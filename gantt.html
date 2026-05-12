@@ -372,10 +372,10 @@ function render() {
       var top = 5 + (bars.filter(function(x,j){return !x.op && j<i}).length % 3) * 0;
       var w = Math.max(20, px(bar.eo - bar.so));
       var bdata = b.replace(/ /g,"_") + "|" + bar.name + "|" + bar.date + "|" + bar.diff;
-      barsHtml += '<div class="bar ' + bar.cls + '" style="left:' + px(bar.so) + 'px;width:' + w + 'px" '
-        + 'onmouseenter="showTip(event,'' + bdata + '')" onmouseleave="hideTip()" '
-        + 'onclick="openDetail('' + b + '')">'
-        + (w > 30 ? bar.label : "") + '</div>';
+      barsHtml += '<div class="bar ' + bar.cls + '" style="left:' + px(bar.so) + 'px;width:' + w + 'px"';
+      barsHtml += ' data-b="' + b.replace(/"/g,"") + '" data-n="' + bar.name.replace(/"/g,"") + '" data-d="' + bar.date + '" data-diff="' + bar.diff + '"'+
+      ' onmouseleave="hideTip()" onclick="openDetail(this.dataset.b)">';
+      barsHtml += (w > 30 ? bar.label : "") + '</div>';
     });
 
     rows += '<div style="display:flex;align-items:stretch">'
@@ -389,6 +389,14 @@ function render() {
   });
 
   document.getElementById("gantt-body").innerHTML = rows;
+  // Reativar tooltips via event delegation
+  document.getElementById("gantt-body").onmouseover = function(e) {
+    var el = e.target.closest ? e.target.closest("[data-b]") : null;
+    if(!el) return;
+    var diff = parseInt(el.dataset.diff||"9999");
+    showTip(e, el.dataset.b.replace(/_/g," ") + "|" + el.dataset.n + "|" + el.dataset.d + "|" + diff);
+  };
+  document.getElementById("gantt-body").onmouseout = function(e) { hideTip(); };
 
   // Linha de hoje
   var tl = document.getElementById("tl");
