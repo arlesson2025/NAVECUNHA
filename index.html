@@ -629,7 +629,7 @@
         </div>
     </div>
 
-    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 8 · com nuvem Google · 14/10/2026</b></span></footer>
+    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 9 · com nuvem Google · 14/10/2026</b></span></footer>
 
     <!-- Modal Técnico de Detalhes -->
     <div id="vesselModal" class="modal">
@@ -676,7 +676,7 @@
                     <select id="launchSystem" required></select>
                 </div>
                 <div class="form-group">
-                    <label>Horímetro Atual (h)</label>
+                    <label id="launchHoursLbl">Horímetro Atual (h)</label>
                     <input type="number" step="any" id="launchHours" placeholder="Ex: 12200" required>
                 </div>
                 <div class="form-group">
@@ -686,11 +686,15 @@
                         <option value="troca">Troca de Óleo / Filtro Realizada</option>
                     </select>
                 </div>
+                <div class="form-group" id="launchDateWrap" style="display:none">
+                    <label>Data da troca (a partir dela contam os meses)</label>
+                    <input type="date" id="launchDate">
+                </div>
                 <div class="form-group" id="launchNextWrap" style="display:none">
                     <label>Próxima troca (h)</label>
                     <input type="number" step="any" id="launchNext" placeholder="Ex: 12450">
                 </div>
-                <p class="muted" style="margin-bottom:10px">Troca de óleo completa (com PDF) deve ser feita pelo formulário FR 049_B.</p>
+                <p class="muted" style="margin-bottom:10px">Troca já feita antes (ex.: carga inicial): lance a <b>TROCA</b> com a data e o horímetro daquele dia e, depois, uma <b>LEITURA</b> com o horímetro de hoje. A troca completa, com PDF, é pelo formulário FR 049_B.</p>
                 <button type="submit" class="action-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">Salvar Lançamento</button>
             </form>
         </div>
@@ -1083,7 +1087,7 @@ function renderHistory(){
     <td><span class="badge-status ok">Troca de Óleo · FR 049_B</span><div class="sub">O.M. ${esc(r.om)} · ${esc(r.user)}${r.tipo==='bal'?' · balsa (só histórico)':''}</div></td><td>${pdfBtns(r)}${adm?` <button class="mini-btn del" onclick="delRecord('${r.id}')" title="Excluir registro">🗑</button>`:''}</td></tr>`;}
   if(r.type==='quick'){
    return `<tr><td>${fmtDT(r.savedAt)}</td><td><b>${esc(r.vessel)}</b></td><td>${esc(EQ_LABEL[r.key]||r.key)}</td><td>${fmtN(r.hours)} h</td>
-    <td><span class="badge-status ${r.op==='troca'?'ok':'none'}">${r.op==='troca'?'Troca de Óleo Realizada':'Atualização de Horímetro'}</span><div class="sub">${esc(r.user)}</div></td><td><span class="muted">sem anexo</span>${adm?` <button class="mini-btn del" onclick="delRecord('${r.id}')" title="Excluir registro">🗑</button>`:''}</td></tr>`;}
+    <td><span class="badge-status ${r.op==='troca'?'ok':'none'}">${r.op==='troca'?'Troca de Óleo Realizada':'Atualização de Horímetro'}</span><div class="sub">${esc(r.user)}${r.op==='troca'?' · troca em '+new Date(r.readAt).toLocaleDateString('pt-BR'):''}</div></td><td><span class="muted">sem anexo</span>${adm?` <button class="mini-btn del" onclick="delRecord('${r.id}')" title="Excluir registro">🗑</button>`:''}</td></tr>`;}
   return `<tr class="seedrow"><td>${esc(r.date)}</td><td><b>${esc(r.vessel)}</b></td><td>${esc(r.system)}</td><td>${esc(r.hours)}</td><td><span class="badge-status ok">${esc(r.opType)}</span><div class="sub">exemplo</div></td><td><span class="muted">—</span></td></tr>`;
  }).join('')||'<tr><td colspan="6" style="padding:24px;color:#5b6874">Nenhum lançamento.</td></tr>';
 }
@@ -1104,20 +1108,29 @@ function openLaunchModal(){
  if(!requireLogin('launch'))return;
  $('#launchVessel').innerHTML='<option value="">Selecione o empurrador...</option>'+FLEET.map(v=>`<option>${esc(v.name)}</option>`).join('');
  $('#launchSystem').innerHTML=EQ.map(e=>`<option value="${e.k}">${e.l}</option>`).join('');
- $('#launchHours').value='';$('#launchNext').value='';$('#launchType').value='leitura';toggleNext();
+ $('#launchHours').value='';$('#launchNext').value='';$('#launchDate').value='';$('#launchType').value='leitura';toggleNext();
  showModal('launchModal');
 }
-function toggleNext(){const t=$('#launchType').value==='troca';$('#launchNextWrap').style.display=t?'block':'none';$('#launchNext').required=false;}
+const todayISO=()=>{const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};
+function toggleNext(){
+ const t=$('#launchType').value==='troca';
+ $('#launchNextWrap').style.display=t?'block':'none';$('#launchDateWrap').style.display=t?'block':'none';
+ $('#launchHoursLbl').textContent=t?'Horímetro na data da troca (h)':'Horímetro atual (h)';
+ if(t&&!$('#launchDate').value)$('#launchDate').value=todayISO();
+ $('#launchNext').required=false;
+}
 async function handleNewLaunch(ev){
  ev.preventDefault();
  const vessel=$('#launchVessel').value,key=$('#launchSystem').value,op=$('#launchType').value;
  const hours=parseFloat($('#launchHours').value),next=$('#launchNext').value===''?null:parseFloat($('#launchNext').value);
  if(!vessel||isNaN(hours))return;
+ const dTroca=$('#launchDate').value;
+ if(op==='troca'&&(!dTroca||dTroca>todayISO())){alert('Informe a data da troca (não pode ser uma data futura).');return;}
  let nextV=next;if(op==='troca'&&nextV===null)nextV=hours+ivOf(key).h;
  if(op==='troca'&&nextV<=hours){alert('A próxima troca deve ser maior que o horímetro atual.');return;}
  const v=FLEET.find(x=>x.name===vessel),cur=v&&v.eq[key];
- if(cur&&cur.h!=null&&hours<cur.h&&!confirm('O horímetro informado ('+fmtN(hours)+' h) é menor que o último registrado ('+fmtN(cur.h)+' h). Salvar mesmo assim?'))return;
- const rec={id:uid(),type:'quick',savedAt:Date.now(),readAt:Date.now(),user:SESSION.name,vessel,key,hours,next:nextV,op,synced:false};
+ if(op!=='troca'&&cur&&cur.h!=null&&hours<cur.h&&!confirm('O horímetro informado ('+fmtN(hours)+' h) é menor que o último registrado ('+fmtN(cur.h)+' h). Salvar mesmo assim?'))return;
+ const rec={id:uid(),type:'quick',savedAt:Date.now(),readAt:op==='troca'?readMs(dTroca):Date.now(),user:SESSION.name,vessel,key,hours,next:nextV,op,synced:false};
  try{await DB.hPut(rec);}catch(e){alert('Não foi possível gravar: '+e.message);return;}
  HISTORY.push(rec);rebuild();renderAll();closeModal('launchModal');syncSoon();toast('Lançamento salvo. Painel atualizado.');
 }
