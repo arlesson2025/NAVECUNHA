@@ -753,6 +753,27 @@ body.present .plogos{display:flex;align-items:center;gap:14px;background:#fff;bo
  .rio-orb{bottom:84px!important}
 }
 @media(max-width:860px){#btnPres{display:none!important}}
+/* v27b: KPIs modernos e gráficos novos */
+.grid-stack-item[gs-id=kpis]>.grid-stack-item-content{background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;padding:0!important}
+.grid-stack-item[gs-id=kpis] .card-header-handle{display:none}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;height:100%}
+.kpi-row .kpi{background:var(--m-card);backdrop-filter:blur(14px) saturate(1.3);border:1px solid rgba(255,255,255,.65);border-radius:16px;box-shadow:var(--shadow)}
+.kpi .t{position:absolute;right:12px;top:10px;font-size:12px;font-weight:700;border-radius:20px;padding:2px 9px}
+.k-bad .ic{background:var(--badb);color:var(--bad)}.k-bad .t{background:var(--badb);color:var(--bad)}
+.k-warn .ic{background:var(--warnb);color:var(--warn)}.k-warn .t{background:var(--warnb);color:var(--warn)}
+.k-ok .ic{background:var(--okb);color:var(--ok)}.k-ok .t{background:var(--okb);color:var(--ok)}
+.k-inf .t{background:var(--infob);color:var(--info)}
+.hint{font-weight:500;color:var(--mut);font-size:12px;margin-left:6px}
+.hrseg{align-self:flex-start;margin:0 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin:6px 0 2px;justify-content:center}
+.chips .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:var(--solid)}
+.chips .chip i{width:9px;height:9px;border-radius:3px}
+.hist-list{flex:1;min-height:0;overflow:auto}
+.hi{display:flex;align-items:center;gap:12px;padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}.hi:last-child{border:0}
+.hi .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
+.hi .tx{flex:1;min-width:0}.hi b{display:block;font-size:13.5px}.hi span{color:var(--mut);font-size:12px}
+.hi .wh{color:var(--mut);font-size:12px;white-space:nowrap}
+@media(max-width:700px){.kpi .t{display:none}.kpi .v{font-size:23px}.kpi-row{grid-template-columns:1fr 1fr}.kpi-row .kpi:last-child{grid-column:span 2}}
 
     </style>
 </head>
@@ -807,44 +828,24 @@ body.present .plogos{display:flex;align-items:center;gap:14px;background:#fff;bo
     <!-- Grid Flutuante (Gridstack) -->
     <div class="grid-stack">
         <!-- Bloco 0: KPIs -->
-        <div class="grid-stack-item" gs-id="kpis" gs-x="0" gs-y="0" gs-w="12" gs-h="2">
+        <div class="grid-stack-item" gs-id="kpis" gs-x="0" gs-y="0" gs-w="12" gs-h="1">
             <div class="grid-stack-item-content">
                 <div class="card-header-handle">
-                    <h3>Indicadores Chave de Desempenho (KPIs)</h3>
+                    <h3>Indicadores</h3>
                     <span class="drag-icon">⋮⋮</span>
                 </div>
-                <div class="kpi-grid">
-                    <div class="kpi-box">
-                        <span>Embarcações</span>
-                        <h2 id="kpiVessels">—</h2>
-                    </div>
-                    <div class="kpi-box">
-                        <span>Total Ativos</span>
-                        <h2 id="kpiTotal">—</h2>
-                    </div>
-                    <div class="kpi-box ok">
-                        <span>Em Dia</span>
-                        <h2 id="kpiOk">—</h2>
-                    </div>
-                    <div class="kpi-box warn">
-                        <span>Em Alerta</span>
-                        <h2 id="kpiWarn">—</h2>
-                    </div>
-                    <div class="kpi-box danger">
-                        <span>Vencidos</span>
-                        <h2 id="kpiDanger">—</h2>
-                    </div>
-                </div>
+                <div class="kpi-row"><div class="kpi k-bad"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 17v.5"/><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div><div><div class="v" id="kpiDanger">—</div><div class="l">Trocas vencidas</div></div><span class="t">urgente</span></div><div class="kpi k-warn"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><div class="v" id="kpiWarn">—</div><div class="l">Em alerta (a vencer)</div></div><span class="t">atenção</span></div><div class="kpi k-ok"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg></div><div><div class="v" id="kpiOk">—</div><div class="l">Equipamentos em dia</div></div><span class="t" id="kpiOkPct">—</span></div><div class="kpi k-inf"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2-7h14l2 7M5 10V6h6v4M2 20c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0"/></svg></div><div><div class="v" id="kpiTotal">—</div><div class="l">Equipamentos · <b id="kpiVessels">—</b> embarcações</div></div></div><div class="kpi k-inf"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.2 4 5.5 6.8 5.5 9.5a5.5 5.5 0 0 1-11 0C6.5 9.8 8.8 7 12 3z"/></svg></div><div><div class="v" id="kpiOil">—</div><div class="l">Óleo usado neste mês</div></div></div></div>
             </div>
         </div>
 
         <!-- Bloco 1: Gráfico Principal de Horas -->
-        <div class="grid-stack-item" gs-id="horas" gs-x="0" gs-y="2" gs-w="12" gs-h="4">
+        <div class="grid-stack-item" gs-id="horas" gs-x="0" gs-y="1" gs-w="8" gs-h="4">
             <div class="grid-stack-item-content">
                 <div class="card-header-handle">
-                    <h3>1.0 Comparativo de Horas até a Troca de Óleo por Sistema (MCP, CRP, MCA, BI) · azul = a vencer · vermelho = vencido</h3>
+                    <h3>Horas até a troca, por sistema <small class="hint">azul = a vencer · vermelho = vencido</small></h3>
                     <span class="drag-icon">⋮⋮</span>
                 </div>
+                <div class="seg hrseg" id="hrSeg"><button class="on" data-s="all">Todos</button><button data-s="0">MCP</button><button data-s="1">Reversor</button><button data-s="2">MCA</button><button data-s="3">Bomba inc.</button></div>
                 <div class="chart-container">
                     <canvas id="hoursComparisonChart"></canvas>
                 </div>
@@ -852,10 +853,10 @@ body.present .plogos{display:flex;align-items:center;gap:14px;background:#fff;bo
         </div>
 
         <!-- Bloco 2: Gráfico de Horas Acumuladas do MCP (Barras Horizontais) -->
-        <div class="grid-stack-item" gs-id="mcp" gs-x="0" gs-y="6" gs-w="6" gs-h="5">
+        <div class="grid-stack-item" gs-id="mcp" gs-x="0" gs-y="19" gs-w="12" gs-h="4">
             <div class="grid-stack-item-content">
                 <div class="card-header-handle">
-                    <h3>2.0 Horímetro Acumulado do MCP por Embarcação</h3>
+                    <h3>Horímetro acumulado do MCP</h3>
                     <span class="drag-icon">⋮⋮</span>
                 </div>
                 <div class="chart-container tbl-scroll" style="min-height: 320px;">
@@ -865,10 +866,10 @@ body.present .plogos{display:flex;align-items:center;gap:14px;background:#fff;bo
         </div>
 
         <!-- Bloco 3: Previsão de troca, próx. 15, 30 e 60 dias -->
-        <div class="grid-stack-item" gs-id="previsao" gs-x="6" gs-y="6" gs-w="6" gs-h="5">
+        <div class="grid-stack-item" gs-id="previsao" gs-x="0" gs-y="10" gs-w="7" gs-h="5">
             <div class="grid-stack-item-content">
                 <div class="card-header-handle">
-                    <h3>3.0 Previsão de troca · próximos 15, 30 e 60 dias</h3>
+                    <h3>Previsão de troca · próximos 15, 30 e 60 dias</h3>
                     <span class="drag-icon">⋮⋮</span>
                 </div>
                 <div class="chart-container tbl-scroll" style="min-height: 320px;">
@@ -878,10 +879,10 @@ body.present .plogos{display:flex;align-items:center;gap:14px;background:#fff;bo
         </div>
 
         <!-- Bloco 4: Tabela de Horímetros -->
-        <div class="grid-stack-item" gs-id="tabela" gs-x="0" gs-y="11" gs-w="12" gs-h="4">
+        <div class="grid-stack-item" gs-id="tabela" gs-x="0" gs-y="15" gs-w="12" gs-h="4">
             <div class="grid-stack-item-content">
                 <div class="card-header-handle">
-                    <h3>4.0 Resumo Geral de Horímetros da Frota (Clique na linha para detalhes)</h3>
+                    <h3>Resumo geral de horímetros da frota <small class="hint">clique na linha para detalhes</small></h3>
                     <span class="drag-icon">⋮⋮</span>
                 </div>
                 <div class="table-container">
@@ -906,11 +907,32 @@ body.present .plogos{display:flex;align-items:center;gap:14px;background:#fff;bo
                 </div>
             </div>
         </div>
+
+        <div class="grid-stack-item" gs-id="situacao" gs-x="8" gs-y="1" gs-w="4" gs-h="4">
+            <div class="grid-stack-item-content">
+                <div class="card-header-handle"><h3>Situação da frota <small class="hint">todos os equipamentos monitorados</small></h3><span class="drag-icon">⋮⋮</span></div>
+                <div class="chart-container" style="min-height:180px"><canvas id="mDonut"></canvas></div>
+                <div class="chips" id="mDonutLeg"></div>
+            </div>
+        </div>
+        <div class="grid-stack-item" gs-id="curva" gs-x="8" gs-y="5" gs-w="4" gs-h="5">
+            <div class="grid-stack-item-content">
+                <div class="card-header-handle"><h3>Curva mensal de consumo <small class="hint">litros por mês, por tipo de óleo</small></h3><span class="drag-icon">⋮⋮</span></div>
+                <div class="chart-container" style="min-height:200px"><canvas id="mCurva"></canvas><div id="mCurvaEmpty" class="muted" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:20px">Ainda sem consumo registrado nos últimos 12 meses.</div></div>
+            </div>
+        </div>
+        <div class="grid-stack-item" gs-id="historico" gs-x="7" gs-y="10" gs-w="5" gs-h="5">
+            <div class="grid-stack-item-content">
+                <div class="card-header-handle"><h3>Histórico recente <small class="hint">últimos lançamentos</small></h3><span class="drag-icon">⋮⋮</span></div>
+                <div class="hist-list" id="mHist"></div>
+                <button class="mbtn" style="margin-top:8px;align-self:flex-start" onclick="openHistoryModal()">Ver histórico completo</button>
+            </div>
+        </div>
         <!-- Bloco 5: Consumo por tipo de óleo -->
-        <div class="grid-stack-item" gs-id="consumo" gs-x="0" gs-y="15" gs-w="12" gs-h="5">
+        <div class="grid-stack-item" gs-id="consumo" gs-x="0" gs-y="5" gs-w="8" gs-h="5">
             <div class="grid-stack-item-content">
                 <div class="card-header-handle">
-                    <h3>5.0 Consumo de óleo · Pareto (litros lançados nos formulários FR 049_B)</h3>
+                    <h3>Consumo de óleo · Pareto <small class="hint">litros lançados nos formulários FR 049_B</small></h3>
                     <span class="drag-icon">⋮⋮</span>
                 </div>
                 <div class="cons-bar"><div class="cons-seg"><button data-k="emb" onclick="setConsMode('emb')">Por embarcação</button><button data-k="mes" onclick="setConsMode('mes')">Curva mensal</button></div><div class="cons-seg"><button data-o="all" onclick="setConsOil('all')">Todos</button><button data-o="SAE 15W-40" onclick="setConsOil('SAE 15W-40')">SAE 15W-40</button><button data-o="SAE 40" onclick="setConsOil('SAE 40')">SAE 40</button><button data-o="SAE 30" onclick="setConsOil('SAE 30')">SAE 30</button><button data-o="Óleo Hidráulico 68" onclick="setConsOil('Óleo Hidráulico 68')">Hidráulico 68</button></div><label>Embarcação: <select id="consVessel" onchange="renderConsumo(visibleFleet())"><option value="all">Frota toda</option></select></label><label id="consPerWrap">Período: <select id="consPeriodo" onchange="renderConsumo(visibleFleet())"><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Últimos 12 meses</option><option value="0" selected>Tudo</option></select></label></div><div id="consChips" class="cons-chips" style="padding:0 4px 6px"></div>
@@ -1473,9 +1495,9 @@ function updateCharts(data){
     datalabels:{anchor:c=>c.dataset.data[c.dataIndex]<0?'start':'end',align:c=>c.dataset.data[c.dataIndex]<0?(mob?'left':'bottom'):(mob?'right':'top'),
      formatter:v=>v==null?'':Math.round(v),font:{size:9,weight:'bold'},color:c=>c.dataset.data[c.dataIndex]<0?'#b91c1c':'#1d2730'}},
    scales:mob?{y:{grid:{display:false},ticks:{color:'#334155',font:{weight:'600'}}},
-    x:{beginAtZero:true,grid:{color:'#eef2f5'},ticks:{color:'#5b6874'},title:{display:true,text:'Horas (azul = a vencer · vermelho = vencido)',color:'#5b6874'}}}
+    x:{beginAtZero:true,grid:{color:'#eef2f5'},ticks:{color:'#5b6874'},title:{display:true,text:'Horas',color:'#5b6874'}}}
    :{x:{grid:{color:'#eef2f5'},ticks:{color:'#5b6874'}},
-    y:{beginAtZero:true,grid:{color:'#eef2f5'},ticks:{color:'#5b6874'},title:{display:true,text:'Horas (azul = a vencer · vermelho = vencido)',color:'#5b6874'}}}}});
+    y:{beginAtZero:true,grid:{color:'#eef2f5'},ticks:{color:'#5b6874'},title:{display:true,text:'Horas',color:'#5b6874'}}}}});
 
  renderMcpTable(data);
 
@@ -2267,7 +2289,7 @@ const M_PLANO=[{"sys": "MCP", "sysName": "Motores principais", "fam": "A", "eq":
 const $1=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pend=s=>esc(s).replace(/_{3,}/g,'<mark class="pend">___ pendente</mark>');
-const redraw=()=>setTimeout(()=>{[window.hoursChart,window.consChart].forEach(c=>c&&c.resize&&c.resize());try{[hoursChart,consChart].forEach(c=>c&&c.resize())}catch(e){}},80);
+const redraw=()=>setTimeout(()=>{try{[hoursChart,consChart,mDonut,mCurva].forEach(c=>c&&c.resize())}catch(e){}},80);
 let cur=null;
 const back=document.createElement('div');back.className='mx-back';document.body.appendChild(back);
 function setNav(v,k){document.querySelectorAll('.nav a[data-v]').forEach(a=>a.classList.toggle('on',a.dataset.v===v&&(v!=='geral'||(a.dataset.go||'geral')===(k||'geral'))))}
@@ -2418,6 +2440,59 @@ addEventListener('resize',()=>setTimeout(mmLines,60));
  lb.onclick=()=>{lb.classList.remove('on');tm=setInterval(()=>show((k+1)%im.length),6500)};
  addEventListener('keydown',e=>{if(e.key==='Escape'&&lb.classList.contains('on'))lb.onclick()});
 })();
+
+
+// ---------- gráficos novos: situação, curva mensal, histórico recente ----------
+let mDonut,mCurva,hrSel='all';
+const fn=n=>Math.round(n).toLocaleString('pt-BR');
+const hrSeg=$1('hrSeg');
+function applyHr(){if(typeof hoursChart==='undefined'||!hoursChart)return;hoursChart.data.datasets.forEach((d,i)=>hoursChart.setDatasetVisibility(i,hrSel==='all'||String(i)===hrSel));hoursChart.update('none')}
+if(hrSeg)hrSeg.onclick=e=>{if(!e.target.dataset.s)return;hrSel=e.target.dataset.s;[...hrSeg.children].forEach(b=>b.classList.toggle('on',b===e.target));applyHr()};
+const KEYN={mcp1:'MCP BB',mcp2:'MCP BE',crp1:'Reversor BB',crp2:'Reversor BE',mca1:'MCA 1',mca2:'MCA 2',hid:'Sist. hidráulico',popa:'Motor de popa',bomba:'Motobomba',inc:'Bomba de incêndio'};
+const tgt=id=>(document.getElementById(id)||{});
+function mdash(){
+ try{applyHr()}catch(e){}
+ const num=id=>+(tgt(id).textContent)||0,ok=num('kpiOk'),w=num('kpiWarn'),bd=num('kpiDanger'),tot=ok+w+bd;
+ if(tgt('kpiOkPct'))tgt('kpiOkPct').textContent=tot?Math.round(ok/tot*100)+'%':'—';
+ const now=new Date(),ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');let Lm=0;
+ const lan=[];
+ try{HISTORY.forEach(r=>{if(r.type==='form'||r.type==='quick')consLanc(r).forEach(x=>{lan.push(x);if(String(x.d).slice(0,7)===ym)Lm+=x.L})})}catch(e){}
+ if(tgt('kpiOil'))tgt('kpiOil').textContent=fn(Lm)+' L';
+ // donut
+ const dc=$1('mDonut');
+ if(dc&&typeof Chart!=='undefined'){
+  if(mDonut)mDonut.destroy();
+  mDonut=new Chart(dc.getContext('2d'),{type:'doughnut',data:{labels:['Em dia','Em alerta','Vencido'],datasets:[{data:[ok,w,bd],backgroundColor:['#1f9d63','#e0a548','#d2452d'],borderWidth:0,spacing:3,borderRadius:6}]},
+   options:{animation:false,cutout:'70%',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false}}},
+   plugins:[{id:'ctr',afterDraw(c){const{ctx,chartArea:a}=c;ctx.save();ctx.textAlign='center';ctx.fillStyle='#14233b';ctx.font='700 26px Segoe UI';ctx.fillText(tot,(a.left+a.right)/2,(a.top+a.bottom)/2+6);ctx.font='500 12px Segoe UI';ctx.fillStyle='#6b7a92';ctx.fillText('equipamentos',(a.left+a.right)/2,(a.top+a.bottom)/2+24);ctx.restore()}}]});
+  $1('mDonutLeg').innerHTML=[['Em dia','#1f9d63',ok],['Em alerta','#e0a548',w],['Vencido','#d2452d',bd]].map(x=>`<span class="chip"><i style="background:${x[1]}"></i>${x[0]}: ${x[2]}</span>`).join('');
+ }
+ // curva mensal (12 meses, por tipo de óleo)
+ const cc=$1('mCurva');
+ if(cc&&typeof Chart!=='undefined'){
+  if(mCurva)mCurva.destroy();
+  const ms=[];for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);ms.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))}
+  const ser={};OIL_TYPES.forEach(([n])=>ser[n]=ms.map(()=>0));
+  lan.forEach(x=>{const i=ms.indexOf(String(x.d).slice(0,7));if(i>=0)ser[x.ty][i]+=x.L});
+  const ds=OIL_TYPES.filter(([n])=>ser[n].some(v=>v>0)).map(([n,c])=>({label:n,data:ser[n].map(v=>Math.round(v*10)/10),borderColor:c,backgroundColor:c,tension:.35,borderWidth:2.5,pointRadius:3}));
+  $1('mCurvaEmpty').style.display=ds.length?'none':'flex';
+  mCurva=new Chart(cc.getContext('2d'),{type:'line',data:{labels:ms.map(k=>MES[+k.slice(5)-1]+'/'+k.slice(2,4)),datasets:ds},options:{animation:false,responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,usePointStyle:true}},datalabels:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#edf1f7'},title:{display:true,text:'Litros por mês',color:'#6b7a92'}}}}});
+ }
+ // histórico recente
+ const hl=$1('mHist');
+ if(hl){
+  const rows=[...HISTORY].filter(r=>r.type==='form'||r.type==='quick').sort((a,b)=>(b.savedAt||b.readAt||0)-(a.savedAt||a.readAt||0)).slice(0,7);
+  const when=t=>{if(!t)return'';const d=new Date(t),h=new Date();const dd=Math.round((new Date(h.getFullYear(),h.getMonth(),h.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);return dd===0?'hoje':dd===1?'ontem':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})};
+  hl.innerHTML=rows.length?rows.map(r=>{
+   const v=String(r.vessel||'').replace('Cap. José Alecrim ','CJA ');
+   let t,s,c='inf';
+   if(r.type==='form'){t='Troca de óleo · FR 049_B';s=v+(r.om?' · O.M. '+r.om:'');c='ok'}
+   else if(r.op==='troca'){t='Troca de óleo · lançamento rápido';s=v+' · '+(KEYN[r.key]||r.key||'')+(litros(r.qtd)?' · '+fn(litros(r.qtd))+' L '+(r.oil||''):'');c='ok'}
+   else{t='Atualização de horímetro';s=v+' · '+(KEYN[r.key]||r.key||'')}
+   return `<div class="hi" onclick="openHistoryModal()"><div class="ic" style="background:var(--${c==='ok'?'okb':'infob'});color:var(--${c==='ok'?'ok':'info'})"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg></div><div class="tx"><b>${esc(t)}</b><span>${esc(s)}</span></div><div class="wh">${when(r.savedAt||r.readAt)}</div></div>`}).join(''):'<p class="muted" style="padding:14px">Nenhum lançamento ainda.</p>';
+ }
+}
+const _ra=window.renderAll;if(typeof _ra==='function'){window.renderAll=function(){const r=_ra.apply(this,arguments);try{mdash()}catch(e){console.error(e)}return r}}
 
 })();
 
