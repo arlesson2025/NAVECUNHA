@@ -737,7 +737,7 @@ body.locked #loginModal .close-modal{display:none}
         </div>
     </div>
 
-    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 18 · com nuvem Google · 14/10/2026</b></span></footer>
+    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 19 · com nuvem Google · 14/10/2026</b></span></footer>
 
     <!-- Modal Técnico de Detalhes -->
     <div id="vesselModal" class="modal">
@@ -798,6 +798,13 @@ body.locked #loginModal .close-modal{display:none}
                 <div class="form-group" id="launchDateWrap" style="display:none">
                     <label>Data da troca (a partir dela contam os meses)</label>
                     <input type="date" id="launchDate">
+                </div>
+                <div class="form-group" id="launchOilWrap" style="display:none">
+                    <label>Tipo de óleo usado</label>
+                    <input type="text" id="launchOil" list="launchOilList" placeholder="Escolha ou digite" autocomplete="off">
+                    <datalist id="launchOilList"><option value="SAE 15W-40"><option value="SAE 40"><option value="SAE 30"><option value="Óleo Hidráulico 68"></datalist>
+                    <label style="margin-top:10px">Quantidade usada (litros)</label>
+                    <input type="number" step="any" min="0" id="launchQtd" placeholder="Ex: 38">
                 </div>
                 <div class="form-group" id="launchNextWrap" style="display:none">
                     <label>Próxima troca (h)</label>
@@ -1132,6 +1139,11 @@ let consMode='emb',consOil='all';
 function setConsMode(m){consMode=m;renderConsumo(visibleFleet());}
 function setConsOil(o){consOil=o;renderConsumo(visibleFleet());}
 const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+/* litros de óleo de um registro: formulário FR 049_B (por equipamento com T) ou lançamento rápido de troca */
+function consLanc(r){const o=[];
+ if(r.type==='form'){(r.eq||[]).forEach(q=>{if(q.status!=='T')return;const L=litros(q.qtd);if(L)o.push({ty:oilType(q.oil),L,d:r.date||''});});}
+ else if(r.type==='quick'&&r.op==='troca'){const L=litros(r.qtd);if(L){const d=new Date(r.readAt);o.push({ty:oilType(r.oil),L,d:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')});}}
+ return o;}
 function renderConsumo(data){
  const cv=$('#consumoChart');if(!cv)return;
  const sel=$('#consVessel');
@@ -1143,8 +1155,8 @@ function renderConsumo(data){
  const types=OIL_TYPES.filter(([n])=>consOil==='all'||n===consOil);
  // lançamentos válidos: {v,t,L,ym}
  const lan=[];
- HISTORY.filter(r=>r.type==='form'&&names.has(r.vessel)&&(vSel==='all'||r.vessel===vSel)).forEach(r=>{
-  (r.eq||[]).forEach(q=>{if(q.status!=='T')return;const L=litros(q.qtd);if(!L)return;lan.push({v:r.vessel,t:oilType(q.oil),L,d:r.date||'',ym:(r.date||'').slice(0,7)});});});
+ HISTORY.filter(r=>(r.type==='form'||r.type==='quick')&&names.has(r.vessel)&&(vSel==='all'||r.vessel===vSel)).forEach(r=>{
+  consLanc(r).forEach(x=>lan.push({v:r.vessel,t:x.ty,L:x.L,d:x.d,ym:x.d.slice(0,7)}));});
  const tot={};OIL_TYPES.forEach(([n])=>tot[n]=0);
  if(consChart)consChart.destroy();
  let cfg,any;
@@ -1325,13 +1337,13 @@ function openLaunchModal(){
  if(!requireLogin('launch'))return;
  $('#launchVessel').innerHTML='<option value="">Selecione o empurrador...</option>'+FLEET.map(v=>`<option>${esc(v.name)}</option>`).join('');
  $('#launchSystem').innerHTML=EQ.map(e=>`<option value="${e.k}">${e.l}</option>`).join('');
- $('#launchHours').value='';$('#launchNext').value='';$('#launchDate').value='';$('#launchType').value='leitura';toggleNext();
+ $('#launchHours').value='';$('#launchOil').value='';$('#launchQtd').value='';$('#launchNext').value='';$('#launchDate').value='';$('#launchType').value='leitura';toggleNext();
  showModal('launchModal');
 }
 const todayISO=()=>{const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};
 function toggleNext(){
  const t=$('#launchType').value==='troca';
- $('#launchNextWrap').style.display=t?'block':'none';$('#launchDateWrap').style.display=t?'block':'none';
+ $('#launchNextWrap').style.display=t?'block':'none';$('#launchDateWrap').style.display=t?'block':'none';$('#launchOilWrap').style.display=t?'block':'none';$('#launchOil').required=t;$('#launchQtd').required=t;
  $('#launchHoursLbl').textContent=t?'Horímetro na data da troca (h)':'Horímetro atual (h)';
  if(t&&!$('#launchDate').value)$('#launchDate').value=todayISO();
  $('#launchNext').required=false;
@@ -1344,11 +1356,14 @@ async function handleNewLaunch(ev){
  if(!vessel||isNaN(hours))return;
  const dTroca=$('#launchDate').value;
  if(op==='troca'&&(!dTroca||dTroca>todayISO())){alert('Informe a data da troca (não pode ser uma data futura).');return;}
+ const oilTxt=($('#launchOil').value||'').trim(),qtd=parseFloat(String($('#launchQtd').value).replace(',','.'));
+ if(op==='troca'&&(!oilTxt||!(qtd>0))){alert('Informe o tipo de óleo e a quantidade usada (litros). Sem isso o consumo de óleo fica incompleto.');return;}
  let nextV=next;if(op==='troca'&&nextV===null)nextV=hours+ivOf(key).h;
  if(op==='troca'&&nextV<=hours){alert('A próxima troca deve ser maior que o horímetro atual.');return;}
  const v=FLEET.find(x=>x.name===vessel),cur=v&&v.eq[key];
  if(op!=='troca'&&cur&&cur.h!=null&&hours<cur.h&&!confirm('O horímetro informado ('+fmtN(hours)+' h) é menor que o último registrado ('+fmtN(cur.h)+' h). Salvar mesmo assim?'))return;
  const rec={id:uid(),type:'quick',savedAt:Date.now(),readAt:op==='troca'?readMs(dTroca):Date.now(),user:SESSION.name,vessel,key,hours,next:nextV,op,synced:false};
+ if(op==='troca'){rec.oil=oilTxt;rec.qtd=qtd;}
  try{await DB.hPut(rec);}catch(e){alert('Não foi possível gravar: '+e.message);return;}
  HISTORY.push(rec);rebuild();renderAll();closeModal('launchModal');syncSoon();toast('Lançamento salvo. Painel atualizado.');
 }
@@ -1783,10 +1798,9 @@ function rioPeriod(t){
 }
 function rioConsumo(per,vessel,oil){
  const names=new Set(FLEET.map(v=>v.name)),out=[];
- HISTORY.filter(r=>r.type==='form'&&names.has(r.vessel)&&(!vessel||r.vessel===vessel.name)).forEach(r=>{
-  const t=r.date?new Date(r.date+'T12:00:00').getTime():(r.savedAt||0);
-  if(t<per.a||t>=per.b)return;
-  (r.eq||[]).forEach(q=>{if(q.status!=='T')return;const L=litros(q.qtd);if(!L)return;const ty=oilType(q.oil);if(oil&&ty!==oil)return;out.push({v:r.vessel,ty,L});});});
+ HISTORY.filter(r=>(r.type==='form'||r.type==='quick')&&names.has(r.vessel)&&(!vessel||r.vessel===vessel.name)).forEach(r=>{
+  consLanc(r).forEach(x=>{const t=x.d?new Date(x.d+'T12:00:00').getTime():(r.savedAt||0);
+   if(t<per.a||t>=per.b)return;if(oil&&x.ty!==oil)return;out.push({v:r.vessel,ty:x.ty,L:x.L});});});
  return out;
 }
 function daysLeft(k,e){const c=calc(k,e);if(!c||c.rem===null)return null;return {rem:c.rem,d:c.rem<0?-1:c.rem/rateOf(e),c};}
