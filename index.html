@@ -498,7 +498,7 @@
 .cons-seg button{border:0;background:#fff;padding:6px 11px;font-size:.76rem;font-weight:600;color:var(--header-bg);cursor:pointer;border-right:1px solid var(--border-color)}
 .cons-seg button:last-child{border-right:0}.cons-seg button.on{background:var(--header-bg);color:#fff}
 
-/* Rio Nego */
+/* ALVA */
 .rio-orb{position:fixed;left:22px;bottom:22px;z-index:2500;border:0;background:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:0}
 .rio-core{width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#9ad0ff,#2b6cb0 52%,#0d2f57);box-shadow:0 6px 20px rgba(13,47,87,.45),inset 0 0 14px rgba(255,255,255,.35);animation:rioIdle 3.2s ease-in-out infinite}
 .rio-lbl{background:#0d2f57;color:#fff;font-size:.76rem;font-weight:700;border-radius:999px;padding:5px 12px;box-shadow:0 3px 10px rgba(0,0,0,.25)}
@@ -560,6 +560,14 @@ body.locked #loginModal .close-modal{display:none}
  .page-foot{flex-direction:column;gap:4px}
  .modal-content{width:94%!important;max-width:94%!important;padding:18px!important}
 }
+
+/* ALVA: visual em anéis ciano (HUD) */
+.rio-core{background:radial-gradient(circle,#eaffff 0 11%,#3fe0ff 12% 30%,#0b6f94 31% 52%,#03283d 53% 70%,#0b6f94 71% 76%,#021722 77%)!important;box-shadow:0 0 18px 3px rgba(63,224,255,.55),inset 0 0 12px rgba(63,224,255,.5)!important}
+.rio-lbl{background:#03283d!important;color:#7fe9ff!important;letter-spacing:.14em;border:1px solid rgba(63,224,255,.45)}
+.rio-head{background:linear-gradient(135deg,#021722,#0b6f94)!important}
+.rio-m.me{background:#0b6f94!important}.rio-in button{background:#0b6f94!important}.rio-in #rioMic.on{background:#d9442b!important}
+@keyframes rioTalk{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(63,224,255,.6)}50%{transform:scale(1.12);box-shadow:0 0 0 18px rgba(63,224,255,0)}}
+.rio-orb.listen .rio-core{background:radial-gradient(circle,#fff0ec 0 11%,#ff7a66 12% 30%,#8a2a1c 31% 60%,#2a0b07 61%)!important}
 
     </style>
 </head>
@@ -737,7 +745,7 @@ body.locked #loginModal .close-modal{display:none}
         </div>
     </div>
 
-    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 19 · com nuvem Google · 14/10/2026</b></span></footer>
+    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 21 · com nuvem Google · 14/10/2026</b></span></footer>
 
     <!-- Modal Técnico de Detalhes -->
     <div id="vesselModal" class="modal">
@@ -800,6 +808,8 @@ body.locked #loginModal .close-modal{display:none}
                     <input type="date" id="launchDate">
                 </div>
                 <div class="form-group" id="launchOilWrap" style="display:none">
+                    <label>Nº da O.M. (Sankhya)</label>
+                    <input type="text" id="launchOm" placeholder="Ex: 123456" autocomplete="off" style="margin-bottom:10px">
                     <label>Tipo de óleo usado</label>
                     <input type="text" id="launchOil" list="launchOilList" placeholder="Escolha ou digite" autocomplete="off">
                     <datalist id="launchOilList"><option value="SAE 15W-40"><option value="SAE 40"><option value="SAE 30"><option value="Óleo Hidráulico 68"></datalist>
@@ -913,14 +923,14 @@ body.locked #loginModal .close-modal{display:none}
         <iframe id="fr016Frame" title="FR 016_E"></iframe>
     </div>
 
-    <!-- Rio Nego · assistente -->
-    <div id="rioPanel" class="rio-panel" role="dialog" aria-label="Rio Nego, assistente do painel">
-        <div class="rio-head"><div><b>Rio Nego</b><small>assistente do painel · voz e texto</small></div><div><button id="rioSpk" onclick="rioToggleSpeak()" title="Voz">🔊</button><button onclick="rioToggle(false)" title="Fechar">✕</button></div></div>
+    <!-- ALVA · assistente -->
+    <div id="rioPanel" class="rio-panel" role="dialog" aria-label="ALVA, assistente do painel">
+        <div class="rio-head"><div><b>ALVA</b><small>assistente do painel · voz e texto</small></div><div><button onclick="rioNextVoice()" title="Trocar a voz (varia conforme o aparelho)">🎙</button><button id="rioSpk" onclick="rioToggleSpeak()" title="Voz">🔊</button><button onclick="rioToggle(false)" title="Fechar">✕</button></div></div>
         <div id="rioMsgs" class="rio-msgs"></div>
         <div class="rio-chips"><button onclick="rioAsk('Quanto consumi de óleo este mês?')">Consumo do mês</button><button onclick="rioAsk('O que vence nos próximos 30 dias?')">Vence em 30 dias</button><button onclick="rioAsk('Quais equipamentos estão vencidos?')">Vencidos</button><button onclick="rioAsk('Resumo da frota')">Resumo</button><button onclick="rioAsk('ajuda')">Ajuda</button></div>
         <div class="rio-in"><button id="rioMic" onclick="rioMic()" title="Falar">🎤</button><input id="rioIn" type="text" placeholder="Digite ou fale sua pergunta…" autocomplete="off"><button onclick="rioSend(false)" title="Enviar">➤</button></div>
     </div>
-    <button id="rioOrb" class="rio-orb" onclick="rioToggle()" title="Rio Nego · pergunte ao painel" aria-label="Abrir o assistente Rio Nego"><span class="rio-core"></span><span class="rio-lbl">Rio Nego</span></button>
+    <button id="rioOrb" class="rio-orb" onclick="rioToggle()" title="ALVA · pergunte ao painel" aria-label="Abrir a assistente ALVA"><span class="rio-core"></span><span class="rio-lbl">ALVA</span></button>
 
     <div id="toast" class="toast" hidden></div>
 
@@ -1316,7 +1326,7 @@ function renderHistory(){
     <td><span class="badge-status ok">Troca de Óleo · FR 049_B</span><div class="sub">O.M. ${esc(r.om)} · ${esc(r.user)}${r.tipo==='bal'?' · balsa (só histórico)':''}</div></td><td>${pdfBtns(r)}${adm?` <button class="mini-btn del" onclick="delRecord('${r.id}')" title="Excluir registro">🗑</button>`:''}</td></tr>`;}
   if(r.type==='quick'){
    return `<tr><td>${fmtDT(r.savedAt)}</td><td><b>${esc(r.vessel)}</b></td><td>${esc(EQ_LABEL[r.key]||r.key)}</td><td>${fmtN(r.hours)} h</td>
-    <td><span class="badge-status ${r.op==='troca'?'ok':'none'}">${r.op==='troca'?'Troca de Óleo Realizada':'Atualização de Horímetro'}</span><div class="sub">${esc(r.user)}${r.op==='troca'?' · troca em '+new Date(r.readAt).toLocaleDateString('pt-BR'):''}</div></td><td><span class="muted">sem anexo</span>${adm?` <button class="mini-btn del" onclick="delRecord('${r.id}')" title="Excluir registro">🗑</button>`:''}</td></tr>`;}
+    <td><span class="badge-status ${r.op==='troca'?'ok':'none'}">${r.op==='troca'?'Troca de Óleo Realizada':'Atualização de Horímetro'}</span><div class="sub">${r.om?'O.M. '+esc(r.om)+' · ':''}${esc(r.user)}${r.op==='troca'?' · troca em '+new Date(r.readAt).toLocaleDateString('pt-BR'):''}${r.op==='troca'&&r.oil?' · '+esc(r.oil)+' '+fmtN(r.qtd)+' L':''}</div></td><td><span class="muted">sem anexo</span>${adm?` <button class="mini-btn del" onclick="delRecord('${r.id}')" title="Excluir registro">🗑</button>`:''}</td></tr>`;}
   return `<tr class="seedrow"><td>${esc(r.date)}</td><td><b>${esc(r.vessel)}</b></td><td>${esc(r.system)}</td><td>${esc(r.hours)}</td><td><span class="badge-status ok">${esc(r.opType)}</span><div class="sub">exemplo</div></td><td><span class="muted">—</span></td></tr>`;
  }).join('')||'<tr><td colspan="6" style="padding:24px;color:#5b6874">Nenhum lançamento.</td></tr>';
 }
@@ -1337,13 +1347,13 @@ function openLaunchModal(){
  if(!requireLogin('launch'))return;
  $('#launchVessel').innerHTML='<option value="">Selecione o empurrador...</option>'+FLEET.map(v=>`<option>${esc(v.name)}</option>`).join('');
  $('#launchSystem').innerHTML=EQ.map(e=>`<option value="${e.k}">${e.l}</option>`).join('');
- $('#launchHours').value='';$('#launchOil').value='';$('#launchQtd').value='';$('#launchNext').value='';$('#launchDate').value='';$('#launchType').value='leitura';toggleNext();
+ $('#launchHours').value='';$('#launchOil').value='';$('#launchQtd').value='';$('#launchOm').value='';$('#launchNext').value='';$('#launchDate').value='';$('#launchType').value='leitura';toggleNext();
  showModal('launchModal');
 }
 const todayISO=()=>{const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};
 function toggleNext(){
  const t=$('#launchType').value==='troca';
- $('#launchNextWrap').style.display=t?'block':'none';$('#launchDateWrap').style.display=t?'block':'none';$('#launchOilWrap').style.display=t?'block':'none';$('#launchOil').required=t;$('#launchQtd').required=t;
+ $('#launchNextWrap').style.display=t?'block':'none';$('#launchDateWrap').style.display=t?'block':'none';$('#launchOilWrap').style.display=t?'block':'none';$('#launchOil').required=t;$('#launchQtd').required=t;$('#launchOm').required=t;
  $('#launchHoursLbl').textContent=t?'Horímetro na data da troca (h)':'Horímetro atual (h)';
  if(t&&!$('#launchDate').value)$('#launchDate').value=todayISO();
  $('#launchNext').required=false;
@@ -1357,13 +1367,15 @@ async function handleNewLaunch(ev){
  const dTroca=$('#launchDate').value;
  if(op==='troca'&&(!dTroca||dTroca>todayISO())){alert('Informe a data da troca (não pode ser uma data futura).');return;}
  const oilTxt=($('#launchOil').value||'').trim(),qtd=parseFloat(String($('#launchQtd').value).replace(',','.'));
+ const omTxt=($('#launchOm').value||'').trim();
+ if(op==='troca'&&!omTxt){alert('Informe o Nº da O.M. (Sankhya) da troca.');return;}
  if(op==='troca'&&(!oilTxt||!(qtd>0))){alert('Informe o tipo de óleo e a quantidade usada (litros). Sem isso o consumo de óleo fica incompleto.');return;}
  let nextV=next;if(op==='troca'&&nextV===null)nextV=hours+ivOf(key).h;
  if(op==='troca'&&nextV<=hours){alert('A próxima troca deve ser maior que o horímetro atual.');return;}
  const v=FLEET.find(x=>x.name===vessel),cur=v&&v.eq[key];
  if(op!=='troca'&&cur&&cur.h!=null&&hours<cur.h&&!confirm('O horímetro informado ('+fmtN(hours)+' h) é menor que o último registrado ('+fmtN(cur.h)+' h). Salvar mesmo assim?'))return;
  const rec={id:uid(),type:'quick',savedAt:Date.now(),readAt:op==='troca'?readMs(dTroca):Date.now(),user:SESSION.name,vessel,key,hours,next:nextV,op,synced:false};
- if(op==='troca'){rec.oil=oilTxt;rec.qtd=qtd;}
+ if(op==='troca'){rec.oil=oilTxt;rec.qtd=qtd;rec.om=omTxt;}
  try{await DB.hPut(rec);}catch(e){alert('Não foi possível gravar: '+e.message);return;}
  HISTORY.push(rec);rebuild();renderAll();closeModal('launchModal');syncSoon();toast('Lançamento salvo. Painel atualizado.');
 }
@@ -1809,7 +1821,7 @@ function rioAnswer(q){
  const V=rioVessel(t),oil=rioOil(t),eq=rioEq(t),per=rioPeriod(t);
  const vn=V?vShort(V):'a frota';
  if(!t)return 'Pode falar ou escrever a sua pergunta.';
- if(/^(oi|ola|e ai|bom dia|boa tarde|boa noite|rio nego)\b/.test(t)&&t.split(' ').length<=4)return 'Olá! Sou o Rio Nego. Pergunte, por exemplo: quanto consumi de óleo neste mês? O que vence em 30 dias? Quais equipamentos estão vencidos?';
+ if(/^(oi|ola|e ai|bom dia|boa tarde|boa noite|alva|oi alva)\b/.test(t)&&t.split(' ').length<=4)return rioSaudacao()+' Sou a ALVA. Pergunte, por exemplo: quanto consumi de óleo neste mês? O que vence em 30 dias? Quais equipamentos estão vencidos?';
  if(/ajuda|o que voce (faz|sabe|pode)|como funciona|exemplos?/.test(t))return 'Eu respondo sobre os dados deste painel:\n• Consumo de óleo por mês, tipo (SAE 15W-40, SAE 40, SAE 30, Hidráulico 68) e embarcação\n• O que vence nos próximos dias\n• Equipamentos vencidos e em alerta\n• Última troca e horímetro de cada equipamento\n• Resumo da frota ou de uma embarcação\nPergunte do seu jeito, por voz ou escrito.';
  // consumo
  if(/consum|gast|litro|usei|usamos|abastec|quanto.*oleo|oleo.*(mes|gasto)/.test(t)&&!/vence|vencid/.test(t)){
@@ -1877,12 +1889,24 @@ function rioUnlock(){ // celulares só liberam o som depois de um toque: "fala" 
 }
 function rioSpeakText(s){
  return s.replace(/\*\*/g,'').replace(/•/g,'').replace(/CJA ([IVX]+)/g,(m,r)=>'Capitão José Alecrim '+(ROMAN_N[r]||r))
-  .replace(/(\d)\s?h\b/g,'$1 horas').replace(/(\d)\s?L\b/g,'$1 litros').replace(/SAE/g,'S A E').replace(/15W-40/g,'15 W 40').replace(/≈/g,'cerca de ').replace(/\n+/g,'. ').replace(/\s+/g,' ');
+  .replace(/(\d)\s?h\b/g,'$1 horas').replace(/(\d)\s?L\b/g,'$1 litros').replace(/ALVA/g,'Alva').replace(/SAE/g,'S A E').replace(/15W-40/g,'15 W 40').replace(/≈/g,'cerca de ').replace(/\n+/g,'. ').replace(/\s+/g,' ');
 }
-function rioPickVoice(){try{const vs=speechSynthesis.getVoices();RIO.voice=vs.find(v=>/pt-BR/i.test(v.lang)&&/google|luciana|francisca|microsoft/i.test(v.name))||vs.find(v=>/pt-BR/i.test(v.lang))||vs.find(v=>/^pt/i.test(v.lang))||null;}catch(e){}}
+const MASC=/daniel|antonio|antônio|felipe|ricardo|jorge|male|masculin|google portugu[eê]s do brasil$/i;
+function rioVoices(){try{return speechSynthesis.getVoices().filter(v=>/^pt/i.test(v.lang));}catch(e){return [];}}
+function rioPickVoice(){
+ const vs=rioVoices();let saved=null;try{saved=localStorage.getItem('rioVoice');}catch(e){}
+ RIO.voice=(saved&&vs.find(v=>v.name===saved))||vs.find(v=>/pt-BR/i.test(v.lang)&&/daniel|antonio|antônio|felipe|ricardo|male|masculin/i.test(v.name))||vs.find(v=>/pt-BR/i.test(v.lang))||vs[0]||null;
+}
+function rioNextVoice(){ // alterna entre as vozes em português do aparelho
+ const vs=rioVoices();if(!vs.length){rioMsg('bot','Este aparelho só tem uma voz disponível.');return;}
+ const i=Math.max(0,vs.findIndex(v=>RIO.voice&&v.name===RIO.voice.name)),n=vs[(i+1)%vs.length];RIO.voice=n;
+ try{localStorage.setItem('rioVoice',n.name);}catch(e){}
+ const t='Voz alterada: '+n.name+'. Assim estou falando agora.';rioMsg('bot',t);rioSay(t);
+}
+function rioSaudacao(){const h=new Date().getHours(),p=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite',nm=(typeof SESSION!=='undefined'&&SESSION&&SESSION.name)?', '+SESSION.name.split(' ')[0]:', senhor';return p+nm+'.';}
 function rioSay(s){
  if(!RIO.speak||!('speechSynthesis' in window))return;
- try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(rioSpeakText(s));u.lang='pt-BR';if(RIO.voice)u.voice=RIO.voice;u.rate=1.02;
+ try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(rioSpeakText(s));u.lang='pt-BR';if(RIO.voice)u.voice=RIO.voice;u.rate=0.94;u.pitch=0.78;
   u.onstart=()=>$('#rioOrb').classList.add('talk');u.onend=u.onerror=()=>$('#rioOrb').classList.remove('talk');speechSynthesis.speak(u);}catch(e){}
 }
 function rioToggleSpeak(){RIO.speak=!RIO.speak;try{localStorage.setItem('rioSpeak',RIO.speak?'1':'0');}catch(e){}
@@ -1918,7 +1942,7 @@ function rioAsk(q){$('#rioIn').value=q;rioSend(false);}
 function rioToggle(open){
  rioUnlock();
  RIO.open=open===undefined?!RIO.open:open;$('#rioPanel').classList.toggle('open',RIO.open);
- if(RIO.open){if(!RIO.hist.length){RIO.hist.push(1);const g='Olá! Eu sou o **Rio Nego**, o assistente deste painel. Pergunte por voz ou escrito.';rioMsg('bot',g);rioSay('Olá! Eu sou o Rio Nego, o assistente deste painel. Pergunte por voz ou escrito.');}setTimeout(()=>$('#rioIn').focus(),150);}
+ if(RIO.open){if(!RIO.hist.length){RIO.hist.push(1);const g=rioSaudacao()+' Sou a **ALVA**, a assistente deste painel. Sistemas online. Às suas ordens, por voz ou escrito.';rioMsg('bot',g);rioSay(g);}setTimeout(()=>$('#rioIn').focus(),150);}
  else{try{speechSynthesis.cancel();}catch(e){}$('#rioOrb').classList.remove('talk');if(RIO.listening)try{RIO.rec.stop();}catch(e){}}
 }
 function rioInit(){
