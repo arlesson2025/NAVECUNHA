@@ -1,5 +1,5 @@
 /* CTLE_LUB · service worker: deixa o painel abrir sem internet. Os dados vão ao Google quando houver sinal. */
-const CACHE='ctle-lub-v27b';
+const CACHE='ctle-lub-v28b';
 const ARQ=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ARQ)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
