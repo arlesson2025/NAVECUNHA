@@ -691,6 +691,19 @@ table.meds tr.out input.dv{border-color:var(--bad);background:var(--badb);color:
 .cover .meta{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;color:#C4D6EE}
 .cover .meta b{display:block;color:#fff;font-size:15px;font-weight:600}
 
+/* ---------- ajuste e calibração ---------- */
+.calh{margin:6px 0 -4px;font-size:16px}
+.calp{gap:9px}.calp.bad{border-left:3px solid var(--bad)}.calp.warn{border-left:3px solid var(--warn)}
+.calnum{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.calnum span{display:flex;flex-direction:column;font-size:11.5px;color:var(--mut)}.calnum b{font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.crow{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.cnm{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.cbar{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ctrack{position:relative;height:12px;border-radius:6px;background:var(--line)}
+.cfill{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.tk{position:absolute;top:-3px;width:3px;height:18px;border-radius:2px;margin-left:-1px;opacity:.85;cursor:help}
+.clegend{display:flex;gap:14px;flex-wrap:wrap;align-items:center}.clegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}.clegend .sp{flex:1}
+@media (max-width:760px){.crow{grid-template-columns:1fr}.crow .mbtn{justify-self:start}}
 /* ---------- responsivo ---------- */
 @media (max-width:1200px){.work{grid-template-columns:1fr}.pdfcol{position:static}.pdfwrap{max-height:none}.kgrid.six{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:900px){.kgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.cls{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -1100,7 +1113,7 @@ const temExemplo = () => [...S.recs.values()].some(r => r.seed);
 
 /* ---------- navegação ---------- */
 const NAV = [
-  ['Painel', [['geral', 'Visão geral'], ['frota', 'Frota e vencimentos'], ['kpi', 'Indicadores NP 055'], ['hist', 'Histórico de OMs']]],
+  ['Painel', [['geral', 'Visão geral'], ['frota', 'Frota e vencimentos'], ['calib', 'Ajuste e calibração MCP'], ['kpi', 'Indicadores NP 055'], ['hist', 'Histórico de OMs']]],
   ['Ordens de Manutenção', [['emitir', 'Emitir preventivas'], ['acomp', 'Acompanhar OMs'], ['prev', 'Preventiva · Anexo II-B'], ['corr', 'Corretiva · Anexo II-A']]],
   ['Consulta', [['matriz', 'Matriz Anexo I']]],
   ['Supervisor', [['rel', 'Relatório mensal'], ['admin', 'Administração']]],
@@ -1127,7 +1140,7 @@ let dirty = false;
 function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { dirty = true; renderNav(); return; } render(); }
 function render() {
   renderNav(); renderUser();
-  const V = { geral: vGeral, frota: vFrota, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, rel: vRel, admin: vAdmin }[VIEW] || vGeral;
+  const V = { geral: vGeral, frota: vFrota, calib: vCalib, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, rel: vRel, admin: vAdmin }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   m.innerHTML = banners() + V();
   (AFTER[VIEW] || (() => { }))();
@@ -1248,6 +1261,84 @@ function vFrota() {
    <button class="mbtn" data-act="lancarHor">⏱ Lançar horímetros</button></div>
    <div class="fleet">${cards}</div>`;
 }
+/* =====================================================================
+   AJUSTE E CALIBRAÇÃO MCP (itens em amarelo do Anexo I + caixa de mar)
+   ===================================================================== */
+const CALIB = [['1.1.11', 'Folga de válvulas'], ['1.1.12', 'Bicos injetores'], ['1.1.13', 'Ponto de injeção'], ['1.1.15', 'Rótulas do controle de combustível'], ['1.1.17', 'Trocador de calor'], ['1.4.1', 'Caixa de mar']];
+const CALN = Object.fromEntries(CALIB);
+// fração da vida que ainda resta (1 = recém-feito, 0 = vence agora, < 0 = vencido); null = sem dado
+function calibVida(t, s) {
+  const iv = intervalo(t); let p = null;
+  if (iv.h && s.rest !== null && s.rest !== undefined) p = s.rest / iv.h;
+  if (iv.m && s.alvoD) { const q = ((s.alvoD - hoje()) / 864e5) / (iv.m * 30.4); p = p === null ? q : Math.min(p, q); }
+  return p;
+}
+function calibDados() {
+  const out = [];
+  S.cfg.frota.forEach(v => CALIB.forEach(([id, nm]) => {
+    const t = A1M[id]; if (!t) return;
+    posicoes(v).forEach(pos => { if (!aplica(v, pos, t)) return; const s = situacao(v, pos, t); out.push({ v, pos, t, nm, s, om: omAberta(v.id, pos, id), vida: s.st === 'sem' ? null : calibVida(t, s) }); });
+  }));
+  return out;
+}
+const CORST = { venc: 'var(--bad)', viag: 'var(--warn)', ok: 'var(--ok)', sem: 'var(--line2)' };
+function ivTxt(t) { const iv = intervalo(t); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' meses' : ''].filter(Boolean).join(' ou ') || '—'; }
+function vCalib() {
+  const D = calibDados(), n = { venc: 0, viag: 0, ok: 0, sem: 0 }; let emOM = 0;
+  D.forEach(x => { if (n[x.s.st] !== undefined) n[x.s.st]++; if (x.om) emOM++; });
+  // A · placar por item
+  const placar = CALIB.map(([id, nm]) => {
+    const t = A1M[id]; if (!t) return '';
+    const L = D.filter(x => x.t.id === id), c = { venc: 0, viag: 0, ok: 0, sem: 0 }; L.forEach(x => { if (c[x.s.st] !== undefined) c[x.s.st]++; });
+    const T = L.length || 1;
+    const lista = st => L.filter(x => x.s.st === st).map(x => `<span data-tip="${esc(x.s.txt || '')}${x.om ? ' · OM ' + esc(x.om.num) + ' aberta' : ''}">${esc(x.v.nome)} ${x.pos}${x.om ? ' ✓OM' : ''}</span>`).join(', ');
+    return `<div class="card calp ${c.venc ? 'bad' : c.viag ? 'warn' : ''}"><div class="row" style="gap:6px"><span class="mono note">${id}</span><b>${esc(nm)}</b><span class="sp"></span><span class="pill p-mut">${ivTxt(t)}</span></div>
+     <div class="calnum"><span><b style="color:var(--bad)">${c.venc}</b>vencidos</span><span><b style="color:var(--warn)">${c.viag}</b>na viagem</span><span><b style="color:var(--ok)">${c.ok}</b>em dia</span><span><b style="color:var(--mut)">${c.sem}</b>sem hist.</span></div>
+     <div class="sbar"><i style="width:${c.venc / T * 100}%;background:var(--bad)"></i><i style="width:${c.viag / T * 100}%;background:var(--warn)"></i><i style="width:${c.ok / T * 100}%;background:var(--ok)"></i><i style="width:${c.sem / T * 100}%;background:var(--line2)"></i></div>
+     ${c.venc ? `<div class="note"><b style="color:var(--badt)">Vencido:</b> ${lista('venc')}</div>` : ''}${c.viag ? `<div class="note"><b style="color:var(--warnt)">Vence na viagem:</b> ${lista('viag')}</div>` : ''}${!c.venc && !c.viag ? `<div class="note">${L.length ? 'Nada vencendo.' : 'Item fora do plano da frota.'}</div>` : ''}</div>`;
+  }).join('');
+  // B · fila de urgência por embarcação
+  const ord = { venc: 0, viag: 1, ok: 2, sem: 3 };
+  const fila = S.cfg.frota.map(v => {
+    const L = D.filter(x => x.v.id === v.id), com = L.filter(x => x.vida !== null).sort((a, b) => a.vida - b.vida);
+    const pior = com[0] || null, sem = L.filter(x => x.s.st === 'sem').length, om = L.filter(x => x.om).length;
+    const st = L.reduce((m, x) => ord[x.s.st] < ord[m] ? x.s.st : m, 'sem');
+    return { v, L, com, pior, sem, om, st };
+  }).sort((a, b) => (a.pior ? a.pior.vida : 9) - (b.pior ? b.pior.vida : 9));
+  const pct = vi => Math.max(0, Math.min(100, vi * 100));
+  const linhas = fila.map(f => {
+    const p = f.pior, w = p ? Math.max(3, pct(p.vida)) : 0, cor = p ? CORST[p.s.st] : 'var(--line2)';
+    const ticks = f.com.slice(1).map(x => `<i class="tk" style="left:${pct(x.vida)}%;background:${CORST[x.s.st]}" data-tip="${x.t.id} ${esc(x.nm)} ${x.pos} · ${esc(x.s.txt || '')}"></i>`).join('');
+    return `<div class="crow"><div class="cnm"><b>${esc(f.v.nome)}</b>${f.sem ? `<span class="pill p-mut">${f.sem} sem histórico</span>` : ''}${f.om ? `<span class="pill p-inf">${f.om} em OM</span>` : ''}</div>
+     <div class="cbar"><div class="ctrack"><i class="cfill" style="width:${w}%;background:${cor}"></i>${ticks}</div>
+      <div class="note">${p ? `<b style="color:${p.s.st === 'venc' ? 'var(--badt)' : p.s.st === 'viag' ? 'var(--warnt)' : 'var(--ink)'}">${p.t.id} ${esc(p.nm)} ${p.pos}</b> · ${esc(p.s.txt || '')}${p.om ? ' · OM ' + esc(p.om.num) + ' aberta' : ''}` : 'Sem histórico: registre o último serviço para começar a contar.'}</div></div>
+     <button class="mbtn sm" data-calib="${f.v.id}">Ver itens</button></div>`;
+  }).join('');
+  return `<div class="vh"><div><h1>Ajuste e calibração MCP</h1><p>Itens de ajuste do Anexo I (folga de válvulas, bicos, ponto de injeção, rótulas, trocador de calor) e a limpeza da caixa de mar. Vencimento = horas OU meses, o que ocorrer primeiro. "Na viagem" = vence nas próximas ${S.cfg.viagemH} h.</p></div><span class="sp"></span><button class="mbtn" onclick="go('emitir')">＋ Emitir preventivas</button></div>
+  <div class="kgrid six">
+   <div class="card mini ${n.venc ? 'bad' : 'ok'}"><b>${n.venc}</b><span>vencidos</span></div>
+   <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>vencem na viagem</span></div>
+   <div class="card mini ok"><b>${n.ok}</b><span>em dia</span></div>
+   <div class="card mini"><b>${n.sem}</b><span>sem histórico</span></div>
+   <div class="card mini"><b>${emOM}</b><span>já com OM aberta</span></div>
+   <div class="card mini"><b>${D.length}</b><span>pontos controlados (item × motor)</span></div>
+  </div>
+  <h2 class="calh">A · Placar por item</h2>
+  <div class="kgrid">${placar}</div>
+  <div class="card"><div class="row"><h2>B · Fila de urgência por embarcação</h2><span class="sp"></span><span class="note">A barra mostra quanto ainda resta do intervalo do item mais apertado. Os tracinhos são os outros itens (passe o mouse).</span></div>
+   <div class="clegend note"><span><i style="background:var(--bad)"></i>vencido</span><span><i style="background:var(--warn)"></i>vence na viagem</span><span><i style="background:var(--ok)"></i>em dia</span><span class="sp"></span><span>0% = vence agora · 100% = recém-feito</span></div>
+   ${linhas || '<div class="note">Nenhuma embarcação cadastrada.</div>'}</div>`;
+}
+function calibModal(vid) {
+  const v = vessel(vid), D = calibDados().filter(x => x.v.id === vid);
+  const ord = { venc: 0, viag: 1, sem: 2, ok: 3 }; D.sort((a, b) => ord[a.s.st] - ord[b.s.st] || CALIB.findIndex(c => c[0] === a.t.id) - CALIB.findIndex(c => c[0] === b.t.id));
+  modal(`<div class="row"><h2>${esc(v.nome)} · ajuste e calibração</h2><span class="sp"></span><a class="mbtn sm pri" href="#emitir/${v.id}" data-close>Emitir OM</a><button class="mbtn" data-close>Fechar</button></div>
+   <div class="tw" style="max-height:60vh"><table class="t"><thead><tr><th>Pos.</th><th>Nº</th><th>Item</th><th>Intervalo</th><th>Último serviço</th><th>Situação</th><th></th></tr></thead><tbody>
+   ${D.map(x => `<tr><td>${posTag(x.pos)}</td><td class="mono">${x.t.id}</td><td>${esc(x.nm)}</td><td class="mono">${ivTxt(x.t)}</td><td class="mono">${x.s.L ? (x.s.L.h !== null ? nf(x.s.L.h) + ' h · ' : '') + brD(x.s.L.date) : '—'}</td><td>${pillSt(x.s.st)}<div class="note">${esc(x.s.txt || '')}</div></td><td>${x.om ? `<a class="mbtn sm" href="#om/${x.om.id}" data-close>OM ${esc(x.om.num)}</a>` : `<button class="mbtn sm" data-base="${v.id}|${x.pos}|${x.t.id}">Último serviço</button>`}</td></tr>`).join('')}
+   </tbody></table></div>`, true);
+  $('#modal').addEventListener('click', e => { const bs = e.target.closest('[data-base]'); if (bs) baseModal(...bs.dataset.base.split('|')); });
+}
+AFTER.calib = () => { $('#main').onclick = e => { const b = e.target.closest('[data-calib]'); if (b) calibModal(b.dataset.calib); }; };
 function vesselModal(vid, filtro) {
   const v = vessel(vid); filtro = filtro || 'pend';
   const p = painelVessel(v).filter(x => filtro === 'todos' ? true : filtro === 'sem' ? x.s.st === 'sem' : ['venc', 'viag'].includes(x.s.st));
