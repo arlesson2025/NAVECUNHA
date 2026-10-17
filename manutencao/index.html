@@ -509,7 +509,7 @@ a.mbtn{text-decoration:none}
 .p-ok{background:var(--okb);color:var(--okt)}.p-warn{background:var(--warnb);color:var(--warnt)}.p-bad{background:var(--badb);color:var(--badt)}.p-inf{background:#E3EEFA;color:var(--acc)}.p-mut{background:var(--ice2);color:var(--mut)}.p-navy{background:var(--navy);color:#fff}
 .pos{display:inline-flex;align-items:center;gap:5px;font-family:var(--fm);font-size:12px;font-weight:700}
 .pos::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c,var(--mut))}
-.pos.BB{--c:var(--bb)}.pos.BE{--c:var(--be)}.pos.MCA1,.pos.MCA2{--c:var(--acc)}.pos.UN{--c:var(--navy)}
+.pos.BB{--c:var(--bb)}.pos.BE{--c:var(--be)}.pos.CE{--c:var(--navy)}.pos.MCA1,.pos.MCA2,.pos.MCA3{--c:var(--acc)}.pos.UN{--c:var(--navy)}
 .mono{font-family:var(--fm);font-variant-numeric:tabular-nums}
 .mut{color:var(--mut)}
 .note{font-size:12.5px;color:var(--mut)}
@@ -803,7 +803,41 @@ const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 const REGN = { fr049:'Nº FR 049_B (troca de óleo/filtros)', fr016:'Nº FR 016_E (resíduos)', lote:'Lote e validade do lubrificante/fluido (5.9)', instr:'Nº do instrumento calibrado (5.9)', end:'Nº do laudo de END (5.9)', cert:'Certificado do material (5.9)', terc:'Relatório técnico do terceiro (5.8)', pt:'Nº da PT do SESMT (5.11.2)', desg:'Controle de desgaste NP 6.1 (novo / limite / medido)' };
 const EQN = { MCP:'MCP Mitsubishi S6R2-MPTK2', FAE80:'Bomba FAE 80', ALTPE:'Alternador ponta de eixo', CXMAR:'Caixa de mar', HITACHI:'Reversor Hitachi Nico MGN91BL', MASSON:'Reversor Masson MM W3700', REINTJES:'Reversor REINTJES WAF 364', EIXO:'Eixo propulsor', HELICE:'Hélice', GOV:'Sistema de governo', MWM:'MCA MWM D229-4NA', YANMAR:'MCA Yanmar 4TNV98-GGE', FAE50:'Bomba FAE 50', BAMB30:'Alternador Bambozzi 30 kVA', QGD:'QGD, aterramento e motores elétricos', MBINC:'Motobomba de incêndio', PEMERG:'Parada de emergência do MCP', PORAO:'Sensores e bombas de porão', RACOR:'Filtros Racor e válvulas', TANQ:'Tanques de combustível', TRANSF:'Transferência de combustível', NAV:'Rádio VHF e luzes de navegação', SOM:'Sinalização sonora', AMARRA:'Guinchos, molinetes e cabos', CASCO:'Casco, convés e estanqueidade', HAB:'Acomodações, cozinha e sanitários', POPA:'Motor de popa Yamaha 15 HP', BOTE:'Bote de alumínio', MB5:'Motobomba 5 HP' };
-const POSN = { BB:'Bombordo', BE:'Boreste', MCA1:'MCA 1', MCA2:'MCA 2', UN:'Embarcação' };
+const POSN = { BB:'Bombordo', BE:'Boreste', CE:'Central', MCA1:'MCA 1', MCA2:'MCA 2', MCA3:'MCA 3', UN:'Embarcação' };
+const MCAS = ['MCA1', 'MCA2', 'MCA3'];
+const isMcp = p => p === 'BB' || p === 'BE' || p === 'CE';
+const fixP = (vid, pos) => { const v = vessel(vid); if (!v) return pos; if (isMcp(pos) && !mcpPos(v).includes(pos)) return mcpPos(v)[0]; if (MCAS.includes(pos) && !v.mca[pos]) return 'UN'; return pos; };
+const optsPos = vid => { const v = vessel(vid); if (!v) return ''; return posicoes(v).map(p => `<option value="${p}"${p === 'UN' ? ' selected' : ''}>${p === 'UN' ? 'N/A (embarcação)' : isMcp(p) ? (p === 'CE' ? 'MCP central' : 'MCP ' + p) : posNome(v, p) + ' · ' + mcaNome(v, p)}</option>`).join(''); };
+// modelos de MCA da frota → bloco do Anexo I (3.1 MWM / 3.2 Yanmar)
+const MCA_MOD = { 'MWM D229-4NA': 'MWM', 'MWM D229-4': 'MWM', 'MWM D229-3T': 'MWM', 'MWM L229-4': 'MWM', 'Yanmar 4TNV98-GGE': 'YANMAR', 'Yanmar NSB18': 'YANMAR' };
+// cadastro da frota conforme a Matriz técnica de equipamentos e lubrificação (17/10/2026)
+const FROTA_MATRIZ = {
+  'CJA I':     { mcp: 'bi',   mod: 'S6R2-T2MPTK',   rev: 'REINTJES', mca: [['MWM', 'Yanmar 4TNV98-GGE', 'Bombordo'], ['MWM', 'MWM L229-4', 'Boreste']] },
+  'CJA II':    { mcp: 'bi',   mod: 'S6R-T2MPTK2',   rev: 'MASSON',   mca: [['', 'MWM D229-3T', 'Bombordo'], ['', 'MWM D229-3T', 'Boreste']] },
+  'CJA X':     { mcp: 'mono', mod: 'S6R2-T2MPTK',   rev: 'REINTJES', mca: [['', 'Yanmar 4TNV98-GGE', 'Bombordo'], ['', 'Yanmar NSB18', 'Boreste']] },
+  'CJA XIII':  { mcp: 'bi',   mod: 'S6R-T2MPTK2',   rev: 'MASSON',   mca: [['', 'MWM D229-3T', 'Bombordo'], ['', 'MWM D229-3T', 'Boreste']] },
+  'CJA XIV':   { mcp: 'mono', mod: 'S6R2MPTK3',     rev: 'HITACHI',  mca: [['', 'MWM D229-4', 'Bombordo'], ['', 'MWM D229-4', 'Boreste']] },
+  'CJA XV':    { mcp: 'mono', mod: 'S6R2MPTK3',     rev: 'HITACHI',  mca: [['', 'MWM D229-3T', 'Bombordo'], ['', 'MWM D229-4NA', 'Boreste']] },
+  'CJA XVI':   { mcp: 'mono', mod: 'S6R2MPTK3',     rev: 'HITACHI',  mca: [['', 'MWM D229-4NA', 'Linha de centro'], ['', 'MWM L229-4', 'Boreste']] },
+  'CJA XVII':  { mcp: 'mono', mod: 'S6R2-T2MPTK3M', rev: 'MASSON',   mca: [['', 'Yanmar 4TNV98-GGE', 'Linha de centro'], ['', 'MWM D229-4NA', 'Boreste']] },
+  'CJA XVIII': { mcp: 'mono', mod: 'S6R2-T2MPTK3M', rev: 'HITACHI',  mca: [['', 'MWM D229-4NA', 'Bombordo'], ['', 'MWM D229-4NA', 'Boreste']] },
+  'CJA XIX':   { mcp: 'bi',   mod: 'S6R2-T2MPTK3M', rev: 'HITACHI',  mca: [['', 'MWM D229-4NA', 'Bombordo'], ['', 'Yanmar 4TNV98-GGE', 'Boreste']] },
+  'CJA XX':    { mcp: 'bi',   mod: 'S6R2-T2MPTK3M', rev: 'HITACHI',  mca: [['', 'Yanmar 4TNV98-GGE', 'Bombordo'], ['', 'Yanmar 4TNV98-GGE', 'Boreste'], ['', 'MWM D229-4', 'Linha de centro (canhão SCI)']] },
+  'CJA XXI':   { mcp: 'bi',   mod: 'S6R-T2MPTK2',   rev: 'MASSON',   mca: [['', 'MWM D229-4', 'Bombordo'], ['', 'MWM D229-4', 'Boreste']] },
+};
+const mcpPos = v => v && v.mcp === 'mono' ? ['CE'] : ['BB', 'BE'];
+const mpos = vid => mcpPos(vessel(vid))[0];
+const mcaNome = (v, p) => (v.mcaMod && v.mcaMod[p]) || EQN[v.mca[p]] || p;
+const posNome = (v, p) => p === 'CE' ? 'Central' : MCAS.includes(p) && v && v.mcaLoc && v.mcaLoc[p] ? POSN[p] + ' (' + v.mcaLoc[p] + ')' : POSN[p] || p;
+// aplica o cadastro da matriz a uma embarcação que ainda está no modelo antigo (sem o campo mcp)
+function vesselDaMatriz(v) {
+  const m = FROTA_MATRIZ[v.nome]; if (!m || v.mcp) return v;
+  const ps = m.mcp === 'mono' ? ['CE'] : ['BB', 'BE'];
+  v.mcp = m.mcp; v.rev = {}; v.mcpMod = {}; ps.forEach(p => { v.rev[p] = m.rev; v.mcpMod[p] = m.mod; });
+  v.mca = {}; v.mcaMod = {}; v.mcaLoc = {}; m.mca.forEach((x, i) => { const k = MCAS[i]; v.mcaMod[k] = x[1]; v.mca[k] = MCA_MOD[x[1]]; v.mcaLoc[k] = x[2]; });
+  v.off = v.off || []; return v;
+}
+const normFrota = cfg => { (cfg.frota || []).forEach(v => { if (!v.mcp) vesselDaMatriz(v); if (!v.mcp) { v.mcp = 'bi'; } v.rev = v.rev || {}; v.mca = v.mca || {}; }); return cfg; };
 const CLASSES = { 'Crítica':{h:0, cor:'var(--bad)', fundo:'var(--badb)', prazo:'Imediato', acao:'Interdição + RNC'}, 'Alta':{h:4, cor:'var(--warn)', fundo:'var(--warnb)', prazo:'≤ 4 horas', acao:'Prioridade + RNC'}, 'Média':{h:48, cor:'var(--acc)', fundo:'#E3EEFA', prazo:'≤ 48 horas', acao:'Programação'}, 'Baixa':{h:360, cor:'var(--ok)', fundo:'var(--okb)', prazo:'≤ 15 dias', acao:'Rotina'} };
 const FROTA_PADRAO = ['CJA I','CJA II','CJA X','CJA XIII','CJA XIV','CJA XV','CJA XVI','CJA XVII','CJA XVIII','CJA XIX','CJA XX','CJA XXI'];
 const ETAPAS_P = [['emitida','Emitida'],['abordo','A bordo'],['executada','Executada'],['conferencia','Em conferência'],['encerrada','Encerrada']];
@@ -851,7 +885,7 @@ const S = {
   lastSync: 0, syncState: 'local', syncMsg: 'Modo local',
 };
 function cfgPadrao() {
-  return { frota: FROTA_PADRAO.map((n, i) => ({ id: 'v' + (i + 1), nome: n, rev: { BB: '', BE: '' }, mca: { MCA1: 'MWM', MCA2: 'YANMAR' }, off: [] })), intervalos: {}, viagemH: 120, cfgAt: 0 };
+  return { frota: FROTA_PADRAO.map((n, i) => vesselDaMatriz({ id: 'v' + (i + 1), nome: n, off: [] })), intervalos: {}, viagemH: 120, cfgAt: 0 };
 }
 const recs = kind => [...S.recs.values()].filter(r => r.kind === kind && !r.excluido);
 const oms = () => recs('om');
@@ -907,7 +941,7 @@ async function syncNow() {
     if (j.ok) {
       await mergeRemote(j.records || []);
       for (const id of j.deleted || []) { const r = S.recs.get(id); if (r) { S.recs.delete(id); if (!MEM) await DB.del(id); } }
-      if (j.cfg && (j.cfgAt || 0) > (S.cfg.cfgAt || 0)) { S.cfg = Object.assign(cfgPadrao(), j.cfg, { cfgAt: j.cfgAt }); await kvSet('cfg', S.cfg); }
+      if (j.cfg && (j.cfgAt || 0) > (S.cfg.cfgAt || 0)) { S.cfg = normFrota(Object.assign(cfgPadrao(), j.cfg, { cfgAt: j.cfgAt })); await kvSet('cfg', S.cfg); }
       S.lastSync = j.now || Date.now(); await kvSet('lastSync', S.lastSync);
       setSync(S.pending.size ? 'pend' : 'ok', S.pending.size ? S.pending.size + ' aguardando envio' + (S.session ? '' : ' (entre para enviar)') : 'Sincronizado ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
       rerender();
@@ -954,16 +988,18 @@ async function login(name, pw) {
 /* =====================================================================
    CÁLCULOS: aplicabilidade, horímetros, vencimentos
    ===================================================================== */
-function intervalo(t) { const o = (S.cfg.intervalos || {})[t.id]; return { h: o && o.h !== undefined && o.h !== '' ? (o.h === null ? null : +o.h) : t.h, m: o && o.m !== undefined && o.m !== '' ? (o.m === null ? null : +o.m) : t.m }; }
-function posicoes(v) { const p = ['BB', 'BE']; ['MCA1', 'MCA2'].forEach(k => { if (v.mca[k]) p.push(k); }); p.push('UN'); return p; }
+// intervalos específicos de modelo (matriz técnica) quando o bloco do Anexo I é de outro modelo da mesma família
+const MOD_IV = { 'Yanmar NSB18': { '3.2.9': { h: 100, m: 6 } } };
+function intervalo(t, v, pos) { const md = v && pos && v.mcaMod && v.mcaMod[pos] && MOD_IV[v.mcaMod[pos]] && MOD_IV[v.mcaMod[pos]][t.id]; if (md) return { h: md.h, m: md.m }; const o = (S.cfg.intervalos || {})[t.id]; return { h: o && o.h !== undefined && o.h !== '' ? (o.h === null ? null : +o.h) : t.h, m: o && o.m !== undefined && o.m !== '' ? (o.m === null ? null : +o.m) : t.m }; }
+function posicoes(v) { return mcpPos(v).concat(MCAS.filter(k => v.mca && v.mca[k]), ['UN']); }
 function aplica(v, pos, t) {
   if ((v.off || []).includes(t.eq)) return false;
-  if (t.scope === 'bordo') { if (pos !== 'BB' && pos !== 'BE') return false; if (['HITACHI', 'MASSON', 'REINTJES'].includes(t.eq)) return v.rev[pos] === t.eq; return true; }
-  if (t.scope === 'mca') { if (pos !== 'MCA1' && pos !== 'MCA2') return false; if (t.eq === 'MWM' || t.eq === 'YANMAR') return v.mca[pos] === t.eq; return pos === 'MCA1'; }
+  if (t.scope === 'bordo') { if (!mcpPos(v).includes(pos)) return false; if (['HITACHI', 'MASSON', 'REINTJES'].includes(t.eq)) return v.rev[pos] === t.eq; return true; }
+  if (t.scope === 'mca') { if (!MCAS.includes(pos) || !v.mca[pos]) return false; if (t.eq === 'MWM' || t.eq === 'YANMAR') return v.mca[pos] === t.eq; return pos === 'MCA1'; }
   return pos === 'UN';
 }
 function itensDe(v, pos) { return A1.filter(t => aplica(v, pos, t)); }
-function posHor(pos, t) { if (pos === 'BB' || pos === 'BE' || pos === 'MCA1' || pos === 'MCA2') return pos; return t && t.eq === 'POPA' ? 'POPA' : 'BB'; }
+function posHor(pos, t, vid) { if (isMcp(pos) || MCAS.includes(pos)) return pos; return t && t.eq === 'POPA' ? 'POPA' : (vid && vessel(vid) ? mpos(vid) : 'BB'); }
 function horAtual(vid, pos) {
   let best = null;
   recs('hor').forEach(r => { if (r.vessel === vid && r.pos === pos && (!best || r.date > best.date || (r.date === best.date && r.h > best.h))) best = r; });
@@ -988,15 +1024,15 @@ let _hdMemo = { n: -1, m: {} };
 function horasDia(vid) {
   if (_hdMemo.n !== S.recs.size) _hdMemo = { n: S.recs.size, m: {} };
   if (_hdMemo.m[vid] !== undefined) return _hdMemo.m[vid];
-  const L = recs('hor').filter(r => r.vessel === vid && r.pos === 'BB').sort((a, b) => a.date < b.date ? -1 : 1);
+  const mp = vessel(vid) ? mpos(vid) : 'BB', L = recs('hor').filter(r => r.vessel === vid && r.pos === mp).sort((a, b) => a.date < b.date ? -1 : 1);
   let t = 20;
   if (L.length > 1) { const b = L[L.length - 1], lim = isoD(new Date(pD(b.date).getTime() - 90 * 864e5)); const a = L.find(r => r.date >= lim) || L[0]; const d = (pD(b.date) - pD(a.date)) / 864e5; if (d >= 7 && b.h > a.h) t = (b.h - a.h) / d; }
   return (_hdMemo.m[vid] = Math.max(4, Math.min(24, t)));
 }
 function situacao(v, pos, t, viagemH) {
-  const iv = intervalo(t);
+  const iv = intervalo(t, v, pos);
   if (t.kind !== 'prog' || (!iv.h && !iv.m)) return { st: 'cond', txt: t.kind === 'novo' ? 'Só para motor novo/revisado' : 'Por condição' };
-  const hp = posHor(pos, t), hr = horAtual(v.id, hp), cur = hr ? hr.h : null;
+  const hp = posHor(pos, t, v.id), hr = horAtual(v.id, hp), cur = hr ? hr.h : null;
   const L = ultimoServico(v.id, pos, t.id);
   if (!L) return { st: 'sem', txt: 'Sem último serviço registrado', cur, hp };
   viagemH = viagemH === undefined ? viagemDe(v) : viagemH;
@@ -1029,7 +1065,7 @@ function omAtrasada(o) {
   if (o.tipo === 'C') { if (o.inicio) return false; const p = prazoCorretiva(o); return p ? hoje() > p : false; }
   if (!['emitida', 'abordo'].includes(o.status)) return false;
   const v = vessel(o.vessel); if (!v) return false;
-  const hr = horAtual(o.vessel, posHor(o.pos, A1M[(o.items || [])[0]]));
+  const hr = horAtual(o.vessel, posHor(o.pos, A1M[(o.items || [])[0]], o.vessel));
   if (o.alvoH && hr && hr.h > o.alvoH) return true;
   if (o.alvoD && hoje() > pD(o.alvoD)) return true;
   return false;
@@ -1054,7 +1090,7 @@ function indispHoras(ini, fim) {
 function kpiDisp(y, m) { const ini = mesIni(y, m), fim0 = mesIni(y, m + 1), fim = fim0 > hoje() ? hoje() : fim0; if (fim <= ini) return null; const tot = S.cfg.frota.length * (fim - ini) / 3600e3; return Math.max(0, (tot - indispHoras(ini, fim)) / tot * 100); }
 function horasOperacao(ini, fim) {
   let tot = 0;
-  S.cfg.frota.forEach(v => { const a = horEm(v.id, 'BB', isoD(ini)), b = horEm(v.id, 'BB', isoD(fim)); if (b) { const a0 = a || recs('hor').filter(r => r.vessel === v.id && r.pos === 'BB').sort((p, q) => p.date < q.date ? -1 : 1)[0]; if (a0) tot += Math.max(0, b.h - a0.h); } });
+  S.cfg.frota.forEach(v => { const mp = mcpPos(v)[0], a = horEm(v.id, mp, isoD(ini)), b = horEm(v.id, mp, isoD(fim)); if (b) { const a0 = a || recs('hor').filter(r => r.vessel === v.id && r.pos === mp).sort((p, q) => p.date < q.date ? -1 : 1)[0]; if (a0) tot += Math.max(0, b.h - a0.h); } });
   return tot;
 }
 function kpiMTBF(fimMes) { const ini = new Date(fimMes); ini.setFullYear(ini.getFullYear() - 1); const f = oms().filter(o => ehFalha(o) && o.abertura && pD(o.abertura) >= ini && pD(o.abertura) < fimMes).length; const h = horasOperacao(ini, fimMes); return { v: f ? h / f : null, h, f }; }
@@ -1067,7 +1103,7 @@ function trimestre(d) { return { y: d.getFullYear(), q: Math.floor(d.getMonth() 
 function kpiPreditivo(y, q) {
   const ini = new Date(y, q * 3, 1), fim = new Date(y, q * 3 + 3, 1), d = { tend: [0, 0], oleo: [0, 0], comp: [0, 0] };
   const enc = oms().filter(o => o.tipo === 'P' && o.status === 'encerrada' && o.dreal && pD(o.dreal) >= ini && pD(o.dreal) < fim);
-  S.cfg.frota.forEach(v => ['BB', 'BE'].forEach(pos => {
+  S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => {
     if (!aplica(v, pos, A1M['1.1.30'])) return;
     d.tend[0]++; if (enc.some(o => o.vessel === v.id && o.pos === pos && (o.items || []).includes('1.1.30'))) d.tend[1]++;
     // cobertura: MCP sem laudo há 24 meses no início do trimestre entra como programado
@@ -1106,22 +1142,21 @@ function rnd(seed) { let s = seed % 2147483647; if (s <= 0) s += 2147483646; ret
 function gerarExemplo() {
   const R = rnd(20261017), out = [], d0 = hoje(), DIAS = 190;
   const cfg = S.cfg; const revs = ['REINTJES', 'MASSON', 'HITACHI'];
-  cfg.frota.forEach((v, i) => { if (!v.rev.BB && !v.rev.BE) { v.rev.BB = v.rev.BE = revs[i % 3]; } });
-  cfg.revExemplo = true;
+  cfg.frota.forEach((v, i) => { const ps = mcpPos(v); if (ps.every(p => !v.rev[p])) { ps.forEach(p => v.rev[p] = revs[i % 3]); cfg.revExemplo = true; } });
   const rate = {};
   cfg.frota.forEach((v, i) => {
-    rate[v.id] = { BB: 9 + (i % 4) * 1.6, BE: 8.6 + (i % 4) * 1.6, MCA1: 7.5, MCA2: 5.5, POPA: .25 };
-    const st = { BB: 2400 + i * 870, BE: 2380 + i * 866, MCA1: 3100 + i * 640, MCA2: 2900 + i * 610, POPA: 120 + i * 9 };
+    rate[v.id] = { BB: 9 + (i % 4) * 1.6, BE: 8.6 + (i % 4) * 1.6, CE: 9.3 + (i % 4) * 1.6, MCA1: 7.5, MCA2: 5.5, MCA3: 2.5, POPA: .25 };
+    const st = { BB: 2400 + i * 870, BE: 2380 + i * 866, CE: 2390 + i * 868, MCA1: 3100 + i * 640, MCA2: 2900 + i * 610, MCA3: 900 + i * 50, POPA: 120 + i * 9 };
     for (let k = DIAS; k >= 0; k -= 7) {
       const dt = new Date(d0); dt.setDate(dt.getDate() - k);
-      Object.keys(st).forEach(p => { if ((p === 'MCA1' || p === 'MCA2') && !v.mca[p]) return; const h = Math.round(st[p] + (DIAS - k) * rate[v.id][p]); out.push({ id: 'ex-hor-' + v.id + p + k, kind: 'hor', vessel: v.id, pos: p, h, date: isoD(dt), seed: true }); });
+      Object.keys(st).forEach(p => { if (MCAS.includes(p) && !v.mca[p]) return; if (isMcp(p) && !mcpPos(v).includes(p)) return; const h = Math.round(st[p] + (DIAS - k) * rate[v.id][p]); out.push({ id: 'ex-hor-' + v.id + p + k, kind: 'hor', vessel: v.id, pos: p, h, date: isoD(dt), seed: true }); });
     }
     v._st = st;
   });
   const curH = (v, p) => Math.round(v._st[p] + DIAS * rate[v.id][p]);
   // último serviço de cada item
   cfg.frota.forEach(v => posicoes(v).forEach(pos => itensDe(v, pos).forEach(t => {
-    if (t.kind !== 'prog') return; const iv = intervalo(t); const hp = posHor(pos, t);
+    if (t.kind !== 'prog') return; const iv = intervalo(t, v, pos); const hp = posHor(pos, t, v.id);
     const f = R() * 1.03; let h = null, date;
     if (iv.h) { h = Math.max(0, Math.round(curH(v, hp) - f * iv.h)); const dias = (curH(v, hp) - h) / rate[v.id][hp]; date = new Date(d0); date.setDate(date.getDate() - Math.round(dias)); if (iv.m) { const lim = addM(d0, -iv.m * f); if (lim > date) date = lim; } }
     else { date = new Date(d0); date.setDate(date.getDate() - Math.round(f * iv.m * 30.4)); }
@@ -1133,7 +1168,7 @@ function gerarExemplo() {
   cfg.frota.forEach((v, i) => {
     for (let k = 0; k < 6; k++) {
       const dias = 8 + k * 30 + Math.round(R() * 18); const dt = new Date(d0); dt.setDate(dt.getDate() - dias);
-      const pos = k % 2 ? 'BE' : 'BB'; const h = Math.round(v._st[pos] + (DIAS - dias) * rate[v.id][pos]);
+      const pos = mcpPos(v)[k % mcpPos(v).length]; const h = Math.round(v._st[pos] + (DIAS - dias) * rate[v.id][pos]);
       const items = k % 3 === 0 ? ['1.1.30'] : k % 3 === 1 ? ['1.1.2', '1.1.3'] : ['1.1.29'];
       out.push({ id: 'ex-om-' + (++num), kind: 'om', tipo: 'P', num: String(num), vessel: v.id, pos, items, status: 'encerrada', emitAt: isoD(new Date(dt.getTime() - 4 * 864e5)), alvoH: h + 20, hreal: h, dreal: isoD(dt), fechadoAt: dt.getTime() + 2 * 864e5, indispH: k % 3 === 1 ? Math.round(4 + R() * 14) : 0, fotos: FOT(R() > .08), conf: {}, extras: [], exec: 'Equipe própria', execn: 'CTF de bordo', resultado: 'Conforme', seed: true, updatedAt: dt.getTime(), createdAt: dt.getTime() });
     }
@@ -1153,7 +1188,7 @@ function gerarExemplo() {
     [9, 'v4', 'BE', 'Alta', '1.0 Sistema de Propulsão', 'Vazamento no tubo de alta pressão de combustível', 6, 'Não'],
   ];
   let rnc = 24;
-  CORR.forEach(([dias, vid, pos, cl, sis, desc, dur, interd]) => {
+  CORR.forEach(([dias, vid, pos, cl, sis, desc, dur, interd]) => { pos = fixP(vid, pos);
     const a = new Date(d0); a.setDate(a.getDate() - dias); a.setHours(7 + dias % 9, 15);
     const lib = new Date(a.getTime() + dur * 3600e3);
     out.push({ id: 'ex-om-' + (++num), kind: 'om', tipo: 'C', num: String(num), vessel: vid, pos, status: 'encerrada', abertura: isoDT(a), sistema: sis, equip: '', classe: cl, rnc: cl === 'Crítica' || cl === 'Alta' ? 'RNC-2026-0' + (++rnc) : '', descricao: desc, interd, interdDT: interd === 'Sim' ? isoDT(a) : '', inicio: isoDT(new Date(a.getTime() + 1800e3)), termino: isoDT(new Date(lib.getTime() - 1800e3)), liberacao: isoDT(lib), resultado: 'Conforme', fotos: FOT(true), fechadoAt: lib.getTime(), seed: true, updatedAt: lib.getTime(), createdAt: a.getTime() });
@@ -1163,7 +1198,7 @@ function gerarExemplo() {
   out.push({ id: 'ex-om-48202', kind: 'om', tipo: 'C', num: '48202', vessel: 'v7', pos: 'UN', status: 'execucao', abertura: isoDT(a1), sistema: '2.0 Manobrabilidade e Governo', equip: 'Orbitrol do governo', classe: 'Alta', rnc: 'RNC-2026-036', descricao: 'Folga excessiva no volante e vazamento no bloco de válvulas', origem: 'Em viagem (Autotrac)', interd: 'N/A', inicio: isoDT(new Date(a1.getTime() + 3600e3)), fotos: [], seed: true });
   out.push({ id: 'ex-om-48195', kind: 'om', tipo: 'C', num: '48195', vessel: 'v10', pos: 'BE', status: 'aberta', abertura: isoDT(a2), sistema: '3.0 Geração Elétrica de Bordo', equip: 'Alternador de carga do MCP', classe: 'Média', rnc: '', descricao: 'Ruído no rolamento do alternador de carga', origem: 'FR 027_L', interd: 'N/A', fotos: [], seed: true });
   // preventivas em andamento
-  const mk = (n, vid, pos, items, status, diasEmit) => { const v = vessel(vid); const hp = pos; const dt = new Date(d0); dt.setDate(dt.getDate() - diasEmit); const ch = curH(v, hp); out.push({ id: 'ex-om-' + n, kind: 'om', tipo: 'P', num: String(n), vessel: vid, pos, items, status, emitAt: isoD(dt), alvoH: ch + 35, conf: {}, extras: [], fotos: [], exec: 'Equipe própria (CTF/MFM)', seed: true }); };
+  const mk = (n, vid, pos, items, status, diasEmit) => { pos = fixP(vid, pos); items = items.filter(id => aplica(vessel(vid), pos, A1M[id])); if (!items.length) return; const v = vessel(vid); const hp = pos; const dt = new Date(d0); dt.setDate(dt.getDate() - diasEmit); const ch = curH(v, hp); out.push({ id: 'ex-om-' + n, kind: 'om', tipo: 'P', num: String(n), vessel: vid, pos, items, status, emitAt: isoD(dt), alvoH: ch + 35, conf: {}, extras: [], fotos: [], exec: 'Equipe própria (CTF/MFM)', seed: true }); };
   mk(48213, 'v5', 'BE', ['1.1.1', '1.1.2', '1.1.3'], 'executada', 6);
   mk(48190, 'v1', 'BB', ['1.1.9', '1.1.10'], 'abordo', 3);
   mk(48177, 'v3', 'MCA1', [itensDe(vessel('v3'), 'MCA1').find(t => t.kind === 'prog').id], 'emitida', 1);
@@ -1176,7 +1211,7 @@ async function carregarExemplo() { const l0 = gerarExemplo(); l0.forEach(r => S.
 async function limparExemplo() {
   const ids = [...S.recs.values()].filter(r => r.seed).map(r => r.id);
   for (const id of ids) { S.recs.delete(id); if (MEM) MEM.delete(id); else await DB.del(id); }
-  if (S.cfg.revExemplo) { S.cfg.frota.forEach(v => { v.rev = { BB: '', BE: '' }; }); S.cfg.revExemplo = false; await kvSet('cfg', S.cfg); }
+  if (S.cfg.revExemplo) { S.cfg.frota.forEach(v => { if (!FROTA_MATRIZ[v.nome]) v.rev = {}; }); S.cfg.revExemplo = false; await kvSet('cfg', S.cfg); }
   await kvSet('seeded', 'limpo');
 }
 const temExemplo = () => [...S.recs.values()].some(r => r.seed);
@@ -1219,7 +1254,7 @@ const AFTER = {};
 function banners() {
   let h = '';
   if (temExemplo()) h += `<div class="banner ex"><b>Dados de exemplo.</b> O painel está mostrando uma frota simulada para você ver o sistema funcionando.<span class="sp"></span>${can.admin() ? '<button class="mbtn sm" data-act="limparEx">Limpar dados de exemplo</button>' : '<span>O Supervisor limpa em Administração.</span>'}</div>`;
-  if (S.cfg.frota.some(v => !v.rev.BB || !v.rev.BE) && VIEW !== 'admin') h += `<div class="banner info">Há embarcações sem o modelo do reversor informado. Os itens do reversor só aparecem depois de configurar em <a href="#admin">Administração › Frota</a>.</div>`;
+  if (S.cfg.frota.some(v => mcpPos(v).some(p => !v.rev[p])) && VIEW !== 'admin') h += `<div class="banner info">Há embarcações sem o modelo do reversor informado. Os itens do reversor só aparecem depois de configurar em <a href="#admin">Administração › Frota</a>.</div>`;
   if (MEM) h += `<div class="banner bad">Este navegador bloqueou o armazenamento. Os dados só valem até fechar a página. Abra em uma janela normal.</div>`;
   return h;
 }
@@ -1328,7 +1363,7 @@ function vFrota() {
   const cards = S.cfg.frota.map(v => {
     const p = painelVessel(v).filter(x => x.s.st !== 'cond'); const n = { venc: 0, viag: 0, ok: 0, sem: 0 }; p.forEach(x => { n[x.s.st]++; }); const T = p.length || 1;
     const it = interditada(v.id), bq = p.some(x => x.s.st === 'venc' && x.t.prio === 'Crítica' && !x.om);
-    const hrs = posicoes(v).filter(x => x !== 'UN').map(pos => { const h = horAtual(v.id, pos); return `${posTag(pos)}<span>${pos === 'BB' || pos === 'BE' ? 'MCP · ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : '<i class="mut">reversor ?</i>') : EQN[v.mca[pos]]}</span><span class="mono">${h ? nf(h.h) + ' h' : '—'}</span>`; }).join('');
+    const hrs = posicoes(v).filter(x => x !== 'UN').map(pos => { const h = horAtual(v.id, pos); return `${posTag(pos)}<span>${isMcp(pos) ? 'MCP' + (v.mcpMod && v.mcpMod[pos] ? ' ' + v.mcpMod[pos] : '') + ' · ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : '<i class="mut">reversor ?</i>') : mcaNome(v, pos)}</span><span class="mono">${h ? nf(h.h) + ' h' : '—'}</span>`; }).join('');
     return `<button class="card vcard" data-vessel="${v.id}"><div class="row"><h3>${esc(v.nome)}</h3><span class="sp"></span>${it ? '<span class="pill p-bad">Interditada</span>' : bq ? '<span class="pill p-bad">Saída bloqueada</span>' : ''}</div>
      <div class="hrs">${hrs}</div>
      <div class="note">Próxima viagem: <b>${nf(viagemDe(v))} h</b>${+v.viagH > 0 ? '' : ' (padrão)'}</div>
@@ -1459,7 +1494,7 @@ function saudeMCP(v, pos) {
   const cobVenc = !oleo || mesesOleo >= COMP.cobMeses;
   return { v, pos, H, u, a, queda, st, txt, ov, desdeOv, oleo, mesesOleo, cobVenc, omOleo: omAberta(v.id, pos, '1.1.29') };
 }
-function overDados() { const out = []; S.cfg.frota.forEach(v => ['BB', 'BE'].forEach(pos => { if ((v.off || []).includes('MCP')) return; out.push(saudeMCP(v, pos)); })); return out; }
+function overDados() { const out = []; S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => { if ((v.off || []).includes('MCP')) return; out.push(saudeMCP(v, pos)); })); return out; }
 // fila do rodízio: cobertura vencida (> 24 meses ou nunca) primeiro; depois pior compressão, maior queda
 function rodizio(D) {
   const SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
@@ -1521,15 +1556,16 @@ function ovModal(vid, pos) {
 }
 function compModal(vid, pos) {
   if (!precisa(false)) return;
-  vid = vid || S.cfg.frota[0].id; pos = pos || 'BB';
+  vid = vid || S.cfg.frota[0].id; pos = pos || mpos(vid);
   const h = horAtual(vid, pos);
   modal(`<h2>Lançar teste de compressão</h2><p class="note">Use para testes feitos fora do CTLE_MAN ou antes dele. O teste feito junto com a calibração dos bicos é lançado na própria OM do item 1.1.12.</p>
    <div class="g"><label class="f s3">Embarcação<select id="cV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
-   <label class="f s3">Motor<select id="cP"><option${pos === 'BB' ? ' selected' : ''}>BB</option><option${pos === 'BE' ? ' selected' : ''}>BE</option></select></label>
+   <label class="f s3">Motor<select id="cP">${mcpPos(vessel(vid)).map(p => `<option value="${p}"${p === pos ? ' selected' : ''}>${p === 'CE' ? 'Central' : p}</option>`).join('')}</select></label>
    <label class="f s3">Data do teste<input id="cD" type="date" value="${isoD(hoje())}"></label><label class="f s3">Horímetro<input id="cH" inputmode="numeric" value="${h ? h.h : ''}"></label>
    ${[1, 2, 3, 4, 5, 6].map(i => `<label class="f s2">Cilindro ${i} (MPa)<input data-cc="${i}" inputmode="decimal" placeholder="ex.: 1,72"></label>`).join('')}
    <label class="f s3">Rotação no teste (rpm)<input id="cR" inputmode="numeric" placeholder="~120"></label></div>
    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="cOk">Salvar</button></div>`);
+  $('#cV').onchange = () => { $('#cP').innerHTML = mcpPos(vessel($('#cV').value)).map(p => `<option value="${p}">${p === 'CE' ? 'Central' : p}</option>`).join(''); };
   $('#cOk').onclick = async () => {
     const vals = [...document.querySelectorAll('[data-cc]')].map(i => i.value.trim()), dv = $('#cD').value;
     if (!dv) return toast('Informe a data.'); if (vals.filter(Boolean).length < 6) return toast('Informe os 6 cilindros.');
@@ -1543,7 +1579,7 @@ AFTER.over = () => { $('#main').onclick = e => { const nc = e.target.closest('[d
 // dados de exemplo da compressão (só para a demonstração; somem em "Limpar dados de exemplo")
 function exemploComp() {
   const R = rnd(7031), out = [];
-  S.cfg.frota.forEach((v, i) => ['BB', 'BE'].forEach((pos, j) => {
+  S.cfg.frota.forEach((v, i) => mcpPos(v).forEach((pos, j) => {
     const b = recs('base').find(r => r.vessel === v.id && r.pos === pos && r.item === '1.1.12' && r.seed); const hr = horAtual(v.id, pos);
     if (!b || !hr) return;
     const k = i * 2 + j, base = 1.68 + R() * 0.12, taxa = [0.05, 0.03, 0.09, 0.02, 0.04, 0.16, 0.03, 0.06][k % 8];
@@ -1736,7 +1772,7 @@ function exemploFalhas() {
     [14, 'v2', 'UN', 'Alta', '2.0 Manobrabilidade e Governo', 'Mangueira de alta pressão do governo', 'Nova mangueira do governo com vazamento na conexão', 7, 'Terminal mal crimpado', '', '', null, ''],
   ];
   let n = 47950;
-  L.forEach(([dias, vid, pos, cl, sis, equip, desc, dur, causa, mitig, resp, prazoDias, st]) => {
+  L.forEach(([dias, vid, pos, cl, sis, equip, desc, dur, causa, mitig, resp, prazoDias, st]) => { pos = fixP(vid, pos);
     if (!vessel(vid)) return;
     const a = new Date(d0); a.setDate(a.getDate() - dias); a.setHours(8 + dias % 8, 10); const lib = new Date(a.getTime() + dur * 3600e3);
     const pz = prazoDias == null ? '' : isoD(new Date(d0.getTime() + prazoDias * 864e5));
@@ -1762,7 +1798,7 @@ function horDados() {
 }
 function horSuspeitos() {
   const out = [];
-  S.cfg.frota.forEach(v => ['BB', 'BE', 'MCA1', 'MCA2', 'POPA'].forEach(p => {
+  S.cfg.frota.forEach(v => mcpPos(v).concat(MCAS, ['POPA']).forEach(p => {
     const L = recs('hor').filter(r => r.vessel === v.id && r.pos === p).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.h - b.h);
     let a = L[0]; // compara sempre com o último lançamento bom (o errado não vira referência)
     for (let i = 1; i < L.length; i++) {
@@ -1798,7 +1834,8 @@ function vHor() {
      <div class="hrps">${pos}</div><button class="mbtn sm" data-act="lancarHor" data-v="${x.v.id}">⏱ Lançar</button></div>`;
   }).join('');
   const NM = 6, meses = []; for (let m = NM - 1; m >= 0; m--) { const d = new Date(hoje().getFullYear(), hoje().getMonth() - m, 1); meses.push(d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') + (m === 0 ? ' (parcial)' : '')); }
-  const tab = S.cfg.frota.filter(v => HORPOS === 'BB' || HORPOS === 'BE' || v.mca[HORPOS]).map(v => ({ v, hm: horasMes(v.id, HORPOS, NM) }));
+  const posDe = v => HORPOS === 'BB' ? mcpPos(v)[0] : HORPOS === 'BE' ? (v.mcp === 'mono' ? null : 'BE') : (v.mca[HORPOS] ? HORPOS : null);
+  const tab = S.cfg.frota.filter(v => posDe(v)).map(v => ({ v, hm: horasMes(v.id, posDe(v), NM) }));
   const maxH = Math.max(1, ...tab.flatMap(t => t.hm.slice(0, -1).filter(x => x != null)));
   const diasMes = m => new Date(hoje().getFullYear(), hoje().getMonth() - m + 1, 0).getDate();
   const ultFech = NM - 2; // último mês fechado
@@ -1810,13 +1847,13 @@ function vHor() {
    <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>atenção (${HOR.ok + 1} a ${HOR.aten} dias)</span></div>
    <div class="card mini ${n.venc + n.sem ? 'bad' : 'ok'}"><b>${n.venc + n.sem}</b><span>desatualizados ou sem lançamento</span></div>
    <div class="card mini ${sus.length ? 'bad' : 'ok'}"><b>${sus.length}</b><span>lançamentos suspeitos</span></div>
-   <div class="card mini"><b>${nf(frotaMes)}</b><span>horas de MCP ${HORPOS === 'BB' || HORPOS === 'BE' ? HORPOS : ''} da frota em ${meses[ultFech]}</span></div>
+   <div class="card mini"><b>${nf(frotaMes)}</b><span>horas ${HORPOS === 'BB' ? 'de MCP (BB ou central)' : HORPOS === 'BE' ? 'de MCP BE' : 'do ' + HORPOS} da frota em ${meses[ultFech]}</span></div>
    <div class="card mini"><b>${ativo.length ? nf(Math.round(frotaMes / ativo.length / diasMes(1) * 10) / 10) : '—'}</b><span>média de horas por dia, por barco (${meses[ultFech]})</span></div>
   </div>
   <div class="card"><div class="row"><h2>A · Último lançamento por barco</h2><span class="sp"></span><span class="note">Barra = dias desde o último lançamento (escala até 30 dias).</span></div>
    <div class="rk">${linhas}</div></div>
   <div class="two">
-   <div class="card"><div class="row"><h2>B · Horas trabalhadas por mês</h2><span class="sp"></span><div class="seg">${['BB', 'BE', 'MCA1', 'MCA2'].map(p => `<button data-horpos="${p}" class="${p === HORPOS ? 'on' : ''}">${p === 'BB' || p === 'BE' ? 'MCP ' + p : p}</button>`).join('')}</div></div>
+   <div class="card"><div class="row"><h2>B · Horas trabalhadas por mês</h2><span class="sp"></span><div class="seg">${[['BB', 'MCP BB/central'], ['BE', 'MCP BE'], ['MCA1', 'MCA1'], ['MCA2', 'MCA2'], ['MCA3', 'MCA3']].map(([p, l]) => `<button data-horpos="${p}" class="${p === HORPOS ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="tw"><table class="t hmt"><thead><tr><th>Barco</th>${meses.map(m => `<th class="c">${m}</th>`).join('')}<th class="c">h/dia</th></tr></thead><tbody>
     ${tab.map(t => { const ref = t.hm[ultFech]; return `<tr><td><b>${esc(t.v.nome)}</b></td>${t.hm.map((h, i) => `<td class="c" style="${h != null && i < NM - 1 ? `background:rgba(46,111,186,${(0.06 + h / maxH * 0.32).toFixed(2)})` : ''}">${h == null ? '<span class="mut">—</span>' : nf(h)}</td>`).join('')}<td class="c mono">${ref != null ? (ref / diasMes(1)).toFixed(1).replace('.', ',') : '—'}</td></tr>`; }).join('')}
     </tbody></table></div>
@@ -1836,7 +1873,7 @@ function exemploHor() {
   const out = [], F = S.cfg.frota;
   const marca = (v, ks) => recs('hor').forEach(r => { if (r.seed && r.vessel === v.id && ks.some(k => r.id.endsWith(r.pos + k))) { r.excluido = true; out.push(r); } });
   if (F[6]) marca(F[6], [1, 8, 15]); if (F[9]) marca(F[9], [1]);
-  const ins = (v, p, dias, delta, id) => { if (!v) return; const d = new Date(hoje()); d.setDate(d.getDate() - dias); const ref = horEm(v.id, p, isoD(d)); if (!ref) return; out.push({ id, kind: 'hor', vessel: v.id, pos: p, h: ref.h + delta, date: isoD(d), seed: true, updatedAt: Date.now(), createdAt: Date.now() }); };
+  const ins = (v, p, dias, delta, id) => { if (!v) return; p = fixP(v.id, p); const d = new Date(hoje()); d.setDate(d.getDate() - dias); const ref = horEm(v.id, p, isoD(d)); if (!ref) return; out.push({ id, kind: 'hor', vessel: v.id, pos: p, h: ref.h + delta, date: isoD(d), seed: true, updatedAt: Date.now(), createdAt: Date.now() }); };
   ins(F[3], 'BB', 58, -310, 'ex-hor-sus1'); ins(F[10], 'BE', 93, 1100, 'ex-hor-sus2');
   return out;
 }
@@ -1847,13 +1884,13 @@ function vesselModal(vid, filtro) {
   modal(`<div class="row"><h2>${esc(v.nome)}</h2><span class="sp"></span><div class="seg" id="vf">${[['pend', 'Vencendo'], ['sem', 'Sem histórico'], ['todos', 'Todos']].map(([k, l]) => `<button data-vf="${k}" class="${k === filtro ? 'on' : ''}">${l}</button>`).join('')}</div><button class="mbtn" data-close>Fechar</button></div>
    <div class="row">${posicoes(v).filter(x => x !== 'UN').map(pos => { const h = horAtual(v.id, pos); return `<span class="pill p-mut">${pos} ${h ? nf(h.h) + ' h · ' + brD(h.date) : 'sem horímetro'}</span>`; }).join('')}<span class="sp"></span><button class="mbtn sm" data-act="lancarHor" data-v="${v.id}">⏱ Lançar horímetro</button><a class="mbtn sm pri" href="#emitir/${v.id}">Emitir OM</a></div>
    <div class="tw" style="max-height:60vh"><table class="t"><thead><tr><th>Pos.</th><th>Nº</th><th>Item</th><th>Prior.</th><th>Intervalo</th><th>Último serviço</th><th>Situação</th><th></th></tr></thead><tbody>
-   ${p.map(x => { const iv = intervalo(x.t); return `<tr><td>${posTag(x.pos)}</td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}<div class="note">${esc(EQN[x.t.eq])}</div></td><td>${x.t.prio}</td><td class="mono">${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' ou ') || '—'}</td><td class="mono">${x.s.L ? (x.s.L.h !== null ? nf(x.s.L.h) + ' h · ' : '') + brD(x.s.L.date) : '—'}</td><td>${x.om ? `<a class="pill p-inf" href="#om/${x.om.id}">OM ${esc(x.om.num)}</a>` : pillSt(x.s.st)}<div class="note">${esc(x.s.txt || '')}</div></td><td>${x.t.kind === 'prog' ? `<button class="mbtn sm" data-base="${v.id}|${x.pos}|${x.t.id}">Último serviço</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Nada neste filtro.</td></tr>'}
+   ${p.map(x => { const iv = intervalo(x.t, x.v, x.pos); return `<tr><td>${posTag(x.pos)}</td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}<div class="note">${esc(EQN[x.t.eq])}</div></td><td>${x.t.prio}</td><td class="mono">${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' ou ') || '—'}</td><td class="mono">${x.s.L ? (x.s.L.h !== null ? nf(x.s.L.h) + ' h · ' : '') + brD(x.s.L.date) : '—'}</td><td>${x.om ? `<a class="pill p-inf" href="#om/${x.om.id}">OM ${esc(x.om.num)}</a>` : pillSt(x.s.st)}<div class="note">${esc(x.s.txt || '')}</div></td><td>${x.t.kind === 'prog' ? `<button class="mbtn sm" data-base="${v.id}|${x.pos}|${x.t.id}">Último serviço</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Nada neste filtro.</td></tr>'}
    </tbody></table></div>`, true);
   $('#modal').addEventListener('click', e => { const b = e.target.closest('[data-vf]'); if (b) vesselModal(vid, b.dataset.vf); const bs = e.target.closest('[data-base]'); if (bs) baseModal(...bs.dataset.base.split('|')); });
 }
 function baseModal(vid, pos, item) {
   if (!precisa(false)) return;
-  const t = A1M[item], L = ultimoServico(vid, pos, item), hp = posHor(pos, t), h = horAtual(vid, hp);
+  const t = A1M[item], L = ultimoServico(vid, pos, item), hp = posHor(pos, t, vid), h = horAtual(vid, hp);
   modal(`<h2>Último serviço · ${item}</h2><p class="note">${esc(vName(vid))} · ${POSN[pos]} · ${esc(t.chk)}. Use para registrar o ponto de partida de itens feitos antes do CTLE_MAN. Depois, o próprio encerramento da OM atualiza.</p>
    <div class="g"><label class="f s3">Horímetro do serviço (${hp})<input id="bH" inputmode="numeric" value="${L && L.h !== null ? L.h : h ? h.h : ''}"></label><label class="f s3">Data do serviço<input id="bD" type="date" value="${L ? L.date : isoD(hoje())}"></label></div>
    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="bOk">Salvar</button></div>`);
@@ -1864,7 +1901,7 @@ function horModal(vid) {
   const v0 = vid || S.cfg.frota[0].id;
   const draw = vid2 => { const v = vessel(vid2); return `<label class="f">Embarcação<select id="hV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid2 ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
    <label class="f">Data da leitura<input id="hD" type="date" value="${isoD(hoje())}"></label>
-   <div class="g">${posicoes(v).filter(p => p !== 'UN').concat(v.off.includes('POPA') ? [] : ['POPA']).map(p => { const h = horAtual(v.id, p); return `<label class="f s3">${p === 'POPA' ? 'Motor de popa' : POSN[p]} · último ${h ? nf(h.h) : '—'}<input data-h="${p}" inputmode="numeric" placeholder="horímetro (h)"></label>`; }).join('')}</div>`; };
+   <div class="g">${posicoes(v).filter(p => p !== 'UN').concat(v.off.includes('POPA') ? [] : ['POPA']).map(p => { const h = horAtual(v.id, p); return `<label class="f s3">${p === 'POPA' ? 'Motor de popa' : posNome(v, p) + (MCAS.includes(p) ? ' · ' + mcaNome(v, p) : '')} · último ${h ? nf(h.h) : '—'}<input data-h="${p}" inputmode="numeric" placeholder="horímetro (h)"></label>`; }).join('')}</div>`; };
   modal(`<h2>Lançar horímetros</h2><p class="note">Normalmente os do FR 027_L (chegada/saída no terminal). Deixe em branco o que não leu.</p><div id="hBody">${draw(v0)}</div><div class="note" id="hE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="hOk">Salvar leituras</button></div>`);
   $('#modal').addEventListener('change', e => { if (e.target.id === 'hV') $('#hBody').innerHTML = draw(e.target.value); });
   $('#hOk').onclick = async () => {
@@ -1895,8 +1932,8 @@ function vEmitir() {
     if (EM.mostrar === 'pend') rows = rows.filter(x => ['venc', 'viag', 'sem'].includes(x.s.st) || x.om);
     const ord = { venc: 0, viag: 1, sem: 2, ok: 3 }; rows.sort((a, b) => ord[a.s.st] - ord[b.s.st]);
     const cnt = [...EM.sel].filter(k => k.startsWith(pos + '|')).length;
-    const hr = horAtual(v.id, pos === 'UN' ? 'BB' : pos);
-    return `<div class="card"><div class="row"><h2>${posTag(pos)} ${POSN[pos]}${pos === 'MCA1' || pos === 'MCA2' ? ' · ' + EQN[v.mca[pos]] : pos === 'BB' || pos === 'BE' ? ' · MCP + ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : 'reversor ?') : ''}</h2><span class="mono note">${hr ? nf(hr.h) + ' h · ' + brD(hr.date) : 'sem horímetro'}</span><span class="sp"></span>
+    const hr = horAtual(v.id, pos === 'UN' ? mcpPos(v)[0] : pos);
+    return `<div class="card"><div class="row"><h2>${posTag(pos)} ${posNome(v, pos)}${MCAS.includes(pos) ? ' · ' + mcaNome(v, pos) : isMcp(pos) ? ' · MCP + ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : 'reversor ?') : ''}</h2><span class="mono note">${hr ? nf(hr.h) + ' h · ' + brD(hr.date) : 'sem horímetro'}</span><span class="sp"></span>
      <button class="mbtn sm" data-pick="${pos}" ${pend.length ? '' : 'disabled'}>Marcar os ${pend.length} que vencem</button><button class="mbtn sm pri" data-mkom="${pos}" ${cnt ? '' : 'disabled'}>Abrir OM com ${cnt} ${cnt === 1 ? 'item' : 'itens'}</button></div>
      ${EM.draft && EM.draft.pos === pos ? draftHtml(v, P) : ''}
      <div class="tw"><table class="t"><thead><tr><th></th><th>Nº</th><th>Item do Anexo I</th><th>Prior.</th><th>Intervalo</th><th>Situação</th></tr></thead><tbody>
@@ -1914,7 +1951,7 @@ function draftHtml(v, P) {
   const d = EM.draft, pos = d.pos;
   const sits = d.ids.map(id => (P.find(x => x.pos === pos && x.t.id === id) || {}).s || {});
   const hs = sits.map(s => s.alvoH).filter(x => x), ds = sits.map(s => s.alvoD).filter(x => x);
-  const hr = horAtual(v.id, pos === 'UN' ? 'BB' : pos);
+  const hr = horAtual(v.id, pos === 'UN' ? mcpPos(v)[0] : pos);
   d.alvoH = hs.length ? Math.min(...hs) : (hr ? hr.h + (EM.viag ?? viagemDe(v)) : null);
   d.alvoD = ds.length ? isoD(new Date(Math.min(...ds))) : null;
   const sisL = [...new Set(d.ids.map(id => A1M[id].sis))].join(' / ');
@@ -1964,7 +2001,7 @@ function vAcomp() {
   const cols = AC.tipo === 'C' ? ETAPAS_C : ETAPAS_P;
   const colOf = o => o.tipo === 'C' ? { aberta: 'emitida', execucao: 'abordo', conferencia: 'conferencia', encerrada: 'encerrada' }[o.status] : o.status;
   const colsUse = AC.tipo === 'C' ? cols.map(c => [c[0], c[1]]) : cols;
-  const card = o => { const late = omAtrasada(o), c = o.pos === 'BB' ? 'var(--bb)' : o.pos === 'BE' ? 'var(--be)' : 'var(--acc)';
+  const card = o => { const late = omAtrasada(o), c = o.pos === 'BB' ? 'var(--bb)' : o.pos === 'BE' ? 'var(--be)' : o.pos === 'CE' ? 'var(--navy)' : 'var(--acc)';
     const next = o.tipo === 'C' ? { aberta: ['execucao', 'Iniciar execução'], execucao: ['conferencia', 'Conferir'] }[o.status] : { emitida: ['abordo', 'Embarcou'], abordo: ['executada', 'Executada (Autotrac)'], executada: ['conferencia', 'Conferir'] }[o.status];
     return `<div class="omc" style="--c:${c}"><div class="h"><b class="num">OM ${esc(o.num)}</b>${posTag(o.pos)}</div><div>${esc(vName(o.vessel))}</div>${tipoPill(o)}
       <div class="note">${o.tipo === 'C' ? esc(o.descricao || '') : (o.items || []).join(' · ')}</div>
@@ -2071,23 +2108,23 @@ function novaCorretiva() {
   const classe = () => T.q1 === 'Sim' ? 'Crítica' : T.q2 === 'Sim' ? 'Alta' : T.q3 === 'Sim' ? 'Média' : (T.q1 && T.q2 && T.q3) ? 'Baixa' : '';
   const draw = () => { const c = classe(); return `<h2>Nova corretiva · triagem (item 5.5.1)</h2>
    <div class="g"><label class="f s3">Embarcação<select id="tV">${S.cfg.frota.map(v => `<option value="${v.id}">${esc(v.nome)}</option>`).join('')}</select></label><label class="f s3">Nº da OM (Sankhya)<input id="tN" inputmode="numeric" placeholder="gerado pelo Sankhya"></label>
-    <label class="f s4">Sistema (lista fixa 7.1)<select id="tS"><option value="">Escolha…</option>${SISTEMAS.map(s => `<option>${s}</option>`).join('')}</select></label><label class="f s2">Posição<select id="tP"><option value="BB">BB</option><option value="BE">BE</option><option value="MCA1">MCA 1</option><option value="MCA2">MCA 2</option><option value="UN" selected>N/A (embarcação)</option></select></label>
+    <label class="f s4">Sistema (lista fixa 7.1)<select id="tS"><option value="">Escolha…</option>${SISTEMAS.map(s => `<option>${s}</option>`).join('')}</select></label><label class="f s2">Posição<select id="tP">${optsPos(S.cfg.frota[0].id)}</select></label>
     <label class="f s6">Falha detectada<textarea id="tD" rows="2" placeholder="O que aconteceu, onde, como foi percebido"></textarea></label></div>
    <div class="triage">${[['q1', 'Há risco de incêndio, explosão, avaria estrutural grave (alagamento) ou dano ambiental?'], ['q2', 'A falha afeta a segurança ou a confiabilidade operacional (perda de propulsão, governo, energia, comunicação)?'], ['q3', 'Há degradação funcional, mesmo sem risco iminente?']].map(([k, q], i) => (i === 0 || T[['q1', 'q2'][i - 1]] === 'Não') ? `<div class="q"><b>${q}</b><div class="opts">${['Sim', 'Não'].map(x => `<label><input type="radio" name="${k}" data-tq="${k}" value="${x}" ${T[k] === x ? 'checked' : ''}>${x}</label>`).join('')}</div></div>` : '').join('')}</div>
    <div class="cls">${Object.entries(CLASSES).map(([k, c]) => `<div class="${c && k === classe() ? 'on' : ''}" style="--c:${c.cor};--cb:${c.fundo}"><b>${k}</b><span>Início: ${c.prazo}</span><span>${c.acao}</span></div>`).join('')}</div>
    ${c === 'Crítica' ? '<div class="banner bad">Falha Crítica: a embarcação fica <b>interditada</b> até a liberação formal do Coordenador de Operações e do Supervisor de Manutenção. Comunicação imediata (5.4.1).</div>' : c === 'Alta' ? '<div class="banner ex">Falha Alta: início em até 4 horas e RNC obrigatória.</div>' : ''}
    <div class="note" id="tE" style="color:var(--badt)"></div>
    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="tOk" ${c ? '' : 'disabled'}>Abrir corretiva ${c ? '· ' + c : ''}</button></div>`; };
-  const keep = () => { const k = {}; ['tV', 'tN', 'tS', 'tP', 'tD'].forEach(i => { const e = $('#' + i); if (e) k[i] = e.value; }); return k; };
-  const put = k => Object.entries(k).forEach(([i, v]) => { const e = $('#' + i); if (e) e.value = v; });
+  const keep = () => { const k = {}; ['tV', 'tN', 'tS', 'tD', 'tP'].forEach(i => { const e = $('#' + i); if (e) k[i] = e.value; }); return k; };
+  const put = k => Object.entries(k).forEach(([i, v]) => { const e = $('#' + i); if (!e) return; if (i === 'tP') e.innerHTML = optsPos(k.tV); e.value = v; });
   const m = modal(draw(), true);
-  m.addEventListener('change', e => { if (e.target.dataset.tq) { const k = keep(); T[e.target.dataset.tq] = e.target.value; if (e.target.dataset.tq === 'q1' && e.target.value === 'Sim') { T.q2 = T.q3 = ''; } if (e.target.dataset.tq === 'q2' && e.target.value === 'Sim') T.q3 = ''; m.querySelector('.box').innerHTML = draw(); put(k); } });
+  m.addEventListener('change', e => { if (e.target.id === 'tV') { $('#tP').innerHTML = optsPos(e.target.value); return; } if (e.target.dataset.tq) { const k = keep(); T[e.target.dataset.tq] = e.target.value; if (e.target.dataset.tq === 'q1' && e.target.value === 'Sim') { T.q2 = T.q3 = ''; } if (e.target.dataset.tq === 'q2' && e.target.value === 'Sim') T.q3 = ''; m.querySelector('.box').innerHTML = draw(); put(k); } });
   m.addEventListener('click', async e => { if (e.target.id !== 'tOk') return;
     const n = $('#tN').value.trim(), s = $('#tS').value, d = $('#tD').value.trim(), c = classe();
     if (!/^\d{3,}$/.test(n)) return $('#tE').textContent = 'Digite o número da OM gerado pelo Sankhya.';
     if (oms().some(o => o.num === n)) return $('#tE').textContent = 'Já existe uma OM com esse número.';
     if (!s) return $('#tE').textContent = 'Escolha o sistema.'; if (!d) return $('#tE').textContent = 'Descreva a falha.';
-    const vid = $('#tV').value, pos = $('#tP').value, hr = horAtual(vid, pos === 'UN' ? 'BB' : pos), agora = isoDT(hoje());
+    const vid = $('#tV').value, pos = $('#tP').value, hr = horAtual(vid, pos === 'UN' ? mpos(vid) : pos), agora = isoDT(hoje());
     const o = { id: uid('om'), kind: 'om', tipo: 'C', num: n, vessel: vid, pos, status: 'aberta', abertura: agora, sistema: s, classe: c, descricao: d, horimetro: hr ? hr.h : '', deteccao: agora, interd: c === 'Crítica' ? 'Sim' : 'N/A', interdDT: c === 'Crítica' ? agora : '', comunicado: c === 'Crítica' || c === 'Alta' ? [] : [], fotos: [], mats: [], medsC: [], hist: [{ at: Date.now(), by: S.session.name, ev: 'Aberta · ' + c }] };
     await saveRec(o); closeModal(); toast('Corretiva ' + n + ' aberta · ' + c + '.'); go('om/' + o.id); });
 }
@@ -2358,7 +2395,7 @@ function docIIB(o) {
   const crit = [...new Set((o.items || []).map(id => { const iv = intervalo(A1M[id]); return iv.h && iv.m ? 'Horas / Tempo' : iv.h ? 'Horas' : 'Tempo'; }))].join(', ');
   const fbar = `<div class="fbar"><div><small>Toda preventiva sistemática e preditiva</small><h3>Formulário II-B — Manutenção ${pred ? 'Preditiva' : 'Preventiva'}</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
   const B = [];
-  B.push(blk('B1', 'Identificação', '', grid('1fr 1.3fr 1.2fr', dv('Nº da OM (Sankhya)', o.num) + dv('Embarcação', v.nome) + dv('Abertura da OM', brD(o.emitAt)) + dv('Sistema (item 7.1)', sis, 2) + dv('Posição', xo(o.pos === 'MCA1' || o.pos === 'MCA2' || o.pos === 'UN' ? 'N/A' : o.pos, ['BB', 'BE', 'N/A']) + (o.pos === 'MCA1' || o.pos === 'MCA2' ? ' (' + POSN[o.pos] + ')' : '')) + dv('Equipamento / componente', eq, 2) + dv('Tipo', xo(pred ? 'Preditiva' : 'Preventiva', ['Preventiva', 'Preditiva'])) + dv('Item(ns) do Anexo I', (o.items || []).join(', ')) + dv('Origem', o.origem || 'Plano (ClickUp)', 2))));
+  B.push(blk('B1', 'Identificação', '', grid('1fr 1.3fr 1.2fr', dv('Nº da OM (Sankhya)', o.num) + dv('Embarcação', v.nome) + dv('Abertura da OM', brD(o.emitAt)) + dv('Sistema (item 7.1)', sis, 2) + dv('Posição', xo(isMcp(o.pos) ? o.pos : 'N/A', ['BB', 'BE', 'CE', 'N/A']) + (MCAS.includes(o.pos) ? ' (' + posNome(v, o.pos) + ' · ' + mcaNome(v, o.pos) + ')' : '')) + dv('Equipamento / componente', eq, 2) + dv('Tipo', xo(pred ? 'Preditiva' : 'Preventiva', ['Preventiva', 'Preditiva'])) + dv('Item(ns) do Anexo I', (o.items || []).join(', ')) + dv('Origem', o.origem || 'Plano (ClickUp)', 2))));
   const fora = o.alvoH && o.hreal ? +o.hreal > o.alvoH : false;
   B.push(blk('B2', 'Programação', '', grid('1fr 1fr 1fr 1fr', dv('Critério', crit) + dv('Intervalo do plano', ivs, 3) + dv('Horímetro previsto', o.alvoH ? nf(o.alvoH) + ' h' : 'N/A') + dv('Horímetro realizado', o.hreal ? nf(o.hreal) + ' h' : '') + dv('Data prevista', o.alvoD ? brD(o.alvoD) : 'N/A') + dv('Data realizada', brD(o.dreal)) + dv('Dentro do prazo?', o.hreal ? (fora ? '☐ Sim  ☒ Não' : '☒ Sim  ☐ Não') : '') + dv('Justificativa (se fora do prazo)', fora ? o.justif : 'N/A', 2) + dv('Indisponível (h)', o.indispH || '0'))));
   B.push(blk('B3', 'Condição encontrada (“antes”)', '', dv('Descrição da condição encontrada', o.condEnc)));
@@ -2381,7 +2418,7 @@ function docIIA(o) {
   const v = vessel(o.vessel) || { nome: o.vessel }, crit = o.classe === 'Crítica', p = o.par || {};
   const fbar = `<div class="fbar"><div><small>Falhas classificadas como Crítica ou Alta</small><h3>Formulário II-A — Manutenção Corretiva</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
   const B = [];
-  B.push(blk('A1', 'Identificação', '', grid('1fr 1.3fr 1.2fr', dv('Nº da OM (Sankhya)', o.num) + dv('Embarcação', v.nome) + dv('Abertura da OM', brDT(o.abertura)) + dv('Sistema (item 7.1)', o.sistema) + dv('Equipamento / componente', o.equip) + dv('Posição', xo(o.pos === 'BB' || o.pos === 'BE' ? o.pos : 'N/A', ['BB', 'BE', 'N/A']) + (o.pos === 'MCA1' || o.pos === 'MCA2' ? ' (' + POSN[o.pos] + ')' : '')) + dv('Local', xo(o.local, ['Terminal', 'Em viagem'])) + dv('Trecho (se em viagem)', o.trecho || 'N/A') + dv('Horímetro', o.horimetro ? nf(o.horimetro) + ' h' : '') + dv('Classe', xo(o.classe, ['Crítica', 'Alta', 'Média', 'Baixa'])) + dv('Nº da RNC', o.rnc || (crit || o.classe === 'Alta' ? '' : 'N/A')) + dv('Origem', o.origem))));
+  B.push(blk('A1', 'Identificação', '', grid('1fr 1.3fr 1.2fr', dv('Nº da OM (Sankhya)', o.num) + dv('Embarcação', v.nome) + dv('Abertura da OM', brDT(o.abertura)) + dv('Sistema (item 7.1)', o.sistema) + dv('Equipamento / componente', o.equip) + dv('Posição', xo(isMcp(o.pos) ? o.pos : 'N/A', ['BB', 'BE', 'CE', 'N/A']) + (MCAS.includes(o.pos) ? ' (' + posNome(v, o.pos) + ' · ' + mcaNome(v, o.pos) + ')' : '')) + dv('Local', xo(o.local, ['Terminal', 'Em viagem'])) + dv('Trecho (se em viagem)', o.trecho || 'N/A') + dv('Horímetro', o.horimetro ? nf(o.horimetro) + ' h' : '') + dv('Classe', xo(o.classe, ['Crítica', 'Alta', 'Média', 'Baixa'])) + dv('Nº da RNC', o.rnc || (crit || o.classe === 'Alta' ? '' : 'N/A')) + dv('Origem', o.origem))));
   B.push(blk('A2', 'Falha detectada (“antes”)', '', dv('Descrição da falha', o.descricao) + `<div class="fl" style="margin-top:2px">Parâmetros observados</div>` + grid('repeat(6,1fr)', dv('Pressão de óleo', p.oleo) + dv('Temp. da água', p.tagua) + dv('Temp. do óleo', p.toleo) + dv('RPM', p.rpm) + dv('Tensão da bateria', p.bat) + dv('Outro', p.outro)) + grid('1fr 1fr 1fr', dv('Detecção', brDT(o.deteccao)) + dv('Comunicação', brDT(o.comunicacao)) + dv('Meio', xo(o.meio, ['Autotrac', 'Telefone', 'Presencial']))) + dv('Comunicado a', ['Coordenação de Operações', 'Supervisão de Manutenção'].map(x => ((o.comunicado || []).includes(x) ? '☒ ' : '☐ ') + x).join('   ')) + `<div class="note">Crítica e Alta: comunicação imediata à Coordenação de Operações e à Supervisão de Manutenção (item 5.4.1).</div>`));
   B.push(blk('A3', 'Interdição', 'item 5.5.1', grid('1fr 1fr 1fr', dv('Interdição da embarcação', xo(o.interd, ['Sim', 'N/A']) + (o.interd === 'Sim' ? ' (Crítica)' : '')) + dv('Data e hora', brDT(o.interdDT)) + dv('Determinada por', o.interdPor))));
   B.push(blk('A4', 'Liberações prévias', 'item 5.11', grid('1.4fr 1fr 1fr', dv('Liberação de segurança do SESMT — responsável', o.sesmt) + dv('Data e hora', brDT(o.sesmtDT)) + dv('Nº da PT', o.pt || 'N/A') + dv('Serviço de terceiro', xo(o.terceiroAut || 'Não', ['Não', 'Sim — autorização da Gerência/Diretoria']), 2) + dv('Nº SC / OC', o.scoc || 'N/A'))));
@@ -2437,7 +2474,7 @@ function vKpi() {
   const venc = []; S.cfg.frota.forEach(v => painelVessel(v).filter(x => x.s.st === 'venc' && !x.om).forEach(x => venc.push(x)));
   const pord = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 }; venc.sort((a, b) => pord[a.t.prio] - pord[b.t.prio]);
   const ab = oms().filter(o => o.status !== 'encerrada');
-  const pred = []; S.cfg.frota.forEach(v => ['BB', 'BE'].forEach(pos => { const t = A1M['1.1.29']; if (!aplica(v, pos, t)) return; const s = situacao(v, pos, t); pred.push({ v, pos, s }); }));
+  const pred = []; S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => { const t = A1M['1.1.29']; if (!aplica(v, pos, t)) return; const s = situacao(v, pos, t); pred.push({ v, pos, s }); }));
   return `<div class="vh"><div><h1>Indicadores NP 055</h1><p>KPIs do item 9, calculados das OMs, dos horímetros e das corretivas registradas no CTLE_MAN. Passe o mouse nos gráficos para ver os valores.</p></div><span class="sp"></span><a class="mbtn" href="#rel">Relatório mensal</a></div>
   <div class="kgrid">
    ${kpiCard('Disponibilidade da frota', di, '%', '≥ 95%', di >= 95, lineChart(K.disp, labs, 95, '%', 1), '(h calendário − h indisponíveis por manutenção) ÷ h calendário × 100. Indisponível: da interdição à liberação, mais as horas paradas em preventiva.', 'Mensal')}
@@ -2491,7 +2528,7 @@ function docRelatorio() {
   const H = s => ({ h: s }), cor = (t, c) => H(`<b style="color:${c}">${esc(String(t))}</b>`), RED = '#B2361F', AMB = '#8A5E00', GRN = '#167A4C';
   // ---- dados do "norte" (situação na emissão)
   const CAL = calibDados(), OV = overDados(), DC = S.cfg.frota.map(docaVessel), HR = horDados(), SUS = horSuspeitos(), FA = falhasDados(12), ROD = rodizio(OV);
-  const horasFrota = S.cfg.frota.map(v => horasMes(v.id, 'BB', 1 + (hoje().getFullYear() - y) * 12 + hoje().getMonth() - m)[0]).filter(x => x != null);
+  const horasFrota = S.cfg.frota.map(v => horasMes(v.id, mcpPos(v)[0], 1 + (hoje().getFullYear() - y) * 12 + hoje().getMonth() - m)[0]).filter(x => x != null);
   const hMes = horasFrota.reduce((a, b) => a + b, 0), diasM = new Date(y, m + 1, 0).getDate();
   const calV = CAL.filter(x => x.s.st === 'venc'), calP = CAL.filter(x => x.s.st === 'viag' && calPorto(x.t.id));
   const ovR = OV.filter(x => x.st === 'venc'), ovA = OV.filter(x => x.st === 'viag');
@@ -2588,11 +2625,13 @@ function vAdmin() {
    <div class="card"><h2>Senhas</h2><p class="note">${S.url ? 'Trocadas no servidor: valem para todos.' : 'Modo local: valem só neste aparelho.'} Mínimo de 6 caracteres. Deixe em branco o que não quer trocar.</p>
     <div class="g"><label class="f s3">Nova senha do Analista (operador)<input id="pwOp" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label><label class="f s3">Nova senha do Supervisor (administrador)<input id="pwAd" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label></div><div class="row"><button class="mbtn" data-act="senhas" ${a ? '' : 'disabled'}>Trocar senhas</button></div></div>
    <div class="card"><div class="row"><h2>Frota</h2><span class="sp"></span><label class="f" style="width:260px">Viagem padrão (h) · só para barco sem a próxima viagem informada<input type="number" id="adViag" value="${S.cfg.viagemH}" ${a ? '' : 'disabled'}></label></div>
-    <p class="note">O reversor de cada bordo decide o bloco do Anexo I (1.5 Hitachi, 1.6 Masson, 1.7 REINTJES). Confirme pela placa. Desmarque os equipamentos que a embarcação não tem.</p>
-    <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Reversor BB</th><th>Reversor BE</th><th>MCA 1</th><th>MCA 2</th><th>Equipamentos que não tem</th></tr></thead><tbody>
+    <p class="note">Cadastro conforme a <b>Matriz técnica de equipamentos e lubrificação</b>. Monomotor tem um MCP central; bimotor, BB e BE. O reversor decide o bloco do Anexo I (1.5 Hitachi, 1.6 Masson, 1.7 REINTJES) e o modelo do MCA decide o bloco 3.1 (MWM) ou 3.2 (Yanmar). Desmarque os equipamentos que a embarcação não tem.</p>
+    <div class="row"><button class="mbtn" data-act="matriz" ${a ? '' : 'disabled'}>↺ Recarregar o cadastro da matriz técnica</button><span class="note">Substitui propulsão, reversores e MCAs dos 12 barcos pelos dados da matriz. Depois clique em Salvar frota.</span></div>
+    <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Propulsão</th><th>Reversor</th><th>MCA 1</th><th>MCA 2</th><th>MCA 3</th><th>Equipamentos que não tem</th></tr></thead><tbody>
     ${S.cfg.frota.map((v, i) => `<tr><td><input data-fr="${i}|nome" value="${esc(v.nome)}" ${a ? '' : 'disabled'} style="min-width:110px"></td>
-     ${['BB', 'BE'].map(p => `<td><select data-fr="${i}|rev|${p}" ${a ? '' : 'disabled'}><option value="">— a confirmar —</option>${['HITACHI', 'MASSON', 'REINTJES'].map(r => `<option value="${r}"${v.rev[p] === r ? ' selected' : ''}>${EQN[r].replace('Reversor ', '')}</option>`).join('')}</select></td>`).join('')}
-     ${['MCA1', 'MCA2'].map(p => `<td><select data-fr="${i}|mca|${p}" ${a ? '' : 'disabled'}><option value="">Não tem</option>${['MWM', 'YANMAR'].map(r => `<option value="${r}"${v.mca[p] === r ? ' selected' : ''}>${EQN[r].replace('MCA ', '')}</option>`).join('')}</select></td>`).join('')}
+     <td><select data-fr="${i}|mcp" ${a ? '' : 'disabled'}><option value="bi"${v.mcp !== 'mono' ? ' selected' : ''}>Bimotor (BB/BE)</option><option value="mono"${v.mcp === 'mono' ? ' selected' : ''}>Monomotor (central)</option></select><div class="note" style="font-size:11px">${esc(Object.values(v.mcpMod || {})[0] || '')}</div></td>
+     <td>${mcpPos(v).map(p => `<div style="display:flex;gap:4px;align-items:center;margin-bottom:3px">${mcpPos(v).length > 1 ? `<b style="font-size:11px;width:20px">${p}</b>` : ''}<select data-fr="${i}|rev|${p}" ${a ? '' : 'disabled'}><option value="">— a confirmar —</option>${['HITACHI', 'MASSON', 'REINTJES'].map(r => `<option value="${r}"${v.rev[p] === r ? ' selected' : ''}>${EQN[r].replace('Reversor ', '')}</option>`).join('')}</select></div>`).join('')}</td>
+     ${MCAS.map(p => `<td><select data-fm="${i}|${p}" ${a ? '' : 'disabled'}><option value="">Não tem</option>${Object.keys(MCA_MOD).map(r => `<option${(v.mcaMod || {})[p] === r ? ' selected' : ''}>${r}</option>`).join('')}</select>${v.mca[p] ? `<input data-fl="${i}|${p}" value="${esc((v.mcaLoc || {})[p] || '')}" placeholder="local (ex.: Boreste)" style="margin-top:3px;font-size:11.5px" ${a ? '' : 'disabled'}>` : ''}</td>`).join('')}
      <td><details><summary class="note">${(v.off || []).length ? (v.off || []).length + ' desmarcados' : 'Todos'}</summary><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;margin-top:6px;font-size:12px">${['FAE80', 'ALTPE', 'CXMAR', 'FAE50', 'BAMB30', 'POPA', 'BOTE', 'MB5', 'MBINC', 'GOV'].map(k => `<label style="display:flex;gap:5px;align-items:center"><input type="checkbox" data-off="${i}|${k}" ${(v.off || []).includes(k) ? '' : 'checked'} ${a ? '' : 'disabled'}>${EQN[k]}</label>`).join('')}</div></details></td></tr>`).join('')}
     </tbody></table></div><div class="row"><button class="mbtn" data-act="addVessel" ${a ? '' : 'disabled'}>+ Embarcação</button><span class="sp"></span><button class="mbtn pri" data-act="salvarCfg" ${a ? '' : 'disabled'}>Salvar frota</button></div></div>
    <div class="card"><div class="row"><h2>Intervalos do Anexo I</h2><span class="sp"></span><input id="adQ" placeholder="Buscar item (ex.: 1.1.1, óleo)" value="${esc(ADM.q)}" style="max-width:260px"></div>
@@ -2609,7 +2648,10 @@ function vAdmin() {
 AFTER.admin = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'adQ') { ADM.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#adQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 350); } };
   m.onchange = async e => { const t = e.target;
-    if (t.dataset.fr) { const [i, k, p] = t.dataset.fr.split('|'); const v = S.cfg.frota[+i]; if (p) v[k][p] = t.value; else v[k] = t.value; if (k === 'rev') S.cfg.revExemplo = false; }
+    if (t.dataset.fr) { const [i, k, p] = t.dataset.fr.split('|'); const v = S.cfg.frota[+i]; if (p) v[k][p] = t.value; else v[k] = t.value; if (k === 'rev') S.cfg.revExemplo = false;
+      if (k === 'mcp') { const r = v.rev || {}, m = v.mcpMod || {}; if (t.value === 'mono') { v.rev = { CE: r.CE || r.BB || r.BE || '' }; v.mcpMod = { CE: m.CE || m.BB || '' }; } else { v.rev = { BB: r.BB || r.CE || '', BE: r.BE || r.CE || '' }; v.mcpMod = { BB: m.BB || m.CE || '', BE: m.BE || m.CE || '' }; } render(); } }
+    if (t.dataset.fm) { const [i, p] = t.dataset.fm.split('|'); const v = S.cfg.frota[+i]; v.mcaMod = v.mcaMod || {}; v.mcaLoc = v.mcaLoc || {}; if (t.value) { v.mcaMod[p] = t.value; v.mca[p] = MCA_MOD[t.value]; } else { delete v.mcaMod[p]; delete v.mca[p]; delete v.mcaLoc[p]; } render(); }
+    if (t.dataset.fl) { const [i, p] = t.dataset.fl.split('|'); const v = S.cfg.frota[+i]; v.mcaLoc = v.mcaLoc || {}; v.mcaLoc[p] = t.value.trim(); }
     if (t.dataset.off) { const [i, k] = t.dataset.off.split('|'); const v = S.cfg.frota[+i]; v.off = v.off || []; v.off = t.checked ? v.off.filter(x => x !== k) : [...new Set(v.off.concat(k))]; }
     if (t.dataset.iv) { const [id, k] = t.dataset.iv.split('|'); S.cfg.intervalos = S.cfg.intervalos || {}; const o = S.cfg.intervalos[id] = S.cfg.intervalos[id] || {}; const val2 = t.value.trim(); if (val2 === '') delete o[k]; else o[k] = +val2.replace(/\D/g, ''); if (!Object.keys(o).length) delete S.cfg.intervalos[id]; }
     if (t.id === 'adViag') S.cfg.viagemH = Math.max(0, +t.value || 0);
@@ -2621,7 +2663,8 @@ AFTER.admin = () => { const m = $('#main');
     if (a === 'sync') { await syncNow(); render(); }
     if (a === 'senhas') { const op = $('#pwOp').value, ad = $('#pwAd').value; if ((op && op.length < 6) || (ad && ad.length < 6)) return toast('Senha com no mínimo 6 caracteres.'); if (!op && !ad) return;
       if (S.url) { const j = await api('setPasswords', { op, ad }); toast(j.ok ? 'Senhas trocadas.' : 'Erro: ' + j.error); } else { if (op) await kvSet('op_hash', await sha256('ctle_man|' + op)); if (ad) await kvSet('ad_hash', await sha256('ctle_man|' + ad)); toast('Senhas trocadas neste aparelho.'); } $('#pwOp').value = $('#pwAd').value = ''; }
-    if (a === 'addVessel') { S.cfg.frota.push({ id: 'v' + Date.now().toString(36), nome: 'Nova embarcação', rev: { BB: '', BE: '' }, mca: { MCA1: 'MWM', MCA2: '' }, off: [] }); render(); }
+    if (a === 'matriz') { if (!precisa(true)) return; S.cfg.frota.forEach(v => { if (FROTA_MATRIZ[v.nome]) { delete v.mcp; vesselDaMatriz(v); } }); S.cfg.revExemplo = false; toast('Cadastro da matriz aplicado. Confira e clique em Salvar frota.'); render(); }
+    if (a === 'addVessel') { S.cfg.frota.push({ id: 'v' + Date.now().toString(36), nome: 'Nova embarcação', mcp: 'bi', rev: { BB: '', BE: '' }, mcpMod: {}, mca: {}, mcaMod: {}, mcaLoc: {}, off: [] }); render(); }
     if (a === 'salvarCfg') { if (!precisa(true)) return; S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg); if (S.url) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota, intervalos: S.cfg.intervalos, viagemH: S.cfg.viagemH, revExemplo: S.cfg.revExemplo } }); toast(j.ok ? 'Configuração salva para todos.' : 'Salvo neste aparelho. Nuvem: ' + j.error); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } } catch (er) { toast('Salvo neste aparelho. Sem conexão com a nuvem.'); } } else toast('Configuração salva.'); render(); }
     if (a === 'carregarEx') { await carregarExemplo(); toast('Dados de exemplo carregados.'); render(); }
     if (a === 'exportar') { const blob = new Blob([JSON.stringify({ app: 'ctle_man', at: new Date().toISOString(), cfg: S.cfg, recs: [...S.recs.values()].filter(r => !r.seed) })], { type: 'application/json' }); const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = 'CTLE_MAN_copia_' + isoD(hoje()) + '.json'; document.body.appendChild(l); l.click(); l.remove(); }
@@ -2653,10 +2696,16 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
   try { await DB.open(); } catch (e) { MEM = new Map(); }
   try {
     const all = MEM ? [] : await DB.all(); all.forEach(r => S.recs.set(r.id, r));
-    S.cfg = Object.assign(cfgPadrao(), (await kvGet('cfg')) || {});
+    S.cfg = normFrota(Object.assign(cfgPadrao(), (await kvGet('cfg')) || {}));
     S.url = (await kvGet('url')) || ''; S.session = (await kvGet('session')) || null;
     S.pending = new Set((await kvGet('pending')) || []); S.pdfPend = (await kvGet('pdfPend')) || {}; S.lastSync = (await kvGet('lastSync')) || 0;
-    if (!(await kvGet('seeded')) && !S.recs.size) await carregarExemplo();
+    if (!(await kvGet('seeded')) && !S.recs.size) { await carregarExemplo(); await kvSet('frotaV', 2); }
+    else if ((await kvGet('frotaV')) !== 2) {
+      // frota passou a seguir a matriz técnica (monomotor = MCP central): refaz o exemplo e move lançamentos BB dos monomotores para CE
+      if (temExemplo()) { const ids = [...S.recs.values()].filter(r => r.seed).map(r => r.id); for (const id of ids) { S.recs.delete(id); if (MEM) MEM.delete(id); else await DB.del(id); } await carregarExemplo(); }
+      for (const r of [...S.recs.values()]) { const v = vessel(r.vessel); if (!r.seed && v && v.mcp === 'mono' && r.pos === 'BB') { r.pos = 'CE'; await saveRec(r); } }
+      await kvSet('frotaV', 2);
+    }
     else if (temExemplo() && !recs('om').some(r => r.seed && r.id.startsWith('ex-omf-'))) { const l = exemploFalhas(); l.forEach(r => S.recs.set(r.id, r)); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); }
     if (temExemplo() && !S.recs.has('ex-hor-sus1')) { const l = exemploHor(); l.forEach(r => S.recs.set(r.id, r)); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); }
     if (temExemplo()) { const l = completarExemploAntigo(); if (l.length) { if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); } }
