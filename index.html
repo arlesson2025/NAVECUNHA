@@ -570,6 +570,16 @@ body.locked #loginModal .close-modal{display:none}
 .rio-orb.listen .rio-core{background:radial-gradient(circle,#fff0ec 0 11%,#ff7a66 12% 30%,#8a2a1c 31% 60%,#2a0b07 61%)!important}
 
 
+/* v28h: tabela de intervalos – campos de horas sem corte */
+table.fleet-table.iv{table-layout:auto;width:100%}
+table.fleet-table.iv td,table.fleet-table.iv th{padding:8px 6px}
+table.fleet-table.iv td:first-child{min-width:140px;line-height:1.3}
+table.fleet-table.iv td:not(:first-child),table.fleet-table.iv th:not(:first-child){width:104px;text-align:center}
+table.fleet-table.iv input[type=number]{width:92px!important;min-width:92px;padding:7px 8px!important;text-align:center;box-sizing:border-box;font-size:.95rem}
+@media(max-width:560px){table.fleet-table.iv td:not(:first-child),table.fleet-table.iv th:not(:first-child){width:84px}table.fleet-table.iv input[type=number]{width:76px!important;min-width:76px}}
+table.fleet-table.iv td:first-child,table.fleet-table.iv th:first-child{white-space:normal!important;word-break:normal;overflow-wrap:anywhere}
+table.fleet-table.iv{min-width:0!important}
+
 /* ================= v27: visual moderno (compacto, claro) ================= */
 :root{--m-card:rgba(255,255,255,.82);--solid:#fff;--ink:#14233b;--mut:#6b7a92;--line:#e4eaf3;--side:#0b1f3a;--side2:#12305a;--acc:#1f6fb5;--acc2:#4a90d0;--ok:#1f9d63;--okb:#e2f5ec;--warn:#c98a10;--warnb:#fdf2d9;--bad:#d2452d;--badb:#fde8e4;--info:#1f6fb5;--infob:#e3eefa;--shadow:0 1px 2px rgba(16,35,66,.05),0 8px 24px rgba(16,35,66,.06);--grid:#edf1f7}
 html{background:#d3e4f6}
@@ -1096,7 +1106,7 @@ body.present .plogos{display:flex;align-items:center;gap:14px;background:#fff;bo
         </div>
     </div>
 
-    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 28g · hidráulico 4.000 h / 24 meses · 16/10/2026</b></span></footer>
+    <footer class="page-foot"><span>Referência: NP-055 – Plano de Gestão de Manutenção – Empurradores</span><span>Formulários: FR 049_B Rev.02 · FR 016_E Rev.00 Ed.01</span><span><b>Versão 28h · campos de horas ajustados · hidráulico 4.000 h / 24 meses · 16/10/2026</b></span></footer>
     </main></div>
     <div class="lb" id="lb"><img id="lbi" alt=""></div>
 
@@ -1332,7 +1342,7 @@ let hoursChart,consChart,currentFilter='all';
 const GKEY={mcp1:'mcp',mcp2:'mcp',crp1:'crp',crp2:'crp',mca1:'mca',mca2:'mca',hid:'hid',popa:'popa',bomba:'bomba',inc:'inc'};
 /* Intervalo de troca: o que vencer primeiro (horas OU meses) */
 const IV_DEF={mcp:{h:350,m:6},mca:{h:250,m:6},crp:{h:1000,m:12},hid:{h:4000,m:24},popa:{h:100,m:6},bomba:{h:100,m:6},inc:{h:250,m:6}};
-const IV_LABEL={mcp:'MCP · Motor propulsor',mca:'MCA · Motor auxiliar',crp:'Reversor (CRP) · por modelo: Hitachi 1.000 h/12 m · Masson 2.500 h/12 m · Reintjes 2.000 h/6 m',hid:'Sistema hidráulico (governo)',popa:'Motor de popa',bomba:'Motobomba (5HP)',inc:'Bomba de incêndio'};
+const IV_LABEL={mcp:'MCP · Motor propulsor',mca:'MCA · Motor auxiliar',crp:'Reversor (CRP) · por modelo<br><small style="font-weight:500;color:#64748b">Hitachi 1.000 h/12 m · Masson 2.500 h/12 m · Reintjes 2.000 h/6 m</small>',hid:'Sistema hidráulico (governo)',popa:'Motor de popa',bomba:'Motobomba (5HP)',inc:'Bomba de incêndio'};
 const DEFAULTS={cloudUrl:'',cloudSynced:false,cloudSince:0,cfgAt:0,warnH:20,warnDays:30,usoDiario:12,seedCleared:false,opDefault:true,adDefault:true};
 const DEFAULT_PW={op:'oleo2026',ad:'admin2026'};
 
@@ -1937,7 +1947,7 @@ async function saveParams(){
  if(isNaN(w)||w<0||isNaN(wd)||wd<0||isNaN(u)||u<1||u>24){alert('Alerta ≥ 0 e uso diário entre 1 e 24 h/dia.');return;}
  const iv={};
  for(const g of Object.keys(IV_DEF)){const h=parseFloat($('#ivh-'+g).value),m=parseInt($('#ivm-'+g).value,10);
-  if(isNaN(h)||h<=0||isNaN(m)||m<=0){alert('Intervalo inválido em '+IV_LABEL[g]+': informe horas e meses maiores que zero.');return;}iv[g]={h,m};}
+  if(isNaN(h)||h<=0||isNaN(m)||m<=0){alert('Intervalo inválido em '+IV_LABEL[g].replace(/<[^>]*>/g,' ')+': informe horas e meses maiores que zero.');return;}iv[g]={h,m};}
  SETTINGS.gate=$('#setGate').checked;SETTINGS.warnH=w;SETTINGS.warnDays=wd;SETTINGS.usoDiario=u;SETTINGS.intervals=iv;await saveSettings();pushConfig();renderAll();toast('Parâmetros salvos. Painel recalculado.');
 }
 async function clearSeed(){
