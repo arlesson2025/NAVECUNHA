@@ -749,6 +749,12 @@ table.meds tr.out input.dv{border-color:var(--bad);background:var(--badb);color:
 .pftr{position:relative;display:flex;height:18px;align-items:center}.pftr i{display:block;height:18px}.pftr i:first-child{border-radius:3px 0 0 3px}
 .pfn{margin-left:6px;font-weight:700;font-size:13px}
 .pfac{font-size:12px;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}.pfac.top{color:var(--ink);font-weight:700}
+.hrrow{grid-template-columns:minmax(200px,26%) minmax(80px,1fr) minmax(0,auto) auto!important;cursor:default}.hrrow:hover{background:none}
+.hrtr{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--okb) 0 23.3%,var(--warnb) 23.3% 46.7%,var(--badb) 46.7% 100%);position:relative}
+.hrbar{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.hrps{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--mut);width:390px}.hpos b{color:var(--ink);font-variant-numeric:tabular-nums}
+.hmt td,.hmt th{padding-left:6px;padding-right:6px}.hmt td.c{font-variant-numeric:tabular-nums}
+@media (max-width:760px){.hrrow{grid-template-columns:1fr!important}.hrps{width:auto}}
 /* ---------- responsivo ---------- */
 @media (max-width:1200px){.work{grid-template-columns:1fr}.pdfcol{position:static}.pdfwrap{max-height:none}.kgrid.six{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:900px){.kgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.cls{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -975,13 +981,25 @@ function ultimoServico(vid, pos, itemId) {
 }
 function omAberta(vid, pos, itemId) { return oms().find(o => o.tipo === 'P' && o.status !== 'encerrada' && o.vessel === vid && o.pos === pos && (o.items || []).includes(itemId)); }
 // situação de um item: venc | viag | ok | sem (sem histórico) | cond (por condição)
+// próxima viagem: cada barco tem a sua (120 h a 1.500 h, conforme o trecho); sem informação, usa a viagem padrão
+const viagemDe = v => (v && +v.viagH > 0) ? +v.viagH : S.cfg.viagemH;
+// horas de MCP por dia do barco (últimos ~90 dias de horímetro BB); sem dados, 20 h/dia
+let _hdMemo = { n: -1, m: {} };
+function horasDia(vid) {
+  if (_hdMemo.n !== S.recs.size) _hdMemo = { n: S.recs.size, m: {} };
+  if (_hdMemo.m[vid] !== undefined) return _hdMemo.m[vid];
+  const L = recs('hor').filter(r => r.vessel === vid && r.pos === 'BB').sort((a, b) => a.date < b.date ? -1 : 1);
+  let t = 20;
+  if (L.length > 1) { const b = L[L.length - 1], lim = isoD(new Date(pD(b.date).getTime() - 90 * 864e5)); const a = L.find(r => r.date >= lim) || L[0]; const d = (pD(b.date) - pD(a.date)) / 864e5; if (d >= 7 && b.h > a.h) t = (b.h - a.h) / d; }
+  return (_hdMemo.m[vid] = Math.max(4, Math.min(24, t)));
+}
 function situacao(v, pos, t, viagemH) {
   const iv = intervalo(t);
   if (t.kind !== 'prog' || (!iv.h && !iv.m)) return { st: 'cond', txt: t.kind === 'novo' ? 'Só para motor novo/revisado' : 'Por condição' };
   const hp = posHor(pos, t), hr = horAtual(v.id, hp), cur = hr ? hr.h : null;
   const L = ultimoServico(v.id, pos, t.id);
   if (!L) return { st: 'sem', txt: 'Sem último serviço registrado', cur, hp };
-  viagemH = viagemH === undefined ? S.cfg.viagemH : viagemH;
+  viagemH = viagemH === undefined ? viagemDe(v) : viagemH;
   let st = 'ok', txt = [], alvoH = null, alvoD = null, rest = null;
   const ord = { ok: 0, viag: 1, venc: 2 }, up = s => { if (ord[s] > ord[st]) st = s; };
   if (iv.h && L.h !== null && cur !== null) {
@@ -992,7 +1010,7 @@ function situacao(v, pos, t, viagemH) {
   if (iv.m) {
     alvoD = addM(pD(L.date), iv.m); const dd = Math.floor((alvoD - hoje()) / 864e5);
     txt.push(dd < 0 ? (-dd) + ' dias vencido' : 'vence ' + alvoD.toLocaleDateString('pt-BR'));
-    up(dd < 0 ? 'venc' : dd <= Math.ceil(viagemH / 20) ? 'viag' : 'ok');
+    up(dd < 0 ? 'venc' : dd <= Math.ceil(viagemH / horasDia(v.id)) ? 'viag' : 'ok');
   }
   return { st, txt: txt.join(' · '), alvoH, alvoD, rest, cur, L, hp };
 }
@@ -1147,7 +1165,7 @@ function gerarExemplo() {
   cfg.frota.forEach(v => delete v._st);
   return out;
 }
-async function carregarExemplo() { const l0 = gerarExemplo(); l0.forEach(r => S.recs.set(r.id, r)); l0.forEach(r => S.recs.set(r.id, r)); completarExemploAntigo(); const l = l0.concat(exemploComp(), exemploFalhas()); l.forEach(r => { r.updatedAt = r.updatedAt || Date.now(); r.createdAt = r.createdAt || r.updatedAt; S.recs.set(r.id, r); }); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); await kvSet('cfg', S.cfg); await kvSet('seeded', true); }
+async function carregarExemplo() { const l0 = gerarExemplo(); l0.forEach(r => S.recs.set(r.id, r)); l0.forEach(r => S.recs.set(r.id, r)); completarExemploAntigo(); const l = l0.concat(exemploComp(), exemploFalhas()); l.forEach(r => S.recs.set(r.id, r)); exemploHor().forEach(r => { if (!l.includes(r)) l.push(r); }); l.forEach(r => { r.updatedAt = r.updatedAt || Date.now(); r.createdAt = r.createdAt || r.updatedAt; S.recs.set(r.id, r); }); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); await kvSet('cfg', S.cfg); await kvSet('seeded', true); }
 async function limparExemplo() {
   const ids = [...S.recs.values()].filter(r => r.seed).map(r => r.id);
   for (const id of ids) { S.recs.delete(id); if (MEM) MEM.delete(id); else await DB.del(id); }
@@ -1158,7 +1176,7 @@ const temExemplo = () => [...S.recs.values()].some(r => r.seed);
 
 /* ---------- navegação ---------- */
 const NAV = [
-  ['Painel', [['geral', 'Visão geral'], ['frota', 'Frota e vencimentos'], ['calib', 'Ajuste e calibração MCP'], ['over', 'Overhaul · saúde do MCP'], ['doca', 'Docagem'], ['falhas', 'Falhas e mitigação'], ['kpi', 'Indicadores NP 055'], ['hist', 'Histórico de OMs']]],
+  ['Painel', [['geral', 'Visão geral'], ['frota', 'Frota e vencimentos'], ['calib', 'Ajuste e calibração MCP'], ['over', 'Overhaul · saúde do MCP'], ['doca', 'Docagem'], ['falhas', 'Falhas e mitigação'], ['hor', 'Horímetro'], ['kpi', 'Indicadores NP 055'], ['hist', 'Histórico de OMs']]],
   ['Ordens de Manutenção', [['emitir', 'Emitir preventivas'], ['acomp', 'Acompanhar OMs'], ['prev', 'Preventiva · Anexo II-B'], ['corr', 'Corretiva · Anexo II-A']]],
   ['Consulta', [['matriz', 'Matriz Anexo I']]],
   ['Supervisor', [['rel', 'Relatório mensal'], ['admin', 'Administração']]],
@@ -1185,7 +1203,7 @@ let dirty = false;
 function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { dirty = true; renderNav(); return; } render(); }
 function render() {
   renderNav(); renderUser();
-  const V = { geral: vGeral, frota: vFrota, calib: vCalib, over: vOver, doca: vDoca, falhas: vFalhas, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, rel: vRel, admin: vAdmin }[VIEW] || vGeral;
+  const V = { geral: vGeral, frota: vFrota, calib: vCalib, over: vOver, doca: vDoca, falhas: vFalhas, hor: vHor, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, rel: vRel, admin: vAdmin }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   m.innerHTML = banners() + V();
   (AFTER[VIEW] || (() => { }))();
@@ -1207,7 +1225,14 @@ function loginModal(msg) {
    <label class="f">Seu nome<input id="lgN" autocomplete="name"></label><label class="f">Senha<input id="lgP" type="password" autocomplete="current-password"></label>
    <div class="note" id="lgE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="lgB">Entrar</button></div>
    ${S.url ? '' : '<p class="note">Modo local (sem nuvem). Senhas iniciais: analista <b>manut2026</b> · supervisor <b>super2026</b>. Troque em Administração.</p>'}`);
-  const go1 = async () => { $('#lgB').disabled = true; const e = await login($('#lgN').value, $('#lgP').value); $('#lgB').disabled = false; if (e) { $('#lgE').textContent = e; return; } closeModal(); toast('Bem-vindo, ' + S.session.name + '.'); render(); };
+  const go1 = async () => {
+    $('#lgB').disabled = true; $('#lgB').textContent = 'Entrando…'; $('#lgE').textContent = '';
+    let e; try { e = await login($('#lgN').value, $('#lgP').value); }
+    catch (err) { e = 'Não consegui falar com o servidor do Google. Confira se a implantação está como "Qualquer pessoa" e se o endereço termina em /exec.'; if (S.url) $('#lgE').insertAdjacentHTML('afterend', '<div class="row" id="lgLoc"><button class="mbtn sm" id="lgLocB">Voltar ao modo local (apagar o endereço da nuvem)</button></div>'); }
+    $('#lgB').disabled = false; $('#lgB').textContent = 'Entrar';
+    if (e) { $('#lgE').textContent = e; const b = $('#lgLocB'); if (b) b.onclick = async () => { S.url = ''; await kvSet('url', ''); closeModal(); loginModal('Modo local. Entre com a senha inicial do Supervisor para corrigir o endereço da nuvem em Administração.'); }; return; }
+    closeModal(); toast('Bem-vindo, ' + S.session.name + '.'); render();
+  };
   $('#lgB').onclick = go1; $('#lgP').onkeydown = e => { if (e.key === 'Enter') go1(); };
 }
 function precisa(adm) { if (!S.session) { loginModal(); return false; } if (adm && !can.admin()) { toast('Somente o Supervisor (administrador) pode fazer isso.'); return false; } return true; }
@@ -1265,7 +1290,7 @@ function vGeral() {
    <button class="mbtn" onclick="go('emitir')">＋ Emitir preventivas</button><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>
   <div class="kgrid six">
    <div class="card mini ${venc ? 'bad' : 'ok'}"><b>${venc}</b><span>preventivas vencidas sem OM</span></div>
-   <div class="card mini ${viag ? 'warn' : 'ok'}"><b>${viag}</b><span>vencem na próxima viagem (${S.cfg.viagemH} h)</span></div>
+   <div class="card mini ${viag ? 'warn' : 'ok'}"><b>${viag}</b><span>vencem na próxima viagem de cada barco</span></div>
    <div class="card mini ${crit ? 'bad' : 'ok'}"><b>${bloq.length}</b><span>embarcações com saída bloqueada (Crítica vencida)</span></div>
    <div class="card mini ${inter.length ? 'bad' : 'ok'}"><b>${inter.length}</b><span>interditadas por falha Crítica</span></div>
    <div class="card mini ${corrAb.length ? 'warn' : 'ok'}"><b>${corrAb.length}</b><span>corretivas em aberto</span></div>
@@ -1299,6 +1324,7 @@ function vFrota() {
     const hrs = posicoes(v).filter(x => x !== 'UN').map(pos => { const h = horAtual(v.id, pos); return `${posTag(pos)}<span>${pos === 'BB' || pos === 'BE' ? 'MCP · ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : '<i class="mut">reversor ?</i>') : EQN[v.mca[pos]]}</span><span class="mono">${h ? nf(h.h) + ' h' : '—'}</span>`; }).join('');
     return `<button class="card vcard" data-vessel="${v.id}"><div class="row"><h3>${esc(v.nome)}</h3><span class="sp"></span>${it ? '<span class="pill p-bad">Interditada</span>' : bq ? '<span class="pill p-bad">Saída bloqueada</span>' : ''}</div>
      <div class="hrs">${hrs}</div>
+     <div class="note">Próxima viagem: <b>${nf(viagemDe(v))} h</b>${+v.viagH > 0 ? '' : ' (padrão)'}</div>
      <div class="sbar"><i style="width:${n.venc / T * 100}%;background:var(--bad)"></i><i style="width:${n.viag / T * 100}%;background:var(--warn)"></i><i style="width:${n.ok / T * 100}%;background:var(--ok)"></i><i style="width:${n.sem / T * 100}%;background:var(--line2)"></i></div>
      <div class="row" style="gap:5px"><span class="pill p-bad">${n.venc} vencidos</span><span class="pill p-warn">${n.viag} na viagem</span><span class="pill p-ok">${n.ok} em dia</span>${n.sem ? `<span class="pill p-mut">${n.sem} sem histórico</span>` : ''}</div></button>`;
   }).join('');
@@ -1361,7 +1387,7 @@ function vCalib() {
     return `<div class="rkrow" data-calib="${x.v.id}" data-tip="${esc(x.s.txt || '')} · clique para ver o barco"><div class="rklb">${x.porBarco ? `<b>${esc(x.v.nome)}</b> · ${x.pos} ${x.t.id} ${esc(x.nm)}` : `<b>${esc(x.v.nome)} ${x.pos}</b> · ${x.t.id} ${esc(x.nm)}`}${x.s.st !== 'ok' ? (calPorto(x.t.id) ? ` <span class="pill ${x.s.st === 'venc' ? 'p-bad' : 'p-warn'}">${x.s.st === 'venc' ? 'fazer no porto' : 'antecipar no porto'}</span>` : ' <span class="pill p-inf">pode a bordo</span>') : ''}${x.om ? ` <span class="pill p-inf">OM ${esc(x.om.num)}</span>` : ''}${x.mais ? ` <span class="pill p-mut">+${x.mais} pendente${x.mais > 1 ? 's' : ''}</span>` : ''}</div>
      <div class="rktr"><i class="rkz"></i><i class="rkbr" style="left:${l}%;width:${w}%;background:${c}"></i><span class="rkvl" style="${x.vida < 0 ? `right:${100 - l + 1}%` : `left:${l + w + 1}%`};color:${c}">${calVal(x)}</span></div></div>`;
   }).join('');
-  return `<div class="vh"><div><h1>Ajuste e calibração MCP</h1><p>Itens de ajuste do Anexo I (folga de válvulas, bicos, ponto de injeção, rótulas, trocador de calor) e a limpeza da caixa de mar. Vencimento = horas OU meses, o que ocorrer primeiro. "Na viagem" = vence nas próximas ${S.cfg.viagemH} h. Os serviços técnicos só são feitos no porto; a caixa de mar pode ser feita a bordo.</p></div><span class="sp"></span><button class="mbtn" onclick="go('emitir')">＋ Emitir preventivas</button></div>
+  return `<div class="vh"><div><h1>Ajuste e calibração MCP</h1><p>Itens de ajuste do Anexo I (folga de válvulas, bicos, ponto de injeção, rótulas, trocador de calor) e a limpeza da caixa de mar. Vencimento = horas OU meses, o que ocorrer primeiro. "Na viagem" = vence antes do fim da próxima viagem de cada barco (horas informadas em Emitir preventivas; sem informação, ${S.cfg.viagemH} h). Os serviços técnicos só são feitos no porto; a caixa de mar pode ser feita a bordo.</p></div><span class="sp"></span><button class="mbtn" onclick="go('emitir')">＋ Emitir preventivas</button></div>
   <div class="kgrid six">
    <div class="card mini ${n.venc ? 'bad' : 'ok'}"><b>${n.venc}</b><span>vencidos</span></div>
    <div class="card mini ${nPorto ? 'warn' : 'ok'}"><b>${nPorto}</b><span>vencem na próxima viagem · fazer no porto antes de sair</span></div>
@@ -1711,6 +1737,102 @@ function exemploFalhas() {
   });
   return out;
 }
+/* =====================================================================
+   HORÍMETRO · lançamento em dia, horas por mês e lançamentos suspeitos
+   (o horímetro é a base de todos os vencimentos por hora)
+   ===================================================================== */
+const HOR = { ok: 7, aten: 14, maxDia: 24 };
+let HORPOS = 'BB';
+function horDados() {
+  return S.cfg.frota.map(v => {
+    const ps = posicoes(v).filter(p => p !== 'UN').concat((v.off || []).includes('POPA') ? [] : ['POPA']);
+    const ult = ps.map(p => ({ p, r: horAtual(v.id, p) })).filter(x => x.r);
+    const last = ult.reduce((m, x) => !m || x.r.date > m ? x.r.date : m, null);
+    const dias = last ? Math.floor((hoje() - pD(last)) / 864e5) : null;
+    const st = dias == null ? 'sem' : dias <= HOR.ok ? 'ok' : dias <= HOR.aten ? 'viag' : 'venc';
+    return { v, ps, ult, last, dias, st };
+  });
+}
+function horSuspeitos() {
+  const out = [];
+  S.cfg.frota.forEach(v => ['BB', 'BE', 'MCA1', 'MCA2', 'POPA'].forEach(p => {
+    const L = recs('hor').filter(r => r.vessel === v.id && r.pos === p).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.h - b.h);
+    let a = L[0]; // compara sempre com o último lançamento bom (o errado não vira referência)
+    for (let i = 1; i < L.length; i++) {
+      const b = L[i], d = Math.max(1, (pD(b.date) - pD(a.date)) / 864e5);
+      if (b.h < a.h) out.push({ v, p, r: b, ant: a, t: 'Horímetro menor que o anterior (' + nf(a.h - b.h) + ' h a menos)' });
+      else if ((b.h - a.h) / d > HOR.maxDia) out.push({ v, p, r: b, ant: a, t: 'Salto de ' + nf(b.h - a.h) + ' h em ' + Math.round(d) + ' dia(s): mais de ' + HOR.maxDia + ' h por dia' });
+      else a = b;
+    }
+  }));
+  return out.sort((a, b) => a.r.date < b.r.date ? 1 : -1);
+}
+function horasMes(vid, pos, nMeses) {
+  const fim = m => { const d = new Date(hoje().getFullYear(), hoje().getMonth() - m + 1, 0); return isoD(d); };
+  const hEm = date => { const r = horEm(vid, pos, date); return r ? r.h : null; };
+  const out = [];
+  for (let m = nMeses - 1; m >= 0; m--) {
+    const ini = isoD(new Date(hoje().getFullYear(), hoje().getMonth() - m, 1)), cur = horAtual(vid, pos);
+    const a = hEm(fim(m + 1)), b = m === 0 ? (cur && cur.date >= ini ? cur.h : null) : hEm(fim(m));
+    out.push(a != null && b != null && b >= a ? b - a : null);
+  }
+  return out;
+}
+function vHor() {
+  const D = horDados(), n = { ok: 0, viag: 0, venc: 0, sem: 0 }; D.forEach(x => n[x.st]++);
+  const sus = horSuspeitos(), SO = { venc: 0, sem: 1, viag: 2, ok: 3 };
+  D.sort((a, b) => SO[a.st] - SO[b.st] || (b.dias || 0) - (a.dias || 0));
+  const X = d => Math.min(100, d / 30 * 100);
+  const linhas = D.map(x => {
+    const tag = x.st === 'venc' ? '<span class="pill p-bad">desatualizado</span>' : x.st === 'viag' ? '<span class="pill p-warn">atenção</span>' : x.st === 'sem' ? '<span class="pill p-mut">sem lançamento</span>' : '';
+    const pos = x.ult.map(u => `<span class="hpos" data-tip="${u.p}: ${nf(u.r.h)} h em ${brD(u.r.date)}">${u.p === 'POPA' ? 'Popa' : u.p} <b>${nf(u.r.h)}</b></span>`).join('');
+    return `<div class="rkrow hrrow"><div class="rklb"><b>${esc(x.v.nome)}</b> ${tag}<div class="note">${x.last ? 'último lançamento ' + brD(x.last) + ' · há ' + x.dias + (x.dias === 1 ? ' dia' : ' dias') : 'nenhum horímetro lançado'}</div></div>
+     <div class="hrtr"><i class="hrbar" style="width:${x.dias == null ? 100 : Math.max(1.5, X(x.dias))}%;background:${CORST[x.st]}"></i></div>
+     <div class="hrps">${pos}</div><button class="mbtn sm" data-act="lancarHor" data-v="${x.v.id}">⏱ Lançar</button></div>`;
+  }).join('');
+  const NM = 6, meses = []; for (let m = NM - 1; m >= 0; m--) { const d = new Date(hoje().getFullYear(), hoje().getMonth() - m, 1); meses.push(d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') + (m === 0 ? ' (parcial)' : '')); }
+  const tab = S.cfg.frota.filter(v => HORPOS === 'BB' || HORPOS === 'BE' || v.mca[HORPOS]).map(v => ({ v, hm: horasMes(v.id, HORPOS, NM) }));
+  const maxH = Math.max(1, ...tab.flatMap(t => t.hm.slice(0, -1).filter(x => x != null)));
+  const diasMes = m => new Date(hoje().getFullYear(), hoje().getMonth() - m + 1, 0).getDate();
+  const ultFech = NM - 2; // último mês fechado
+  const ativo = tab.map(t => t.hm[ultFech]).filter(x => x != null);
+  const frotaMes = ativo.reduce((a, b) => a + b, 0);
+  return `<div class="vh"><div><h1>Horímetro</h1><p>O horímetro é a base de todos os vencimentos por hora: se ele está atrasado, o painel mostra itens "em dia" que já venceram. Em dia = lançado nos últimos ${HOR.ok} dias · atenção até ${HOR.aten} dias · depois disso, desatualizado.</p></div><span class="sp"></span><button class="mbtn pri" data-act="lancarHor">⏱ Lançar horímetros</button></div>
+  <div class="kgrid six">
+   <div class="card mini ok"><b>${n.ok}</b><span>barcos com horímetro em dia (≤ ${HOR.ok} dias)</span></div>
+   <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>atenção (${HOR.ok + 1} a ${HOR.aten} dias)</span></div>
+   <div class="card mini ${n.venc + n.sem ? 'bad' : 'ok'}"><b>${n.venc + n.sem}</b><span>desatualizados ou sem lançamento</span></div>
+   <div class="card mini ${sus.length ? 'bad' : 'ok'}"><b>${sus.length}</b><span>lançamentos suspeitos</span></div>
+   <div class="card mini"><b>${nf(frotaMes)}</b><span>horas de MCP ${HORPOS === 'BB' || HORPOS === 'BE' ? HORPOS : ''} da frota em ${meses[ultFech]}</span></div>
+   <div class="card mini"><b>${ativo.length ? nf(Math.round(frotaMes / ativo.length / diasMes(1) * 10) / 10) : '—'}</b><span>média de horas por dia, por barco (${meses[ultFech]})</span></div>
+  </div>
+  <div class="card"><div class="row"><h2>A · Último lançamento por barco</h2><span class="sp"></span><span class="note">Barra = dias desde o último lançamento (escala até 30 dias).</span></div>
+   <div class="rk">${linhas}</div></div>
+  <div class="two">
+   <div class="card"><div class="row"><h2>B · Horas trabalhadas por mês</h2><span class="sp"></span><div class="seg">${['BB', 'BE', 'MCA1', 'MCA2'].map(p => `<button data-horpos="${p}" class="${p === HORPOS ? 'on' : ''}">${p === 'BB' || p === 'BE' ? 'MCP ' + p : p}</button>`).join('')}</div></div>
+    <div class="tw"><table class="t hmt"><thead><tr><th>Barco</th>${meses.map(m => `<th class="c">${m}</th>`).join('')}<th class="c">h/dia</th></tr></thead><tbody>
+    ${tab.map(t => { const ref = t.hm[ultFech]; return `<tr><td><b>${esc(t.v.nome)}</b></td>${t.hm.map((h, i) => `<td class="c" style="${h != null && i < NM - 1 ? `background:rgba(46,111,186,${(0.06 + h / maxH * 0.32).toFixed(2)})` : ''}">${h == null ? '<span class="mut">—</span>' : nf(h)}</td>`).join('')}<td class="c mono">${ref != null ? (ref / diasMes(1)).toFixed(1).replace('.', ',') : '—'}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <p class="note">Horas do mês = horímetro no fim do mês − horímetro no fim do mês anterior (último lançamento até a data). O KPI de horas de operação da NP 055 usa o MCP BB. "—" = sem lançamento suficiente.</p></div>
+   <div class="card"><div class="row"><h2>C · Lançamentos suspeitos</h2></div>
+    ${sus.length ? `<div class="tw"><table class="t"><thead><tr><th>Barco</th><th>Motor</th><th>Data</th><th>Lançado</th><th>Anterior</th><th>Problema</th>${can.admin() ? '<th></th>' : ''}</tr></thead><tbody>
+    ${sus.map(s => `<tr><td><b>${esc(s.v.nome)}</b></td><td>${s.p}</td><td>${brD(s.r.date)}</td><td class="mono">${nf(s.r.h)} h</td><td class="mono note">${nf(s.ant.h)} h · ${brD(s.ant.date)}</td><td><span class="pill p-bad" style="white-space:normal">${esc(s.t)}</span></td>${can.admin() ? `<td><button class="mbtn sm" data-horexc="${s.r.id}">Excluir</button></td>` : ''}</tr>`).join('')}
+    </tbody></table></div><p class="note">Provável erro de digitação. Confira no Diário de Máquinas. ${can.admin() ? 'O Supervisor pode excluir o lançamento errado e lançar o certo.' : 'Peça ao Supervisor para excluir o lançamento errado.'}</p>` : '<div class="note">Nenhum lançamento suspeito.</div>'}</div>
+  </div>`;
+}
+AFTER.hor = () => { $('#main').onclick = async e => {
+  const p = e.target.closest('[data-horpos]'); if (p) { HORPOS = p.dataset.horpos; render(); return; }
+  const x = e.target.closest('[data-horexc]'); if (x) { if (!precisa(true)) return; const r = S.recs.get(x.dataset.horexc); if (!r) return; if (!confirm('Excluir o lançamento de ' + nf(r.h) + ' h de ' + brD(r.date) + '?')) return; r.excluido = true; await saveRec(r); toast('Lançamento excluído.'); render(); }
+}; };
+// exemplo: dois barcos atrasados e dois lançamentos com erro de digitação
+function exemploHor() {
+  const out = [], F = S.cfg.frota;
+  const marca = (v, ks) => recs('hor').forEach(r => { if (r.seed && r.vessel === v.id && ks.some(k => r.id.endsWith(r.pos + k))) { r.excluido = true; out.push(r); } });
+  if (F[6]) marca(F[6], [1, 8, 15]); if (F[9]) marca(F[9], [1]);
+  const ins = (v, p, dias, delta, id) => { if (!v) return; const d = new Date(hoje()); d.setDate(d.getDate() - dias); const ref = horEm(v.id, p, isoD(d)); if (!ref) return; out.push({ id, kind: 'hor', vessel: v.id, pos: p, h: ref.h + delta, date: isoD(d), seed: true, updatedAt: Date.now(), createdAt: Date.now() }); };
+  ins(F[3], 'BB', 58, -310, 'ex-hor-sus1'); ins(F[10], 'BE', 93, 1100, 'ex-hor-sus2');
+  return out;
+}
 function vesselModal(vid, filtro) {
   const v = vessel(vid); filtro = filtro || 'pend';
   const p = painelVessel(v).filter(x => filtro === 'todos' ? true : filtro === 'sem' ? x.s.st === 'sem' : ['venc', 'viag'].includes(x.s.st));
@@ -1751,10 +1873,14 @@ function horModal(vid) {
    EMITIR PREVENTIVAS (pacote da viagem)
    ===================================================================== */
 const EM = { sel: new Set(), draft: null, viag: null, mostrar: 'pend' };
+async function salvarViagem(vid, h) {
+  const v = vessel(vid); if (!v) return; v.viagH = h; v.viagAt = Date.now(); S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg);
+  if (S.url && can.admin()) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } } catch (e) { } }
+}
 function vEmitir() {
   const vid = ARG || S.cfg.frota[0].id, v = vessel(vid); if (!v) return '<div class="empty">Embarcação não encontrada.</div>';
-  if (EM.vid !== vid) { EM.sel.clear(); EM.draft = null; EM.vid = vid; }
-  const vh = EM.viag ?? S.cfg.viagemH;
+  if (EM.vid !== vid) { EM.sel.clear(); EM.draft = null; EM.vid = vid; EM.viag = null; }
+  const vh = EM.viag ?? viagemDe(v);
   const P = painelVessel(v, vh);
   const bloco = pos => {
     let rows = P.filter(x => x.pos === pos && x.t.kind === 'prog'); if (!rows.length) return '';
@@ -1772,7 +1898,7 @@ function vEmitir() {
   };
   return `<div class="vh"><div><h1>Emitir preventivas · pacote da viagem</h1><p>Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.</p></div></div>
    <div class="card row"><label class="f" style="min-width:200px">Embarcação<select id="emV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
-    <label class="f" style="width:170px">Horas previstas da viagem<input type="number" id="emH" value="${vh}" min="0" step="10"></label>
+    <label class="f" style="width:230px">Horas previstas da próxima viagem<input type="number" id="emH" value="${vh}" min="0" step="10"><span class="note" style="font-size:11px">${+v.viagH > 0 ? 'salvo para este barco' : 'padrão (' + S.cfg.viagemH + ' h): informe o trecho'} · ~${Math.round(horasDia(v.id))} h/dia</span></label>
     <div class="seg" style="align-self:flex-end"><button data-mostra="pend" class="${EM.mostrar === 'pend' ? 'on' : ''}">Só vencendo</button><button data-mostra="todos" class="${EM.mostrar === 'todos' ? 'on' : ''}">Todos os itens</button></div>
     ${interditada(vid) ? '<span class="pill p-bad">Interditada por falha Crítica</span>' : ''}${bloqueioSaida(vid).length ? '<span class="pill p-bad">Saída bloqueada: item Crítico vencido</span>' : ''}</div>
    ${posicoes(v).map(bloco).join('')}`;
@@ -1782,7 +1908,7 @@ function draftHtml(v, P) {
   const sits = d.ids.map(id => (P.find(x => x.pos === pos && x.t.id === id) || {}).s || {});
   const hs = sits.map(s => s.alvoH).filter(x => x), ds = sits.map(s => s.alvoD).filter(x => x);
   const hr = horAtual(v.id, pos === 'UN' ? 'BB' : pos);
-  d.alvoH = hs.length ? Math.min(...hs) : (hr ? hr.h + (EM.viag ?? S.cfg.viagemH) : null);
+  d.alvoH = hs.length ? Math.min(...hs) : (hr ? hr.h + (EM.viag ?? viagemDe(v)) : null);
   d.alvoD = ds.length ? isoD(new Date(Math.min(...ds))) : null;
   const sisL = [...new Set(d.ids.map(id => A1M[id].sis))].join(' / ');
   d.txt = `PREVENTIVA – ${v.nome} – ${POSN[pos]}\nSistema: ${sisL}\nItens Anexo I: ${d.ids.join(', ')}\n${d.ids.map(id => '- ' + id + ' ' + A1M[id].chk).join('\n')}\nHorímetro atual: ${hr ? nf(hr.h) + ' h' : '—'}${d.alvoH ? ' · Hora-alvo: ' + nf(d.alvoH) + ' h' : ''}${d.alvoD ? ' · Data-limite: ' + brD(d.alvoD) : ''}\nRegistro: Anexo II (II-B) + fotos antes/depois – NP 055 7.4`;
@@ -1795,11 +1921,11 @@ AFTER.emitir = () => {
   const m = $('#main');
   m.onchange = e => { const t = e.target;
     if (t.id === 'emV') go('emitir/' + t.value);
-    if (t.id === 'emH') { EM.viag = Math.max(0, +t.value || 0); render(); }
+    if (t.id === 'emH') { EM.viag = Math.max(0, +t.value || 0); salvarViagem(EM.vid, EM.viag); render(); }
     if (t.dataset.sel) { t.checked ? EM.sel.add(t.dataset.sel) : EM.sel.delete(t.dataset.sel); EM.draft = null; render(); } };
   m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.mostra) { EM.mostrar = t.dataset.mostra; render(); }
-    if (t.dataset.pick) { const v = vessel(EM.vid); painelVessel(v, EM.viag ?? S.cfg.viagemH).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); }
+    if (t.dataset.pick) { const v = vessel(EM.vid); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); }
     if (t.dataset.mkom) { if (!precisa(true)) return; const pos = t.dataset.mkom; EM.draft = { pos, ids: [...EM.sel].filter(k => k.startsWith(pos + '|')).map(k => k.split('|')[1]) }; render(); setTimeout(() => $('#omNum') && $('#omNum').focus(), 30); }
     if (t.dataset.act === 'cancDraft') { EM.draft = null; render(); }
     if (t.dataset.act === 'copiarTxt') { try { await navigator.clipboard.writeText(EM.draft.txt); $('#cpM').textContent = 'Copiado.'; } catch (er) { const r = document.createRange(); r.selectNodeContents($('#omTxt')); getSelection().removeAllRanges(); getSelection().addRange(r); $('#cpM').textContent = 'Texto selecionado. Use Ctrl+C.'; } }
@@ -2389,7 +2515,7 @@ function vAdmin() {
     <div class="row"><input id="adUrl" value="${esc(S.url)}" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:240px"><button class="mbtn" data-act="testar">Testar</button><button class="mbtn pri" data-act="salvarUrl">Salvar</button><button class="mbtn" data-act="sync">↻ Sincronizar agora</button></div><div class="note" id="adUrlMsg">${esc(S.syncMsg)}</div></div>
    <div class="card"><h2>Senhas</h2><p class="note">${S.url ? 'Trocadas no servidor: valem para todos.' : 'Modo local: valem só neste aparelho.'} Mínimo de 6 caracteres. Deixe em branco o que não quer trocar.</p>
     <div class="g"><label class="f s3">Nova senha do Analista (operador)<input id="pwOp" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label><label class="f s3">Nova senha do Supervisor (administrador)<input id="pwAd" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label></div><div class="row"><button class="mbtn" data-act="senhas" ${a ? '' : 'disabled'}>Trocar senhas</button></div></div>
-   <div class="card"><div class="row"><h2>Frota</h2><span class="sp"></span><label class="f" style="width:200px">Horas padrão de uma viagem<input type="number" id="adViag" value="${S.cfg.viagemH}" ${a ? '' : 'disabled'}></label></div>
+   <div class="card"><div class="row"><h2>Frota</h2><span class="sp"></span><label class="f" style="width:260px">Viagem padrão (h) · só para barco sem a próxima viagem informada<input type="number" id="adViag" value="${S.cfg.viagemH}" ${a ? '' : 'disabled'}></label></div>
     <p class="note">O reversor de cada bordo decide o bloco do Anexo I (1.5 Hitachi, 1.6 Masson, 1.7 REINTJES). Confirme pela placa. Desmarque os equipamentos que a embarcação não tem.</p>
     <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Reversor BB</th><th>Reversor BE</th><th>MCA 1</th><th>MCA 2</th><th>Equipamentos que não tem</th></tr></thead><tbody>
     ${S.cfg.frota.map((v, i) => `<tr><td><input data-fr="${i}|nome" value="${esc(v.nome)}" ${a ? '' : 'disabled'} style="min-width:110px"></td>
@@ -2460,6 +2586,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
     S.pending = new Set((await kvGet('pending')) || []); S.pdfPend = (await kvGet('pdfPend')) || {}; S.lastSync = (await kvGet('lastSync')) || 0;
     if (!(await kvGet('seeded')) && !S.recs.size) await carregarExemplo();
     else if (temExemplo() && !recs('om').some(r => r.seed && r.id.startsWith('ex-omf-'))) { const l = exemploFalhas(); l.forEach(r => S.recs.set(r.id, r)); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); }
+    if (temExemplo() && !S.recs.has('ex-hor-sus1')) { const l = exemploHor(); l.forEach(r => S.recs.set(r.id, r)); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); }
     if (temExemplo()) { const l = completarExemploAntigo(); if (l.length) { if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); } }
     if (temExemplo() && !recs('comp').some(r => r.seed)) { const l = exemploComp(); l.forEach(r => { r.updatedAt = r.createdAt = Date.now(); S.recs.set(r.id, r); }); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); }
   } catch (e) { S.cfg = S.cfg || cfgPadrao(); console.error(e); }
