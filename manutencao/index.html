@@ -715,7 +715,7 @@ table.meds tr.out input.dv{border-color:var(--bad);background:var(--badb);color:
 .rkbr{position:absolute;top:3px;height:14px;border-radius:3px}
 .rkvl{position:absolute;top:1px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 .rkax .rktr span{position:absolute;font-size:11px;color:var(--mut);white-space:nowrap}
-@media (max-width:760px){.ovrk .rkrow{grid-template-columns:1fr}.rkrow{grid-template-columns:1fr;gap:3px;padding:7px 2px;border-top:1px solid var(--line)}.rkax>span:empty{display:none}}
+@media (max-width:760px){.ovrk .rkrow,.dcrk .rkrow{grid-template-columns:1fr}.rkrow{grid-template-columns:1fr;gap:3px;padding:7px 2px;border-top:1px solid var(--line)}.rkax>span:empty{display:none}}
 .calgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 @media (max-width:1100px){.calgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){.calgrid{grid-template-columns:1fr}}
@@ -735,6 +735,15 @@ table.meds tr.out input.dv{border-color:var(--bad);background:var(--badb);color:
 .ovpt.prev{background:#fff;border:2px solid var(--mut);box-shadow:none;width:12px;height:12px;top:6px;margin-left:-6px;z-index:1}
 .ovln{position:absolute;top:11px;height:2px;background:var(--mut);opacity:.5}
 .ovrk .rkrow{grid-template-columns:minmax(220px,min(34%,400px)) minmax(0,1fr) 170px}.ovvl{font-weight:700;font-size:13px;white-space:nowrap}.ovvl small{font-weight:500;color:var(--mut);font-size:11px}
+.dcrk .rkrow{grid-template-columns:minmax(220px,min(34%,420px)) minmax(0,1fr)}
+.dctr{position:relative;height:26px;border-radius:6px;background:var(--line)}
+.dctr.ax{background:none;height:18px}.dctr.ax span{position:absolute;transform:translateX(-50%);font-size:11.5px;color:var(--mut);white-space:nowrap}.dctr.ax b{color:var(--ink)}
+.dcy{position:absolute;top:0;bottom:0;border-left:1px solid #fff}
+.dchj{position:absolute;top:-4px;bottom:-4px;border-left:2px solid var(--acc);z-index:3}
+.dcbar{position:absolute;top:12px;height:2px;background:var(--line2)}
+.dcwin{position:absolute;top:3px;bottom:3px;background:var(--warnb);border-radius:3px}
+.dcl{position:absolute;top:8px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--line2);border:2px solid #fff;z-index:2;cursor:help}
+.dcd{position:absolute;top:6px;width:14px;height:14px;margin-left:-7px;transform:rotate(45deg);border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);z-index:4;cursor:help}
 /* ---------- responsivo ---------- */
 @media (max-width:1200px){.work{grid-template-columns:1fr}.pdfcol{position:static}.pdfwrap{max-height:none}.kgrid.six{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:900px){.kgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.cls{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -1144,7 +1153,7 @@ const temExemplo = () => [...S.recs.values()].some(r => r.seed);
 
 /* ---------- navegação ---------- */
 const NAV = [
-  ['Painel', [['geral', 'Visão geral'], ['frota', 'Frota e vencimentos'], ['calib', 'Ajuste e calibração MCP'], ['over', 'Overhaul · saúde do MCP'], ['kpi', 'Indicadores NP 055'], ['hist', 'Histórico de OMs']]],
+  ['Painel', [['geral', 'Visão geral'], ['frota', 'Frota e vencimentos'], ['calib', 'Ajuste e calibração MCP'], ['over', 'Overhaul · saúde do MCP'], ['doca', 'Docagem'], ['kpi', 'Indicadores NP 055'], ['hist', 'Histórico de OMs']]],
   ['Ordens de Manutenção', [['emitir', 'Emitir preventivas'], ['acomp', 'Acompanhar OMs'], ['prev', 'Preventiva · Anexo II-B'], ['corr', 'Corretiva · Anexo II-A']]],
   ['Consulta', [['matriz', 'Matriz Anexo I']]],
   ['Supervisor', [['rel', 'Relatório mensal'], ['admin', 'Administração']]],
@@ -1171,7 +1180,7 @@ let dirty = false;
 function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { dirty = true; renderNav(); return; } render(); }
 function render() {
   renderNav(); renderUser();
-  const V = { geral: vGeral, frota: vFrota, calib: vCalib, over: vOver, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, rel: vRel, admin: vAdmin }[VIEW] || vGeral;
+  const V = { geral: vGeral, frota: vFrota, calib: vCalib, over: vOver, doca: vDoca, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, rel: vRel, admin: vAdmin }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   m.innerHTML = banners() + V();
   (AFTER[VIEW] || (() => { }))();
@@ -1511,6 +1520,77 @@ function exemploComp() {
   }));
   return out;
 }
+/* =====================================================================
+   DOCAGEM (Anexo I, item 9.1.5 – 5 anos) · data-limite do CSN prevalece
+   ===================================================================== */
+// junto: itens que exigem o barco fora d'água – ajustar com o Supervisor; janela: vencem até 6 meses depois da docagem
+const DOCA = { item: '9.1.5', planejarMeses: 12, janela: 6, junto: ['1.8.4'] };
+function docaLim(vid) { let b = null; recs('doclim').forEach(r => { if (r.vessel === vid && (!b || r.updatedAt > b.updatedAt)) b = r; }); return b; }
+function docaVessel(v) {
+  const t = A1M[DOCA.item], iv = intervalo(t), L = ultimoServico(v.id, 'UN', DOCA.item), lim = docaLim(v.id);
+  let due = L && iv.m ? addM(pD(L.date), iv.m) : null, fonte = 'Anexo I (' + iv.m + ' meses)';
+  if (lim && lim.date) { const d = pD(lim.date); if (!due || d < due) { due = d; fonte = 'Certificado (CSN)'; } }
+  const dias = due ? Math.floor((due - hoje()) / 864e5) : null;
+  const st = !due ? 'sem' : dias < 0 ? 'venc' : dias <= DOCA.planejarMeses * 30.4 ? 'viag' : 'ok';
+  // itens que só se faz (ou é melhor fazer) com o barco fora d'água e vencem até 12 meses depois da docagem
+  const junto = [];
+  if (due) { const ate = addM(due, DOCA.janela); DOCA.junto.forEach(id => { const ti = A1M[id]; if (!ti) return; posicoes(v).forEach(pos => { if (!aplica(v, pos, ti)) return; const s = situacao(v, pos, ti); const alvo = s.alvoD || null; const perto = (due - hoje()) / 864e5 <= DOCA.planejarMeses * 30.4; if ((perto && (s.st === 'venc' || s.st === 'sem')) || (alvo && alvo >= addM(due, -DOCA.planejarMeses) && alvo <= ate)) junto.push({ id, pos, nm: ti.chk, s }); }); }); }
+  return { v, L, lim, due, dias, st, fonte, junto, om: omAberta(v.id, 'UN', DOCA.item) };
+}
+function vDoca() {
+  const D = S.cfg.frota.map(docaVessel), n = { venc: 0, viag: 0, ok: 0, sem: 0 }; D.forEach(x => n[x.st]++);
+  const SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
+  D.sort((a, b) => SO[a.st] - SO[b.st] || (a.due && b.due ? a.due - b.due : 0));
+  const y0 = hoje().getFullYear() - 1, y1 = hoje().getFullYear() + 5, t0 = new Date(y0, 0, 1), t1 = new Date(y1 + 1, 0, 1);
+  const X = d => Math.max(0, Math.min(100, (d - t0) / (t1 - t0) * 100));
+  const anos = []; for (let y = y0; y <= y1; y++) anos.push(y);
+  const porAno = Object.fromEntries(anos.map(y => [y, D.filter(x => x.due && x.due.getFullYear() === y).length]));
+  const hj = X(hoje());
+  const linhas = D.map(x => {
+    const tag = x.st === 'venc' ? '<span class="pill p-bad">vencida</span>' : x.st === 'viag' ? '<span class="pill p-warn">planejar</span>' : x.st === 'sem' ? '<span class="pill p-mut">sem registro</span>' : '';
+    const info = x.due ? (x.dias < 0 ? (m => m <= 1 ? 'vencida há ' + (-x.dias) + ' dias' : 'vencida há ' + m + ' meses')(Math.round(-x.dias / 30.4)) : 'faltam ' + (x.dias < 62 ? x.dias + ' dias' : Math.round(x.dias / 30.4) + ' meses')) + ' · limite ' + brD(isoD(x.due)) + ' (' + x.fonte + ')' : 'registre a última docagem ou a data-limite do CSN';
+    const c = CORST[x.st];
+    const tl = x.due ? `${x.L ? `<i class="dcbar" style="left:${X(pD(x.L.date))}%;width:${X(x.due) - X(pD(x.L.date))}%"></i><i class="dcl" style="left:${X(pD(x.L.date))}%" data-tip="Última docagem: ${brD(x.L.date)}"></i>` : ''}<i class="dcwin" style="left:${X(addM(x.due, -DOCA.planejarMeses))}%;width:${X(x.due) - X(addM(x.due, -DOCA.planejarMeses))}%"></i><i class="dcd" style="left:${X(x.due)}%;background:${c}" data-tip="Limite: ${brD(isoD(x.due))} (${x.fonte})"></i>` : '';
+    return `<div class="rkrow" data-doca="${x.v.id}"><div class="rklb"><b>${esc(x.v.nome)}</b> ${tag}${x.om ? ` <span class="pill p-inf">OM ${esc(x.om.num)}</span>` : ''}${x.junto.length ? ` <span class="pill p-mut">+${x.junto.length} ${x.junto.length > 1 ? 'itens' : 'item'} para levar</span>` : ''}<div class="note">${info}</div></div><div class="dctr">${anos.map(y => `<i class="dcy" style="left:${X(new Date(y, 0, 1))}%"></i>`).join('')}<i class="dchj" style="left:${hj}%"></i>${tl}</div></div>`;
+  }).join('');
+  const prox = D.filter(x => x.st === 'venc' || x.st === 'viag');
+  return `<div class="vh"><div><h1>Docagem</h1><p>Anexo I, item 9.1.5: docagem a cada ${intervalo(A1M[DOCA.item]).m / 12} anos (jateamento, medição de espessura por ultrassom e repintura). Quando o certificado do barco (CSN) tiver uma data-limite de vistoria em seco anterior, ela prevalece. "Planejar" = vence nos próximos ${DOCA.planejarMeses} meses.</p></div><span class="sp"></span></div>
+  <div class="kgrid six">
+   <div class="card mini ${n.venc ? 'bad' : 'ok'}"><b>${n.venc}</b><span>docagens vencidas</span></div>
+   <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>vencem em até ${DOCA.planejarMeses} meses · planejar estaleiro</span></div>
+   <div class="card mini ok"><b>${n.ok}</b><span>em dia</span></div>
+   <div class="card mini"><b>${n.sem}</b><span>sem registro</span></div>
+   <div class="card mini"><b>${porAno[hoje().getFullYear() + 1] || 0}</b><span>docagens previstas em ${hoje().getFullYear() + 1}</span></div>
+   <div class="card mini"><b>${Math.max(...anos.slice(1).map(y => porAno[y]))}</b><span>maior nº de docagens num mesmo ano</span></div>
+  </div>
+  <div class="card"><div class="row"><h2>A · Linha do tempo das docagens</h2><span class="sp"></span><span class="note">Clique num barco para registrar a última docagem ou a data-limite do CSN.</span></div>
+   <div class="clegend note"><span><i style="background:var(--line2);border-radius:50%"></i>última docagem</span><span><i style="background:var(--warnb)"></i>janela de planejamento (${DOCA.planejarMeses} meses)</span><span><i style="background:var(--bad);transform:rotate(45deg)"></i>limite</span><span><i style="background:var(--acc);width:2px"></i>hoje</span></div>
+   <div class="rk dcrk">${linhas}
+    <div class="rkrow rkax"><span></span><div class="dctr ax">${anos.map(y => `<span style="left:${(X(new Date(y, 0, 1)) + X(new Date(y + 1, 0, 1))) / 2}%">${y}${porAno[y] ? ` <b>· ${porAno[y]}</b>` : ''}</span>`).join('')}</div></div></div>
+   <p class="note">O número ao lado do ano é quantas docagens vencem naquele ano. Se dois ou mais barcos caírem no mesmo período, dá para antecipar um deles e não parar dois de uma vez.</p></div>
+  <div class="card"><div class="row"><h2>B · O que levar para a docagem</h2><span class="sp"></span><span class="note">Itens que precisam do barco fora d'água (hoje: ${DOCA.junto.join(', ')}) e vencem até ${DOCA.janela} meses depois da docagem: fazer junto.</span></div>
+   ${prox.length ? `<div class="tw"><table class="t"><thead><tr><th>Barco</th><th>Limite da docagem</th><th>Itens para fazer junto</th><th></th></tr></thead><tbody>${prox.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${brD(isoD(x.due))}${x.st === 'venc' ? ' <span class="pill p-bad">vencida</span>' : ''}</td><td>${x.junto.length ? x.junto.map(j => `<span class="pd ${j.s.st === 'venc' ? 'venc' : 'viag'}" data-tip="${esc(j.s.txt || '')}">${j.id} ${esc(j.nm)}${j.pos !== 'UN' ? ' ' + j.pos : ''}</span>`).join('') : '<span class="mut">nenhum</span>'}</td><td><a class="mbtn sm pri" href="#emitir/${x.v.id}">Emitir OM</a></td></tr>`).join('')}</tbody></table></div>` : '<div class="note">Nenhuma docagem nos próximos 12 meses.</div>'}</div>`;
+}
+function docaModal(vid) {
+  const x = docaVessel(vessel(vid));
+  modal(`<div class="row"><h2>${esc(x.v.nome)} · docagem</h2><span class="sp"></span><button class="mbtn" data-close>Fechar</button></div>
+   <div class="row"><span class="pill ${{ venc: 'p-bad', viag: 'p-warn', ok: 'p-ok', sem: 'p-mut' }[x.st]}">${{ venc: 'Vencida', viag: 'Planejar', ok: 'Em dia', sem: 'Sem registro' }[x.st]}</span><span>${x.due ? 'Limite ' + brD(isoD(x.due)) + ' · ' + x.fonte : 'Sem data'}</span></div>
+   <div class="tw"><table class="t"><tbody>
+    <tr><td>Última docagem</td><td>${x.L ? brD(x.L.date) + (x.L.src && x.L.src.startsWith('om:') ? ' · ' + x.L.src.slice(3) : '') : '—'}</td><td><button class="mbtn sm" data-base="${vid}|UN|${DOCA.item}">Registrar</button></td></tr>
+    <tr><td>Data-limite da vistoria em seco no CSN</td><td>${x.lim && x.lim.date ? brD(x.lim.date) + (x.lim.obs ? ' · ' + esc(x.lim.obs) : '') : '—'}</td><td><button class="mbtn sm" id="dlEd">Informar</button></td></tr>
+   </tbody></table></div>
+   ${x.junto.length ? `<h3 style="margin:4px 0 0;font-size:14px">Levar para a docagem</h3><div class="tw"><table class="t"><tbody>${x.junto.map(j => `<tr><td>${posTag(j.pos)}</td><td class="mono">${j.id}</td><td>${esc(j.nm)}</td><td>${pillSt(j.s.st)} <span class="note">${esc(j.s.txt || '')}</span></td></tr>`).join('')}</tbody></table></div>` : ''}
+   <div class="row end"><a class="mbtn pri" href="#emitir/${vid}" data-close>Emitir OM</a></div>`, true);
+  $('#modal').addEventListener('click', e => { const bs = e.target.closest('[data-base]'); if (bs) baseModal(...bs.dataset.base.split('|')); });
+  $('#dlEd').onclick = () => {
+    if (!precisa(false)) return;
+    modal(`<h2>Data-limite do CSN · ${esc(x.v.nome)}</h2><p class="note">Data até a qual o barco precisa passar pela vistoria em seco, conforme o Certificado de Segurança da Navegação. Deixe em branco para usar só o prazo do Anexo I.</p>
+     <div class="g"><label class="f s3">Data-limite<input id="dlD" type="date" value="${x.lim ? x.lim.date || '' : ''}"></label><label class="f s3">Observação (nº do certificado, CP/AG)<input id="dlO" value="${esc(x.lim ? x.lim.obs || '' : '')}"></label></div>
+     <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="dlOk">Salvar</button></div>`);
+    $('#dlOk').onclick = async () => { await saveRec({ id: uid('doclim'), kind: 'doclim', vessel: vid, date: $('#dlD').value, obs: $('#dlO').value.trim(), by: S.session.name }); closeModal(); toast('Data-limite salva.'); render(); };
+  };
+}
+AFTER.doca = () => { $('#main').onclick = e => { const b = e.target.closest('[data-doca]'); if (b) docaModal(b.dataset.doca); }; };
 function vesselModal(vid, filtro) {
   const v = vessel(vid); filtro = filtro || 'pend';
   const p = painelVessel(v).filter(x => filtro === 'todos' ? true : filtro === 'sem' ? x.s.st === 'sem' : ['venc', 'viag'].includes(x.s.st));
