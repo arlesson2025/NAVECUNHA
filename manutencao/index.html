@@ -1592,6 +1592,15 @@ td,th,.ct-n,.kc b,.mini b{font-variant-numeric:tabular-nums}
 /* conteúdo centralizado e com largura limitada em telas largas (todas as telas) */
 #main{max-width:1320px!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box;width:100%}
 .cs-idx.fix{max-width:1320px}
+
+.cx-kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.cx-kpi>div{background:#fff;border:1px solid #DADCE0;border-radius:8px;padding:12px 16px}.cx-kpi b{display:block;font-size:30px;font-weight:400}.cx-kpi span{display:block;font-size:13px;color:#202124}.cx-kpi small{color:#5F6368;font-size:12px}
+@media(max-width:900px){.cx-kpi{grid-template-columns:1fr 1fr}}
+.cx-w{max-height:70vh;overflow:auto}.cx-t{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}.cx-t th{position:sticky;top:0;background:#F8F9FA;z-index:2;font-size:11px;font-weight:500;color:#5F6368;padding:6px 4px;border-bottom:1px solid #DADCE0;text-align:center;white-space:nowrap}
+.cx-t td{border-bottom:1px solid #F1F3F4;padding:4px 3px;text-align:center}.cx-t td.cx-it{text-align:left;min-width:240px;color:#202124}.cx-t td.cx-id{color:#5F6368;white-space:nowrap}.cx-t td.cx-iv{color:#5F6368;white-space:nowrap;font-size:11.5px}
+.cx-t tr.cx-g td{background:#E8F0FE;text-align:left;font-weight:600;color:#1967D2;padding:6px 8px}.cx-t tfoot td{background:#F8F9FA;border-top:2px solid #DADCE0;font-size:12px;position:sticky;bottom:0}.cx-t tfoot td:first-child{text-align:left;color:#3C4043}.cx-t tfoot small{display:block;color:#5F6368;font-size:10.5px}
+.cx-c{display:inline-block;min-width:26px;border-radius:4px;color:#fff;font-weight:700;font-size:12px;padding:2px 4px;line-height:1.15;font-style:normal;text-align:center}.cx-c small{display:block;font-weight:400;font-size:9.5px;opacity:.95}
+.cx-c.ok{background:#188038}.cx-c.late{background:#E37400}.cx-c.miss{background:#D93025}.cx-c.plan{background:#BDC1C6;color:#202124}.cx-c.pl{background:#fff;color:#E37400;border:1px solid #E37400}
+.cx-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:#3C4043}.cx-leg .cx-c{margin-right:5px;min-width:20px;font-size:11px}
 </style>
 </head>
 <body>
@@ -6442,6 +6451,137 @@ svgPareto = function (labels, vals, o = {}) {
   g += `<polyline points="${pts.map(p => p[0] + ',' + Yp(p[1])).join(' ')}" fill="none" stroke="${GG.lj}" stroke-width="1.8"/>` + pts.map(p => `<circle cx="${p[0]}" cy="${Yp(p[1])}" r="3.2" fill="#fff" stroke="${GG.lj}" stroke-width="1.8"/><text x="${p[0] + 7}" y="${Yp(p[1]) - 6}" text-anchor="start" font-size="9.5" font-weight="600" fill="${GG.lj}">${Math.round(p[1])}%</text>`).join('');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;font-family:${GG.fonte}">${g}</svg>`;
 };
+
+</script>
+<script>
+/* =====================================================================
+   CRONOGRAMA × REALIZADO (ano) · preventivas do Anexo I
+   P = programado (vencimento) · R = realizado (OM, FR 049_B ou último serviço registrado)
+   verde: feito no prazo · laranja: feito com atraso · vermelho: venceu e não foi feito · cinza: ainda vai vencer
+   ===================================================================== */
+'use strict';
+const CX = { ano: hoje().getFullYear(), v: '', sis: '', so: true };
+let CXI = null;   // índices montados uma vez por cálculo
+function cxIndice() {
+  const ev = {}, hor = {}, add = (k, o) => (ev[k] = ev[k] || []).push(o);
+  recs('base').forEach(b => { if (b.date) add(b.vessel + '|' + b.pos + '|' + b.item, { date: b.date, h: b.h == null || b.h === '' ? null : +b.h, src: 'Último serviço registrado' }); });
+  oms().forEach(o => { if (o.tipo === 'P' && o.status === 'encerrada') (o.items || []).forEach(it => add(o.vessel + '|' + o.pos + '|' + it, { date: o.dreal || isoD(new Date(o.fechadoAt || o.updatedAt)), h: o.hreal == null || o.hreal === '' ? null : +o.hreal, src: 'OM ' + o.num, num: o.num })); });
+  recs('lub').forEach(r => { if (r.tipo === 'fr049') (r.eq || []).forEach(q => { if (q.status === 'T') (q.itens || []).forEach(it => add(r.vessel + '|' + q.pos + '|' + it, { date: r.date, h: q.hr == null || q.hr === '' ? null : +q.hr, src: 'FR 049_B ' + (r.om || ''), num: r.om })); }); });
+  Object.values(ev).forEach(L => L.sort((a, b) => a.date < b.date ? -1 : 1));
+  recs('hor').forEach(r => (hor[r.vessel + '|' + r.pos] = hor[r.vessel + '|' + r.pos] || []).push(r));
+  Object.values(hor).forEach(L => L.sort((a, b) => a.date < b.date ? -1 : 1));
+  return { ev, hor };
+}
+function cxServicos(vid, pos, itemId) { return (CXI.ev[vid + '|' + pos + '|' + itemId] || []); }
+function cxDataHoras(vid, hp, alvoH, desde, rate) {   // data em que o horímetro chega a alvoH
+  const R = (CXI.hor[vid + '|' + hp] || []).filter(r => r.date >= desde);
+  const hit = R.find(r => r.h >= alvoH); if (hit) return pD(hit.date);
+  const last = R[R.length - 1] || null; if (!last) return null;
+  return new Date(pD(last.date).getTime() + Math.max(0, alvoH - last.h) / Math.max(.1, rate) * 864e5);
+}
+function cxLinha(v, pos, t, ano) {
+  const iv = intervalo(t, v, pos); if (!iv.h && !iv.m) return null;
+  const hp = posHor(pos, t, v.id), rate = horasDiaPos(v.id, hp) || horasDia(v.id) || 10;
+  const ini = new Date(ano, 0, 1), fim = new Date(ano + 1, 0, 1), hj = hoje(), iniS = isoD(ini), fimS = isoD(fim);
+  const E = cxServicos(v.id, pos, t.id), marks = [];
+  let cur = E.filter(e => e.date < iniS).pop() || null;
+  if (!cur && v.marco && v.marco.date && t.id !== DOCA.item) cur = { date: v.marco.date, h: v.marco.h && v.marco.h[hp] != null ? v.marco.h[hp] : null, src: 'Marco zero' };
+  if (!cur) { const f = E.find(e => e.date >= iniS && e.date < fimS); if (f) { marks.push({ k: 'ok', d: pD(f.date), ev: f, semPrazo: true }); cur = f; } }
+  if (!cur) return { v, pos, t, iv, marks };
+  let n = 0;
+  while (n++ < 80) {
+    const c = []; if (iv.m) c.push(addM(pD(cur.date), iv.m));
+    if (iv.h) { const d = cur.h != null ? cxDataHoras(v.id, hp, cur.h + iv.h, cur.date, rate) : null; c.push(d || new Date(pD(cur.date).getTime() + iv.h / rate * 864e5)); }
+    const due = new Date(Math.min(...c.filter(Boolean).map(d => d.getTime()))); if (isNaN(due)) break;
+    const e = E.find(x => x.date > cur.date);
+    if (e) { const de = pD(e.date), atr = Math.round((de - due) / 864e5);
+      if (de >= ini && de < fim) marks.push({ k: atr <= 0 ? 'ok' : 'late', d: de, due, ev: e, atr });
+      if (atr > 0 && due >= ini && due < fim && due.getMonth() !== de.getMonth()) marks.push({ k: 'pl', d: due, due, ev: e, ref: true });
+      cur = e; if (de >= fim) break; continue; }
+    if (due >= fim) break;
+    if (due < hj) { if (due >= ini) marks.push({ k: 'miss', d: due, due }); break; }
+    if (due >= ini) marks.push({ k: 'plan', d: due, due });
+    cur = { date: isoD(due), h: cur.h != null && iv.h ? cur.h + iv.h : null, proj: true };
+  }
+  return { v, pos, t, iv, marks };
+}
+function cxDados(ano, filtroV, sis) {
+  CXI = cxIndice(); const L = []; S.cfg.frota.forEach(v => { if (foraOp(v) || (filtroV && v.id !== filtroV)) return;
+    posicoes(v).forEach(pos => itensDe(v, pos).forEach(t => { if (t.kind !== 'prog' || (typeof CRONO_FORA !== 'undefined' && CRONO_FORA.includes(t.id)) || !aplica(v, pos, t)) return; if (sis && parseInt(t.id) !== +sis) return; const r = cxLinha(v, pos, t, ano); if (r) L.push(r); })); });
+  return L;
+}
+function cxConta(L, mes) {
+  const M = L.flatMap(r => r.marks.filter(m => m.k !== 'pl' && (mes == null || m.d.getMonth() === mes)));
+  const ok = M.filter(m => m.k === 'ok').length, late = M.filter(m => m.k === 'late').length, miss = M.filter(m => m.k === 'miss').length, plan = M.filter(m => m.k === 'plan').length;
+  const den = ok + late + miss; return { ok, late, miss, plan, den, ad: den ? ok / den * 100 : null };
+}
+const CXC = { ok: '#188038', late: '#E37400', miss: '#D93025', plan: '#9AA0A6', pl: '#E37400' };
+function cxCel(ms) {
+  if (!ms.length) return '<td></td>';
+  const tip = ms.map(m => m.k === 'ok' ? `Realizado ${brD(isoD(m.d))} · ${m.ev.src}${m.due ? ' · vencia ' + brD(isoD(m.due)) : ''}` : m.k === 'late' ? `Realizado com ${m.atr} d de atraso em ${brD(isoD(m.d))} · ${m.ev.src} · vencia ${brD(isoD(m.due))}` : m.k === 'miss' ? `Programado ${brD(isoD(m.d))} · NÃO realizado` : m.k === 'pl' ? `Programado ${brD(isoD(m.d))} · feito depois (${m.ev.src})` : `Programado ${brD(isoD(m.d))}`).join('\n');
+  const sm = { ok: 'R', late: 'R', miss: 'P', plan: 'P', pl: 'P' };
+  const k = ['miss', 'late', 'ok', 'pl', 'plan'].find(x => ms.some(m => m.k === x));
+  const lab = ms.filter(m => m.k === k).length > 1 ? sm[k] + '×' + ms.filter(m => m.k === k).length : sm[k];
+  const om = ms.find(m => m.ev && m.ev.num && (m.k === 'ok' || m.k === 'late'));
+  return `<td><span class="cx-c ${k}" title="${esc(tip)}">${lab}${om ? `<small>${esc(String(om.ev.num))}</small>` : ''}</span></td>`;
+}
+function cxTabela(L, ano) {
+  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const rows = (CX.so ? L.filter(r => r.marks.length) : L);
+  let html = '', vAnt = '';
+  rows.forEach(r => { const vk = r.v.id + '|' + r.pos;
+    if (vk !== vAnt) { vAnt = vk; html += `<tr class="cx-g"><td colspan="15">${esc(r.v.nome)}${r.pos !== 'UN' ? ' · ' + esc(posNome(r.v, r.pos)) : ' · embarcação'}</td></tr>`; }
+    html += `<tr><td class="cx-id">${r.t.id}</td><td class="cx-it">${esc(r.t.chk)}</td><td class="cx-iv">${[r.iv.h ? nf(r.iv.h) + ' h' : '', r.iv.m ? r.iv.m + ' m' : ''].filter(Boolean).join(' / ')}</td>${MES.map((_, i) => cxCel(r.marks.filter(m => m.d.getMonth() === i))).join('')}</tr>`; });
+  const tot = MES.map((_, i) => cxConta(rows, i));
+  const foot = `<tr class="cx-f"><td colspan="3">Aderência no mês (feitos no prazo ÷ vencidos até hoje)</td>${tot.map(c => `<td>${c.ad == null ? (c.plan ? `<small>${c.plan} prog.</small>` : '—') : `<b style="color:${c.ad >= 90 ? '#188038' : c.ad >= 75 ? '#E37400' : '#D93025'}">${nf(c.ad, 0)}%</b><small>${c.ok}/${c.den}</small>`}</td>`).join('')}</tr>`;
+  return `<table class="cx-t"><thead><tr><th>Nº</th><th>Item do Anexo I</th><th>Intervalo</th>${MES.map(m => `<th>${m}/${String(ano).slice(2)}</th>`).join('')}</tr></thead><tbody>${html || '<tr><td colspan="15" class="note">Nada programado nem realizado neste filtro.</td></tr>'}</tbody><tfoot>${foot}</tfoot></table>`;
+}
+function vCxr() {
+  const ano = CX.ano, L = cxDados(ano, CX.v, CX.sis), T = cxConta(L), all = CX.v ? cxDados(ano, '', CX.sis) : L;
+  const porV = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, c: cxConta(all.filter(r => r.v === v)) }));
+  const anos = []; for (let y = 2025; y <= hoje().getFullYear() + 1; y++) anos.push(y);
+  const sel = (k, ops, val) => `<select data-cx="${k}">${ops.map(([a, b]) => `<option value="${a}"${String(a) === String(val) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
+  const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#D93025';
+  return `<div class="vh"><div><h1>Cronograma × Realizado · ${ano}</h1><p>Preventivas do Plano de Manutenção (Anexo I, NP 055) por embarcação e mês: o que estava programado (P) e o que foi realizado (R), com o nº da OM. Programado = último serviço + intervalo (horas OU meses, o que vier primeiro).</p></div><span class="sp"></span><button class="mbtn pri" data-cxpdf>⬇ PDF para auditoria (A4 deitado)</button></div>
+   <div class="card"><div class="g"><label class="f s2">Ano${sel('ano', anos.map(y => [y, y]), ano)}</label><label class="f s2">Embarcação${sel('v', [['', 'Frota toda']].concat(S.cfg.frota.filter(v => !foraOp(v)).map(v => [v.id, v.nome])), CX.v)}</label><label class="f s2">Sistema${sel('sis', [['', 'Todos']].concat(SISTEMAS.map((s, i) => [i + 1, s])), CX.sis)}</label><label class="f s2" style="flex-direction:row;align-items:center;gap:8px;align-self:end"><input type="checkbox" data-cx="so" ${CX.so ? 'checked' : ''}> só itens com P ou R no ano</label></div></div>
+   <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao plano</span><small>${T.ok} de ${T.den} vencidos até hoje feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>realizados no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>realizados com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>vencidos e não realizados</span></div><div><b style="color:#5F6368">${T.plan}</b><span>programados até dezembro</span></div></div>
+   <div class="card"><div class="row"><h2>Aderência por embarcação · ${ano}</h2><span class="sp"></span><span class="note">clique na embarcação para ver o cronograma dela</span></div>
+    <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr class="click" data-cxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${x.c.ok}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table></div></div>
+   <div class="card"><div class="row"><h2>Cronograma × Realizado${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota toda'}</h2><span class="sp"></span><div class="cx-leg"><span><i class="cx-c ok">R</i>feito no prazo</span><span><i class="cx-c late">R</i>feito com atraso</span><span><i class="cx-c miss">P</i>venceu e não foi feito</span><span><i class="cx-c pl">P</i>vencimento (feito depois)</span><span><i class="cx-c plan">P</i>programado</span></div></div>
+    ${!CX.v && L.length > 400 ? '<p class="note">A frota toda gera uma tabela muito grande: escolha uma embarcação para ver o detalhe.</p>' : `<div class="tw cx-w">${cxTabela(L, ano)}</div>`}
+    <p class="note">Passe o mouse numa célula para ver a data, a OM ou o FR 049_B. Aderência = realizados no prazo ÷ (no prazo + com atraso + vencidos não realizados). Os registros começam em outubro de 2026 (implantação do SGMF); o histórico anterior pode ser importado.</p></div>`;
+}
+VX.cxr = vCxr;
+document.addEventListener('change', e => { const s = e.target.closest('[data-cx]'); if (!s || VIEW !== 'cxr') return; const k = s.dataset.cx; CX[k] = k === 'so' ? s.checked : k === 'ano' ? +s.value : s.value; render(); });
+document.addEventListener('click', e => { if (VIEW !== 'cxr') return; const r = e.target.closest('[data-cxv]'); if (r) { CX.v = r.dataset.cxv; render(); setTimeout(() => { const t = document.querySelector('.cx-w'); if (t) t.scrollIntoView({ behavior: 'smooth' }); }, 300); return; } if (e.target.closest('[data-cxpdf]')) cxPDF(); });
+function cxPDF() {
+  const ano = CX.ano, vs = CX.v ? [vessel(CX.v)] : S.cfg.frota.filter(v => !foraOp(v)), sisN = CX.sis ? SISTEMAS[CX.sis - 1] : 'todos os sistemas';
+  const all = cxDados(ano, '', CX.sis), T = cxConta(CX.v ? all.filter(r => r.v.id === CX.v) : all);
+  const porV = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, c: cxConta(all.filter(r => r.v === v)) }));
+  const so0 = CX.so; CX.so = true;
+  const blocos = vs.map(v => `<h2>${esc(v.nome)}</h2>${cxTabela(all.filter(r => r.v === v), ano)}`).join('');
+  CX.so = so0;
+  const css = `@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:"Segoe UI",Arial,sans-serif;color:#202124;font-size:9.5px;margin:0}
+   .hd{display:flex;align-items:center;gap:14px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:8px}.hd img{height:38px}.hd h1{font-size:16px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368;font-size:10px}.hd .sp{flex:1}
+   .k{display:flex;gap:10px;margin:6px 0 10px}.k div{border:1px solid #DADCE0;border-radius:4px;padding:5px 10px}.k b{display:block;font-size:16px}
+   table{width:100%;border-collapse:collapse;margin-bottom:8px;page-break-inside:auto}tr{page-break-inside:avoid}thead{display:table-header-group}th,td{border:1px solid #DADCE0;padding:2px 3px;text-align:center}th{background:#16244A;color:#fff;font-weight:600}
+   td.cx-it{text-align:left}td.cx-id,td.cx-iv{white-space:nowrap}tr.cx-g td{background:#E8EEF8;text-align:left;font-weight:600}tr.cx-f td{background:#F1F3F4;font-size:8.5px}tr.cx-f td:first-child{text-align:left}
+   .cx-c{display:inline-block;min-width:18px;border-radius:3px;color:#fff;font-weight:700;padding:0 3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cx-c small{display:block;font-weight:400;font-size:7px}
+   .ok{background:#188038}.late{background:#E37400}.miss{background:#D93025}.plan{background:#9AA0A6}.pl{background:#fff;color:#E37400;border:1px solid #E37400}
+   h2{font-size:12px;color:#16244A;margin:10px 0 4px}.lg span{margin-right:12px}.ass{display:flex;gap:60px;margin-top:30px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}
+   th,td,.ok,.late,.miss,.plan,tr.cx-g td,tr.cx-f td{-webkit-print-color-adjust:exact;print-color-adjust:exact}small{font-size:8px}`;
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma x Realizado ${ano}</title><style>${css}</style></head><body>
+   <div class="hd"><img src="${LOGOS.nav}" alt="Navecunha"><img src="${LOGOS.vda}" alt="VDA"><div><h1>Cronograma × Realizado · Manutenção preventiva · ${ano}</h1><p>Plano de Manutenção (Anexo I · NP Navecunha 055) · ${CX.v ? esc(vName(CX.v)) : 'frota em operação'} · ${esc(sisN)} · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SGMF</p></div><span class="sp"></span></div>
+   <div class="k"><div><b>${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b>aderência ao plano (${T.ok} de ${T.den})</div><div><b style="color:#188038">${T.ok}</b>no prazo</div><div><b style="color:#E37400">${T.late}</b>com atraso</div><div><b style="color:#D93025">${T.miss}</b>não realizados</div><div><b>${T.plan}</b>programados até dez.</div></div>
+   ${!CX.v ? `<h2>Aderência por embarcação</h2><table><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr><td style="text-align:left">${esc(x.v.nome)}</td><td>${x.c.ok}</td><td>${x.c.late}</td><td>${x.c.miss}</td><td>${x.c.plan}</td><td><b>${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table>` : ''}
+   <p class="lg"><span><i class="cx-c ok">R</i> feito no prazo</span><span><i class="cx-c late">R</i> feito com atraso</span><span><i class="cx-c miss">P</i> venceu e não foi feito</span><span><i class="cx-c pl">P</i> vencimento (feito depois)</span><span><i class="cx-c plan">P</i> programado</span> · número sob o R = OM ou FR 049_B · aderência = no prazo ÷ (no prazo + com atraso + não realizados)</p>
+   ${blocos}
+   <div class="ass"><div>Supervisor de Manutenção</div><div>Gerência</div><div>Data</div></div>
+   <script>setTimeout(function(){window.print()},500)<\/script></body></html>`;
+  const w = window.open('', '_blank'); if (!w) { toast('Permita pop-ups para gerar o PDF.'); return; } w.document.open(); w.document.write(html); w.document.close();
+}
+// menu: 2 · Planejar
+{ const s = SECOES.find(x => x.id === 'plan'); if (s && !s.views.some(x => x[0] === 'cxr')) { const i = s.views.findIndex(x => x[0] === 'crono'); s.views.splice(i < 0 ? s.views.length : i + 1, 0, ['cxr', 'Cronograma × Realizado']); } }
 
 </script>
 </body>
