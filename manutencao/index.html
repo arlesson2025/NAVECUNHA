@@ -1544,6 +1544,16 @@ td,th,.ct-n,.kc b,.mini b{font-variant-numeric:tabular-nums}
 .lay.free .lb[data-h]>.card,.lay.free .lb[data-h]>a.card,#main .lay.free .lb[data-h]>a.card.area.kp2,#main .lay.free .lb[data-h]>.card.dz{min-height:0!important;max-height:none!important;scrollbar-width:thin}
 .lay.free .lb>.card,.lay.free .lb>a.card{min-width:0!important}
 .lay.free .lb{min-width:0!important}
+
+.vh>.al-card{flex-basis:100%;order:98;margin:10px 0 4px}
+.al-card .row{align-items:baseline;gap:14px}.al-n{font-size:13px;color:#5F6368}.al-n b{font-size:18px;font-weight:500;margin-right:3px}.al-n b.p1{color:#D93025}.al-n b.p2{color:#E37400}
+.al-l{display:flex;flex-direction:column;margin-top:8px}.al-i{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid #F1F3F4;font-size:14px}.al-i:last-child{border-bottom:0}
+.al-p{flex:none;font-size:11px;font-weight:600;border-radius:4px;padding:2px 7px;color:#fff}.al-p.p1{background:#D93025}.al-p.p2{background:#E37400}
+.al-i .vlink{flex:none;font-weight:600}.al-t{flex:1;color:#3C4043}.al-go{flex:none;color:#1A73E8;text-decoration:none;padding:0 6px}
+.al-mais summary{cursor:pointer;color:#1A73E8;font-size:13px;margin-top:6px}
+#main .dzk{grid-template-columns:repeat(6,1fr)!important}@media(max-width:1200px){#main .dzk{grid-template-columns:repeat(3,1fr)!important}}@media(max-width:600px){#main .dzk{grid-template-columns:1fr 1fr!important}}
+.pr-seg{margin:6px 0 10px;display:inline-flex}.pr-seg button{font-size:12px}
+.ds-row{display:flex;gap:12px;margin:8px 0 6px;flex-wrap:wrap}.ds{border:1px solid #DADCE0;border-radius:8px;padding:10px 14px;min-width:200px}.ds b{display:block;font-size:24px;font-weight:400;color:#202124}.ds span{display:block;font-size:13px;color:#3C4043}.ds small{color:#5F6368;font-size:12px}
 </style>
 </head>
 <body>
@@ -5504,7 +5514,7 @@ function dashGeral() {
      ${pan('Corretivas por classe', '12 meses', dzCols(cls, [{ nome: 'Corretivas', vals: cls.map(c => C12.filter(o => o.classe === c).length), corF: i => corCls[cls[i]], cor: GC.az }]), 'falhas')}
      ${pan('Disponibilidade e MTTR', 'por mês', dzLines(ms.map(x => x.lab), [{ nome: 'Disponibilidade (%)', vals: K.disp, cor: '25,103,210', fmt: v => nf(v, 1) + '%' }, { nome: 'MTTR (h)', vals: K.mttr, cor: '217,48,37', corT: '176,84,79', fmt: v => nf(v, 1) + ' h', min: 0 }]), 'kpi')}
    </div>
-   <div class="card dzk">${kpiB(nf(di, 1) + '%', 'Disponibilidade da frota', di >= 95, 'meta ≥ 95% · mensal')}${kpiB(nf(mtbf) + ' h', 'MTBF · tempo médio entre falhas', mtbf >= 500, 'meta ≥ 500 h · 12 meses')}${kpiB(mttr == null ? '—' : nf(mttr, 1) + ' h', 'MTTR · tempo médio de reparo', mttr == null || mttr <= 8, 'meta ≤ 8 h · mensal')}${kpiB(nf(bk, 1) + '%', 'Backlog de OMs', bk <= 5, 'meta ≤ 5% · semanal')}</div>
+   <div class="card dzk">${kpiB(nf(di, 1) + '%', 'Disponibilidade da frota', di >= 95, 'meta ≥ 95% · mensal')}${kpiB(nf(mtbf) + ' h', 'MTBF · tempo médio entre falhas', mtbf >= 500, 'meta ≥ 500 h · 12 meses')}${kpiB(mttr == null ? '—' : nf(mttr, 1) + ' h', 'MTTR · tempo médio de reparo', mttr == null || mttr <= 8, 'meta ≤ 8 h · mensal')}${kpiB(nf(bk, 1) + '%', 'Backlog de OMs', bk <= 5, 'meta ≤ 5% · semanal')}${(f => kpiB(f == null ? '—' : nf(f, 0) + '%', 'Registro fotográfico', f == null || f >= 100, 'OMs com foto antes/depois · meta 100% · semanal'))(K.fotosSem)}${(q => kpiB(q == null ? '—' : nf(q, 0) + '%', 'Plano preditivo', q == null || q >= 80, 'análises feitas ÷ programadas · meta ≥ 80% · trimestral'))(K.pred[K.pred.length - 1])}</div>
    <div class="dz3">
      ${pan('Falhas por sistema', 'Crítica e Alta · 12 meses', dzCols(fs.map(r => r[0]), [{ nome: 'Falhas', vals: fs.map(r => r[1]), corF: i => i === 0 ? GC.az3 : GC.az, cor: GC.az }]), 'falhas')}
      ${pan('Modo de falha', 'ISO 14224 · 12 meses', mods.length ? dzDonut(mods) : '<div class="note">Sem corretivas classificadas.</div>', 'falhas')}
@@ -5992,6 +6002,79 @@ document.addEventListener('click', async e => {
     return Object.assign(x, { ult: x.ult, last, dias, st, est: x.ps.filter(p => horEst(x.v, p)) }); }); }; }
 // na página única do Controle da condição, as pendências aparecem no começo da parte de Horímetros
 if (VX.controle) { const c0 = VX.controle; VX.controle = function () { const h = c0(), c = horPendCard(); if (!c) return h; const i = h.indexOf('id="cs-hor"'); if (i < 0) return h + c; const j = h.indexOf('</div>', h.indexOf('</h2>', i)); return h.slice(0, j + 6) + c.replace('class="card hp-card"', 'class="card hp-card" data-sec="hor"') + h.slice(j + 6); }; }
+
+</script>
+<script>
+/* =====================================================================
+   Melhorias vindas do modelo "Painel da Frota":
+   1) Alertas priorizados P1 / P2 no topo do Painel (reunião da manhã)
+   2) KPIs Registro fotográfico e Plano preditivo na faixa de indicadores (no código do painel)
+   3) Previsto × Realizado por embarcação no mês (OMs preventivas)
+   4) Docagem: parada média em estaleiro e pontualidade de entrada
+   ===================================================================== */
+'use strict';
+/* ---------- 1) alertas ---------- */
+function alertasFrota() {
+  const A = [], ativos = S.cfg.frota.filter(v => !foraOp(v)), Q = quadroFrota(), OV = overDados(), LD = lubDados(), CA = calibDados(), HR = horDados();
+  const add = (p, v, txt, go) => A.push({ p, v, txt, go });
+  ativos.forEach(v => {
+    const q = Q.find(x => x.v === v);
+    if (q && q.sit[1] === 'Interditada') add(1, v, 'interditada · falha Crítica em aberto', 'acomp');
+    else if (q && q.sit[1] === 'Saída bloqueada') { const n = painelVessel(v).filter(x => x.s.st === 'venc' && x.t.prio === 'Crítica' && !x.om); add(1, v, 'saída bloqueada · ' + n.length + ' item(ns) de prioridade Crítica vencido(s): ' + n.slice(0, 2).map(x => x.t.id + ' ' + x.t.chk).join('; ') + (n.length > 2 ? '…' : ''), 'controle'); }
+    const d = docaVessel(v);
+    if (d.st === 'venc') add(1, v, 'docagem vencida há ' + (-d.dias) + ' dias', 'doca');
+    else if (d.due && d.dias <= 90) add(2, v, 'docagem em ' + d.dias + ' dias (' + brD(isoD(d.due)) + ')', 'doca');
+    oms().filter(o => o.tipo === 'C' && o.vessel === v.id && o.status !== 'encerrada' && (o.classe === 'Crítica' || o.classe === 'Alta')).forEach(o => add(o.classe === 'Crítica' ? 1 : 2, v, 'corretiva ' + o.classe + ' aberta · OM ' + o.num + (o.sistema ? ' · ' + String(o.sistema).replace(/^\d+\.0 /, '') : ''), 'acomp'));
+    OV.filter(x => x.v === v && x.st === 'venc').forEach(x => add(1, v, 'MCP ' + (v.mcp === 'mono' ? '' : x.pos + ' ') + 'abaixo do limite de compressão · avaliar overhaul', 'controle'));
+    const lv = LD.filter(x => x.v === v && x.s.st === 'venc' && !x.om); if (lv.length) add(2, v, 'troca de óleo vencida: ' + lv.map(x => x.e.nome).join(', '), 'controle');
+    const cv = CA.filter(x => x.v === v && x.s.st === 'venc' && !x.om); if (cv.length) add(2, v, cv.length + ' calibração(ões) do MCP vencida(s)', 'controle');
+    const pv = painelVessel(v).filter(x => x.s.st === 'venc' && !x.om && x.t.prio !== 'Crítica'); if (pv.length) add(2, v, pv.length + ' preventiva(s) vencida(s) sem OM', 'controle');
+    const h = HR.find(x => x.v === v); if (h && (h.st === 'venc' || h.st === 'sem')) add(2, v, h.dias == null ? 'sem leitura de horímetro' : 'horímetro sem leitura há ' + h.dias + ' dias', 'controle');
+  });
+  const np = typeof recsHorp === 'function' ? recsHorp().length : 0; if (np) A.push({ p: 2, v: null, txt: np + ' leitura(s) de horímetro aguardando sua confirmação', go: 'hor' });
+  return A.sort((a, b) => a.p - b.p || (a.v && b.v ? S.cfg.frota.indexOf(a.v) - S.cfg.frota.indexOf(b.v) : 0));
+}
+function alertasCard() {
+  const A = alertasFrota(), n1 = A.filter(a => a.p === 1).length, n2 = A.length - n1, MAX = 12;
+  const linha = a => `<div class="al-i"><span class="al-p p${a.p}">P${a.p}</span>${a.v ? `<button class="vlink" data-vessel="${a.v.id}">${esc(a.v.nome)}</button>` : '<b>Horímetros</b>'}<span class="al-t">${esc(a.txt)}</span><a class="al-go" href="#${a.go}" title="Abrir">↗</a></div>`;
+  return `<div class="card al-card"><div class="row"><h2>Alertas da frota</h2><span class="sp"></span><span class="al-n"><b class="p1">${n1}</b> P1 · ação imediata</span><span class="al-n"><b class="p2">${n2}</b> P2 · programar</span></div>
+   ${A.length ? `<div class="al-l">${A.slice(0, MAX).map(linha).join('')}</div>${A.length > MAX ? `<details class="al-mais"><summary>mais ${A.length - MAX} alerta(s)</summary><div class="al-l">${A.slice(MAX).map(linha).join('')}</div></details>` : ''}` : '<p class="note" style="margin:6px 0 0">Nenhum alerta. Frota em dia. ✓</p>'}
+   <p class="note" style="margin:8px 0 0">P1: interditada, saída bloqueada, docagem vencida, corretiva Crítica aberta, MCP abaixo do limite de compressão. P2: docagem em até 90 dias, corretiva Alta, troca de óleo ou calibração vencida, preventiva vencida sem OM, horímetro desatualizado. Embarcações fora de operação não entram.</p></div>`;
+}
+
+/* ---------- 3) previsto × realizado ---------- */
+let PRM = 0;   // 0 = mês atual, 1 = anterior…
+function prevReal(y, m) {
+  const ini = new Date(y, m, 1), fim = new Date(y, m + 1, 1), iniS = isoD(ini), fimS = isoD(fim);
+  const P = oms().filter(o => o.tipo === 'P' && o.status !== 'cancelada' && o.emitAt && o.emitAt < fimS && !(o.status === 'encerrada' && o.fechadoAt && o.fechadoAt < ini.getTime()));
+  const R = P.filter(o => o.status === 'encerrada' && o.fechadoAt && o.fechadoAt >= ini.getTime() && o.fechadoAt < fim.getTime());
+  const V = S.cfg.frota.filter(v => !foraOp(v) || P.some(o => o.vessel === v.id));
+  return { V, prev: V.map(v => P.filter(o => o.vessel === v.id).length), real: V.map(v => R.filter(o => o.vessel === v.id).length), P: P.length, R: R.length };
+}
+function prevRealCard() {
+  const d = hoje(), meses = [0, 1, 2, 3, 4, 5].map(i => { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); return { i, y: x.getFullYear(), m: x.getMonth(), lab: x.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') + '/' + String(x.getFullYear()).slice(2) }; });
+  const sel = meses[PRM] || meses[0], r = prevReal(sel.y, sel.m), ad = r.P ? r.R / r.P * 100 : null;
+  return `<div class="card dz pr-card"><div class="dz-h"><h3>Previsto × Realizado por embarcação</h3><small>OMs preventivas · ${sel.lab}${sel.i === 0 ? ' (parcial)' : ''} · aderência <b style="color:${ad == null ? '#5F6368' : ad >= 90 ? '#188038' : ad >= 75 ? '#E37400' : '#D93025'}">${ad == null ? '—' : nf(ad, 0) + '%'}</b> (${r.R} de ${r.P})</small><a class="dz-go" href="#hist" title="Abrir">↗</a></div>
+    <div class="seg pr-seg">${meses.slice().reverse().map(x => `<button data-prm="${x.i}" class="${x.i === PRM ? 'on' : ''}">${x.lab}</button>`).join('')}</div>
+    ${r.P ? dzCols(r.V.map(v => v.nome.replace('CJA ', '')), [{ nome: 'Previsto (programadas)', vals: r.prev, cor: '174,203,250' }, { nome: 'Realizado (encerradas no mês)', vals: r.real, cor: GC.az }]) : '<div class="note" style="padding:20px 0">Nenhuma OM preventiva programada neste mês.</div>'}
+    <div class="note">Previsto = OMs preventivas emitidas até o fim do mês e ainda abertas no dia 1º. Realizado = dessas, as encerradas dentro do mês.</div></div>`;
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-prm]'); if (!b) return; e.stopPropagation(); PRM = +b.dataset.prm; render(); }, true);
+
+/* ---------- painel: alertas logo depois do cabeçalho; previsto × realizado depois dos indicadores ---------- */
+{ const g0 = vGeral; vGeral = function () { const t = document.createElement('div'); t.innerHTML = g0();
+    const vh = t.querySelector(':scope > .vh'); const al = document.createElement('div'); al.innerHTML = alertasCard();
+    if (vh) vh.appendChild(al.firstElementChild); else t.prepend(al.firstElementChild);
+    const pr = document.createElement('div'); pr.innerHTML = prevRealCard(); const k = t.querySelector(':scope > .dzk') || t.querySelector('.dzk');
+    if (k && k.parentElement === t) k.after(pr.firstElementChild); else t.appendChild(pr.firstElementChild);
+    return t.innerHTML; }; }
+
+/* ---------- 4) docagem: parada média e pontualidade ---------- */
+function docaStats() { const H = S.cfg.frota.flatMap(v => docaHist(v)); const par = H.filter(x => x.parada != null).map(x => x.parada), pont = H.filter(x => x.atraso != null);
+  return { parada: par.length ? par.reduce((a, b) => a + b, 0) / par.length : null, nPar: par.length, pont: pont.length ? pont.filter(x => x.atraso <= 0).length / pont.length * 100 : null, nPont: pont.length, okPont: pont.filter(x => x.atraso <= 0).length }; }
+{ const c0 = docaCrono; docaCrono = function (D) { const h = c0(D), s = docaStats();
+    const box = `<div class="ds-row"><div class="ds"><b>${s.parada == null ? '—' : nf(s.parada, 0) + ' d'}</b><span>parada média em estaleiro</span><small>${s.nPar ? s.nPar + ' docagem(ns) com entrada e saída' : 'registre entrada e saída'}</small></div><div class="ds"><b style="color:${s.pont == null ? '#202124' : s.pont >= 80 ? '#188038' : s.pont >= 60 ? '#E37400' : '#D93025'}">${s.pont == null ? '—' : nf(s.pont, 0) + '%'}</b><span>pontualidade de entrada</span><small>${s.nPont ? s.okPont + ' de ' + s.nPont + ' entraram no prazo' : 'precisa de 2 docagens do mesmo barco'}</small></div></div>`;
+    const i = h.indexOf('<div class="clegend'); return i > 0 ? h.slice(0, i) + box + h.slice(i) : h; }; }
 
 </script>
 </body>
