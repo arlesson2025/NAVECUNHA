@@ -1539,6 +1539,11 @@ html,body,body *:not(i):not(.ic){font-family:"Segoe UI",Inter,system-ui,Arial,sa
 svg text,svg tspan{font-family:"Segoe UI",Inter,system-ui,Arial,sans-serif!important}
 .mono,td.mono,[class*="mono"],code,kbd,pre,samp,tt{font-variant-numeric:tabular-nums;letter-spacing:0!important}
 td,th,.ct-n,.kc b,.mini b{font-variant-numeric:tabular-nums}
+
+/* tamanho livre: quando o usuário redimensiona, o cartão pode ficar tão pequeno quanto quiser */
+.lay.free .lb[data-h]>.card,.lay.free .lb[data-h]>a.card,#main .lay.free .lb[data-h]>a.card.area.kp2,#main .lay.free .lb[data-h]>.card.dz{min-height:0!important;max-height:none!important;scrollbar-width:thin}
+.lay.free .lb>.card,.lay.free .lb>a.card{min-width:0!important}
+.lay.free .lb{min-width:0!important}
 </style>
 </head>
 <body>
@@ -4892,7 +4897,7 @@ function freeApply(fixoK) {
   lay.classList.add('free');
   const W = lay.clientWidth, colW = (W + FG) / 24, cfg = LAY[VIEW] || {}, pos = cfg.free || {};
   const vis = [...lay.children].filter(w => w.classList.contains('lb') && !w.classList.contains('oc'));
-  const arr = vis.map(w => { const k = w.dataset.k, p = pos[k] || {}, wd = Math.max(4, Math.min(24, p.w || +w.dataset.span || 24));
+  const arr = vis.map(w => { const k = w.dataset.k, p = pos[k] || {}, wd = Math.max(2, Math.min(24, p.w || +w.dataset.span || 24));
     w.style.position = 'absolute'; w.style.width = (wd * colW - FG) + 'px'; w.style.gridColumn = '';
     return { w: wd, el: w, k, x: p.x, y: p.y, salvo: p.x != null }; });
   arr.forEach(it => { it.hu = Math.max(3, Math.ceil((it.el.offsetHeight + FG) / FU)); });
@@ -4930,8 +4935,8 @@ document.addEventListener('pointerdown', e => {
   if (rz) {
     w.classList.add('rzing'); const w0 = it.w, h0 = card.getBoundingClientRect().height;
     const mov = ev => { vy = ev.clientY > innerHeight - 50 ? 12 : 0;
-      it.w = Math.max(4, Math.min(24 - it.x, Math.round((w0 * colW + (ev.clientX - x0)) / colW))); w.dataset.span = it.w; w.style.width = (it.w * colW - FG) + 'px';
-      const h = Math.max(70, Math.round((h0 + (ev.clientY - y0)) / 10) * 10); w.dataset.h = h; layAltura(w);
+      it.w = Math.max(2, Math.min(24 - it.x, Math.round((w0 * colW + (ev.clientX - x0)) / colW))); w.dataset.span = it.w; w.style.width = (it.w * colW - FG) + 'px';
+      const h = Math.max(36, Math.round((h0 + (ev.clientY - y0)) / 4) * 4); w.dataset.h = h; layAltura(w);
       it.hu = Math.ceil((w.offsetHeight + FG) / FU); mostraPh(); };
     const up = () => { FDRAG = false; clearInterval(tick); document.removeEventListener('pointermove', mov); document.removeEventListener('pointerup', up); ph.remove(); w.classList.remove('rzing');
       const cfg = LAY[VIEW] = LAY[VIEW] || {}; cfg.free = cfg.free || {}; FLY.itens.forEach(i => { if (i.k !== it.k) cfg.free[i.k] = { x: i.x, y: i.y, w: i.w }; }); cfg.free[it.k] = { x: it.x, y: it.y, w: it.w }; freeApply(it.k); freeSalvar(); };
