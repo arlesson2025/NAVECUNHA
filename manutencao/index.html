@@ -1485,6 +1485,7 @@ html.gated body>*:not(#gate):not(.toast){visibility:hidden}
 #gate input:focus{outline:none;border-color:#1A73E8;box-shadow:0 0 0 1px #1A73E8}
 #gate #gE{color:#D93025;font-size:13px;min-height:16px}
 #gate button{font:inherit;font-size:15px;font-weight:500;background:#1A73E8;color:#fff;border:0;border-radius:4px;padding:11px;cursor:pointer}#gate button:hover{background:#1765CC}#gate button:disabled{opacity:.6}
+#gate .glink{background:none!important;color:#1A73E8!important;padding:4px 0!important;font-size:13px!important;text-decoration:underline;cursor:pointer}
 #gate .gnote{margin:4px 0 0;text-align:center;color:#80868B;font-size:12px}
 .toast{z-index:10000}
 </style>
@@ -5535,14 +5536,19 @@ function gate() {
    <h1>SGMF</h1><p class="gsub">Sistema de Gestão da Manutenção da Frota</p>
    <label>Seu nome<input id="gN" autocomplete="username" required></label>
    <label>Senha<input id="gP" type="password" autocomplete="current-password" required></label>
-   <div id="gE"></div><button type="submit" id="gB">Entrar</button>
-   <p class="gnote">Acesso restrito à equipe de manutenção Navecunha.</p></form>`;
+   <div id="gCaps" style="display:none;color:#B06000;font-size:12px">Caps Lock está ligado.</div><div id="gE"></div><button type="submit" id="gB">Entrar</button>
+   <p class="gnote">Acesso restrito à equipe de manutenção Navecunha.<br><span id="gMode">${S.url ? 'Conectado à planilha do Google' : 'Modo local (sem planilha)'}</span></p></form>`;
   document.body.appendChild(g);
   try { const n = localStorage.getItem('sgmf_nome'); if (n) { $('#gN').value = n; setTimeout(() => $('#gP').focus(), 50); } else setTimeout(() => $('#gN').focus(), 50); } catch (e) { }
+  $('#gP').addEventListener('keyup', ev => { $('#gCaps').style.display = ev.getModifierState && ev.getModifierState('CapsLock') ? '' : 'none'; });
   g.querySelector('form').onsubmit = async ev => { ev.preventDefault(); const b = $('#gB'); b.disabled = true; b.textContent = 'Entrando…'; $('#gE').textContent = '';
-    let e; try { e = await login($('#gN').value, $('#gP').value); } catch (er) { e = 'Não consegui falar com o servidor do Google. Verifique a internet e tente de novo.'; }
+    const nome = $('#gN').value.trim(), pw = $('#gP').value.trim();
+    if (!nome) { b.disabled = false; b.textContent = 'Entrar'; $('#gE').textContent = 'Digite seu nome (qualquer nome, ex.: Arlesson).'; $('#gN').focus(); return; }
+    let e; try { e = await login(nome, pw); } catch (er) { e = 'Não consegui falar com o servidor do Google. Verifique a internet e tente de novo.'; }
     b.disabled = false; b.textContent = 'Entrar';
-    if (e) { $('#gE').textContent = e; $('#gP').select(); return; }
+    if (e) { $('#gE').innerHTML = esc(S.url ? 'Senha não aceita pela planilha do Google. Confira a senha do Supervisor configurada na planilha.' : 'Senha incorreta.') + (S.url ? '<br><button type="button" class="glink" id="gLoc">Entrar sem a planilha (modo local neste computador)</button>' : '');
+      const l = $('#gLoc'); if (l) l.onclick = async () => { S.url = ''; await kvSet('url', ''); $('#gE').textContent = 'Modo local ativado. Digite a senha de novo.'; $('#gMode').textContent = 'Modo local (sem planilha)'; $('#gP').focus(); };
+      $('#gP').select(); return; }
     try { localStorage.setItem('sgmf_nome', S.session.name); } catch (er) { }
     gate(); toast('Bem-vindo, ' + S.session.name + '.'); render(); };
 }
