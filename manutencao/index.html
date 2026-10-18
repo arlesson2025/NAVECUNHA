@@ -1601,6 +1601,24 @@ td,th,.ct-n,.kc b,.mini b{font-variant-numeric:tabular-nums}
 .cx-c{display:inline-block;min-width:26px;border-radius:4px;color:#fff;font-weight:700;font-size:12px;padding:2px 4px;line-height:1.15;font-style:normal;text-align:center}.cx-c small{display:block;font-weight:400;font-size:9.5px;opacity:.95}
 .cx-c.ok{background:#188038}.cx-c.late{background:#E37400}.cx-c.miss{background:#D93025}.cx-c.plan{background:#BDC1C6;color:#202124}.cx-c.pl{background:#fff;color:#E37400;border:1px solid #E37400}
 .cx-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:#3C4043}.cx-leg .cx-c{margin-right:5px;min-width:20px;font-size:11px}
+
+.banner.warn{background:#FEF7E0;border:1px solid #F9D67A;color:#7A4F01}.banner.ok{background:#E6F4EA;border:1px solid #A8DAB5;color:#0D652D}
+.em-bar{position:sticky;top:8px;z-index:5;border:2px solid #1967D2;box-shadow:0 4px 14px rgba(25,103,210,.12)}
+.rg-parte{border:1px solid var(--line,#DADCE0);border-radius:10px;padding:10px 12px;margin:10px 0}.rg-parte h3{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 6px;font-size:15px;color:var(--navy,#16244A)}
+.rg-hr{font-size:13px;font-weight:500;color:#3C4043;display:flex;align-items:center;gap:6px;margin-left:auto}.rg-hr input{width:110px}
+.rg-sis{font-size:12px;font-weight:700;color:#1967D2;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 4px;padding-top:6px;border-top:1px dashed #E0E3E7}
+.rg-it{display:grid;grid-template-columns:62px 1fr auto 220px;gap:6px 10px;align-items:center;padding:6px 6px;border-radius:8px;border-left:4px solid transparent}
+.rg-it:nth-child(odd){background:#FAFBFC}.rg-it.ok{border-left-color:#188038}.rg-it.nok{border-left-color:#D93025;background:#FCE8E6}.rg-it.na{border-left-color:#9AA0A6}
+.rg-tx{line-height:1.25}.rg-tx small{display:block;color:#5F6368;font-size:11.5px}.rg-obs{width:100%}
+.rg-seg button{min-width:44px;font-weight:600}.rg-seg button.on.ok{background:#188038;color:#fff;border-color:#188038}.rg-seg button.on.nok{background:#D93025;color:#fff;border-color:#D93025}.rg-seg button.on.na{background:#5F6368;color:#fff;border-color:#5F6368}
+.rg-meds{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px}.rg-meds i{color:#5F6368;font-style:normal}.rg-meds input{width:90px;margin-left:4px}.rg-meds input.out{border-color:#D93025;background:#FCE8E6}
+@media (max-width:760px){.rg-it{grid-template-columns:52px 1fr}.rg-seg,.rg-obs{grid-column:2/-1}}
+.rt-passos{display:flex;align-items:stretch;gap:6px;margin:4px 0 14px;flex-wrap:wrap}.rt-passos>i{align-self:center;color:#9AA0A6;font-style:normal;font-size:20px}
+.rt-passos>div{flex:1;min-width:140px;background:#fff;border:1px solid var(--line,#DADCE0);border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center}
+.rt-passos b{grid-row:span 2;width:28px;height:28px;border-radius:50%;background:#16244A;color:#fff;display:grid;place-items:center;font-size:14px}.rt-passos span{font-weight:700}.rt-passos small{grid-column:2;color:#5F6368;font-size:11.5px;line-height:1.2}
+.rt-passos em{grid-row:1/3;grid-column:3;font-style:normal;font-size:22px;font-weight:700;color:#1967D2}
+.rt-al ul{margin:4px 0 0;padding-left:18px;line-height:1.7}.rt-t td{vertical-align:middle}.rt-n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;color:#fff;font-weight:700}
+.rt-b{white-space:nowrap;text-align:right}.rt-b .mbtn{margin-left:4px}.rt-fora td{color:#9AA0A6}
 </style>
 </head>
 <body>
@@ -6610,6 +6628,281 @@ function cxPDF() {
 }
 // menu: 2 · Planejar
 { const s = SECOES.find(x => x.id === 'plan'); if (s && !s.views.some(x => x[0] === 'cxr')) { const i = s.views.findIndex(x => x[0] === 'crono'); s.views.splice(i < 0 ? s.views.length : i + 1, 0, ['cxr', 'Cronograma × Realizado']); } }
+
+</script>
+<script>
+/* ===== OM por embarcação (uma por janela) · ficha checklist para a equipe de terra · lançamento rápido · rotina do dia ===== */
+'use strict';
+ETAPAS_P[1][1] = 'Em execução'; ETAPAS_P[2][1] = 'Executada';
+const omGrupo = g => oms().filter(o => o.tipo === 'P' && o.grupo === g).sort((a, b) => (a.parte || 0) - (b.parte || 0));
+const grpOrd = ETAPAS_P.map(x => x[0]);
+const grpStatus = P => grpOrd[Math.min(...P.map(o => Math.max(0, grpOrd.indexOf(o.status))))];
+const grpItens = P => P.reduce((a, o) => a + (o.itensProg || o.items || []).length, 0);
+const grpNext = { emitida: ['abordo', 'Iniciar execução'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Lançar a ficha'] };
+const ivEmb = (t, v, p) => { const iv = intervalo(t, v, p); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' / '); };
+const posCurtoE = (v, p) => p === 'UN' ? 'Embarcação' : isMcp(p) ? 'MCP ' + (p === 'CE' ? 'Central' : p) : posNome(v, p);
+
+/* ---------- 1 · Programação: uma OM por embarcação ---------- */
+function embPartes(v) {
+  const P = painelVessel(v, EM.viag ?? viagemDe(v)), viag = EM.viag ?? viagemDe(v), por = {};
+  [...EM.sel].forEach(k => { const [p, id] = k.split('|'); (por[p] = por[p] || []).push(id); });
+  const idn = id => id.split('.').map(n => String(+n).padStart(3, '0')).join('.');
+  return posicoes(v).filter(p => por[p]).map(p => {
+    const ids = por[p].sort((a, b) => idn(a) < idn(b) ? -1 : 1), sits = ids.map(id => (P.find(x => x.pos === p && x.t.id === id) || {}).s || {});
+    const hs = sits.map(s => s.alvoH).filter(x => x), ds = sits.map(s => s.alvoD).filter(x => x), hr = horAtual(v.id, p === 'UN' ? mpos(v.id) : p);
+    return { pos: p, ids, hr, alvoH: hs.length ? Math.min(...hs) : (hr ? hr.h + viag : null), alvoD: ds.length ? isoD(new Date(Math.min(...ds))) : null };
+  });
+}
+function embTexto(v, partes) {
+  const n = partes.reduce((a, p) => a + p.ids.length, 0), ds = partes.map(p => p.alvoD).filter(Boolean).sort();
+  return `PREVENTIVA – ${v.nome} – janela de manutenção (equipe de terra)\n${n} itens do Anexo I (NP 055)${ds[0] ? ' · data-limite ' + brD(ds[0]) : ''}\n` +
+    partes.map(p => `\n[${posCurtoE(v, p.pos)}]${p.hr ? ' horímetro ' + nf(p.hr.h) + ' h' : ''}${p.alvoH && p.pos !== 'UN' ? ' · hora-alvo ' + nf(p.alvoH) + ' h' : ''}\n` + p.ids.map(id => '- ' + id + ' ' + A1M[id].chk).join('\n')).join('\n');
+}
+{ const v0 = vEmitir; vEmitir = function () {
+  let h = v0(); const v = vessel(ARG || S.cfg.frota[0].id); if (!v) return h;
+  h = h.replace(/<button class="mbtn sm pri" data-mkom="[^"]*"[^>]*>[^<]*<\/button>/g, '')
+    .replace('Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.', 'Uma OM por embarcação em cada janela. 1) Marque o que vence na viagem · 2) abra a OM no Sankhya com o texto pronto · 3) digite o número · 4) imprima a ficha para a equipe de terra.');
+  const P = painelVessel(v, EM.viag ?? viagemDe(v)), pend = P.filter(x => x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om), n = EM.sel.size;
+  const dr = EM.draft && EM.draft.emb ? (() => { const pt = embPartes(v); EM.draft.partes = pt; EM.draft.txt = embTexto(v, pt); return `<div class="sk" style="margin-top:10px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Texto para abrir a OM no Sankhya</b><div class="skt" id="omTxt">${esc(EM.draft.txt)}</div>
+     <div class="row"><button class="mbtn sm" data-act="copiarTxt">Copiar texto</button><span class="note" id="cpM"></span></div>
+     <b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Número gerado pelo Sankhya</b>
+     <div class="row"><input id="omNum" inputmode="numeric" placeholder="Ex.: 48231" style="width:160px"><button class="mbtn pri" data-act="emitirEmb">Emitir OM e imprimir ficha</button><button class="mbtn" data-act="cancDraft">Cancelar</button><span class="note" id="emE" style="color:var(--badt)"></span></div></div>`; })() : '';
+  const bar = `<div class="card em-bar"><div class="row"><div><b style="font-size:16px">${n ? n + ' ' + (n === 1 ? 'item marcado' : 'itens marcados') : 'Nenhum item marcado'}</b><div class="note">${pend.length} vencem até o fim da próxima viagem e ainda não têm OM</div></div><span class="sp"></span>
+    <button class="mbtn" data-emb="todos" ${pend.length ? '' : 'disabled'}>Marcar os ${pend.length} que vencem</button><button class="mbtn" data-emb="limpar" ${n ? '' : 'disabled'}>Limpar</button>
+    <button class="mbtn pri" data-emb="abrir" ${n ? '' : 'disabled'}>Abrir OM da embarcação com ${n} ${n === 1 ? 'item' : 'itens'}</button></div>${dr}</div>`;
+  const i = h.indexOf('<div class="card row">'), j = i >= 0 ? h.indexOf('</div>\n   ', i) : -1;
+  const k = h.indexOf('<div class="card">', i + 10);
+  return k > 0 ? h.slice(0, k) + bar + h.slice(k) : h + bar;
+}; }
+{ const a0 = AFTER.emitir; AFTER.emitir = function () {
+  if (a0) a0(); const m = $('#main'), c0 = m.onclick;
+  m.onclick = async e => { const t = e.target.closest('button'); const v = vessel(EM.vid);
+    if (t && t.dataset.emb) { e.stopImmediatePropagation();
+      if (t.dataset.emb === 'todos') painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om).forEach(x => EM.sel.add(x.pos + '|' + x.t.id));
+      if (t.dataset.emb === 'limpar') EM.sel.clear();
+      EM.draft = null;
+      if (t.dataset.emb === 'abrir') { if (!precisa(true)) return; EM.draft = { emb: true }; }
+      render(); if (EM.draft) setTimeout(() => { const x = $('#omNum'); if (x) { x.focus(); x.scrollIntoView({ block: 'center' }); } }, 40); return; }
+    if (t && t.dataset.act === 'emitirEmb') {
+      const n = $('#omNum').value.trim();
+      if (!/^\d{3,}$/.test(n)) { $('#emE').textContent = 'Digite o número da OM gerado pelo Sankhya (só números).'; return; }
+      if (oms().some(o => o.num === n)) { $('#emE').textContent = 'Já existe uma OM com esse número no SGMF.'; return; }
+      const pt = EM.draft.partes || embPartes(v); let i = 0;
+      for (const p of pt) { const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, grupo: n, parte: ++i, partes: pt.length, vessel: v.id, pos: p.pos, items: p.ids.slice(), itensProg: p.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: p.pos === 'UN' ? null : p.alvoH, alvoD: p.alvoD, hEmit: p.hr ? p.hr.h : null, conf: {}, extras: [], fotos: [], exec: 'Equipe própria (CTF/MFM)', execTerra: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] }; await saveRec(o); }
+      EM.sel.clear(); EM.draft = null; toast('OM ' + n + ' emitida para ' + v.nome + '.'); fichaModal(omGrupo(n)[0]); render(); return; }
+    if (c0) return c0(e); };
+}; }
+
+/* ---------- 2 · Ficha impressa: checklist em poucas folhas ---------- */
+function docFichaEmb(g) {
+  const P = omGrupo(g), o1 = P[0], v = vessel(o1.vessel) || { nome: o1.vessel }, n = grpItens(P);
+  const fbar = `<div class="fbar"><div><small>Equipe de terra · marcar uma coluna por item · devolver ao Supervisor</small><h3>Ficha de execução · checklist da OM</h3></div><div class="om">Nº da OM<br><b>${esc(o1.num)}</b></div></div>`;
+  const B = [blk('', 'Identificação', '', grid('1.3fr 1fr 1fr 1fr', dv('Embarcação', v.nome) + dv('Emitida em', brD(o1.emitAt)) + dv('Data-limite', P.map(o => o.alvoD).filter(Boolean).sort()[0] ? brD(P.map(o => o.alvoD).filter(Boolean).sort()[0]) : '—') + dv('Itens', n + ' itens · ' + P.length + (P.length === 1 ? ' parte' : ' partes')) + dv('Equipe executora (nomes)', '', 2) + dv('Início (data/hora)', '') + dv('Término (data/hora)', ''))).replace('<code></code>', '')];
+  const mot = P.filter(o => o.pos !== 'UN');
+  if (mot.length) B.push(blk('', 'Horímetros', 'anotar antes de começar', tbl(['Motor', 'Na emissão', 'Hora-alvo', 'Na execução'], mot.map(o => [posCurtoE(v, o.pos), o.hEmit ? nf(o.hEmit) + ' h' : '—', o.alvoH ? nf(o.alvoH) + ' h' : '—', '']), ['34%', '22%', '22%', '22%'])).replace('<code></code>', ''));
+  B.push(`<div class="note" style="margin:2px 0 6px;font-size:10px">OK = feito e conforme · NOK = não conforme ou não deu para fazer (escrever o motivo em Obs.) · NA = não se aplica nesta embarcação</div>`);
+  const box = '☐';
+  P.forEach(o => { const ids = o.itensProg || o.items || [], sis = [...new Set(ids.map(id => parseInt(id)))];
+    sis.forEach(sn => { const L = ids.filter(id => parseInt(id) === sn);
+      B.push(blk('', posCurtoE(v, o.pos) + ' · ' + (SISTEMAS[sn - 1] || ''), L.length + (L.length === 1 ? ' item' : ' itens'), tbl(['Nº', 'O que fazer', 'Intervalo', 'OK', 'NOK', 'NA', 'Obs.'], L.map(id => { const t = A1M[id]; return [id, { h: `<b>${esc(t.chk)}</b> <span style="color:#5F6368">· ${esc(EQN[t.eq] || t.eq)}</span>${t.meds.length ? ' <i style="color:#1967D2">· medir (ver quadro)</i>' : ''}` }, ivEmb(t, v, o.pos), { h: box, c: 'c' }, { h: box, c: 'c' }, { h: box, c: 'c' }, '']; }), ['8%', '50%', '12%', '5%', '5%', '5%', '15%'])).replace('<code></code>', '')); }); });
+  const M = []; P.forEach(o => (o.itensProg || o.items || []).forEach(id => A1M[id].meds.forEach(m => M.push([posCurtoE(v, o.pos), id, m[0], m[1] + ' ' + (m[2] || ''), '', '']))));
+  if (M.length) B.push(blk('', 'Medições', 'anotar como encontrou e como deixou', tbl(['Motor', 'Nº', 'Medição', 'Especificado', 'Encontrado', 'Deixado'], M, ['13%', '8%', '33%', '16%', '15%', '15%'])).replace('<code></code>', ''));
+  B.push(blk('', 'Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], [['', '', ''], ['', '', '']], ['60%', '12%', '28%'])).replace('<code></code>', ''));
+  B.push(blk('', 'Observações, NOK e serviços fora do plano', 'fotos ANTES e DEPOIS dos serviços principais · resíduos no FR 016_E', '<div class="v" style="min-height:52px"></div>').replace('<code></code>', ''));
+  B.push(blk('', 'Assinaturas', '', grid('1fr 1fr 1fr', dv('Executor (terra) · nome e rubrica', '') + dv('Comandante · aceite', '') + dv('Supervisor · conferência', ''))).replace('<code></code>', ''));
+  return numerar(paginar(fbar, B));
+}
+{ const f0 = fichaModal; fichaModal = function (o) {
+  if (!o || !o.grupo) return f0(o);
+  const P = omGrupo(o.grupo), docs = docFichaEmb(o.grupo);
+  modal(`<div class="row"><h2>Ficha da OM ${esc(o.num)} · ${esc(vName(o.vessel))}</h2><span class="sp"></span><button class="mbtn pri" data-act="pdfFicha">⬇ Baixar PDF para imprimir</button><button class="mbtn" data-close>Fechar</button></div>
+   <p class="note">${grpItens(P)} itens em ${docs.length} ${docs.length === 1 ? 'folha' : 'folhas'}. Imprima e entregue à equipe de terra. Na volta, lance em <b>3 · Executar → OMs em execução → Lançar a ficha</b>.</p><div class="pdfwrap" id="fichaPrev"></div>`, true);
+  previewPages($('#fichaPrev'), docs, 560);
+  $('#modal').addEventListener('click', async e => { if (e.target.closest('[data-act="pdfFicha"]')) await baixarPDF(docs, `Ficha_${vName(o.vessel).replace(/\s+/g, '_')}_OM${o.num}.pdf`); });
+}; }
+
+/* ---------- 3 · Quadro de OMs: uma linha por OM da embarcação ---------- */
+vAcomp = function () {
+  const ab = oms().filter(o => o.status !== 'encerrada' || (o.fechadoAt && Date.now() - o.fechadoAt < 7 * 864e5));
+  const vis = new Set(), L = [];
+  ab.filter(o => AC.tipo === 'todas' || o.tipo === AC.tipo).forEach(o => { if (o.grupo) { if (vis.has(o.grupo)) return; vis.add(o.grupo); const P = omGrupo(o.grupo); L.push({ g: o.grupo, P, o: P[0], status: grpStatus(P) }); } else L.push({ o, status: o.status }); });
+  const colOf = x => x.o.tipo === 'C' ? { aberta: 'emitida', execucao: 'abordo', conferencia: 'conferencia', encerrada: 'encerrada' }[x.status] : x.status;
+  const cols = AC.tipo === 'C' ? ETAPAS_C : ETAPAS_P;
+  const card = x => { const o = x.o, late = x.P ? x.P.some(omAtrasada) : omAtrasada(o);
+    if (x.P) { const nx = grpNext[x.status], v = vessel(o.vessel);
+      return `<div class="omc" style="--c:var(--navy)"><div class="h"><b class="num">OM ${esc(o.num)}</b><span class="pill p-inf">Preventiva</span></div><div><b>${esc(vName(o.vessel))}</b></div>
+       <div class="note">${grpItens(x.P)} itens · ${x.P.map(p => posCurtoE(v, p.pos)).join(', ')}</div><div class="note mono">emitida ${brD(o.emitAt)}${x.P.map(p => p.alvoD).filter(Boolean).sort()[0] ? ' · até ' + brD(x.P.map(p => p.alvoD).filter(Boolean).sort()[0]) : ''}</div>
+       ${late ? '<span class="pill p-bad">Início em atraso</span>' : ''}${o.devolvida ? `<span class="pill p-warn">Devolvida: ${esc(o.devolvida)}</span>` : ''}
+       <div class="acts">${nx && x.status !== 'encerrada' ? `<button class="mbtn sm ${nx[0] === 'conferencia' ? 'pri' : ''}" data-gadv="${esc(x.g)}|${nx[0]}">${nx[1]}</button>` : ''}<a class="mbtn sm ${x.status === 'conferencia' ? 'pri' : ''}" href="#omg/${encodeURIComponent(x.g)}">${x.status === 'conferencia' ? 'Conferir' : x.status === 'encerrada' ? 'Ver' : 'Abrir'}</a><button class="mbtn sm" data-ficha="${o.id}">Ficha</button></div></div>`; }
+    const c = o.pos === 'BB' ? 'var(--bb)' : o.pos === 'BE' ? 'var(--be)' : o.pos === 'CE' ? 'var(--navy)' : 'var(--acc)';
+    const next = o.tipo === 'C' ? { aberta: ['execucao', 'Iniciar execução'], execucao: ['conferencia', 'Conferir'] }[o.status] : { emitida: ['abordo', 'Iniciar execução'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Conferir'] }[o.status];
+    return `<div class="omc" style="--c:${c}"><div class="h"><b class="num">OM ${esc(o.num)}</b>${posTag(o.pos)}</div><div>${esc(vName(o.vessel))}</div>${tipoPill(o)}
+      <div class="note">${o.tipo === 'C' ? esc(o.descricao || '') : (o.items || []).join(' · ')}</div>
+      <div class="note mono">${o.tipo === 'C' ? 'aberta ' + brDT(o.abertura) : (o.alvoH ? 'alvo ' + nf(o.alvoH) + ' h' : '') + (o.alvoD ? ' · até ' + brD(o.alvoD) : '')}</div>
+      ${late ? '<span class="pill p-bad">Início em atraso</span>' : ''}${o.devolvida ? `<span class="pill p-warn">Devolvida: ${esc(o.devolvida)}</span>` : ''}
+      <div class="acts">${next && o.status !== 'encerrada' ? `<button class="mbtn sm ${next[0] === 'conferencia' ? 'pri' : ''}" data-adv="${o.id}|${next[0]}">${next[1]}</button>` : ''}<a class="mbtn sm" href="#om/${o.id}">Abrir</a>${o.tipo === 'P' ? `<button class="mbtn sm" data-ficha="${o.id}">Ficha</button>` : ''}</div></div>`; };
+  const colsH = (AC.tipo === 'todas' ? ETAPAS_P : cols).map(([k, l]) => { const l2 = L.filter(x => (AC.tipo === 'C' ? x.status : colOf(x)) === k); return `<div class="col"><h4>${AC.tipo === 'todas' && k === 'emitida' ? 'Emitida / aberta' : l}<span class="mono">${l2.length}</span></h4>${l2.map(card).join('') || '<div class="note">Nenhuma</div>'}</div>`; }).join('');
+  return `<div class="vh"><div><h1>OMs em execução</h1><p>Cada cartão é uma OM. Preventiva: uma por embarcação, executada pela equipe de terra. Avance o cartão conforme o serviço anda; na volta da ficha, clique em <b>Lançar a ficha</b>.</p></div><span class="sp"></span>
+   <div class="seg">${[['todas', 'Todas'], ['P', 'Preventivas'], ['C', 'Corretivas']].map(([k, l]) => `<button data-ac="${k}" class="${AC.tipo === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+   <div class="kan" style="grid-template-columns:repeat(${AC.tipo === 'C' ? 4 : 5},minmax(210px,1fr))">${colsH}</div><p class="note">Encerradas aparecem por 7 dias.</p>`;
+};
+async function grpAvancar(g, st) {
+  const P = omGrupo(g), i = grpOrd.indexOf(st);
+  for (const o of P) if (grpOrd.indexOf(o.status) < i) { o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); }
+}
+{ const a0 = AFTER.acomp; AFTER.acomp = function () { a0(); const m = $('#main'), c0 = m.onclick;
+  m.onclick = async e => { const t = e.target.closest('button[data-gadv]'); if (!t) return c0(e); if (!precisa(false)) return; const [g, st] = t.dataset.gadv.split('|'); await grpAvancar(g, st); if (st === 'conferencia') go('omg/' + encodeURIComponent(g)); else render(); }; }; }
+
+/* ---------- 4 · Lançamento rápido da ficha (OM inteira numa tela) ---------- */
+const RG = { t: null };
+function rgDados(P) { const o = P[0]; o.rap = o.rap || { res: {}, obs: {}, med: {}, hr: {}, regs: {} }; ['res', 'obs', 'med', 'hr', 'regs'].forEach(k => o.rap[k] = o.rap[k] || {}); return o.rap; }
+function rgSalvar(P) { clearTimeout(RG.t); RG.t = setTimeout(() => saveRec(P[0]), 700); }
+function rgPend(P) {
+  const R = rgDados(P), v = vessel(P[0].vessel), out = [];
+  if (!R.dreal) out.push('Data da execução');
+  if (!(R.execn || '').trim()) out.push('Equipe executora (nomes)');
+  P.filter(o => o.pos !== 'UN').forEach(o => { if (!R.hr[o.pos]) out.push('Horímetro na execução · ' + posCurtoE(v, o.pos)); });
+  let semR = 0, semObs = 0, medF = 0; P.forEach(o => (o.itensProg || o.items || []).forEach(id => { const k = o.pos + '|' + id, r = R.res[k]; if (!r) semR++; else if (r !== 'ok' && !(R.obs[k] || '').trim()) semObs++;
+    if (r === 'ok') A1M[id].meds.forEach((m, i) => { const d = ((R.med[k] || [])[i] || {}).dei; if (m[5] !== 'info' && (d === undefined || d === '' || medFora(m, d))) medF++; }); }));
+  if (semR) out.push(semR + (semR === 1 ? ' item sem marcação' : ' itens sem marcação') + ' (OK / NOK / NA)');
+  if (semObs) out.push(semObs + ' NOK/NA sem motivo');
+  if (medF) out.push(medF + (medF === 1 ? ' medição faltando ou fora da especificação' : ' medições faltando ou fora da especificação'));
+  if (P.some(o => o.alvoH && R.hr[o.pos] && +R.hr[o.pos] > o.alvoH) && !(R.justif || '').trim()) out.push('Justificativa: executada depois da hora-alvo');
+  const regs = rgRegs(P); regs.forEach(r => { if (!((R.regs[r] || '').trim())) out.push(REGN[r]); });
+  if (regs.length === 0 && P.some(o => regsDe({ items: o.itensProg || o.items }).includes('pt')) && !(R.pt || '').trim()) out.push('Nº da PT do SESMT');
+  if (R.resid === 'Sim' && !(R.fr016 || '').trim()) out.push('Nº do FR 016_E (resíduos)'); if (!R.resid) out.push('Resíduos: gerou ou não');
+  const f = P[0].fotos || []; if (!f.some(x => x.tipo === 'ANTES')) out.push('Foto ANTES'); if (!f.some(x => x.tipo === 'DEPOIS')) out.push('Foto DEPOIS'); if (f.length && !f.every(x => (x.leg || '').trim())) out.push('Legenda em todas as fotos');
+  return out;
+}
+const rgRegs = P => { const s = new Set(); P.forEach(o => regsDe({ items: o.itensProg || o.items }).forEach(r => s.add(r))); return [...s].filter(r => ['lote', 'fr049', 'instr', 'end', 'cert'].includes(r)); };
+function vOmg() {
+  const g = ARG, P = omGrupo(g); if (!P.length) return '<div class="empty">OM não encontrada. Talvez ainda não tenha sincronizado.</div>';
+  const o1 = P[0], v = vessel(o1.vessel), R = rgDados(P), st = grpStatus(P), fechada = st === 'encerrada', ro = fechada || !can.edit(), idx = grpOrd.indexOf(st);
+  const bar = `<div class="stepsbar">${ETAPAS_P.map(([k, l], i) => `<div class="${i < idx || fechada ? 'done' : i === idx ? 'cur' : ''}"><b>${i < idx || fechada ? '✓' : i + 1}</b>${l}</div>`).join('')}</div>`;
+  const inp = (k, lab, cls, at = '') => `<label class="f ${cls}">${lab}<input data-rg="${k}" value="${esc(R[k] || '')}" ${at}></label>`;
+  const seg = (k, val) => `<div class="seg rg-seg" data-rk="${esc(k)}">${[['ok', 'OK'], ['nok', 'NOK'], ['na', 'NA']].map(([c, l]) => `<button type="button" data-rv="${c}" class="${val === c ? 'on ' + c : ''}">${l}</button>`).join('')}</div>`;
+  let tot = 0, ok = 0, nok = 0, na = 0;
+  const partes = P.map(o => { const ids = o.itensProg || o.items || [];
+    const sis = [...new Set(ids.map(id => parseInt(id)))];
+    return `<div class="rg-parte"><h3>${esc(posCurtoE(v, o.pos))}${o.pos !== 'UN' ? `<label class="rg-hr">Horímetro na execução <input data-rgh="${o.pos}" inputmode="numeric" value="${esc(R.hr[o.pos] || '')}" placeholder="${o.alvoH ? 'alvo ' + nf(o.alvoH) : 'h'}"> h</label>` : ''}</h3>
+     ${sis.map(sn => `<div class="rg-sis">${esc(SISTEMAS[sn - 1] || '')}</div>` + ids.filter(id => parseInt(id) === sn).map(id => { const t = A1M[id], k = o.pos + '|' + id, r = R.res[k] || ''; tot++; if (r === 'ok') ok++; if (r === 'nok') nok++; if (r === 'na') na++;
+      return `<div class="rg-it ${r}" data-it="${esc(k)}"><span class="mono">${id}</span><span class="rg-tx">${esc(t.chk)}<small>${esc(EQN[t.eq] || t.eq)} · ${ivEmb(t, v, o.pos)}</small></span>${seg(k, r)}
+        <input class="rg-obs" data-rgo="${esc(k)}" value="${esc(R.obs[k] || '')}" placeholder="${r === 'nok' || r === 'na' ? 'Motivo (obrigatório)' : 'Obs.'}">
+        ${t.meds.length ? `<div class="rg-meds">${t.meds.map((m, i) => { const md = (R.med[k] || [])[i] || {}; return `<span>${esc(m[0])} <i>(${esc(m[1])} ${esc(m[2] || '')})</i> <input data-rgm="${esc(k)}|${i}|enc" value="${esc(md.enc || '')}" placeholder="encontrado" inputmode="decimal"><input data-rgm="${esc(k)}|${i}|dei" value="${esc(md.dei || '')}" placeholder="deixado" inputmode="decimal" class="${medFora(m, md.dei) ? 'out' : ''}"></span>`; }).join('')}</div>` : ''}</div>`; }).join('')).join('')}</div>`; }).join('');
+  const regs = rgRegs(P), pend = fechada ? [] : rgPend(P), f = o1.fotos || [];
+  return `<div class="vh"><div><h1>OM ${esc(o1.num)} · ${esc(v ? v.nome : o1.vessel)} · preventiva da janela</h1><p>Lance aqui a ficha que voltou da equipe de terra: uma tela para a OM inteira. Emitida em ${brD(o1.emitAt)} · ${tot} itens em ${P.length} ${P.length === 1 ? 'parte' : 'partes'}.</p></div><span class="sp"></span>
+    <button class="mbtn" data-ficha="${o1.id}">🖨 Imprimir ficha</button></div>${bar}<p class="note" style="margin:-4px 0 10px">Anexo II-B de cada parte (gerado na aprovação): ${P.map(o => `<a href="#om/${o.id}">${esc(posCurtoE(v, o.pos))}</a>`).join(' · ')}</p>
+   ${fechada ? `<div class="banner info">OM encerrada. Somente leitura. Os PDFs do Anexo II-B de cada parte estão no Drive.</div>` : ''}
+   <div ${ro ? 'inert' : ''} id="rgForm">
+   <div class="card"><div class="row"><h2>1 · Dados da execução</h2></div><div class="g">
+    ${inp('dreal', 'Data da execução', 's2', 'type="date"')}${inp('inicio', 'Início', 's2', 'type="datetime-local"')}${inp('termino', 'Término', 's2', 'type="datetime-local"')}
+    ${inp('execn', 'Equipe executora (nomes)', 's4', 'placeholder="Ex.: João (mecânico), Pedro (auxiliar)"')}${inp('indispH', 'Barco parado para a manutenção (h)', 's2', 'inputmode="decimal" placeholder="0 se não parou"')}
+    <label class="f s2">Gerou resíduo?<select data-rg="resid"><option value="">Escolha…</option>${['Não', 'Sim'].map(x => `<option${R.resid === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>${inp('fr016', 'Nº FR 016_E', 's2')}${inp('pt', 'Nº da PT do SESMT (se houver)', 's2')}
+    ${inp('justif', 'Justificativa (se passou da hora-alvo)', 's6')}</div></div>
+   <div class="card"><div class="row"><h2>2 · Itens da ficha</h2><span class="sp"></span><span class="note" id="rgCnt">${ok} OK · ${nok} NOK · ${na} NA · ${tot - ok - nok - na} sem marcação</span><button class="mbtn" data-rgall="ok">Marcar todos sem marcação como OK</button></div>
+    <p class="note">Copie da ficha: OK = feito e conforme. NOK = não conforme ou não feito (escreva o motivo; se for falha, abra uma corretiva). NA = não se aplica. Item NOK ou NA não conta como feito: continua vencido e volta na próxima programação.</p>${partes}</div>
+   ${regs.length ? `<div class="card"><h2>3 · Registros exigidos por estes itens</h2><div class="g">${regs.map(r => `<label class="f s3">${REGN[r]}<input data-rgr="${r}" value="${esc(R.regs[r] || '')}"></label>`).join('')}</div></div>` : ''}
+   <div class="card"><h2>${regs.length ? 4 : 3} · Fotos (antes e depois)</h2><div class="phgrid">${f.map((x, i) => `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span></div>
+     <div class="meta"><select data-rgf="${i}|tipo">${['ANTES', 'DURANTE', 'DEPOIS'].map(t => `<option${t === x.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select><input data-rgf="${i}|leg" placeholder="Legenda (o que mostra)" value="${esc(x.leg || '')}"><button class="xbtn" data-rgfdel="${i}" aria-label="Remover foto">✕</button></div></div>`).join('')}
+    <label class="addph" for="rgFoto"><span style="font-size:28px;line-height:1">+</span>Adicionar foto<small>uma ou várias de uma vez</small><input type="file" id="rgFoto" accept="image/*" multiple></label></div></div>
+   </div>
+   <div class="card rg-fim"><h2>${regs.length ? 5 : 4} · Conferência e encerramento</h2>
+    ${fechada ? '<p class="note">Encerrada.</p>' : pend.length ? `<div class="banner warn"><b>Falta:</b> ${pend.map(esc).join(' · ')}</div>` : '<div class="banner ok">Tudo preenchido. Pode aprovar.</div>'}
+    ${fechada ? '' : `<div class="row"><button class="mbtn" data-rgact="salvar">💾 Salvar</button>${st !== 'conferencia' ? '<button class="mbtn" data-rgact="conf">Enviar para conferência</button>' : ''}<span class="sp"></span><button class="mbtn ok" data-rgact="aprovar" ${pend.length ? 'disabled' : ''}>✓ Aprovar a OM inteira e gerar os PDFs</button></div><p class="note">Ao aprovar, cada parte (motor / embarcação) gera o seu Anexo II-B com a mesma OM ${esc(o1.num)}. Itens OK passam a contar como feitos; NOK/NA continuam vencidos.</p>`}</div>`;
+}
+async function rgAplicar(P) {
+  const R = rgDados(P), v = vessel(P[0].vessel), regs = rgRegs(P);
+  P.forEach((o, n) => { const ids = o.itensProg = o.itensProg || (o.items || []).slice();
+    o.items = ids.filter(id => R.res[o.pos + '|' + id] === 'ok');
+    o.naoExec = ids.filter(id => R.res[o.pos + '|' + id] && R.res[o.pos + '|' + id] !== 'ok').map(id => ({ id, r: R.res[o.pos + '|' + id], motivo: R.obs[o.pos + '|' + id] || '' }));
+    o.conf = {}; o.items.forEach(id => { const k = o.pos + '|' + id; o.conf[id] = { steps: A1M[id].steps.map(() => true), meds: (R.med[k] || []).map(x => ({ enc: x.enc || '', dei: x.dei || '' })) }; });
+    o.dreal = R.dreal || ''; o.inicio = R.inicio || o.inicio || ''; o.termino = R.termino || ''; o.exec = 'Equipe própria (CTF/MFM)'; o.execn = (R.execn || '') + ' · equipe de terra';
+    o.hreal = o.pos === 'UN' ? (R.hr[mpos(o.vessel)] || Object.values(R.hr)[0] || '') : (R.hr[o.pos] || '');
+    if (o.pos === 'UN' && !o.hreal) { const hr = horAtual(o.vessel, mpos(o.vessel)); o.hreal = hr ? hr.h : ''; }
+    o.indispH = n === 0 ? (R.indispH || '0') : '0'; o.resid = R.resid || ''; o.residT = R.resid === 'Sim' ? (o.residT || ['Óleo usado']) : []; o.fr016 = R.fr016 || ''; o.pt = R.pt || ''; o.justif = R.justif || '';
+    o.reg = Object.assign({}, o.reg || {}, R.regs); o.teste = 'Itens da ficha verificados pela equipe de terra' + (o.naoExec.length ? '; não executados: ' + o.naoExec.map(x => x.id + ' (' + x.r.toUpperCase() + (x.motivo ? ': ' + x.motivo : '') + ')').join(', ') : '');
+    o.criterio = 'Especificação do Anexo I (NP 055)'; o.resultado = 'Conforme'; o.anomalia = o.anomalia && o.anomalia !== 'Não' ? o.anomalia : 'Não'; o.omCorr = o.omCorr || 'N/A';
+    o.condEnc = o.condEnc || 'Conforme ficha de execução da OM ' + o.num + '.'; o.origem = o.origem || 'Plano (ClickUp)';
+    o.liberacao = o.liberacao || (R.termino || (R.dreal ? R.dreal + 'T17:00' : '')); });
+  for (const o of P) await saveRec(o);
+}
+{ const g0 = gateIIB; gateIIB = function (o) { const g = g0(o); if (!o.grupo || o.parte === 1) return g; const L = omGrupo(o.grupo)[0], f = (L && L.fotos) || [];
+  return g.filter(x => !/^Pelo menos uma foto|^Todas as fotos/.test(x[0])).concat([['Fotos da OM (na parte 1)', f.some(x => x.tipo === 'ANTES') && f.some(x => x.tipo === 'DEPOIS')]]); }; }
+VX.omg = vOmg;
+AFTER.omg = function () {
+  const m = $('#main'), P = omGrupo(ARG); if (!P.length) return; const R = rgDados(P);
+  const cnt = () => { let t = 0, a = 0, b = 0, c = 0; m.querySelectorAll('.rg-it').forEach(el => { t++; if (el.classList.contains('ok')) a++; if (el.classList.contains('nok')) b++; if (el.classList.contains('na')) c++; }); const x = $('#rgCnt'); if (x) x.textContent = `${a} OK · ${b} NOK · ${c} NA · ${t - a - b - c} sem marcação`; };
+  m.oninput = m.onchange = async e => { const t = e.target; if (!can.edit()) return;
+    if (t.dataset.rg) R[t.dataset.rg] = t.value; else if (t.dataset.rgh) R.hr[t.dataset.rgh] = t.value.replace(/\D/g, ''); else if (t.dataset.rgo) R.obs[t.dataset.rgo] = t.value; else if (t.dataset.rgr) R.regs[t.dataset.rgr] = t.value;
+    else if (t.dataset.rgm) { const [p, id, i, f] = t.dataset.rgm.split('|'), k = p + '|' + id; R.med[k] = R.med[k] || []; R.med[k][i] = R.med[k][i] || {}; R.med[k][i][f] = t.value; if (f === 'dei') t.classList.toggle('out', medFora(A1M[id].meds[i], t.value)); }
+    else if (t.dataset.rgf) { const [i, f] = t.dataset.rgf.split('|'); P[0].fotos[i][f] = t.value; }
+    else if (t.id === 'rgFoto' && e.type === 'change') { for (const f of t.files) { const src = await comprimir(f); P[0].fotos = P[0].fotos || []; P[0].fotos.push({ src, tipo: P[0].fotos.some(x => x.tipo === 'ANTES') ? 'DEPOIS' : 'ANTES', leg: '', at: Date.now() }); } await saveRec(P[0]); render(); return; }
+    else return;
+    rgSalvar(P); };
+  m.onclick = async e => { const t = e.target.closest('button,a'); if (!t) return;
+    if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
+    if (t.dataset.rv) { if (!can.edit()) return; const s = t.closest('[data-rk]'), k = s.dataset.rk, it = t.closest('.rg-it'), v = R.res[k] === t.dataset.rv ? '' : t.dataset.rv; R.res[k] = v;
+      s.querySelectorAll('button').forEach(b => b.className = b.dataset.rv === v ? 'on ' + v : ''); it.className = 'rg-it ' + v; const ob = it.querySelector('.rg-obs'); if (ob) ob.placeholder = v === 'nok' || v === 'na' ? 'Motivo (obrigatório)' : 'Obs.'; cnt(); rgSalvar(P); return; }
+    if (t.dataset.rgall) { if (!can.edit()) return; P.forEach(o => (o.itensProg || o.items || []).forEach(id => { const k = o.pos + '|' + id; if (!R.res[k]) R.res[k] = 'ok'; })); await saveRec(P[0]); render(); return; }
+    if (t.dataset.rgfdel) { P[0].fotos.splice(+t.dataset.rgfdel, 1); await saveRec(P[0]); render(); return; }
+    if (t.dataset.rgact === 'salvar') { clearTimeout(RG.t); await saveRec(P[0]); toast('Salvo.'); render(); return; }
+    if (t.dataset.rgact === 'conf') { if (!precisa(false)) return; clearTimeout(RG.t); await rgAplicar(P); await grpAvancar(ARG, 'conferencia'); toast('OM ' + P[0].num + ' enviada para conferência.'); render(); return; }
+    if (t.dataset.rgact === 'aprovar') { if (!precisa(true)) return; clearTimeout(RG.t); if (rgPend(P).length) return toast('Ainda há pendências.');
+      t.disabled = true; t.textContent = 'Gerando PDFs…'; await rgAplicar(P); await grpAvancar(ARG, 'conferencia');
+      const falha = []; P.forEach(o => { const g = gateIIB(o).filter(x => !x[1]); if (g.length) falha.push(posCurtoE(vessel(o.vessel), o.pos) + ': ' + g.map(x => x[0]).join(', ')); });
+      if (falha.length) { toast('Não foi possível aprovar: ' + falha.join(' | '), 9000); render(); return; }
+      for (const o of P) await aprovarOM(o); toast('OM ' + P[0].num + ' aprovada: ' + P.length + (P.length === 1 ? ' PDF gerado.' : ' PDFs gerados.'), 5000); render(); return; } };
+};
+{ const s = SECOES.find(x => x.id === 'exec'); if (s) s.extra = (s.extra || []).concat(['omg']); }
+
+/* ---------- 5 · Rotina do dia: o que fazer, em ordem, por embarcação ---------- */
+function rotinaDados() {
+  return S.cfg.frota.map(v => {
+    if (foraOp(v)) return { v, fora: true };
+    const P = painelVessel(v), venc = P.filter(x => x.t.kind === 'prog' && x.s.st === 'venc' && !x.om), viag = P.filter(x => x.t.kind === 'prog' && x.s.st === 'viag' && !x.om);
+    const abertas = oms().filter(o => o.vessel === v.id && o.tipo === 'P' && o.status !== 'encerrada'), gs = [...new Set(abertas.map(o => o.grupo || o.id))];
+    const om = gs.map(g => { const L = abertas.filter(o => (o.grupo || o.id) === g); return { g, L, num: L[0].num, st: grpStatus(L), grp: !!L[0].grupo, id: L[0].id }; }).sort((a, b) => grpOrd.indexOf(a.st) - grpOrd.indexOf(b.st))[0];
+    const corr = oms().filter(o => o.vessel === v.id && o.tipo === 'C' && o.status !== 'encerrada');
+    const hr = horAtual(v.id, mpos(v.id)), dHr = hr ? Math.floor((hoje() - pD(hr.date)) / 864e5) : null, crit = bloqueioSaida(v.id).length;
+    return { v, venc, viag, om, corr, hr, dHr, crit };
+  });
+}
+function rotinaPasso(x) {
+  if (x.fora) return { n: 0, txt: 'Fora de operação', btn: '' };
+  if (x.om) { const o = x.om, L = x.om.grp ? `#omg/${encodeURIComponent(o.g)}` : `#om/${o.id}`;
+    if (o.st === 'emitida') return { n: 2, txt: `OM ${esc(o.num)} emitida: imprimir a ficha e entregar à equipe de terra`, btn: `<button class="mbtn sm" data-ficha="${o.id}">🖨 Ficha</button><button class="mbtn sm pri" data-rtadv="${esc(o.g)}|abordo|${o.grp ? 1 : 0}">Iniciar execução</button>` };
+    if (o.st === 'abordo') return { n: 3, txt: `OM ${esc(o.num)} em execução pela equipe de terra`, btn: `<button class="mbtn sm pri" data-rtadv="${esc(o.g)}|executada|${o.grp ? 1 : 0}">Terminou a execução</button>` };
+    if (o.st === 'executada') return { n: 4, txt: `OM ${esc(o.num)} executada: lançar a ficha que voltou`, btn: `<a class="mbtn sm pri" href="${L}">Lançar a ficha</a>` };
+    if (o.st === 'conferencia') return { n: 5, txt: `OM ${esc(o.num)} lançada: conferir e aprovar`, btn: `<a class="mbtn sm pri" href="${L}">Conferir e aprovar</a>` }; }
+  const n = x.venc.length + x.viag.length;
+  if (n) return { n: 1, txt: `${x.venc.length ? `<b style="color:#D93025">${x.venc.length} vencidos</b>` : ''}${x.venc.length && x.viag.length ? ' + ' : ''}${x.viag.length ? x.viag.length + ' vencem na próxima viagem' : ''}: programar a OM`, btn: `<a class="mbtn sm pri" href="#emitir/${x.v.id}">Programar OM</a>` };
+  return { n: 6, txt: 'Em dia: nada a programar', btn: '' };
+}
+function vRotina() {
+  const D = rotinaDados(), A = D.filter(x => !x.fora), Pa = A.map(x => ({ x, p: rotinaPasso(x) }));
+  const cont = k => Pa.filter(y => y.p.n === k).length, hrOld = A.filter(x => x.dHr == null || x.dHr > 7), corr = A.reduce((a, x) => a + x.corr.length, 0), crit = A.filter(x => x.crit);
+  const passos = [['1', 'Programar', 'marcar o que vence e abrir a OM no Sankhya'], ['2', 'Imprimir', 'ficha checklist para a equipe de terra'], ['3', 'Executar', 'equipe de terra faz e marca OK / NOK / NA'], ['4', 'Lançar', 'copiar a ficha para o sistema'], ['5', 'Conferir', 'Supervisor aprova; PDF vai para o Drive']];
+  const corP = { 1: '#D93025', 2: '#E37400', 3: '#1967D2', 4: '#E37400', 5: '#188038', 6: '#188038', 0: '#9AA0A6' };
+  const ordem = Pa.slice().sort((a, b) => (a.p.n || 9) - (b.p.n || 9) || (b.x.venc ? b.x.venc.length : 0) - (a.x.venc ? a.x.venc.length : 0));
+  return `<div class="vh"><div><h1>Rotina do dia</h1><p>O que fazer agora, barco por barco, na ordem do processo. Cada linha mostra o próximo passo e o botão para fazê-lo.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
+   <div class="rt-passos">${passos.map(([n, t, d], i) => `<div><b>${n}</b><span>${t}</span><small>${d}</small><em>${cont(i + 1)}</em></div>`).join('<i>›</i>')}</div>
+   ${crit.length || hrOld.length || corr ? `<div class="card rt-al"><h2>Antes de tudo</h2><ul>
+    ${crit.map(x => `<li><b style="color:#D93025">${esc(x.v.nome)}: saída bloqueada</b>, item Crítico vencido sem OM. <a href="#emitir/${x.v.id}">Programar agora</a></li>`).join('')}
+    ${corr ? `<li><b>${corr} ${corr === 1 ? 'corretiva aberta' : 'corretivas abertas'}</b>. <a href="#acomp">Ver no quadro</a></li>` : ''}
+    ${hrOld.length ? `<li><b>Horímetro desatualizado</b> (mais de 7 dias): ${hrOld.map(x => esc(x.v.nome)).join(', ')}. Sem leitura, o vencimento fica errado. <a href="#hor">Lançar horímetros</a></li>` : ''}</ul></div>` : ''}
+   <div class="card"><div class="tw"><table class="t rt-t"><thead><tr><th>Embarcação</th><th>Passo</th><th>O que fazer agora</th><th>Horímetro MCP</th><th></th></tr></thead><tbody>
+    ${ordem.map(({ x, p }) => `<tr><td><b>${esc(x.v.nome)}</b></td><td><span class="rt-n" style="background:${corP[p.n]}">${p.n >= 1 && p.n <= 5 ? p.n : '✓'}</span></td><td>${p.txt}</td><td class="mono note">${x.hr ? nf(x.hr.h) + ' h · ' + (x.dHr === 0 ? 'hoje' : x.dHr + ' d') : '—'}</td><td class="rt-b">${p.btn}</td></tr>`).join('')}
+    ${D.filter(x => x.fora).map(x => `<tr class="rt-fora"><td>${esc(x.v.nome)}</td><td><span class="rt-n" style="background:#9AA0A6">—</span></td><td class="note">Fora de operação</td><td></td><td></td></tr>`).join('')}</tbody></table></div></div>
+   <p class="note">Detalhes: <a href="#emitir">Programação</a> · <a href="#acomp">OMs em execução</a> · <a href="#cxr">Cronograma × Realizado</a> · <a href="#geral">Painel de gestão</a></p>`;
+}
+VX.rotina = vRotina;
+AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
+  if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); } render(); } }; };
+{ const s = SECOES.find(x => x.id === 'inicio'); if (s) { s.nome = '0 · Rotina do dia'; s.views.unshift(['rotina', 'Rotina do dia']); s.views = s.views.slice(0, 1); }
+  const pg = { id: 'painel', nome: '1 · Painel de gestão', views: [['geral', 'Painel de gestão']] }; ICO.painel = ICO.inicio; const i = SECOES.findIndex(x => x.id === 'inicio'); SECOES.splice(i + 1, 0, pg);
+  ICO.inicio = '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'; }
+if (!location.hash) { try { history.replaceState(null, '', '#rotina'); } catch (e) { } if (typeof VIEW !== 'undefined' && VIEW === 'geral' && S.cfg) { VIEW = 'rotina'; } }
 
 </script>
 </body>
