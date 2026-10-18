@@ -5526,7 +5526,10 @@ const placaTxt = pl => [pl.sn && 'S/N ' + pl.sn, pl.pot, pl.cil, pl.data && 'pla
 <script>
 /* ===== tela de acesso: o SGMF só abre com nome e senha ===== */
 'use strict';
+const sessOk = () => { try { return sessionStorage.getItem('sgmf_ok') === '1'; } catch (e) { return false; } };
+{ const l0 = login; login = async function () { const e = await l0.apply(this, arguments); if (!e) { try { sessionStorage.setItem('sgmf_ok', '1'); } catch (er) { } } return e; }; }
 function gate() {
+  if (S.session && !sessOk()) { S.session = null; kvSet('session', null); }
   let g = document.getElementById('gate');
   if (S.session) { if (g) g.remove(); document.documentElement.classList.remove('gated'); return; }
   document.documentElement.classList.add('gated');
