@@ -5507,7 +5507,7 @@ overDados = _semFora(overDados); calibDados = _semFora(calibDados); lubDados = _
 { const g0 = vGeral; vGeral = function () { const F = S.cfg.frota.filter(v => foraOp(v)); const h = g0(); if (!F.length) return h; const av = `<div class="banner"><span><b>Fora de operação:</b> ${F.map(v => `<button class="vlink" data-vessel="${v.id}">${esc(v.nome)}</button> (${esc(foraOp(v).motivo)})`).join(' · ')}. Não entram nos vencimentos nem nos alertas até voltarem a operar. Altere em Administração.</span></div>`; return av.replace('class="banner"', 'class="banner fora"') + h; }; }
 { const a0 = vAdmin; vAdmin = function () { const a = can.admin(); return a0() + `<div class="card"><div class="row"><h2>Embarcações fora de operação</h2><span class="sp"></span><span class="note">Em reforma ou ainda não liberada: não gera vencimentos, alertas de horímetro nem bloqueio de saída.</span></div>
    <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Situação</th><th>Motivo</th><th>Observação</th><th>Desde</th></tr></thead><tbody>${S.cfg.frota.map(v => { const f = v.foraOp || {}; return `<tr><td><b>${esc(v.nome)}</b></td><td><select data-fo="${v.id}" data-k="on" ${a ? '' : 'disabled'}><option value="">Em operação</option><option value="1"${f.motivo ? ' selected' : ''}>Fora de operação</option></select></td>
-     <td><select data-fo="${v.id}" data-k="motivo" ${a && f.motivo ? '' : 'disabled'}>${FORA_MOT.map(m => `<option${f.motivo === m ? ' selected' : ''}>${m}</option>`).join('')}</select></td><td><input data-fo="${v.id}" data-k="obs" value="${esc(f.obs || '')}" ${a && f.motivo ? '' : 'disabled'}></td><td><input type="date" data-fo="${v.id}" data-k="desde" value="${esc(f.desde || '')}" ${a && f.motivo ? '' : 'disabled'}></td></tr>`; }).join('')}</tbody></table></div></div>`; }; }
+     <td><select data-fo="${v.id}" data-k="motivo" ${a && f.motivo ? '' : 'disabled'}>${f.motivo ? '' : '<option>—</option>'}${FORA_MOT.map(m => `<option${f.motivo === m ? ' selected' : ''}>${m}</option>`).join('')}</select></td><td><input data-fo="${v.id}" data-k="obs" value="${esc(f.obs || '')}" ${a && f.motivo ? '' : 'disabled'}></td><td><input type="date" data-fo="${v.id}" data-k="desde" value="${esc(f.desde || '')}" ${a && f.motivo ? '' : 'disabled'}></td></tr>`; }).join('')}</tbody></table></div></div>`; }; }
 document.addEventListener('change', async e => { const el = e.target.closest('[data-fo]'); if (!el || !can.admin()) return; const v = vessel(el.dataset.fo); if (!v) return;
   if (el.dataset.k === 'on') v.foraOp = el.value ? { motivo: FORA_MOT[0], obs: '', desde: isoD(hoje()) } : null; else { v.foraOp = v.foraOp || { motivo: FORA_MOT[0] }; v.foraOp[el.dataset.k] = el.value; }
   S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg);
@@ -5558,6 +5558,34 @@ function gate() {
 { const r0 = render; render = function () { const x = r0.apply(this, arguments); gate(); return x; }; }
 { const u0 = renderUser; renderUser = function () { const x = u0.apply(this, arguments); gate(); return x; }; }
 { let n = 0; const t = setInterval(() => { n++; if (typeof S !== 'undefined' && S.cfg && typeof LOGOS !== 'undefined') { clearInterval(t); gate(); } else if (n > 100) clearInterval(t); }, 100); }
+
+</script>
+<script>
+/* ===== MARCO ZERO da implantação: itens sem histórico contam a partir da data e do horímetro do marco ===== */
+'use strict';
+{ const u0 = ultimoServico; ultimoServico = function (vid, pos, itemId) { const r = u0(vid, pos, itemId); if (r) return r; const v = vessel(vid), m = v && v.marco; if (!m || !m.date) return null; const t = A1M[itemId], hp = t ? posHor(pos, t, vid) : pos; const h = m.h && m.h[hp] != null ? m.h[hp] : null; return { h, date: m.date, src: 'marco' }; }; }
+async function aplicarMarco(date, ids) {
+  let n = 0; S.cfg.frota.forEach(v => { if (!ids.includes(v.id)) return; const h = {}; [...mcpPos(v), ...MCAS.filter(p => v.mca && v.mca[p])].forEach(p => { const r = horAtual(v.id, p); if (r) h[p] = r.h; }); v.marco = { date, h }; n++; });
+  S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg);
+  if (S.url) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } else toast('A planilha não aceitou: ' + j.error); } catch (e) { } }
+  return n;
+}
+{ const a0 = vAdmin; vAdmin = function () { const a = can.admin(), F = S.cfg.frota, sem = F.filter(v => !v.marco && !foraOp(v));
+  return a0() + `<div class="card" id="cardMarco"><div class="row"><h2>Marco zero da implantação</h2><span class="sp"></span><span class="note">${F.filter(v => v.marco).length} de ${F.length} embarcações com marco</span></div>
+   <p class="note">Os itens do Anexo I que ainda não têm último serviço registrado passam a contar a partir desta data e do horímetro atual de cada motor. Quando uma OM for encerrada ou um último serviço real for lançado, ele substitui o marco automaticamente. Embarcações fora de operação ficam de fora.</p>
+   <div class="row"><label class="f" style="max-width:200px">Data do marco<input type="date" id="mzD" value="${isoD(hoje())}" ${a ? '' : 'disabled'}></label>
+    <button class="mbtn pri" id="mzB" ${a && sem.length ? '' : 'disabled'}>Aplicar marco zero em ${sem.length} embarcação(ões)</button></div>
+   <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Marco</th><th>Horímetros no marco</th><th></th></tr></thead><tbody>${F.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td>${v.marco ? brD(v.marco.date) : foraOp(v) ? '<span class="note">fora de operação</span>' : '<span class="note">sem marco</span>'}</td><td class="mono">${v.marco ? Object.entries(v.marco.h || {}).map(([p, h]) => (MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p) + ' ' + nf(h)).join(' · ') || '—' : ''}</td><td>${v.marco && a ? `<button class="mbtn sm" data-mzdel="${v.id}">Remover</button>` : !v.marco && foraOp(v) && a ? `<button class="mbtn sm" data-mzone="${v.id}">Aplicar</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }; }
+document.addEventListener('click', async e => {
+  const b = e.target.closest('#mzB,[data-mzdel],[data-mzone]'); if (!b || !can.admin()) return;
+  if (b.id === 'mzB') { const d = $('#mzD').value; if (!d) return toast('Informe a data.'); const ids = S.cfg.frota.filter(v => !v.marco && !foraOp(v)).map(v => v.id);
+    confirmar('Aplicar o marco zero em ' + brD(d) + ' para ' + ids.length + ' embarcações? Itens sem histórico passam a contar a partir daí.', async () => { const n = await aplicarMarco(d, ids); toast('Marco zero aplicado em ' + n + ' embarcações.'); render(); }); }
+  else if (b.dataset.mzone) { const n = await aplicarMarco($('#mzD').value || isoD(hoje()), [b.dataset.mzone]); toast('Marco aplicado.'); render(); }
+  else { const v = vessel(b.dataset.mzdel); confirmar('Remover o marco zero de ' + v.nome + '?', async () => { delete v.marco; S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg); if (S.url) { try { await api('setConfig', { cfg: { frota: S.cfg.frota } }); } catch (er) { } } render(); }); }
+});
+// aviso no painel enquanto houver embarcação em operação sem marco nem histórico
+{ const g0 = vGeral; vGeral = function () { const h = g0(); const sem = S.cfg.frota.filter(v => !v.marco && !foraOp(v)); if (!sem.length || temExemplo()) return h; const n = sem.reduce((s, v) => s + painelVessel(v).filter(x => x.s.st === 'sem').length, 0); if (!n) return h;
+  return `<div class="banner info"><span><b>${nf(n)} itens sem último serviço registrado</b> em ${sem.length} embarcação(ões): o painel não consegue calcular vencimentos para eles. ${can.admin() ? '<button class="mbtn sm" onclick="location.hash=\'admin\';setTimeout(()=>{const c=document.getElementById(\'cardMarco\');c&&c.scrollIntoView({behavior:\'smooth\'})},300)">Definir marco zero</button>' : 'Peça ao Supervisor para definir o marco zero.'}</span></div>` + h; }; }
 
 </script>
 </body>
