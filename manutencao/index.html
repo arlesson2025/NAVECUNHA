@@ -1515,6 +1515,8 @@ html.gated body>*:not(#gate):not(.toast){visibility:hidden}
 .ol-ref{position:absolute;top:2px;bottom:2px;width:2px;margin-left:-1px;background:#D93025}.ol-ref.a{background:none;border-left:2px dashed #F9AB00;width:0}
 .ol-v{font-size:13px;color:#202124;white-space:nowrap}.ol-v b{font-weight:500}.ol-v span{color:#5F6368}
 .ol-ax{height:22px;cursor:default}.ol-ax:hover{background:none}.ol-ax .ol-t>span{position:absolute;top:2px;transform:translateX(-50%);font-size:11px;color:#5F6368}
+
+.ab4-sec{display:flex;align-items:baseline;gap:12px;margin:28px 0 12px;padding-top:18px;border-top:1px solid #DADCE0}.ab4-sec h2{margin:0;font-size:20px;font-weight:400;color:#202124}
 </style>
 </head>
 <body>
@@ -5697,6 +5699,27 @@ rioCard = function () {
    ${L.length ? `<div class="ol">${L.map(linha).join('')}<div class="ol-r ol-ax"><span class="ol-l"></span><div class="ol-t">${ticks.map(h => `<span style="left:${X(h)}%">${h}</span>`).join('')}</div><span class="ol-v note">horas</span></div></div>` : '<div class="note">Sem leituras de horímetro do MCP.</div>'}</div>`;
 };
 horMcpCard = rioCard;
+
+</script>
+<script>
+/* ===== Controle da condição em 4 abas: Vencimentos (+lubrificação) · MCP (calibração + MBC) · Docagem · Horímetros ===== */
+'use strict';
+{ const keep = { frota: VX.frota || vFrota, lub: VX.lub, calib: VX.calib || vCalib, over: VX.over || vOver }, A = { frota: AFTER.frota, lub: AFTER.lub, calib: AFTER.calib, over: AFTER.over };
+  const semCab = h => { const t = document.createElement('div'); t.innerHTML = h; const vh = t.querySelector('.vh'); if (vh) vh.remove(); return t.innerHTML; };
+  const sec = (tit, sub) => `<div class="ab4-sec"><h2>${tit}</h2>${sub ? `<span class="note">${sub}</span>` : ''}</div>`;
+  const juntaAfter = (a, b) => () => { const m = $('#main'); a && a(); const h1 = [m.onclick, m.oninput, m.onchange]; b && b(); const h2 = [m.onclick, m.oninput, m.onchange];
+    ['onclick', 'oninput', 'onchange'].forEach((k, i) => { const f1 = h1[i], f2 = h2[i]; m[k] = f1 && f2 && f1 !== f2 ? e => { f1.call(m, e); f2.call(m, e); } : (f2 || f1); }); };
+  VX.frota = () => keep.frota() + sec('Lubrificação', 'trocas de óleo · FR 049_B') + semCab(keep.lub());
+  VX.mcp = () => { const c = keep.calib(); return c + sec('MBC · condição do MCP', 'compressão e análise de óleo') + semCab(keep.over()); };
+  AFTER.frota = juntaAfter(A.frota, A.lub); AFTER.mcp = juntaAfter(A.calib, A.over);
+  const s = SECOES.find(x => x.id === 'cond');
+  if (s) { s.views = [['frota', 'Vencimentos e lubrificação'], ['mcp', 'MCP · calibração e MBC'], ['doca', 'Docagem'], ['hor', 'Horímetros']]; s.extra = (s.extra || []).concat(['lub', 'calib', 'over']); }
+  // links antigos levam para a aba nova
+  const redir = () => { const h = location.hash.slice(1); if (h === 'lub') location.replace('#frota'); else if (h === 'calib' || h === 'over') location.replace('#mcp'); };
+  window.addEventListener('hashchange', redir); redir();
+}
+
+if (typeof LAY_VIEWS !== 'undefined' && !LAY_VIEWS.includes('mcp')) LAY_VIEWS.push('mcp');
 
 </script>
 </body>
