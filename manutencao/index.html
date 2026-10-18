@@ -19,7 +19,9 @@
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600&display=swap">
-<script>/* html2canvas 1.4.1 (MIT) */
+<script>
+const NUVEM_PADRAO = 'https://script.google.com/macros/s/AKfycbw9GV1TYtyXXCHfeMX2cAaJqkSwoP76lthNvYPpnFbvBuwb3d0lGNNd0nVgIYf9QBNj/exec';   // planilha CTLE_MAN: todo aparelho novo já abre ligado à nuvem
+/* html2canvas 1.4.1 (MIT) */
 /*!
  * html2canvas 1.4.1 <https://html2canvas.hertzen.com>
  * Copyright (c) 2022 Niklas von Hertzen <https://hertzen.com>
@@ -3456,7 +3458,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
   try {
     const all = MEM ? [] : await DB.all(); all.forEach(r => S.recs.set(r.id, r));
     S.cfg = normFrota(Object.assign(cfgPadrao(), (await kvGet('cfg')) || {}));
-    S.url = (await kvGet('url')) || ''; S.session = (await kvGet('session')) || null;
+    { const u0 = await kvGet('url'); S.url = u0 == null ? NUVEM_PADRAO : u0; if (u0 == null && NUVEM_PADRAO) await kvSet('url', NUVEM_PADRAO); } S.session = (await kvGet('session')) || null;
     S.pending = new Set((await kvGet('pending')) || []); S.pdfPend = (await kvGet('pdfPend')) || {}; S.lastSync = (await kvGet('lastSync')) || 0;
     if (!(await kvGet('seeded')) && !S.recs.size) { await carregarExemplo(); await kvSet('frotaV', 2); }
     else if ((await kvGet('frotaV')) !== 2) {
