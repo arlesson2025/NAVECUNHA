@@ -1517,6 +1517,10 @@ html.gated body>*:not(#gate):not(.toast){visibility:hidden}
 .ol-ax{height:22px;cursor:default}.ol-ax:hover{background:none}.ol-ax .ol-t>span{position:absolute;top:2px;transform:translateX(-50%);font-size:11px;color:#5F6368}
 
 .ab4-sec{display:flex;align-items:baseline;gap:12px;margin:28px 0 12px;padding-top:18px;border-top:1px solid #DADCE0}.ab4-sec h2{margin:0;font-size:20px;font-weight:400;color:#202124}
+
+.cs-idx{flex-basis:100%;order:99;display:flex;flex-wrap:wrap;gap:6px;background:#fff;border-bottom:1px solid #DADCE0;padding:10px 0;margin:6px 0 0}.cs-idx.fix{position:fixed;top:0;z-index:50;margin:0;box-shadow:0 2px 6px rgba(60,64,67,.15);padding:10px 12px}
+.cs-idx button{font:inherit;font-size:13px;color:#1A73E8;background:#fff;border:1px solid #DADCE0;border-radius:16px;padding:5px 14px;cursor:pointer}.cs-idx button:hover{background:#E8F0FE;border-color:#1A73E8}
+.ab4-sec .mbtn{margin-left:6px}
 </style>
 </head>
 <body>
@@ -5671,7 +5675,7 @@ function docaReg(vid, rid) {
     const h = [...t.querySelectorAll('h2')].find(e => /^A · Cronograma de docagem/.test(e.textContent)); if (!h) return html;
     const D = S.cfg.frota.map(docaVessel), SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
     const n = document.createElement('div'); n.innerHTML = docaCrono(D); h.closest('.card').replaceWith(n.firstElementChild); return t.innerHTML; }; VX.doca = vDoca; }
-document.addEventListener('click', e => { if (VIEW !== 'doca') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
+document.addEventListener('click', e => { if (VIEW !== 'doca' && VIEW !== 'controle') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
   if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);
 
 </script>
@@ -5715,12 +5719,57 @@ horMcpCard = rioCard;
   const s = SECOES.find(x => x.id === 'cond');
   if (s) { s.views = [['frota', 'Vencimentos e lubrificação'], ['mcp', 'MCP · calibração e MBC'], ['doca', 'Docagem'], ['hor', 'Horímetros']]; s.extra = (s.extra || []).concat(['lub', 'calib', 'over']); }
   // links antigos levam para a aba nova
-  const redir = () => { const h = location.hash.slice(1); if (h === 'lub') location.replace('#frota'); else if (h === 'calib' || h === 'over') location.replace('#mcp'); };
+  const redir = () => { if (VX.controle) return; const h = location.hash.slice(1); if (h === 'lub') location.replace('#frota'); else if (h === 'calib' || h === 'over') location.replace('#mcp'); };
   window.addEventListener('hashchange', redir); redir();
 }
 
 if (typeof LAY_VIEWS !== 'undefined' && !LAY_VIEWS.includes('mcp')) LAY_VIEWS.push('mcp');
 
+</script>
+<script>
+/* ===== Controle da condição numa página só: seções uma embaixo da outra, com índice fixo ===== */
+'use strict';
+{ const SEC = [['venc', VX.frota, AFTER.frota], ['mcp', VX.mcp, AFTER.mcp], ['doca', VX.doca, AFTER.doca], ['hor', VX.hor, AFTER.hor]];
+  const IDX = [['venc', 'Vencimentos'], ['lub', 'Lubrificação'], ['mcp', 'Calibração do MCP'], ['mbc', 'MBC · MCP'], ['doca', 'Docagem'], ['hor', 'Horímetros']];
+  let ALVO = '';
+  const parte = (k, f, i) => { const t = document.createElement('div'); t.innerHTML = f();
+    t.querySelectorAll('.banner').forEach(b => b.remove());
+    const vh = t.querySelector(':scope > .vh');
+    if (vh && i > 0) { const h1 = vh.querySelector('h1'), btns = [...vh.querySelectorAll(':scope > .mbtn, :scope > a.mbtn')].map(b => b.outerHTML).join(''); const s = document.createElement('div'); s.className = 'ab4-sec'; s.id = 'cs-' + k; s.innerHTML = `<h2>${h1 ? h1.innerHTML : ''}</h2><span class="sp"></span>${btns}`; vh.replaceWith(s); }
+    else if (vh) { vh.id = 'cs-' + k; const h1 = vh.querySelector('h1'); if (h1) h1.textContent = 'Controle da condição'; }
+    t.querySelectorAll('.ab4-sec').forEach(s => { const h = (s.querySelector('h2') || {}).textContent || ''; if (/^Lubrifica/.test(h)) s.id = 'cs-lub'; if (/^MBC/.test(h)) s.id = 'cs-mbc'; });
+    [...t.children].forEach(c => { c.dataset.sec = k; c.querySelectorAll('.card,.kc,.mini,.lb,.ab4-sec').forEach(x => x.dataset.sec = k); });
+    return t.innerHTML; };
+  VX.controle = () => { const h = SEC.map(([k, f], i) => parte(k, f, i)).join('');
+    const t = document.createElement('div'); t.innerHTML = h; const vh = t.querySelector(':scope > .vh');
+    if (vh) vh.insertAdjacentHTML('afterend', `<nav class="cs-idx" data-sec="nav">${IDX.map(([k, l]) => `<button data-csgo="${k}">${l}</button>`).join('')}</nav>`);
+    return t.innerHTML; };
+  AFTER.controle = () => { const m = $('#main'), H = {};
+    SEC.forEach(([k, , a]) => { m.onclick = m.oninput = m.onchange = null; a && a(); H[k] = { onclick: m.onclick, oninput: m.oninput, onchange: m.onchange }; });
+    ['onclick', 'oninput', 'onchange'].forEach(ev => { m[ev] = function (e) { const s = e.target.closest('[data-sec]'); const k = s ? s.dataset.sec : 'venc'; if (k === 'nav') return; const f = (H[k] || {})[ev]; if (f) return f.call(m, e); }; });
+    // a nav fica fora do layout de painéis
+    const nav = m.querySelector('.cs-idx'); const vh = m.querySelector(':scope > .vh'); if (nav && vh) vh.appendChild(nav);
+    if (ALVO && Date.now() - ALVO.t < 3000) { const a = ALVO.k; setTimeout(() => irPara(a), 450); } };
+  const fixa = () => { const n = document.querySelector('.cs-idx'); if (!n) return; const ph = document.querySelector('.cs-ph'); const ref = ph || n; const r = ref.getBoundingClientRect(), mr = $('#main').getBoundingClientRect();
+    if (!n.classList.contains('fix') && r.top < 0) { const p = document.createElement('div'); p.className = 'cs-ph'; p.style.height = n.offsetHeight + 'px'; n.before(p); n.classList.add('fix'); n.style.left = mr.left + 'px'; n.style.width = mr.width + 'px'; }
+    else if (n.classList.contains('fix') && ph && ph.getBoundingClientRect().top >= 0) { ph.remove(); n.classList.remove('fix'); n.style.left = n.style.width = ''; } };
+  window.addEventListener('scroll', () => { if (VIEW === 'controle') fixa(); }, { passive: true });
+  const irPara = k => { if (VIEW !== 'controle') return; const e = document.getElementById('cs-' + k); if (!e) return; const y = e.getBoundingClientRect().top + scrollY - 120; scrollTo({ top: Math.max(0, y), behavior: 'smooth' }); };
+  document.addEventListener('click', e => { const b = e.target.closest('[data-csgo]'); if (!b) return; e.preventDefault(); e.stopPropagation(); irPara(b.dataset.csgo); }, true);
+  const s = SECOES.find(x => x.id === 'cond');
+  if (s) { s.extra = [...new Set((s.extra || []).concat(s.views.map(x => x[0]), ['lub', 'calib', 'over', 'mcp', 'frota', 'doca', 'hor']))]; s.views = [['controle', 'Controle da condição']]; }
+  if (typeof LAY_VIEWS !== 'undefined' && !LAY_VIEWS.includes('controle')) LAY_VIEWS.push('controle');
+  const MAPA = { frota: 'venc', lub: 'lub', calib: 'mcp', over: 'mbc', mcp: 'mcp', doca: 'doca', hor: 'hor' };
+  const redir2 = () => { const h = location.hash.slice(1); if (MAPA[h]) { ALVO = MAPA[h] === 'venc' ? '' : { k: MAPA[h], t: Date.now() }; location.replace('#controle'); } };
+  window.addEventListener('hashchange', redir2, true); redir2();
+}
+
+
+{ const f0 = freeLivre; freeLivre = function (arr, it) { if (VIEW !== 'controle') return f0(arr, it); const y0 = arr.length ? arr[arr.length - 1].y : 0;
+  for (let y = y0; y < 9000; y++) for (let x = 0; x <= 24 - it.w; x++) { it.x = x; it.y = y; if (!arr.some(o => sobrep(it, o))) return; } }; }
+
+// mantém a posição da rolagem quando a mesma tela é redesenhada (página longa do Controle da condição)
+{ const r0 = render; let ultV = ''; render = function () { const mesma = VIEW === ultV, y = scrollY; const x = r0.apply(this, arguments); ultV = VIEW; if (mesma && y > 0 && VIEW === 'controle') { scrollTo(0, y); requestAnimationFrame(() => scrollTo(0, y)); setTimeout(() => scrollTo(0, y), 450); } return x; }; }
 </script>
 </body>
 </html>
