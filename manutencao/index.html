@@ -1488,6 +1488,16 @@ html.gated body>*:not(#gate):not(.toast){visibility:hidden}
 #gate .glink{background:none!important;color:#1A73E8!important;padding:4px 0!important;font-size:13px!important;text-decoration:underline;cursor:pointer}
 #gate .gnote{margin:4px 0 0;text-align:center;color:#80868B;font-size:12px}
 .toast{z-index:10000}
+
+.ct-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:4px 0 16px}
+@media(max-width:1100px){.ct-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:600px){.ct-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ct-tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:#fff;border:1px solid #DADCE0;border-radius:8px;padding:14px 16px;cursor:pointer;font:inherit;color:#3C4043}
+.ct-tile:hover{border-color:#1A73E8}.ct-tile.on{border-color:#1A73E8;box-shadow:0 0 0 1px #1A73E8}
+.ct-n{font-size:30px;line-height:1.1;color:#202124}.ct-n.bad{color:#D93025}.ct-l{font-size:14px;color:#202124}.ct-s{font-size:12px;color:#5F6368}
+.ct-q button.qs{border:0;cursor:pointer;font:inherit;font-size:12px}.ct-q tr.sel td{background:#E8F0FE}
+.ct-f{margin:18px 0 10px;align-items:center;gap:8px}.ct-f .chip{display:inline-flex;gap:6px;align-items:center;background:#E8F0FE;color:#1967D2;border-radius:14px;padding:3px 10px;font-size:13px}.ct-f .chip button{border:0;background:none;color:inherit;cursor:pointer;padding:0}
+details.ct-g{background:#fff;border:1px solid #DADCE0;border-radius:8px;margin-bottom:10px}details.ct-g>summary{display:flex;gap:12px;align-items:center;padding:12px 16px;cursor:pointer;list-style:none}details.ct-g>summary::-webkit-details-marker{display:none}
+details.ct-g>summary::before{content:'▸';color:#5F6368}details.ct-g[open]>summary::before{content:'▾'}details.ct-g .tw{padding:0 12px 12px}
 </style>
 </head>
 <body>
@@ -5584,6 +5594,56 @@ document.addEventListener('click', async e => {
 // aviso no painel enquanto houver embarcação em operação sem marco nem histórico
 { const g0 = vGeral; vGeral = function () { const h = g0(); const sem = S.cfg.frota.filter(v => !v.marco && !foraOp(v)); if (!sem.length || temExemplo()) return h; const n = sem.reduce((s, v) => s + painelVessel(v).filter(x => x.s.st === 'sem').length, 0); if (!n) return h;
   return `<div class="banner info"><span><b>${nf(n)} itens sem último serviço registrado</b> em ${sem.length} embarcação(ões): o painel não consegue calcular vencimentos para eles. ${can.admin() ? '<button class="mbtn sm" onclick="location.hash=\'admin\';setTimeout(()=>{const c=document.getElementById(\'cardMarco\');c&&c.scrollIntoView({behavior:\'smooth\'})},300)">Definir marco zero</button>' : 'Peça ao Supervisor para definir o marco zero.'}</span></div>` + h; }; }
+
+</script>
+<script>
+/* ===== VENCIMENTOS · QUADRO ÚNICO: preventivas, lubrificação, calibração, MBC, docagem e horímetros numa só tela ===== */
+'use strict';
+const CTC = [['prev', 'Preventivas', 'frota'], ['lub', 'Lubrificação', 'lub'], ['cal', 'Calibração do MCP', 'calib'], ['mbc', 'MBC · compressão', 'over'], ['doca', 'Docagem', 'doca'], ['hor', 'Horímetros', 'hor']];
+const CT = { cat: '', v: '', tudo: false };
+function ctPend() {
+  const calIds = new Set(CALIB.map(c => c[0])), LD = lubDados(), CA = calibDados(), OV = overDados(), HR = horDados(), out = [];
+  const pen = st => st === 'venc' || st === 'viag';
+  S.cfg.frota.forEach(v => {
+    if (foraOp(v)) return;
+    painelVessel(v).forEach(x => { if (OLEO_IDS.has(x.t.id) || calIds.has(x.t.id) || x.s.st === 'cond') return; out.push({ v, cat: 'prev', st: x.s.st, eq: posNome(v, x.pos) + ' · ' + (EQN[x.t.eq] || x.t.eq), item: x.t.id + ' · ' + x.t.chk, txt: x.s.txt, om: x.om, prio: x.t.prio }); });
+    LD.filter(x => x.v === v).forEach(x => out.push({ v, cat: 'lub', st: x.s.st, eq: x.e.nome + (x.e.mod ? ' · ' + x.e.mod.split(' · ')[0] : ''), item: x.t.id + ' · ' + x.t.chk, txt: x.s.txt, om: x.om }));
+    CA.filter(x => x.v === v).forEach(x => out.push({ v, cat: 'cal', st: x.s.st, eq: posNome(v, x.pos), item: x.t.id + ' · ' + x.nm, txt: x.s.txt, om: x.om }));
+    OV.filter(x => x.v === v).forEach(x => out.push({ v, cat: 'mbc', st: x.st, eq: 'MCP ' + (v.mcp === 'mono' ? '' : x.pos), item: 'Pressão de compressão e análise de óleo', txt: x.txt }));
+    const d = docaVessel(v); out.push({ v, cat: 'doca', st: d.st, eq: 'Casco', item: 'Docagem', txt: d.dias == null ? 'sem registro da última docagem' : d.dias < 0 ? 'vencida há ' + (-d.dias) + ' dias' : 'limite ' + brD(isoD(d.due)) + ' (' + d.dias + ' dias) · ' + d.fonte, om: d.om });
+    const h = HR.find(x => x.v === v); if (h) out.push({ v, cat: 'hor', st: h.st === 'sem' ? 'venc' : h.st, eq: 'Todos os motores', item: 'Leitura de horímetro', txt: h.dias == null ? 'nenhuma leitura lançada' : h.dias === 0 ? 'lida hoje' : 'última leitura há ' + h.dias + ' dias' });
+  });
+  return out;
+}
+function vCtrl() {
+  const P = ctPend(), SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
+  const tile = ([k, nome]) => { const L = P.filter(x => x.cat === k), a = L.filter(x => x.st === 'venc' && !x.om).length, b = L.filter(x => x.st === 'viag' && !x.om).length;
+    return `<button class="ct-tile${CT.cat === k ? ' on' : ''}" data-ctf="cat" data-val="${CT.cat === k ? '' : k}"><span class="ct-n${a ? ' bad' : ''}">${a}</span><span class="ct-l">${nome}</span><span class="ct-s">${a ? (a > 1 ? 'vencidos' : 'vencido') : 'nenhum vencido'}${b ? ' · ' + b + ' na próxima viagem' : ''}</span></button>`; };
+  const Q = quadroFrota(), ordem = [0, 1, 2, 3, 4, 5];
+  const tab = `<div class="tw"><table class="t ct-q"><thead><tr><th>Embarcação</th><th>Situação</th>${CTC.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${Q.map(q => `<tr class="${CT.v === q.v.id ? 'sel' : ''}"><td><button class="vlink" data-ctf="v" data-val="${CT.v === q.v.id ? '' : q.v.id}">${esc(q.v.nome)}</button></td><td><span class="qs ${q.sit[0]}" title="${esc(q.sit[1])}">${esc(q.sit[1].split(' · ')[0])}</span></td>${ordem.map(i => `<td><button class="qs ${q.cel[i][0]}" data-ctf="vc" data-val="${q.v.id}|${CTC[i][0]}">${esc(q.cel[i][1])}</button></td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  let L = P.filter(x => (!CT.cat || x.cat === CT.cat) && (!CT.v || x.v.id === CT.v) && (CT.tudo || x.st === 'venc' || x.st === 'viag'));
+  L.sort((a, b) => (SO[a.st] - SO[b.st]) || (a.om ? 1 : 0) - (b.om ? 1 : 0) || S.cfg.frota.indexOf(a.v) - S.cfg.frota.indexOf(b.v));
+  const grupos = S.cfg.frota.map(v => [v, L.filter(x => x.v === v)]).filter(g => g[1].length);
+  const stTxt = { venc: 'Vencido', viag: 'Próxima viagem', ok: 'Em dia', sem: 'Sem registro' };
+  const lista = grupos.length ? grupos.map(([v, I]) => `<details class="ct-g" ${grupos.length <= 3 || I.some(x => x.st === 'venc') ? 'open' : ''}><summary><b>${esc(v.nome)}</b><span class="note">${I.filter(x => x.st === 'venc').length} vencido(s) · ${I.filter(x => x.st === 'viag').length} na próxima viagem${CT.tudo ? ' · ' + I.length + ' itens' : ''}</span><span class="sp"></span><button class="mbtn sm" data-vessel="${v.id}">Ficha da embarcação</button></summary>
+     <div class="tw"><table class="t"><thead><tr><th>Situação</th><th>Controle</th><th>Equipamento</th><th>Item</th><th>Detalhe</th></tr></thead><tbody>${I.map(x => `<tr><td><span class="qs ${x.om ? 'sem' : x.st}">${x.om ? 'OM ' + esc(x.om.num) : stTxt[x.st] || x.st}</span></td><td><a href="#${CTC.find(c => c[0] === x.cat)[2]}" class="note">${CTC.find(c => c[0] === x.cat)[1]}</a></td><td>${esc(x.eq)}</td><td>${esc(x.item)}${x.prio === 'Crítica' ? ' <span class="qs venc">Crítica</span>' : ''}</td><td class="note">${esc(x.txt || '')}</td></tr>`).join('')}</tbody></table></div></details>`).join('')
+    : `<div class="card"><p class="note" style="margin:0">${CT.cat || CT.v ? 'Nada pendente com esse filtro.' : 'Nenhum item vencido ou na próxima viagem. 👍'}</p></div>`;
+  const fora = S.cfg.frota.filter(v => foraOp(v));
+  return `<div class="vh"><div><h1>Vencimentos</h1><p>Preventivas, lubrificação, calibração, MBC, docagem e horímetros num só quadro · ${hoje().toLocaleDateString('pt-BR')}</p></div><span class="sp"></span>
+    <button class="mbtn" data-act="lancarHor">⏱ Lançar horímetros</button><button class="mbtn" data-act="lubForm">📝 FR 049_B</button><button class="mbtn pri" onclick="go('emitir')">＋ Programar OMs</button></div>
+   <div class="ct-tiles">${CTC.map(tile).join('')}</div>
+   <div class="card"><div class="row"><h2>Situação por embarcação</h2><span class="sp"></span><span class="note">Clique numa célula para ver só aquilo abaixo.</span></div>${tab}${fora.length ? `<p class="note">Fora de operação: ${fora.map(v => esc(v.nome) + ' (' + esc(foraOp(v).motivo) + ')').join(' · ')}.</p>` : ''}</div>
+   <div class="row ct-f"><h2 style="margin:0">${CT.tudo ? 'Todos os itens' : 'O que está vencendo'}</h2>${CT.cat ? `<span class="chip">${CTC.find(c => c[0] === CT.cat)[1]} <button data-ctf="cat" data-val="">✕</button></span>` : ''}${CT.v ? `<span class="chip">${esc(vName(CT.v))} <button data-ctf="v" data-val="">✕</button></span>` : ''}<span class="sp"></span>
+    <label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-ctf="tudo" ${CT.tudo ? 'checked' : ''}> mostrar também os itens em dia</label></div>
+   ${lista}`;
+}
+VX.ctrl = vCtrl;
+document.addEventListener('click', e => { const b = e.target.closest('[data-ctf]'); if (!b || b.dataset.ctf === 'tudo') return; e.preventDefault(); e.stopPropagation();
+  const k = b.dataset.ctf, val = b.dataset.val; if (k === 'vc') { const [vid, c] = val.split('|'); const same = CT.v === vid && CT.cat === c; CT.v = same ? '' : vid; CT.cat = same ? '' : c; } else CT[k] = val; render(); }, true);
+document.addEventListener('change', e => { const b = e.target.closest('[data-ctf="tudo"]'); if (!b) return; CT.tudo = b.checked; render(); });
+// menu: "Controle da condição" vira uma tela só; as telas detalhadas continuam acessíveis pelos links
+{ const s = SECOES.find(x => x.id === 'cond'); if (s) { s.extra = (s.extra || []).concat(s.views.map(x => x[0])); s.views = [['ctrl', 'Vencimentos']]; } }
+{ const a0 = abasHtml; abasHtml = function () { const s = SECOES.find(x => x.id === 'cond'); if (s && VIEW !== 'ctrl' && (s.extra || []).includes(VIEW)) return `<nav class="abas"><a href="#ctrl">← Vencimentos (quadro único)</a></nav>`; return a0.apply(this, arguments); }; }
 
 </script>
 </body>
