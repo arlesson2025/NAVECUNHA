@@ -1468,6 +1468,11 @@ a.kp2:hover .kp2-go,.kp2-go:hover{background:#1A73E8!important;color:#fff!import
 :root{--bg:#FFFFFF}
 html,body,.app,.main,#main{background:#FFFFFF!important}
 body::before,body::after{display:none!important;background:none!important}
+
+/* painel de gestão organizado: alturas iguais por linha */
+#main a.card.area.kp2{min-height:196px!important}
+#main .card.dz{min-height:345px}
+#main .lay > .lb > .card.dz{height:100%}
 </style>
 </head>
 <body>
@@ -4669,7 +4674,7 @@ const layChave = (el, i, usadas) => { const h = el.matches('h1,h2,h3') ? el : el
 let LAYV = '';
 function layApply() {
   if (VIEW !== LAYV) { LAYED = false; LAYV = VIEW; }
-  if (!LAYOK) { LAYOK = true; kvGet('layout').then(v => { LAY = v || {}; if (LAY_VIEWS.includes(VIEW) && Object.keys(LAY).length) render(); }).catch(() => { }); }
+  if (!LAYOK) { LAYOK = true; kvGet('layout').then(v => { LAY = v || {}; if (!LAY._org3) { delete LAY.geral; LAY._org3 = 1; kvSet('layout', LAY); } if (LAY_VIEWS.includes(VIEW) && Object.keys(LAY).length) render(); }).catch(() => { }); }
   if (!LAY_VIEWS.includes(VIEW)) return;
   const m = $('#main'), vh = m.querySelector(':scope > .vh'); if (!vh) return;
   const blocos = [], usadas = new Set();
@@ -5443,7 +5448,7 @@ function dashGeral() {
   [...t.querySelectorAll(':scope > h2.sec')].forEach(h => { if (/Indicadores de desempenho/.test(h.textContent)) { const n = h.nextElementSibling; if (n && n.classList.contains('kgrid')) n.remove(); h.remove(); } });
   const pend = [...t.querySelectorAll(':scope > h2.sec')].find(h => /Pendências/.test(h.textContent));
   const box = document.createElement('div'); box.innerHTML = dashGeral();
-  const ref = pend || t.querySelector(':scope > .card');
+  const areas = t.querySelector(':scope > .areas'), ref = areas ? areas.nextElementSibling : (pend || t.querySelector(':scope > .card')); const kb = box.querySelector(':scope > .dzk'); if (kb) box.insertBefore(kb, box.firstElementChild);
   [...box.children].forEach(c => t.insertBefore(c, ref));
   return t.innerHTML; }; }
 
