@@ -1473,6 +1473,8 @@ body::before,body::after{display:none!important;background:none!important}
 #main a.card.area.kp2{min-height:196px!important}
 #main .card.dz{min-height:345px}
 #main .lay > .lb > .card.dz{height:100%}
+
+.banner.fora{background:#F1F3F4!important;border:1px solid #DADCE0!important;color:#3C4043}.banner.fora .vlink{font-weight:500}
 </style>
 </head>
 <body>
@@ -5465,6 +5467,47 @@ if (typeof stackChart === 'function') stackChart = function (labels, series, uni
    <div class="dz-gr">${labels.map((l, i) => `<div class="dz-g" data-tip="${esc(l)}: ${series.filter(s => s.vals[i]).map(s => s.nome + ' ' + nf1(s.vals[i]) + unit).join(' · ')} · total ${nf1(tot[i])}${unit}"><div class="dz-st" style="height:${tot[i] / top * 100}%"><span>${tot[i] ? nf(tot[i]) : ''}</span>${series.slice().reverse().map((s, k) => s.vals[i] ? `<i style="flex:${s.vals[i]};${vid(rgb(s.cor))}"></i>` : '').join('')}</div></div>`).join('')}</div></div>
    <div class="dz-x">${labels.map(l => `<span>${esc(l)}</span>`).join('')}</div></div>`;
 };
+
+</script>
+<script>
+/* =====================================================================
+   EMBARCAÇÃO FORA DE OPERAÇÃO (em reforma / ativo novo aguardando liberação)
+   não gera vencimentos, alertas de horímetro nem bloqueio de saída
+   ===================================================================== */
+'use strict';
+const FORA_PADRAO = {
+  'CJA XIII': { motivo: 'Em reforma', obs: 'Motores novos; horímetro zerado até sair da reforma' },
+  'CJA XXI': { motivo: 'Ativo novo · aguardando liberação', obs: 'Aguardando documentação da Capitania para a primeira operação' },
+};
+const FORA_MOT = ['Em reforma', 'Ativo novo · aguardando liberação', 'Docagem', 'Parado · aguardando peça', 'Outro'];
+const foraOp = v => { v = typeof v === 'string' ? vessel(v) : v; return v && v.foraOp && v.foraOp.motivo ? v.foraOp : null; };
+function foraInit() { let mud = false; (S.cfg.frota || []).forEach(v => { if (!('foraOp' in v)) { v.foraOp = FORA_PADRAO[v.nome] ? Object.assign({ desde: isoD(hoje()) }, FORA_PADRAO[v.nome]) : null; mud = true; } }); if (mud) kvSet('cfg', S.cfg); }
+// filtros nos dados de condição
+{ const p0 = painelVessel; painelVessel = function (v, vh) { return foraOp(v) ? [] : p0(v, vh); }; }
+const _semFora = f => function () { const r = f.apply(this, arguments); return Array.isArray(r) ? r.filter(x => !foraOp(x.v || (x.vessel && vessel(x.vessel)))) : r; };
+overDados = _semFora(overDados); calibDados = _semFora(calibDados); lubDados = _semFora(lubDados); horDados = _semFora(horDados);
+{ const d0 = docaVessel; docaVessel = function (v) { const r = d0(v); if (foraOp(v)) { r.st = 'sem'; r.fora = true; } return r; }; }
+// status nas tabelas e na matriz
+{ const q0 = quadroFrota; quadroFrota = function () { return q0().map(q => { const f = foraOp(q.v); if (f) { q.sit = ['sem', 'Fora de operação · ' + f.motivo]; q.cel = q.cel.map(() => ['sem', '—']); } return q; }); }; }
+{ const m0 = frotaMatriz; frotaMatriz = function () { return m0().map(x => { if (foraOp(x.v)) { x.sit = -1; x.fora = foraOp(x.v); } return x; }).sort((a, b) => (a.fora ? 1 : 0) - (b.fora ? 1 : 0)); }; }
+// aviso no topo do painel e cadastro em Administração
+{ const g0 = vGeral; vGeral = function () { const F = S.cfg.frota.filter(v => foraOp(v)); const h = g0(); if (!F.length) return h; const av = `<div class="banner"><span><b>Fora de operação:</b> ${F.map(v => `<button class="vlink" data-vessel="${v.id}">${esc(v.nome)}</button> (${esc(foraOp(v).motivo)})`).join(' · ')}. Não entram nos vencimentos nem nos alertas até voltarem a operar. Altere em Administração.</span></div>`; return av.replace('class="banner"', 'class="banner fora"') + h; }; }
+{ const a0 = vAdmin; vAdmin = function () { const a = can.admin(); return a0() + `<div class="card"><div class="row"><h2>Embarcações fora de operação</h2><span class="sp"></span><span class="note">Em reforma ou ainda não liberada: não gera vencimentos, alertas de horímetro nem bloqueio de saída.</span></div>
+   <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Situação</th><th>Motivo</th><th>Observação</th><th>Desde</th></tr></thead><tbody>${S.cfg.frota.map(v => { const f = v.foraOp || {}; return `<tr><td><b>${esc(v.nome)}</b></td><td><select data-fo="${v.id}" data-k="on" ${a ? '' : 'disabled'}><option value="">Em operação</option><option value="1"${f.motivo ? ' selected' : ''}>Fora de operação</option></select></td>
+     <td><select data-fo="${v.id}" data-k="motivo" ${a && f.motivo ? '' : 'disabled'}>${FORA_MOT.map(m => `<option${f.motivo === m ? ' selected' : ''}>${m}</option>`).join('')}</select></td><td><input data-fo="${v.id}" data-k="obs" value="${esc(f.obs || '')}" ${a && f.motivo ? '' : 'disabled'}></td><td><input type="date" data-fo="${v.id}" data-k="desde" value="${esc(f.desde || '')}" ${a && f.motivo ? '' : 'disabled'}></td></tr>`; }).join('')}</tbody></table></div></div>`; }; }
+document.addEventListener('change', async e => { const el = e.target.closest('[data-fo]'); if (!el || !can.admin()) return; const v = vessel(el.dataset.fo); if (!v) return;
+  if (el.dataset.k === 'on') v.foraOp = el.value ? { motivo: FORA_MOT[0], obs: '', desde: isoD(hoje()) } : null; else { v.foraOp = v.foraOp || { motivo: FORA_MOT[0] }; v.foraOp[el.dataset.k] = el.value; }
+  S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg);
+  if (S.url) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } } catch (er) { } }
+  toast(v.nome + (foraOp(v) ? ': fora de operação (' + foraOp(v).motivo + ').' : ': de volta à operação.')); render(); });
+{ const r0 = render; render = function () { if (S.cfg && S.cfg.frota) foraInit(); return r0.apply(this, arguments); }; }
+/* ---------- dados de placa dos motores (n.º de série, potência, cilindrada) ---------- */
+const PLACA_PADRAO = { 'CJA XX': { MCA3: { mod: 'MWM D229-4', sn: 'B1N503926', pot: '48,5 kW / 1800 rpm', cil: '3,922 L', data: '2020-11-23', fun: 'Bomba de incêndio (canhão SCI)' } } };
+function placaInit() { let mud = false; (S.cfg.frota || []).forEach(v => { const P = PLACA_PADRAO[v.nome]; if (!P) return; v.placa = v.placa || {}; Object.keys(P).forEach(p => { if (!v.placa[p]) { v.placa[p] = P[p]; mud = true; } }); }); if (mud) kvSet('cfg', S.cfg); }
+const placaTxt = pl => [pl.sn && 'S/N ' + pl.sn, pl.pot, pl.cil, pl.data && 'placa ' + brD(pl.data)].filter(Boolean).join(' · ');
+{ const l0 = lubEquip; lubEquip = function (v) { const L = l0(v); if (v && v.placa) L.forEach(e => { const pl = v.placa[e.pos]; if (pl && e.g !== 'mcp' && e.g !== 'crp') { e.placa = pl; e.mod = (e.mod || '') + ' · ' + placaTxt(pl); if (pl.fun) e.nome = e.nome + ' · ' + pl.fun; } }); return L; }; }
+{ const r0 = render; render = function () { if (S.cfg && S.cfg.frota) placaInit(); return r0.apply(this, arguments); }; }
+{ let n = 0; const t = setInterval(() => { n++; if (typeof S !== 'undefined' && S.cfg && S.cfg.frota && document.getElementById('main')) { clearInterval(t); render(); } else if (n > 100) clearInterval(t); }, 150); }
 
 </script>
 </body>
