@@ -1532,6 +1532,13 @@ html.gated body>*:not(#gate):not(.toast){visibility:hidden}
 .hl-r{grid-column:1/-1;font-size:13px;color:#3C4043;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.hl-r:empty{display:none}
 .hl-w{color:#B06000}.hl-ok{color:#188038}.hl-foto{height:44px;border-radius:6px;border:1px solid #DADCE0;cursor:pointer;vertical-align:middle}
 .hl-cam{cursor:pointer}@media(max-width:600px){.hl{grid-template-columns:1fr}}
+
+/* fonte única em todo o sistema (números alinhados sem fonte de máquina de escrever) */
+:root{--fm:var(--f)!important;--fd:var(--f)!important;--mono:var(--f)!important}
+html,body,body *:not(i):not(.ic){font-family:"Segoe UI",Inter,system-ui,Arial,sans-serif!important}
+svg text,svg tspan{font-family:"Segoe UI",Inter,system-ui,Arial,sans-serif!important}
+.mono,td.mono,[class*="mono"],code,kbd,pre,samp,tt{font-variant-numeric:tabular-nums;letter-spacing:0!important}
+td,th,.ct-n,.kc b,.mini b{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
