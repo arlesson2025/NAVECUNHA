@@ -6643,6 +6643,7 @@ const ivEmb = (t, v, p) => { const iv = intervalo(t, v, p); return [iv.h ? nf(iv
 const posCurtoE = (v, p) => p === 'UN' ? 'Embarcação' : isMcp(p) ? 'MCP ' + (p === 'CE' ? 'Central' : p) : posNome(v, p);
 
 /* ---------- 1 · Programação: uma OM por embarcação ---------- */
+const foraJanela = id => id === DOCA.item || (DOCA.junto || []).includes(id);   // docagem e o que só se faz em dique: planejamento próprio
 function embPartes(v) {
   const P = painelVessel(v, EM.viag ?? viagemDe(v)), viag = EM.viag ?? viagemDe(v), por = {};
   [...EM.sel].forEach(k => { const [p, id] = k.split('|'); (por[p] = por[p] || []).push(id); });
@@ -6662,7 +6663,7 @@ function embTexto(v, partes) {
   let h = v0(); const v = vessel(ARG || S.cfg.frota[0].id); if (!v) return h;
   h = h.replace(/<button class="mbtn sm pri" data-mkom="[^"]*"[^>]*>[^<]*<\/button>/g, '')
     .replace('Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.', 'Uma OM por embarcação em cada janela. 1) Marque o que vence na viagem · 2) abra a OM no Sankhya com o texto pronto · 3) digite o número · 4) imprima a ficha para a equipe de terra.');
-  const P = painelVessel(v, EM.viag ?? viagemDe(v)), pend = P.filter(x => x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om), n = EM.sel.size;
+  const P = painelVessel(v, EM.viag ?? viagemDe(v)), pend = P.filter(x => x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om && !foraJanela(x.t.id)), n = EM.sel.size;
   const dr = EM.draft && EM.draft.emb ? (() => { const pt = embPartes(v); EM.draft.partes = pt; EM.draft.txt = embTexto(v, pt); return `<div class="sk" style="margin-top:10px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Texto para abrir a OM no Sankhya</b><div class="skt" id="omTxt">${esc(EM.draft.txt)}</div>
      <div class="row"><button class="mbtn sm" data-act="copiarTxt">Copiar texto</button><span class="note" id="cpM"></span></div>
      <b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Número gerado pelo Sankhya</b>
@@ -6678,11 +6679,12 @@ function embTexto(v, partes) {
   if (a0) a0(); const m = $('#main'), c0 = m.onclick;
   m.onclick = async e => { const t = e.target.closest('button'); const v = vessel(EM.vid);
     if (t && t.dataset.emb) { e.stopImmediatePropagation();
-      if (t.dataset.emb === 'todos') painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om).forEach(x => EM.sel.add(x.pos + '|' + x.t.id));
+      if (t.dataset.emb === 'todos') painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om && !foraJanela(x.t.id)).forEach(x => EM.sel.add(x.pos + '|' + x.t.id));
       if (t.dataset.emb === 'limpar') EM.sel.clear();
       EM.draft = null;
       if (t.dataset.emb === 'abrir') { if (!precisa(true)) return; EM.draft = { emb: true }; }
       render(); if (EM.draft) setTimeout(() => { const x = $('#omNum'); if (x) { x.focus(); x.scrollIntoView({ block: 'center' }); } }, 40); return; }
+    if (t && t.dataset.pick) { e.stopImmediatePropagation(); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om && !foraJanela(x.t.id)).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); return; }
     if (t && t.dataset.act === 'emitirEmb') {
       const n = $('#omNum').value.trim();
       if (!/^\d{3,}$/.test(n)) { $('#emE').textContent = 'Digite o número da OM gerado pelo Sankhya (só números).'; return; }
@@ -6859,7 +6861,7 @@ AFTER.omg = function () {
 function rotinaDados() {
   return S.cfg.frota.map(v => {
     if (foraOp(v)) return { v, fora: true };
-    const P = painelVessel(v), venc = P.filter(x => x.t.kind === 'prog' && x.s.st === 'venc' && !x.om), viag = P.filter(x => x.t.kind === 'prog' && x.s.st === 'viag' && !x.om);
+    const P = painelVessel(v), venc = P.filter(x => x.t.kind === 'prog' && x.s.st === 'venc' && !x.om && !foraJanela(x.t.id)), viag = P.filter(x => x.t.kind === 'prog' && x.s.st === 'viag' && !x.om && !foraJanela(x.t.id));
     const abertas = oms().filter(o => o.vessel === v.id && o.tipo === 'P' && o.status !== 'encerrada'), gs = [...new Set(abertas.map(o => o.grupo || o.id))];
     const om = gs.map(g => { const L = abertas.filter(o => (o.grupo || o.id) === g); return { g, L, num: L[0].num, st: grpStatus(L), grp: !!L[0].grupo, id: L[0].id }; }).sort((a, b) => grpOrd.indexOf(a.st) - grpOrd.indexOf(b.st))[0];
     const corr = oms().filter(o => o.vessel === v.id && o.tipo === 'C' && o.status !== 'encerrada');
