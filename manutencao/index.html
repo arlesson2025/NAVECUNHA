@@ -3339,6 +3339,7 @@ function docRelatorio() {
     <div><span class="fl" style="color:${RED}">Fora da meta</span><div class="v" style="min-height:52px">${fora.length ? fora.map(k => '✕ ' + k[0] + ': ' + k[3]).join('<br>') : 'Nenhum indicador fora da meta.'}</div></div></div>
     <span class="fl" style="margin-top:8px;display:block">Principais ações para o próximo mês</span><div class="v">${acoes.length ? acoes.slice(0, 7).map((a, i) => (i + 1) + '. ' + a).join('<br>') : 'Nenhuma pendência relevante.'}</div>
     <span class="fl" style="margin-top:8px;display:block">Comentário do Supervisor</span><div class="v" style="min-height:44px">${esc(RL.obs || '—')}</div>`));
+  B.push(blk('0B', 'O mês em uma página · o que foi feito e o que mais quebrou', nomeMes, relResumoVisual(ini, fim, enc, corr)));
   // ---- 1 · indicadores
   B.push(blk('1', 'Indicadores do item 9', 'metas da NP 055', `<div class="kpis">
     <div><span>Disponibilidade da frota · meta ≥ 95%</span><b>${fmtv(disp[5], 1)}%</b>${st(disp[5], disp[5] >= 95)}</div>
@@ -3372,7 +3373,7 @@ function docRelatorio() {
   const topC = Object.values(comp).sort((a, b) => b.L.length - a.L.length).slice(0, 6).map(c => [H(esc(c.nome) + (c.L.some(o => o._reinc) ? ` <b style="color:${RED}">· reincidente</b>` : '')), c.L.length, [...new Set(c.L.map(o => vName(o.vessel)))].join(', '), nf(Math.round(c.L.reduce((s, o) => s + (o._h || 0), 0))) + ' h']);
   B.push(blk('7A', 'Falhas Crítica/Alta por sistema · 12 meses', '', '<div style="width:62%">' + hbar(falhasPorSistema(new Date(y - 1, m + 1, 1), fim), '', null) + '</div>' + tbl(['Componentes com maior frequência de falha (12 meses)', 'Ocorrências', 'Embarcações', 'h indisponível'], topC, ['44%', '10%', '32%', '14%'])));
   const medRows = medAtr.slice(0, 12).map(o => { const s = mitigSit(o); return [o.num, vName(o.vessel), o.descricao || '', o.mitig || '—', o.mitigResp || '—', o.mitigPrazo ? brD(o.mitigPrazo) : '—', cor(s.t, RED)]; });
-  B.push(blk('7B', 'Medidas de mitigação', `${medOkMes.length} concluída(s) no mês · ${medAtr.length} faltando ou atrasada(s)`, medRows.length ? tbl(['OM', 'Barco', 'Falha', 'Medida', 'Responsável', 'Prazo', 'Situação'], medRows, ['8%', '10%', '24%', '26%', '12%', '10%', '10%']) : '<div class="v">Todas as falhas Crítica/Alta têm medida definida e dentro do prazo.</div>'));
+  { const MR = relMitigacao(FA, ini, fim); B.push(blk('7B', 'Medidas de mitigação · falha, causa, ação e reincidência', `${medOkMes.length} concluída(s) no mês · ${medAtr.length} faltando ou atrasada(s)`, MR.length ? tbl(['Embarcação', 'Falha', 'Causa', 'Ação (medida de mitigação)', 'Resp.', 'Prazo', 'Status', 'Reincidência'], MR, ['10%', '19%', '15%', '21%', '9%', '8%', '9%', '9%']) : '<div class="v">Nenhuma falha no período e nenhuma medida pendente.</div>')); }
   // ---- 8 · preventivas vencidas: resumo por embarcação + detalhe Crítica/Alta
   const porB = S.cfg.frota.map(v => { const L = venc.filter(x => x.v === v); return [v.nome, L.length, L.filter(x => x.t.prio === 'Crítica').length ? cor(L.filter(x => x.t.prio === 'Crítica').length, RED) : '–', L.filter(x => x.t.prio === 'Alta').length || '–', L.filter(x => x.t.prio !== 'Crítica' && x.t.prio !== 'Alta').length || '–', L.some(x => x.t.prio === 'Crítica') ? cor('Saída bloqueada', RED) : '—']; }).filter(r => r[1]);
   B.push(blk('8', 'Preventivas vencidas sem OM · resumo por embarcação', venc.length + ' itens (lista completa no Anexo A)', tbl(['Embarcação', 'Total', 'Crítica', 'Alta', 'Média/Baixa', 'Saída'], porB, ['24%', '12%', '12%', '12%', '16%', '24%'])));
@@ -6075,6 +6076,59 @@ function docaStats() { const H = S.cfg.frota.flatMap(v => docaHist(v)); const pa
 { const c0 = docaCrono; docaCrono = function (D) { const h = c0(D), s = docaStats();
     const box = `<div class="ds-row"><div class="ds"><b>${s.parada == null ? '—' : nf(s.parada, 0) + ' d'}</b><span>parada média em estaleiro</span><small>${s.nPar ? s.nPar + ' docagem(ns) com entrada e saída' : 'registre entrada e saída'}</small></div><div class="ds"><b style="color:${s.pont == null ? '#202124' : s.pont >= 80 ? '#188038' : s.pont >= 60 ? '#E37400' : '#D93025'}">${s.pont == null ? '—' : nf(s.pont, 0) + '%'}</b><span>pontualidade de entrada</span><small>${s.nPont ? s.okPont + ' de ' + s.nPont + ' entraram no prazo' : 'precisa de 2 docagens do mesmo barco'}</small></div></div>`;
     const i = h.indexOf('<div class="clegend'); return i > 0 ? h.slice(0, i) + box + h.slice(i) : h; }; }
+
+</script>
+<script>
+/* ===== Relatório mensal: "o que foi feito" e "o que mais quebrou" em uma página, com gráficos ===== */
+'use strict';
+function svgColunas(labels, series, o = {}) {
+  const W = o.w || 680, H = o.h || 210, L = 30, B = 26, T = 18, R = 8, n = labels.length, gw = (W - L - R) / Math.max(1, n), bw = Math.min(22, (gw - 8) / series.length);
+  const mx = Math.max(1, ...series.flatMap(s => s.vals)), top = Math.ceil(mx * 1.15), Y = v => T + (H - T - B) * (1 - v / top);
+  const ticks = [...new Set([0, Math.round(top / 2), top])];
+  let g = ticks.map(t => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E8EAED"/><text x="${L - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${t}</text>`).join('');
+  labels.forEach((l, i) => { const x0 = L + i * gw + (gw - bw * series.length) / 2;
+    series.forEach((s, j) => { const v = s.vals[i] || 0, x = x0 + j * bw; if (v) g += `<rect x="${x}" y="${Y(v)}" width="${bw - 1}" height="${Y(0) - Y(v)}" fill="${s.cor}" rx="2"/><text x="${x + (bw - 1) / 2}" y="${Y(v) - 3}" text-anchor="middle" font-size="9" fill="#202124">${v}</text>`; });
+    g += `<text x="${L + i * gw + gw / 2}" y="${H - 10}" text-anchor="middle" font-size="9.5" fill="#3C4043">${esc(l)}</text>`; });
+  const leg = series.map((s, j) => `<rect x="${L + j * 190}" y="2" width="10" height="10" rx="2" fill="${s.cor}"/><text x="${L + 14 + j * 190}" y="11" font-size="10" fill="#3C4043">${esc(s.nome)}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H + 14}" width="100%" style="display:block"><g transform="translate(0,14)">${g}</g>${leg}</svg>`;
+}
+function svgPareto(labels, vals, o = {}) {
+  const W = o.w || 680, H = o.h || 220, L = 30, Rr = 36, B = 30, T = 16, n = labels.length, gw = (W - L - Rr) / Math.max(1, n), bw = Math.min(70, gw * .62);
+  const tot = vals.reduce((a, b) => a + b, 0) || 1, mx = Math.max(1, ...vals), top = Math.ceil(mx * 1.15), Y = v => T + (H - T - B) * (1 - v / top), Yp = p => T + (H - T - B) * (1 - p / 100);
+  let acc = 0; const pts = vals.map((v, i) => { acc += v; return [L + i * gw + gw / 2, acc / tot * 100]; });
+  let g = [0, Math.round(top / 2), top].map(t => `<line x1="${L}" x2="${W - Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E8EAED"/><text x="${L - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${t}</text>`).join('');
+  g += [50, 80, 100].map(p => `<text x="${W - Rr + 6}" y="${Yp(p) + 3}" font-size="9" fill="#B06000">${p}%</text>`).join('') + `<line x1="${L}" x2="${W - Rr}" y1="${Yp(80)}" y2="${Yp(80)}" stroke="#F9AB00" stroke-dasharray="3 3"/>`;
+  vals.forEach((v, i) => { const x = L + i * gw + (gw - bw) / 2; g += `<rect x="${x}" y="${Y(v)}" width="${bw}" height="${Y(0) - Y(v)}" fill="${i === 0 ? '#1967D2' : '#4285F4'}" rx="3"/><text x="${x + bw / 2}" y="${Y(v) - 4}" text-anchor="middle" font-size="10" fill="#202124">${v}</text><text x="${L + i * gw + gw / 2}" y="${H - 12}" text-anchor="middle" font-size="9.5" fill="#3C4043">${esc(labels[i])}</text>`; });
+  g += `<polyline points="${pts.map(p => p[0] + ',' + Yp(p[1])).join(' ')}" fill="none" stroke="#E37400" stroke-width="2"/>` + pts.map(p => `<circle cx="${p[0]}" cy="${Yp(p[1])}" r="3.5" fill="#E37400"/><text x="${p[0] + 6}" y="${Yp(p[1]) - 6}" font-size="9" fill="#B06000">${Math.round(p[1])}%</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg>`;
+}
+const sisCurto = s => String(s || 'Não informado').replace(/^\d+\.0 /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração elétrica').replace('Alimentação de Combustível', 'Combustível');
+function relResumoVisual(ini, fim, enc, corr) {
+  const V = S.cfg.frota, nP = enc.filter(o => o.tipo === 'P').length, nC = enc.filter(o => o.tipo === 'C').length;
+  const trocas = recs('lub').filter(r => r.tipo === 'fr049' && r.date && pD(r.date) >= ini && pD(r.date) < fim).length;
+  const hRep = enc.filter(o => o.tipo === 'C' && o.liberacao && o.abertura).reduce((s, o) => s + Math.max(0, (pDT(o.liberacao) - pDT(o.abertura)) / 36e5), 0);
+  const num = (v, l, c) => `<div style="border:1px solid #DADCE0;border-radius:6px;padding:6px 10px"><b style="display:block;font-size:22px;font-weight:500;color:${c || '#202124'}">${v}</b><span style="font-size:10.5px;color:#3C4043">${l}</span></div>`;
+  const cols = svgColunas(V.map(v => v.nome.replace('CJA ', '')), [{ nome: 'Preventivas / preditivas encerradas', vals: V.map(v => enc.filter(o => o.vessel === v.id && o.tipo === 'P').length), cor: '#1A73E8' }, { nome: 'Corretivas encerradas', vals: V.map(v => enc.filter(o => o.vessel === v.id && o.tipo === 'C').length), cor: '#F9AB00' }], { h: 175 });
+  let base = corr, per = 'no mês'; if (!base.length) { base = falhasDados(12); per = 'nos últimos 12 meses (nenhuma no mês)'; }
+  const pS = {}; base.forEach(o => { const k = sisCurto(o.sistema); pS[k] = (pS[k] || 0) + 1; });
+  const par = Object.entries(pS).sort((a, b) => b[1] - a[1]).slice(0, 7);
+  const comp = {}; base.forEach(o => { const k = ((o.equip || '').trim() || (o.descricao || '').trim().split(/[,.;(:]/)[0] || '—'); comp[k] = (comp[k] || 0) + 1; });
+  const topC = Object.entries(comp).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return `<div style="display:grid;grid-template-columns:1fr;gap:10px">
+    <div><span class="fl" style="color:#1967D2;font-size:11px">O que foi feito no mês</span>
+     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0">${num(nP, 'preventivas / preditivas encerradas', '#1967D2')}${num(nC, 'corretivas encerradas', '#B06000')}${num(trocas, 'trocas de óleo (FR 049_B)')}${num(nf(hRep, 1) + ' h', 'tempo total de reparo das corretivas')}</div>
+     ${enc.length ? cols : '<div class="v">Nenhuma OM encerrada no mês.</div>'}</div>
+    <div><span class="fl" style="color:#C5221F;font-size:11px">O que mais quebrou · Pareto por sistema</span><div style="font-size:10.5px;color:#3C4043;margin:2px 0 4px">Falhas (corretivas) registradas ${per}: ${base.length} · barras = quantidade · linha = % acumulado (a linha tracejada marca 80%: os sistemas até ela concentram a maior parte das falhas)</div>
+     ${par.length ? svgPareto(par.map(p => p[0]), par.map(p => p[1]), { h: 190 }) + `<div style="font-size:10.5px;margin-top:2px"><b>Componentes que mais falharam:</b> ${topC.map(c => esc(c[0]) + ' (' + c[1] + ')').join(' · ')}</div>` : '<div class="v">Nenhuma falha registrada.</div>'}</div></div>`;
+}
+function relMitigacao(FA, ini, fim) {
+  const L = FA.filter(o => { const s = mitigSit(o); return (o.abertura && pDT(o.abertura) >= ini && pDT(o.abertura) < fim) || s.k === 'falta' || s.k === 'atraso' || s.k === 'and' || (o.mitigSt === 'Concluída' && o.updatedAt >= ini.getTime() && o.updatedAt < fim.getTime()); });
+  const ord = { atraso: 0, falta: 1, and: 2, nd: 3, ok: 4 };
+  L.sort((a, b) => ord[mitigSit(a).k] - ord[mitigSit(b).k]);
+  const pill = s => ({ h: `<b style="font-size:9.5px;padding:1px 6px;border-radius:4px;${s.k === 'ok' ? 'background:#E6F4EA;color:#137333' : s.k === 'and' ? 'background:#FEF7E0;color:#B06000' : s.k === 'nd' ? 'background:#F1F3F4;color:#5F6368' : 'background:#FCE8E6;color:#C5221F'}">${esc(s.t.toUpperCase())}</b>` });
+  const rei = o => o._reinc ? { h: '<b style="color:#C5221F">Sim · reincidente</b>' } : o.mitigSt === 'Concluída' ? { h: '<span style="color:#137333">Não</span>' } : { h: '<span style="color:#5F6368">Em observação</span>' };
+  return L.slice(0, 14).map(o => [vName(o.vessel), (o.descricao || '').slice(0, 70), (o.causa || '—').slice(0, 60), (o.mitig || '—').slice(0, 70), o.mitigResp || '—', o.mitigPrazo ? brD(o.mitigPrazo) : '—', pill(mitigSit(o)), rei(o)]);
+}
 
 </script>
 </body>
