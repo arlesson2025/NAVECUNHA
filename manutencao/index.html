@@ -1597,7 +1597,7 @@ td,th,.ct-n,.kc b,.mini b{font-variant-numeric:tabular-nums}
 @media(max-width:900px){.cx-kpi{grid-template-columns:1fr 1fr}}
 .cx-w{max-height:70vh;overflow:auto}.cx-t{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}.cx-t th{position:sticky;top:0;background:#F8F9FA;z-index:2;font-size:11px;font-weight:500;color:#5F6368;padding:6px 4px;border-bottom:1px solid #DADCE0;text-align:center;white-space:nowrap}
 .cx-t td{border-bottom:1px solid #F1F3F4;padding:4px 3px;text-align:center}.cx-t td.cx-it{text-align:left;min-width:240px;color:#202124}.cx-t td.cx-id{color:#5F6368;white-space:nowrap}.cx-t td.cx-iv{color:#5F6368;white-space:nowrap;font-size:11.5px}
-.cx-t tr.cx-g td{background:#E8F0FE;text-align:left;font-weight:600;color:#1967D2;padding:6px 8px}.cx-t tfoot td{background:#F8F9FA;border-top:2px solid #DADCE0;font-size:12px;position:sticky;bottom:0}.cx-t tfoot td:first-child{text-align:left;color:#3C4043}.cx-t tfoot small{display:block;color:#5F6368;font-size:10.5px}
+.cx-t tr.cx-v td{background:#16244A;color:#fff;text-align:left;font-weight:700;padding:7px 8px}.cx-t tr.cx-g td{background:#E8F0FE;text-align:left;font-weight:700;color:#1967D2;padding:6px 8px}.cx-t tr.cx-g td span{float:right;font-weight:500;color:#5F6368}.cx-t tr.cx-s td{background:#fff;text-align:left;font-style:italic;color:#5F6368;padding:4px 8px 4px 18px}.cx-t tfoot td{background:#F8F9FA;border-top:2px solid #DADCE0;font-size:12px;position:sticky;bottom:0}.cx-t tfoot td:first-child{text-align:left;color:#3C4043}.cx-t tfoot small{display:block;color:#5F6368;font-size:10.5px}
 .cx-c{display:inline-block;min-width:26px;border-radius:4px;color:#fff;font-weight:700;font-size:12px;padding:2px 4px;line-height:1.15;font-style:normal;text-align:center}.cx-c small{display:block;font-weight:400;font-size:9.5px;opacity:.95}
 .cx-c.ok{background:#188038}.cx-c.late{background:#E37400}.cx-c.miss{background:#D93025}.cx-c.plan{background:#BDC1C6;color:#202124}.cx-c.pl{background:#fff;color:#E37400;border:1px solid #E37400}
 .cx-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:#3C4043}.cx-leg .cx-c{margin-right:5px;min-width:20px;font-size:11px}
@@ -6508,6 +6508,8 @@ function cxLinha(v, pos, t, ano) {
 function cxDados(ano, filtroV, sis) {
   CXI = cxIndice(); const L = []; S.cfg.frota.forEach(v => { if (foraOp(v) || (filtroV && v.id !== filtroV)) return;
     posicoes(v).forEach(pos => itensDe(v, pos).forEach(t => { if (t.kind !== 'prog' || (typeof CRONO_FORA !== 'undefined' && CRONO_FORA.includes(t.id)) || !aplica(v, pos, t)) return; if (sis && parseInt(t.id) !== +sis) return; const r = cxLinha(v, pos, t, ano); if (r) L.push(r); })); });
+  const ordV = r => S.cfg.frota.indexOf(r.v), ordP = r => posicoes(r.v).indexOf(r.pos), idn = id => id.split('.').map(n => String(+n).padStart(3, '0')).join('.');
+  L.sort((a, b) => ordV(a) - ordV(b) || parseInt(a.t.id) - parseInt(b.t.id) || ordP(a) - ordP(b) || (idn(a.t.id) < idn(b.t.id) ? -1 : 1));
   return L;
 }
 function cxConta(L, mes) {
@@ -6525,12 +6527,19 @@ function cxCel(ms) {
   const om = ms.find(m => m.ev && m.ev.num && (m.k === 'ok' || m.k === 'late'));
   return `<td><span class="cx-c ${k}" title="${esc(tip)}">${lab}${om ? `<small>${esc(String(om.ev.num))}</small>` : ''}</span></td>`;
 }
+function cxPorSis(L) { return SISTEMAS.map((s, i) => ({ s, c: cxConta(L.filter(r => parseInt(r.t.id) === i + 1)), n: L.filter(r => parseInt(r.t.id) === i + 1).length })); }
+function cxSisTab(L, pdf) { const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#D93025';
+  return `<table class="${pdf ? '' : 't'}"><thead><tr><th style="text-align:left">Sistema (Anexo I · 7.1)</th><th>Itens no plano</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${cxPorSis(L).map(x => `<tr${pdf ? '' : ` class="click" data-cxs="${SISTEMAS.indexOf(x.s) + 1}"`}><td style="text-align:left"><b>${esc(x.s)}</b></td><td>${x.n || '—'}</td><td>${x.c.ok || '—'}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan || '—'}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table>`; }
 function cxTabela(L, ano) {
   const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const rows = (CX.so ? L.filter(r => r.marks.length) : L);
-  let html = '', vAnt = '';
-  rows.forEach(r => { const vk = r.v.id + '|' + r.pos;
-    if (vk !== vAnt) { vAnt = vk; html += `<tr class="cx-g"><td colspan="15">${esc(r.v.nome)}${r.pos !== 'UN' ? ' · ' + esc(posNome(r.v, r.pos)) : ' · embarcação'}</td></tr>`; }
+  let html = '', vAnt = '', sAnt = '', pAnt = '';
+  const varios = new Set(rows.map(r => r.v)).size > 1, adTx = c => c.ad == null ? `${c.plan} programados` : `aderência ${nf(c.ad, 0)}% (${c.ok} de ${c.den})`;
+  rows.forEach(r => { const sn = parseInt(r.t.id), sk = r.v.id + '|' + sn, pk = sk + '|' + r.pos;
+    if (varios && r.v.id !== vAnt) { vAnt = r.v.id; html += `<tr class="cx-v"><td colspan="15">${esc(r.v.nome)}</td></tr>`; }
+    if (sk !== sAnt) { sAnt = sk; pAnt = ''; const c = cxConta(rows.filter(x => x.v === r.v && parseInt(x.t.id) === sn)); html += `<tr class="cx-g"><td colspan="15">${esc(SISTEMAS[sn - 1] || sn + '.0')}<span>${adTx(c)}</span></td></tr>`; }
+    const nP = new Set(rows.filter(x => x.v === r.v && parseInt(x.t.id) === sn).map(x => x.pos)).size;
+    if (pk !== pAnt) { pAnt = pk; if (r.pos !== 'UN' && (nP > 1 || sn === 1 || sn === 3)) html += `<tr class="cx-s"><td colspan="15">${esc(posNome(r.v, r.pos))}</td></tr>`; }
     html += `<tr><td class="cx-id">${r.t.id}</td><td class="cx-it">${esc(r.t.chk)}</td><td class="cx-iv">${[r.iv.h ? nf(r.iv.h) + ' h' : '', r.iv.m ? r.iv.m + ' m' : ''].filter(Boolean).join(' / ')}</td>${MES.map((_, i) => cxCel(r.marks.filter(m => m.d.getMonth() === i))).join('')}</tr>`; });
   const tot = MES.map((_, i) => cxConta(rows, i));
   const foot = `<tr class="cx-f"><td colspan="3">Aderência no mês (feitos no prazo ÷ vencidos até hoje)</td>${tot.map(c => `<td>${c.ad == null ? (c.plan ? `<small>${c.plan} prog.</small>` : '—') : `<b style="color:${c.ad >= 90 ? '#188038' : c.ad >= 75 ? '#E37400' : '#D93025'}">${nf(c.ad, 0)}%</b><small>${c.ok}/${c.den}</small>`}</td>`).join('')}</tr>`;
@@ -6547,13 +6556,14 @@ function vCxr() {
    <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao plano</span><small>${T.ok} de ${T.den} vencidos até hoje feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>realizados no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>realizados com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>vencidos e não realizados</span></div><div><b style="color:#5F6368">${T.plan}</b><span>programados até dezembro</span></div></div>
    <div class="card"><div class="row"><h2>Aderência por embarcação · ${ano}</h2><span class="sp"></span><span class="note">clique na embarcação para ver o cronograma dela</span></div>
     <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr class="click" data-cxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${x.c.ok}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table></div></div>
+   <div class="card"><div class="row"><h2>Aderência por sistema · ${CX.v ? esc(vName(CX.v)) : 'frota toda'}</h2><span class="sp"></span><span class="note">os 11 sistemas do Anexo I · clique para filtrar</span></div><div class="tw">${cxSisTab(CX.sis ? cxDados(ano, CX.v, '') : L)}</div></div>
    <div class="card"><div class="row"><h2>Cronograma × Realizado${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota toda'}</h2><span class="sp"></span><div class="cx-leg"><span><i class="cx-c ok">R</i>feito no prazo</span><span><i class="cx-c late">R</i>feito com atraso</span><span><i class="cx-c miss">P</i>venceu e não foi feito</span><span><i class="cx-c pl">P</i>vencimento (feito depois)</span><span><i class="cx-c plan">P</i>programado</span></div></div>
     ${!CX.v && L.length > 400 ? '<p class="note">A frota toda gera uma tabela muito grande: escolha uma embarcação para ver o detalhe.</p>' : `<div class="tw cx-w">${cxTabela(L, ano)}</div>`}
     <p class="note">Passe o mouse numa célula para ver a data, a OM ou o FR 049_B. Aderência = realizados no prazo ÷ (no prazo + com atraso + vencidos não realizados). Os registros começam em outubro de 2026 (implantação do SGMF); o histórico anterior pode ser importado.</p></div>`;
 }
 VX.cxr = vCxr;
 document.addEventListener('change', e => { const s = e.target.closest('[data-cx]'); if (!s || VIEW !== 'cxr') return; const k = s.dataset.cx; CX[k] = k === 'so' ? s.checked : k === 'ano' ? +s.value : s.value; render(); });
-document.addEventListener('click', e => { if (VIEW !== 'cxr') return; const r = e.target.closest('[data-cxv]'); if (r) { CX.v = r.dataset.cxv; render(); setTimeout(() => { const t = document.querySelector('.cx-w'); if (t) t.scrollIntoView({ behavior: 'smooth' }); }, 300); return; } if (e.target.closest('[data-cxpdf]')) cxPDF(); });
+document.addEventListener('click', e => { if (VIEW !== 'cxr') return; const r = e.target.closest('[data-cxv]'); if (r) { CX.v = r.dataset.cxv; render(); setTimeout(() => { const t = document.querySelector('.cx-w'); if (t) t.scrollIntoView({ behavior: 'smooth' }); }, 300); return; } const sx = e.target.closest('[data-cxs]'); if (sx) { CX.sis = String(CX.sis) === sx.dataset.cxs ? '' : sx.dataset.cxs; render(); return; } if (e.target.closest('[data-cxpdf]')) cxPDF(); });
 function cxPDF() {
   const ano = CX.ano, vs = CX.v ? [vessel(CX.v)] : S.cfg.frota.filter(v => !foraOp(v)), sisN = CX.sis ? SISTEMAS[CX.sis - 1] : 'todos os sistemas';
   const all = cxDados(ano, '', CX.sis), T = cxConta(CX.v ? all.filter(r => r.v.id === CX.v) : all);
@@ -6565,15 +6575,16 @@ function cxPDF() {
    .hd{display:flex;align-items:center;gap:14px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:8px}.hd img{height:38px}.hd h1{font-size:16px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368;font-size:10px}.hd .sp{flex:1}
    .k{display:flex;gap:10px;margin:6px 0 10px}.k div{border:1px solid #DADCE0;border-radius:4px;padding:5px 10px}.k b{display:block;font-size:16px}
    table{width:100%;border-collapse:collapse;margin-bottom:8px;page-break-inside:auto}tr{page-break-inside:avoid}thead{display:table-header-group}th,td{border:1px solid #DADCE0;padding:2px 3px;text-align:center}th{background:#16244A;color:#fff;font-weight:600}
-   td.cx-it{text-align:left}td.cx-id,td.cx-iv{white-space:nowrap}tr.cx-g td{background:#E8EEF8;text-align:left;font-weight:600}tr.cx-f td{background:#F1F3F4;font-size:8.5px}tr.cx-f td:first-child{text-align:left}
+   td.cx-it{text-align:left}td.cx-id,td.cx-iv{white-space:nowrap}tr.cx-v td{background:#16244A;color:#fff;text-align:left;font-weight:700;font-size:10.5px}tr.cx-g td{background:#E8EEF8;text-align:left;font-weight:700;color:#16244A}tr.cx-g td span{float:right;font-weight:400;color:#5F6368}tr.cx-s td{background:#fff;text-align:left;font-style:italic;color:#5F6368;padding-left:10px}tr.cx-f td{background:#F1F3F4;font-size:8.5px}tr.cx-f td:first-child{text-align:left}
    .cx-c{display:inline-block;min-width:18px;border-radius:3px;color:#fff;font-weight:700;padding:0 3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cx-c small{display:block;font-weight:400;font-size:7px}
    .ok{background:#188038}.late{background:#E37400}.miss{background:#D93025}.plan{background:#9AA0A6}.pl{background:#fff;color:#E37400;border:1px solid #E37400}
    h2{font-size:12px;color:#16244A;margin:10px 0 4px}.lg span{margin-right:12px}.ass{display:flex;gap:60px;margin-top:30px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}
-   th,td,.ok,.late,.miss,.plan,tr.cx-g td,tr.cx-f td{-webkit-print-color-adjust:exact;print-color-adjust:exact}small{font-size:8px}`;
+   th,td,.ok,.late,.miss,.plan,tr.cx-g td,tr.cx-v td,tr.cx-f td{-webkit-print-color-adjust:exact;print-color-adjust:exact}small{font-size:8px}`;
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma x Realizado ${ano}</title><style>${css}</style></head><body>
    <div class="hd"><img src="${LOGOS.nav}" alt="Navecunha"><img src="${LOGOS.vda}" alt="VDA"><div><h1>Cronograma × Realizado · Manutenção preventiva · ${ano}</h1><p>Plano de Manutenção (Anexo I · NP Navecunha 055) · ${CX.v ? esc(vName(CX.v)) : 'frota em operação'} · ${esc(sisN)} · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SGMF</p></div><span class="sp"></span></div>
    <div class="k"><div><b>${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b>aderência ao plano (${T.ok} de ${T.den})</div><div><b style="color:#188038">${T.ok}</b>no prazo</div><div><b style="color:#E37400">${T.late}</b>com atraso</div><div><b style="color:#D93025">${T.miss}</b>não realizados</div><div><b>${T.plan}</b>programados até dez.</div></div>
    ${!CX.v ? `<h2>Aderência por embarcação</h2><table><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr><td style="text-align:left">${esc(x.v.nome)}</td><td>${x.c.ok}</td><td>${x.c.late}</td><td>${x.c.miss}</td><td>${x.c.plan}</td><td><b>${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table>` : ''}
+   <h2>Aderência por sistema${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota'}</h2>${cxSisTab(cxDados(ano, CX.v, ''), true)}
    <p class="lg"><span><i class="cx-c ok">R</i> feito no prazo</span><span><i class="cx-c late">R</i> feito com atraso</span><span><i class="cx-c miss">P</i> venceu e não foi feito</span><span><i class="cx-c pl">P</i> vencimento (feito depois)</span><span><i class="cx-c plan">P</i> programado</span> · número sob o R = OM ou FR 049_B · aderência = no prazo ÷ (no prazo + com atraso + não realizados)</p>
    ${blocos}
    <div class="ass"><div>Supervisor de Manutenção</div><div>Gerência</div><div>Data</div></div>
