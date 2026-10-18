@@ -1488,6 +1488,11 @@ html.gated body>*:not(#gate):not(.toast){visibility:hidden}
 #gate .glink{background:none!important;color:#1A73E8!important;padding:4px 0!important;font-size:13px!important;text-decoration:underline;cursor:pointer}
 #gate .gnote{margin:4px 0 0;text-align:center;color:#80868B;font-size:12px}
 .toast{z-index:10000}
+
+/* controles dos painéis sempre visíveis (arrastar ⠿, minimizar −, maximizar ⛶, redimensionar ◢) */
+.lay.free .lb>.pctl{opacity:.6!important}.lay.free .lb:hover>.pctl{opacity:1!important}
+.lay.free .lb>.pctl button{color:#5F6368!important;background:#fff!important;width:22px!important;height:22px!important}
+.lay.free .lb>.lrz{opacity:.8!important}
 </style>
 </head>
 <body>
