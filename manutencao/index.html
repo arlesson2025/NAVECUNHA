@@ -7114,5 +7114,99 @@ cxPDF = function () {
 };
 
 </script>
+<script>
+/* ===== Cronograma da frota numa tabela só: Embarcação · Equipamento · Criticidade · Serviços · jan…dez (planejado × realizado) ===== */
+'use strict';
+const eqGrp = e => e === 'MCP' ? 'MCP' : (e === 'MWM' || e === 'YANMAR') ? 'MCA' : ['HITACHI', 'MASSON', 'REINTJES'].includes(e) ? 'REV' : e;
+const eqKeyDe = (pos, t) => eqGrp(t.eq) + '|' + pos;
+// cada linha do cronograma passa a ser de UM equipamento (o calendário deixa de misturar casco, rádio, porão…)
+{ const l0 = cronoLinhas; cronoLinhas = function (v) { const out = [];
+  l0(v).forEach(l => { const G = {}; l.its.forEach(x => { const k = eqKeyDe(x.pos, x.t); (G[k] = G[k] || []).push(x); });
+    Object.entries(G).forEach(([k, its]) => out.push(Object.assign({}, l, { k: l.k + '|' + k, eqKey: k, its }))); });
+  return out; }; }
+const PRIO_ORD = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 };
+function eqNome(v, k) { const [g, pos] = k.split('|'), multi = mcpPos(v).length > 1;
+  if (g === 'MCP') return { n: posCurtoE(v, pos), m: (v.mcpMod && v.mcpMod[pos]) ? 'Mitsubishi ' + v.mcpMod[pos] : 'Mitsubishi' };
+  if (g === 'MCA') return { n: posCurtoE(v, pos), m: (v.mcaMod && v.mcaMod[pos]) || EQN[v.mca[pos]] || '' };
+  if (g === 'REV') return { n: 'Reversor' + (multi ? ' ' + pos : ''), m: (EQN[v.rev[pos]] || '').replace('Reversor ', '') };
+  return { n: (EQN[g] || g) + (pos !== 'UN' && multi ? ' · ' + pos : ''), m: '' }; }
+function servNome(l) { if (l.tr === 'bordo') return 'Troca de óleo' + (l.its.some(x => compDe(l.its[0].t ? vessel(l.vId) || {} : {}, x.pos, x.t)) ? ' + 250 h' : '');
+  if (l.tr === 'janela') { const h = Math.min(...l.its.map(x => x.t.h || 1e9)); return h >= 4000 ? 'Revisão ' + nf(h) + ' h+' : 'Revisão ' + nf(h) + ' h'; }
+  if (l.tr === 'doca') return 'Docagem'; return l.nome.replace(' (2 a 10 anos)', '').toLowerCase().replace(/^./, c => c.toUpperCase()); }
+function cronoFrota(ano, vid) {
+  const out = [];
+  S.cfg.frota.filter(v => !foraOp(v) && (!vid || v.id === vid)).forEach(v => {
+    const R = cronoMarcas(v, ano), B = cronoBase(ano, v.id), E = {};
+    R.forEach(l => { const k = l.eqKey, e = E[k] = E[k] || { v, k, servs: [], crit: 'Baixa', its: 0, M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, tx: [] })), sis: 99, ord: 0 };
+      const sv = l.tr === 'bordo' ? 'Troca de óleo' + (l.its.some(x => compDe(v, x.pos, x.t)) ? ' + itens 250 h' : '') : servNome(l);
+      if (!e.servs.includes(sv)) e.servs.push(sv); e.its += l.its.length;
+      l.its.forEach(x => { if (PRIO_ORD[x.t.prio] < PRIO_ORD[e.crit]) e.crit = x.t.prio; e.sis = Math.min(e.sis, parseInt(x.t.id)); });
+      e.ord = e.sis * 100 + posicoes(v).indexOf(l.its[0].pos) * 10 + ['MCP', 'REV', 'MCA'].indexOf(k.split('|')[0]);
+      l.M.forEach((m, i) => { const c = e.M[i]; ['plan', 'ok', 'late', 'miss'].forEach(z => c[z] += m[z]); if (m.plan || m.ok || m.late || m.miss) c.tx.push(sv + (m.ok || m.late ? ' · realizado' : m.miss ? ' · venceu e não foi feito' : ' · programado')); }); });
+    Object.values(E).forEach(e => { e.nome = eqNome(v, e.k); if (B && B.linhasEq && B.linhasEq[e.k]) e.base = B.linhasEq[e.k]; out.push(e); });
+  });
+  return out.sort((a, b) => S.cfg.frota.indexOf(a.v) - S.cfg.frota.indexOf(b.v) || a.ord - b.ord);
+}
+const CR3 = { v: '', crit: '', ano: hoje().getMonth() >= 9 ? hoje().getFullYear() + 1 : hoje().getFullYear() };
+function cr3Tabela(L, ano, pdf) {
+  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'], hm = !pdf && hoje().getFullYear() === ano ? hoje().getMonth() : -1;
+  const pc = { 'Crítica': 'cr', 'Alta': 'al', 'Média': 'me', 'Baixa': 'ba' };
+  const cel = (e, i) => { const m = e.M[i], pb = e.base ? e.base[i] || 0 : null, pl = pb != null ? pb : m.plan + m.miss, tip = esc(MES[i] + '/' + String(ano).slice(2) + '\n' + m.tx.join('\n'));
+    let h = ''; if (m.ok || m.late) h += `<i class="k3 ${m.late ? 'late' : 'ok'}">R</i>`; if (m.miss) h += '<i class="k3 miss">P</i>'; else if (pl && !(m.ok || m.late) || (pl > (m.ok + m.late) && i >= hm && hm >= 0)) h += `<i class="k3 plan">P</i>`;
+    return `<td${i === hm ? ' class="hj"' : ''} title="${tip}">${h}</td>`; };
+  let vAnt = '';
+  const rows = L.map(e => { const tot = e.M.reduce((a, m) => ({ r: a.r + m.ok + m.late, p: a.p + (e.base ? 0 : m.plan + m.miss + m.ok + m.late) }), { r: 0, p: 0 }); if (e.base) tot.p = e.base.reduce((a, x) => a + x, 0);
+    const g = e.v.id !== vAnt ? `<tr class="k3-v"><td colspan="17">${esc(e.v.nome)}${cronoBase(ano, e.v.id) ? ` <span>cronograma aprovado · rev. ${cronoBase(ano, e.v.id).rev} · ${esc(cronoBase(ano, e.v.id).aprovBy)} · ${brD(cronoBase(ano, e.v.id).aprovAt)}</span>` : ' <span>cronograma ainda não aprovado</span>'}</td></tr>` : ''; vAnt = e.v.id;
+    return g + `<tr><td class="k3-e"><b>${esc(e.nome.n)}</b>${e.nome.m ? `<small>${esc(e.nome.m)}</small>` : ''}</td><td><span class="k3-c ${pc[e.crit]}">${e.crit}</span></td><td class="k3-s">${e.servs.map(esc).join(' · ')}</td>${MES.map((_, i) => cel(e, i)).join('')}<td class="k3-t">${tot.r}/${tot.p}</td></tr>`; }).join('');
+  return `<table class="k3"><thead><tr><th>Equipamento</th><th>Criticidade</th><th>Serviços</th>${MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>R / P</th></tr></thead><tbody>${rows || '<tr><td colspan="16" class="note">Nada neste filtro.</td></tr>'}</tbody></table>`;
+}
+function cr3Conta(L, hm) { const c = { ok: 0, late: 0, miss: 0, plan: 0 }; L.forEach(e => e.M.forEach(m => { c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.plan += m.plan; })); c.den = c.ok + c.late + c.miss; c.ad = c.den ? c.ok / c.den * 100 : null; return c; }
+function vCrono3() {
+  const ano = +CR3.ano, ativos = S.cfg.frota.filter(v => !foraOp(v)), L0 = cronoFrota(ano, CR3.v), L = CR3.crit ? L0.filter(e => CR3.crit === 'CA' ? ['Crítica', 'Alta'].includes(e.crit) : e.crit === CR3.crit) : L0, T = cr3Conta(L);
+  const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#D93025';
+  const sel = (k, ops, val) => `<select data-k3="${k}">${ops.map(([a, b]) => `<option value="${a}"${String(a) === String(val) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
+  const c = ciclo(), hv = hViagem(), nB = ativos.filter(v => cronoBase(ano, v.id)).length;
+  return `<div class="vh"><div><h1>Cronograma de manutenção · planejado × realizado · ${ano}</h1><p>Uma linha por equipamento de cada embarcação: criticidade, serviços (tirados do Anexo I, que fica para consulta) e, mês a mês, o que está <b>P</b>lanejado e o que foi <b>R</b>ealizado.</p></div><span class="sp"></span><button class="mbtn pri" data-k3pdf>⬇ PDF para auditoria</button></div>
+   <div class="card"><div class="g"><label class="f s2">Ano${sel('ano', [hoje().getFullYear(), hoje().getFullYear() + 1].map(y => [y, y]), ano)}</label><label class="f s2">Embarcação${sel('v', [['', 'Frota toda']].concat(ativos.map(v => [v.id, v.nome])), CR3.v)}</label><label class="f s2">Criticidade${sel('crit', [['', 'Todas'], ['CA', 'Crítica e Alta'], ['Crítica', 'Só Crítica'], ['Alta', 'Só Alta'], ['Média', 'Só Média'], ['Baixa', 'Só Baixa']], CR3.crit)}</label>
+    <div class="s6 c2-ciclo">Ciclo: ida <input data-cic="ida" value="${c.ida}"> d · descargas <input data-cic="desc" value="${c.desc}"> d · volta <input data-cic="volta" value="${c.volta}"> d · porto <input data-cic="porto" value="${c.porto}"> d <span class="note">≈ ${nf(hv)} h de MCP por viagem</span></div></div></div>
+   <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao cronograma</span><small>${T.ok} de ${T.den} serviços vencidos feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>realizados no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>realizados com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>venceram e não foram feitos</span></div><div><b>${nB}/${ativos.length}</b><span>cronogramas aprovados</span>${can.admin() ? `<small><a href="#" data-k3apr="${CR3.v || 'frota'}">${CR3.v ? 'aprovar este barco' : 'aprovar a frota toda'} (${ano})</a></small>` : ''}</div></div>
+   <div class="card"><div class="k3-leg"><span><i class="k3 plan">P</i> planejado</span><span><i class="k3 ok">R</i> realizado no prazo</span><span><i class="k3 late">R</i> realizado com atraso</span><span><i class="k3 miss">P</i> venceu e não foi feito</span><span class="note">Serviços: troca de óleo (+ itens de 250 h, FR 049_B) · revisões por hora na janela em Manaus · trimestral / semestral / anual · docagem. Passe o mouse no mês para ver o serviço.</span></div>
+    <div class="tw k3-w">${cr3Tabela(L, ano)}</div></div>`;
+}
+function cr3PDF() {
+  const ano = +CR3.ano, L0 = cronoFrota(ano, CR3.v), L = CR3.crit ? L0.filter(e => CR3.crit === 'CA' ? ['Crítica', 'Alta'].includes(e.crit) : e.crit === CR3.crit) : L0, T = cr3Conta(L);
+  const css = `@page{size:A4 landscape;margin:8mm}body{font-family:Arial,sans-serif;font-size:9px;color:#202124;margin:0}.hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:6px}.hd img{height:34px}.hd h1{font-size:14px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368}
+   .k{display:flex;gap:8px;margin:4px 0 8px}.k div{border:1px solid #DADCE0;border-radius:4px;padding:4px 9px}.k b{display:block;font-size:14px}.lg span{margin-right:12px}
+   ${K3CSS}.k3 th{font-size:8.5px}.k3 td{padding:2px 3px}.ass{display:flex;gap:60px;margin-top:24px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{page-break-inside:avoid}thead{display:table-header-group}`;
+  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para gerar o PDF.');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma ${ano}</title><style>${css}</style></head><body>
+   <div class="hd"><img src="${LOGOS.nav}" alt=""><img src="${LOGOS.vda}" alt=""><div><h1>Cronograma de manutenção · planejado × realizado · ${ano}</h1><p>${CR3.v ? esc(vName(CR3.v)) : 'Frota em operação'} · serviços tirados do Anexo I da NP Navecunha 055 · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SGMF</p></div></div>
+   <div class="k"><div><b>${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b>aderência (${T.ok} de ${T.den} serviços vencidos)</div><div><b style="color:#188038">${T.ok}</b>no prazo</div><div><b style="color:#E37400">${T.late}</b>com atraso</div><div><b style="color:#D93025">${T.miss}</b>não feitos</div></div>
+   <p class="lg"><span><i class="k3 plan">P</i> planejado</span><span><i class="k3 ok">R</i> realizado no prazo</span><span><i class="k3 late">R</i> realizado com atraso</span><span><i class="k3 miss">P</i> venceu e não foi feito</span></p>
+   ${[...new Set(L.map(e => e.v))].map((v, i) => `<div${i ? ' style="page-break-before:always"' : ''}>${cr3Tabela(L.filter(e => e.v === v), ano, true)}</div>`).join('')}
+   <div class="ass"><div>Supervisor de Manutenção · aprovação</div><div>Data</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
+}
+const K3CSS = `.k3{width:100%;border-collapse:collapse}.k3 th{background:#16244A;color:#fff;padding:6px 4px;font-weight:600;position:sticky;top:0;z-index:1}.k3 th.hj{background:#1967D2}.k3 td{border-bottom:1px solid #E8EAED;text-align:center;padding:4px 3px;vertical-align:middle}.k3 td.hj{background:#F1F6FE}
+ .k3 td.k3-e{text-align:left;min-width:170px}.k3 td.k3-e small{display:block;color:#5F6368;font-size:.85em}.k3 td.k3-s{text-align:left;color:#3C4043;font-size:.85em;min-width:180px;max-width:260px;line-height:1.3}.k3 td.k3-t{font-weight:700;white-space:nowrap}
+ .k3 tr.k3-v td{background:#E8F0FE;color:#16244A;font-weight:700;text-align:left;padding:7px 8px;font-size:1.05em}.k3 tr.k3-v td span{font-weight:400;color:#5F6368;font-size:.85em;margin-left:8px}
+ .k3-c{display:inline-block;padding:1px 7px;border-radius:10px;font-size:.85em;font-weight:700}.k3-c.cr{background:#FCE8E6;color:#C5221F}.k3-c.al{background:#FEF7E0;color:#B06000}.k3-c.me{background:#E8F0FE;color:#1967D2}.k3-c.ba{background:#F1F3F4;color:#5F6368}
+ i.k3{display:inline-block!important;width:auto!important;min-width:18px;padding:1px 3px;margin:1px;border-radius:4px;color:#fff;font-weight:700;font-style:normal;font-size:.92em}i.k3.plan{background:#80868B}i.k3.ok{background:#188038}i.k3.late{background:#E37400}i.k3.miss{background:#D93025}`;
+{ const st = document.createElement('style'); st.textContent = K3CSS + '.k3-w{max-height:72vh;overflow:auto}.k3-leg{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin:0 0 10px;font-size:13px}.k3-leg>span{display:inline-flex;align-items:center;gap:4px}'; document.head.appendChild(st); }
+async function cr3Aprovar(vs, ano) {
+  for (const v of vs) { const L = cronoFrota(ano, v.id), id = 'crono-' + ano + '-' + v.id, B0 = S.recs.get(id), linhasEq = {}, nomes = {};
+    L.forEach(e => { linhasEq[e.k] = e.M.map(m => m.plan + m.miss + m.ok + m.late); nomes[e.k] = e.nome.n + ' · ' + e.servs.join(', ') + ' · ' + e.crit; });
+    await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasEq, nomes }); }
+}
+VX.crono = vCrono3; VX.cxr = vCrono3;
+const after3 = function () { const m = $('#main');
+  m.onchange = async e => { const t = e.target; if (t.dataset.k3) { CR3[t.dataset.k3] = t.value; render(); } if (t.dataset.cic) { S.cfg.ciclo = Object.assign({}, S.cfg.ciclo || {}, { [t.dataset.cic]: Math.max(0, +t.value || 0) }); await kvSet('cfg', S.cfg); render(); } };
+  m.onclick = async e => { const t = e.target.closest('button,a'); if (!t) return;
+    if ('k3pdf' in t.dataset) return cr3PDF();
+    if (t.dataset.k3apr) { e.preventDefault(); if (!precisa(true)) return; const vs = t.dataset.k3apr === 'frota' ? S.cfg.frota.filter(v => !foraOp(v)) : [vessel(t.dataset.k3apr)];
+      await cr3Aprovar(vs, +CR3.ano); toast('Cronograma ' + CR3.ano + ' aprovado' + (vs.length > 1 ? ' para ' + vs.length + ' embarcações.' : '.')); render(); } }; };
+AFTER.crono = after3; AFTER.cxr = after3;
+{ const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'cxr'); if (i >= 0) s.views.splice(i, 1); const c = s.views.find(x => x[0] === 'crono'); if (c) c[1] = 'Cronograma (planejado × realizado)'; s.extra = (s.extra || []).concat(['cxr']); } }
+
+</script>
 </body>
 </html>
