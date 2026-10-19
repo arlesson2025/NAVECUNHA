@@ -3617,7 +3617,7 @@ function lubEquip(v) {
   const L = [], ps = mcpPos(v), mono = v.mcp === 'mono';
   ps.forEach((p, i) => L.push(Object.assign({ key: i ? 'mcp2' : 'mcp1', g: 'mcp', pos: p, nome: mono ? 'MCP' : 'MCP ' + p, mod: 'Mitsubishi ' + ((v.mcpMod || {})[p] || ''), itens: ['1.1.1'] }, capDe(planoRow(r => r.sys === 'MCP')))));
   ps.forEach((p, i) => { const r = v.rev[p]; if (!r) return; L.push(Object.assign({ key: i ? 'crp2' : 'crp1', g: 'crp', pos: p, nome: mono ? 'Reversor' : 'Reversor ' + p, mod: EQN[r] || r, itens: REV_ITENS[r] }, capDe(planoRow(x => x.sys === 'CRP' && x.eq.includes(REV_PLANO[r]))))); });
-  MCAS.forEach((p, i) => { if (!v.mca[p]) return; const md = (v.mcaMod || {})[p] || EQN[v.mca[p]]; L.push(Object.assign({ key: i === 2 ? 'inc' : 'mca' + (i + 1), g: 'mca', pos: p, nome: 'MCA ' + (i + 1), mod: md, itens: [v.mca[p] === 'MWM' ? '3.1.3' : '3.2.9'] }, capDe(planoRow(x => x.sys === 'MCA' && x.eq === md)))); });
+  MCAS.forEach((p, i) => { if (!v.mca[p]) return; const md = (v.mcaMod || {})[p] || EQN[v.mca[p]]; L.push(Object.assign({ key: i === 2 ? 'inc' : 'mca' + (i + 1), g: 'mca', pos: p, nome: i === 2 ? 'Motobomba de incêndio (MCA 3)' : 'MCA ' + (i + 1), mod: md, itens: [v.mca[p] === 'MWM' ? '3.1.3' : '3.2.9'] }, capDe(planoRow(x => x.sys === 'MCA' && x.eq === md)))); });
   L.push(Object.assign({ key: 'hid', g: 'hid', pos: 'UN', nome: 'Governo (hidráulico)', mod: 'Sistema hidráulico do leme', itens: ['2.1.8'] }, capDe(planoRow(x => /leme/i.test(x.eq)))));
   if (!v.mca.MCA3) L.push(Object.assign({ key: 'inc', g: 'inc', pos: 'UN', nome: 'Motobomba de incêndio', mod: 'Motor da motobomba', itens: ['4.1.3'] }, capDe(null), { oleo: 'SAE 15W-40' }));
   return L.filter(e => e.itens && e.itens.some(id => A1M[id] && aplica(v, e.pos, A1M[id])));
@@ -6387,8 +6387,8 @@ const GG = { az: '#1A73E8', az2: '#AECBFA', vd: '#188038', vdE: '#0F7B6C', ci: '
 /* ---------- 4.1 troca de óleo: barras horizontais (uma por sistema, por embarcação) ---------- */
 function oleoHoriz(o = {}) {
   const LD = lubDados(), V = S.cfg.frota.filter(v => !foraOp(v));
-  const SIS = [['mcp', 'MCP', GG.az], ['crp', 'Reversor', GG.vdE], ['mca', 'MCA', GG.ci]];
-  const val = (v, g) => { const L = LD.filter(x => x.v === v && x.e.g === g && x.horas != null); if (!L.length) return null; const m = L.reduce((a, b) => a.horas <= b.horas ? a : b); return { h: Math.round(m.horas), e: m.e, om: m.om }; };
+  const SIS = [['mcp', 'MCP', GG.az], ['crp', 'Reversor', GG.vdE], ['mca', 'MCA', GG.ci], ['inc', 'Motobomba de incêndio', '#9334E6']];
+  const val = (v, g) => { const L = LD.filter(x => x.v === v && (g === 'inc' ? x.e.key === 'inc' && x.e.g === 'mca' : x.e.g === g && x.e.key !== 'inc') && x.horas != null); if (!L.length) return null; const m = L.reduce((a, b) => a.horas <= b.horas ? a : b); return { h: Math.round(m.horas), e: m.e, om: m.om }; };
   const rows = V.map(v => ({ v, b: SIS.map(([g, n, c]) => ({ g, n, c, x: val(v, g) })).filter(s => s.x) })).filter(r => r.b.length);
   const vals = rows.flatMap(r => r.b.filter(s => s.g !== 'crp').map(s => s.x.h)), mx = Math.max(400, ...vals.filter(x => x > 0)), mn = Math.min(0, ...rows.flatMap(r => r.b.map(s => s.x.h)));
   const W = o.w || 980, LB = 96, RV = 64, bh = 9, gap = 2, padR = 10, aw = W - LB - RV, sc0 = aw / mx, neg = mn < 0 ? Math.max(56, Math.min(aw * .25, (-mn) * sc0 + 46)) : 0, X0 = LB + neg, sc = (aw - neg) / mx, sn = sc;
@@ -6647,7 +6647,7 @@ const grpItens = P => P.reduce((a, o) => a + (o.itensProg || o.items || []).leng
 const grpNext = { emitida: ['abordo', 'Iniciar execução'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Lançar a ficha'] };
 const ivEmb = (t, v, p) => { const iv = intervalo(t, v, p); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' / '); };
 const ladoMCA = (v, p) => { const l = v && v.mcaLoc && v.mcaLoc[p] ? v.mcaLoc[p] : ''; return /^bomb/i.test(l) ? 'BB' : /^bores/i.test(l) ? 'BE' : ''; };
-const posCurtoE = (v, p) => { if (p === 'UN') return 'Embarcação'; if (isMcp(p)) return p === 'CE' || mcpPos(v).length < 2 ? 'MCP' : 'MCP ' + p; if (MCAS.includes(p)) { const n = MCAS.filter(k => v && v.mca && v.mca[k]).length, l = ladoMCA(v, p); return n < 2 ? 'MCA' : l ? 'MCA ' + l : posNome(v, p); } return posNome(v, p); };
+const posCurtoE = (v, p) => { if (p === 'UN') return 'Embarcação'; if (isMcp(p)) return p === 'CE' || mcpPos(v).length < 2 ? 'MCP' : 'MCP ' + p; if (p === 'MCA3') return 'Motobomba de incêndio (MCA 3)'; if (MCAS.includes(p)) { const n = MCAS.filter(k => v && v.mca && v.mca[k] && k !== 'MCA3').length, l = ladoMCA(v, p); return n < 2 ? 'MCA' : l ? 'MCA ' + l : posNome(v, p); } return posNome(v, p); };
 
 /* ---------- 1 · Programação: uma OM por embarcação ---------- */
 var foraJanela = (id, v, pos) => id === DOCA.item || (DOCA.junto || []).includes(id);   // docagem e o que só se faz em dique: planejamento próprio
@@ -7122,7 +7122,7 @@ const eqGrp = e => e === 'MCP' ? 'MCP' : (e === 'MWM' || e === 'YANMAR') ? 'MCA'
 const eqKeyDe = (pos, t) => eqGrp(t.eq) + '|' + (isMcp(pos) || t.eq === 'RACOR' ? 'MCP' : pos);   // BB e BE (ou Central) numa linha só: "MCP BB/BE", "Caixa de mar BB/BE"
 // cada linha do cronograma passa a ser de UM equipamento (o calendário deixa de misturar casco, rádio, porão…)
 { const l0 = cronoLinhas; cronoLinhas = function (v) { const out = [];
-  l0(v).forEach(l => { const G = {}; l.its.forEach(x => { const k = eqKeyDe(x.pos, x.t); (G[k] = G[k] || []).push(x); });
+  l0(v).forEach(l => { const G = {}; l.its.forEach(x => { const k = x.t.eq === 'MBINC' && v.mca && v.mca.MCA3 ? 'MCA|MCA3' : eqKeyDe(x.pos, x.t); (G[k] = G[k] || []).push(x); });   // CJA XX: bomba de incêndio e o motor dela (MCA 3) numa linha só
     Object.entries(G).forEach(([k, its]) => out.push(Object.assign({}, l, { k: l.k + '|' + k, eqKey: k, its }))); });
   return out; }; }
 const PRIO_ORD = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 };
