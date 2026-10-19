@@ -6646,7 +6646,8 @@ const grpStatus = P => grpOrd[Math.min(...P.map(o => Math.max(0, grpOrd.indexOf(
 const grpItens = P => P.reduce((a, o) => a + (o.itensProg || o.items || []).length, 0);
 const grpNext = { emitida: ['abordo', 'Iniciar execução'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Lançar a ficha'] };
 const ivEmb = (t, v, p) => { const iv = intervalo(t, v, p); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' / '); };
-const posCurtoE = (v, p) => p === 'UN' ? 'Embarcação' : isMcp(p) ? 'MCP ' + (p === 'CE' ? 'Central' : p) : posNome(v, p);
+const ladoMCA = (v, p) => { const l = v && v.mcaLoc && v.mcaLoc[p] ? v.mcaLoc[p] : ''; return /^bomb/i.test(l) ? 'BB' : /^bores/i.test(l) ? 'BE' : ''; };
+const posCurtoE = (v, p) => { if (p === 'UN') return 'Embarcação'; if (isMcp(p)) return p === 'CE' || mcpPos(v).length < 2 ? 'MCP' : 'MCP ' + p; if (MCAS.includes(p)) { const n = MCAS.filter(k => v && v.mca && v.mca[k]).length, l = ladoMCA(v, p); return n < 2 ? 'MCA' : l ? 'MCA ' + l : posNome(v, p); } return posNome(v, p); };
 
 /* ---------- 1 · Programação: uma OM por embarcação ---------- */
 var foraJanela = (id, v, pos) => id === DOCA.item || (DOCA.junto || []).includes(id);   // docagem e o que só se faz em dique: planejamento próprio
@@ -7118,18 +7119,18 @@ cxPDF = function () {
 /* ===== Cronograma da frota numa tabela só: Embarcação · Equipamento · Criticidade · Serviços · jan…dez (planejado × realizado) ===== */
 'use strict';
 const eqGrp = e => e === 'MCP' ? 'MCP' : (e === 'MWM' || e === 'YANMAR') ? 'MCA' : ['HITACHI', 'MASSON', 'REINTJES'].includes(e) ? 'REV' : e;
-const eqKeyDe = (pos, t) => eqGrp(t.eq) + '|' + pos;
+const eqKeyDe = (pos, t) => eqGrp(t.eq) + '|' + (isMcp(pos) || t.eq === 'RACOR' ? 'MCP' : pos);   // BB e BE (ou Central) numa linha só: "MCP BB/BE", "Caixa de mar BB/BE"
 // cada linha do cronograma passa a ser de UM equipamento (o calendário deixa de misturar casco, rádio, porão…)
 { const l0 = cronoLinhas; cronoLinhas = function (v) { const out = [];
   l0(v).forEach(l => { const G = {}; l.its.forEach(x => { const k = eqKeyDe(x.pos, x.t); (G[k] = G[k] || []).push(x); });
     Object.entries(G).forEach(([k, its]) => out.push(Object.assign({}, l, { k: l.k + '|' + k, eqKey: k, its }))); });
   return out; }; }
 const PRIO_ORD = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 };
-function eqNome(v, k) { const [g, pos] = k.split('|'), multi = mcpPos(v).length > 1;
-  if (g === 'MCP') return { n: posCurtoE(v, pos), m: (v.mcpMod && v.mcpMod[pos]) ? 'Mitsubishi ' + v.mcpMod[pos] : 'Mitsubishi' };
+function eqNome(v, k) { const [g, pos] = k.split('|'), ps = mcpPos(v), suf = ps.length > 1 ? ' BB/BE' : '';
+  if (g === 'MCP') return { n: 'MCP' + suf, m: 'Mitsubishi ' + [...new Set(ps.map(p => (v.mcpMod || {})[p]).filter(Boolean))].join(' / ') };
   if (g === 'MCA') return { n: posCurtoE(v, pos), m: (v.mcaMod && v.mcaMod[pos]) || EQN[v.mca[pos]] || '' };
-  if (g === 'REV') return { n: 'Reversor' + (multi ? ' ' + pos : ''), m: (EQN[v.rev[pos]] || '').replace('Reversor ', '') };
-  return { n: (EQN[g] || g) + (pos !== 'UN' && multi ? ' · ' + pos : ''), m: '' }; }
+  if (g === 'REV') return { n: 'Reversor' + suf, m: [...new Set(ps.map(p => (EQN[v.rev[p]] || '').replace('Reversor ', '')).filter(Boolean))].join(' / ') + ' · caixa redutora' };
+  return { n: (EQN[g] || g) + (pos === 'MCP' ? suf : ''), m: '' }; }
 function servNome(l) { if (l.tr === 'bordo') return 'Troca de óleo' + (l.its.some(x => compDe(l.its[0].t ? vessel(l.vId) || {} : {}, x.pos, x.t)) ? ' + 250 h' : '');
   if (l.tr === 'janela') { const h = Math.min(...l.its.map(x => x.t.h || 1e9)); return h >= 4000 ? 'Revisão ' + nf(h) + ' h+' : 'Revisão ' + nf(h) + ' h'; }
   if (l.tr === 'doca') return 'Docagem'; return l.nome.replace(' (2 a 10 anos)', '').toLowerCase().replace(/^./, c => c.toUpperCase()); }
@@ -7141,7 +7142,7 @@ function cronoFrota(ano, vid) {
       const sv = l.tr === 'bordo' ? 'Troca de óleo' + (l.its.some(x => compDe(v, x.pos, x.t)) ? ' + itens 250 h' : '') : servNome(l);
       if (!e.servs.includes(sv)) e.servs.push(sv); e.its += l.its.length;
       l.its.forEach(x => { if (PRIO_ORD[x.t.prio] < PRIO_ORD[e.crit]) e.crit = x.t.prio; e.sis = Math.min(e.sis, parseInt(x.t.id)); });
-      e.ord = e.sis * 100 + posicoes(v).indexOf(l.its[0].pos) * 10 + ['MCP', 'REV', 'MCA'].indexOf(k.split('|')[0]);
+      { const EQO = ['MCP', 'REV', 'EIXO', 'HELICE', 'CXMAR', 'FAE80', 'ALTPE', 'MCA', 'FAE50', 'BAMB30'], gi = EQO.indexOf(k.split('|')[0]); e.ord = e.sis * 1000 + (gi < 0 ? 50 : gi) * 10 + posicoes(v).indexOf(l.its[0].pos); }   // MCP BB, MCP BE, Reversor BB, Reversor BE… lado a lado
       l.M.forEach((m, i) => { const c = e.M[i]; ['plan', 'ok', 'late', 'miss'].forEach(z => c[z] += m[z]); if (m.plan || m.ok || m.late || m.miss) c.tx.push(sv + (m.ok || m.late ? ' · realizado' : m.miss ? ' · venceu e não foi feito' : ' · programado')); }); });
     Object.values(E).forEach(e => { e.nome = eqNome(v, e.k); if (B && B.linhasEq && B.linhasEq[e.k]) e.base = B.linhasEq[e.k]; out.push(e); });
   });
