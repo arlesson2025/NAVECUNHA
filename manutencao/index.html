@@ -4018,7 +4018,8 @@ async function lubSalvarForm(data, win) {
     lubBusy(true, 'Gravando e atualizando o painel…');
     // motor de popa e motobomba 5 HP não têm horímetro (NP 7.3): a troca vale pelo horímetro do MCP na data
     const hMcp = (() => { const m = (data.eq || []).find(q => q.key === 'mcp1' && q.hr != null); if (m) return m.hr; const r = v && horEm(v.id, mpos(v.id), data.date); return r ? r.h : null; })();
-    const eq = (data.eq || []).map(q => { const o = Object.assign({}, q); if (['popa', 'bomba'].includes(q.key) && q.status === 'T' && q.hr == null) { o.hr = hMcp; o.hrMcp = true; } if (v && q.status === 'T') { const e = lubEq(v, q.key); if (e) { o.pos = e.pos; o.hp = lubHp(v, e); o.itens = e.itens.filter((id, i) => i === 0 || (id === '1.6.2' && (q.filters || []).length)); } } return o; });
+    const eq = (data.eq || []).map(q => { const o = Object.assign({}, q); if (['popa', 'bomba'].includes(q.key) && q.status === 'T' && q.hr == null) { o.hr = hMcp; o.hrMcp = true; } if (v && q.status === 'T') { const e = lubEq(v, q.key); if (e) { o.pos = e.pos; o.hp = lubHp(v, e); o.itens = e.itens.filter((id, i) => i === 0 || (id === '1.6.2' && (q.filters || []).length));
+      if (o.hr != null && +o.hr < VOLTA && !['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) { const c = horCalc(v.id, o.hp, +o.hr, data.date); if (c && c.total) { o.hrPainel = +o.hr; o.hr = c.total; } } /* número do painel (volta a zero em 10.000 h) → horímetro total */ } } return o; });
     const rec = { id: uid('lub'), kind: 'lub', tipo: 'fr049', vessel: v ? v.id : '', vNome: data.vessel, tipoEmb: data.tipo || (v ? 'emp' : 'bal'), om: data.om, num: data.om, date: data.date, local: data.local, localTx: data.localTx, eq, me: data.me, nc: data.nc, atn: data.atn, obs: data.obs, residuos: data.residuos, nomes: data.nomes, fotos: data.fotos, fotosLocais: (fl.a.length || fl.d.length) ? fl : null, pages: out.pages, pdfName: data.pdfName, by: S.session.name };
     const b64 = out.pdf.output('datauristring').split(',')[1];
     await saveRec(rec, { pdfB64: b64 });
@@ -4026,6 +4027,7 @@ async function lubSalvarForm(data, win) {
     let nh = 0;
     if (v) for (const q of eq) { if (q.status !== 'T' || q.hr == null || !q.hp) continue; if (['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) continue; if (await lubHor(v.id, q.hp, q.hr, data.date, 'FR 049_B OM ' + data.om)) nh++; }
     lubFecharOverlay('lubFO');
+    if (v) { const avis = eq.filter(q => q.status === 'T' && q.hp && q.hr != null && !['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)).filter(q => { const a = horAtual(v.id, q.hp); return a && !a.est && a.h > +q.hr + 1; }); if (avis.length) setTimeout(() => toast('Atenção: horímetro menor que a última leitura em ' + avis.map(q => (lubEq(v, q.key) || {}).nome + ' (' + nf(q.hr) + ' h; última ' + nf(horAtual(v.id, q.hp).h) + ' h)').join(', ') + '. Confira o número: a troca pode continuar aparecendo como vencida.', 12000), 1500); }
     const nT = eq.filter(q => q.status === 'T').length;
     toast(`FR 049_B salvo · ${data.vessel} · O.M. ${data.om}. ${v ? nT + ' troca(s) atualizada(s) no painel' + (nh ? ', ' + nh + ' horímetro(s) lançado(s)' : '') + '. ' + (omII ? (omII.status === 'encerrada' ? 'OM ' + omII.num + ' (II-B) já encerrada.' : 'Ligado à OM ' + omII.num + ' (II-B): nº do FR 049_B, FR 016_E e lotes preenchidos.') : 'Atenção: a OM ' + data.om + ' não está no SGMF. Pela NP (7.4) a troca também é registrada no Anexo II-B.') : 'Balsa (NP 024): fica só no histórico.'}`, 9000);
     render();
@@ -7223,7 +7225,18 @@ function oleoDoBarco(v) {
   return cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA|Motobomba/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null)
     .map(x => ({ nome: MCAS.includes(x.p.pos) ? posCurtoE(v, x.p.pos) : x.l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''), rest: x.p.rest, pos: x.p.pos })).sort((a, b) => a.rest - b.rest);
 }
+let FRFIX = false;
+async function frPainelFix() {   // FR 049_B lançados com o número do painel (antes da correção): converte para o horímetro total
+  if (FRFIX || !S.session) return; FRFIX = true; let n = 0;
+  for (const r of recs('lub').filter(r => r.tipo === 'fr049' && r.vessel)) { const v = vessel(r.vessel); if (!v) continue; let mud = false;
+    for (const q of r.eq || []) { if (q.status !== 'T' || q.hr == null || !q.hp || q.hrPainel != null || +q.hr >= VOLTA || ['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) continue;
+      const a = horAtual(v.id, q.hp); if (!a || a.est || a.h <= +q.hr + 1) continue; const c = horCalc(v.id, q.hp, +q.hr, r.date); if (!c || !c.total) continue;
+      q.hrPainel = +q.hr; q.hr = c.total; mud = true; await lubHor(v.id, q.hp, c.total, r.date, 'FR 049_B OM ' + r.om); }
+    if (mud) { await saveRec(r); n++; } }
+  if (n) { toast(n + (n === 1 ? ' FR 049_B corrigido' : ' FR 049_B corrigidos') + ': horímetro do painel convertido para o total.', 6000); render(); }
+}
 vRotina = function () {
+  setTimeout(frPainelFix, 300);
   const D = rotinaDados(), A = D.filter(x => !x.fora), hv = hViagem();
   const porto = A.filter(x => situDe(x.v) && x.v.situ.st === 'porto'), viag = A.filter(x => situDe(x.v) && x.v.situ.st === 'viagem'), sem = A.filter(x => !situDe(x.v));
   const hrTxt = x => x.hr ? nf(x.hr.h) + ' h · ' + (x.dHr === 0 ? 'hoje' : 'há ' + x.dHr + ' d') : 'sem leitura';
