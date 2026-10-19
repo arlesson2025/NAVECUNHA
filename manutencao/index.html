@@ -7454,7 +7454,7 @@ AFTER.oms = function () { $('#main').onclick = async e => { const t = e.target.c
     { id: 'oleo', nome: 'Óleo', views: [['oleo', 'Óleo da frota'], ['lubreg', 'Trocas lançadas']] },
     { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma do barco'], ['audit', 'Planejado × realizado'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
     { id: 'omsv2', nome: 'OMs', views: [['oms', 'Abertas e encerradas']], extra: ['emitir', 'omg', 'om', 'acomp', 'prev', 'corr', 'hist'] },
-    { id: 'graf', nome: 'Gráficos', views: [['controle', 'Docagem, calibração, MBC, óleo'], ['geral', 'Painel de gestão'], ['falhas', 'Análise de falhas'], ['kpi', 'Indicadores']], cfg: true },
+    { id: 'graf', nome: 'Gráficos', views: [['controle', 'Docagem, calibração, MBC, óleo'], ['geral', 'Painel de gestão'], ['kpi', 'Indicadores']], extra: ['falhas'], cfg: true },
     { id: 'apoio2', nome: 'Biblioteca', views: [['bib', 'Biblioteca'], ['pecas', 'Sobressalentes críticos'], ['terc', 'Prestadores de serviço'], ['trein', 'Treinamentos']], cfg: true },
     { id: 'adm', nome: 'Administração', views: [['admin', 'Administração'], ['hor', 'Horímetros'], ['matriz', 'Anexo I'], ['frota', 'Vencimentos (detalhe)']], cfg: true });
   ICO.apoio2 = ICO.bib || ICO.apoio || ICO.ref;
@@ -8041,7 +8041,7 @@ function riscoHTML() {
   const { out, alertas } = riscoDados(), alto = out.filter(x => x.nivel === 'alto'), sg = n => (n > 0 ? '+' : n < 0 ? '−' : '+') + nf(Math.abs(n));
   const omA = alto.reduce((a, x) => a + x.ab, 0), hm = out.filter(x => x.hr != null), med = hm.length ? hm.reduce((a, x) => a + x.hr, 0) / hm.length : null;
   const L = out.filter(x => RK_F === 'todas' || x.nivel === RK_F);
-  return `<div class="card rk" data-lk="Gestao de riscos"><h2>Gestão de riscos &amp; alertas críticos</h2><p class="rk-sub">Embarcações em risco, pendências regulatórias e matriz completa da frota.</p>
+  return `<div class="card rk" data-lk="Gestao de riscos"><div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:10px"><div><h2>Gestão de riscos &amp; alertas críticos</h2><p class="rk-sub">Embarcações em risco, pendências regulatórias e matriz completa da frota.</p></div><span class="sp"></span><div class="seg">${[6, 12, 24].map(m => `<button data-falper="${m}" class="${m === FALPER ? 'on' : ''}">${m} meses</button>`).join('')}</div><button class="mbtn pri" style="margin-right:40px" data-act="novaCorr">＋ Nova corretiva</button></div>
   <div class="rk-g"><div class="rk-p"><div class="rk-h"><b>Embarcações em risco alto</b>${alto.length ? '<span class="rk-bd alto">AÇÃO IMEDIATA</span>' : '<span class="rk-bd baixo">SOB CONTROLE</span>'}</div>
     <div class="rk-big"><span style="color:${alto.length ? '#DC2626' : '#16A34A'}">${alto.length}</span><em>de ${out.length} embarcações ativas</em></div>
     <div class="rk-2"><div><b>${omA}</b><small>OM aberta${omA === 1 ? '' : 's'}${alto.length ? ' nos barcos em risco' : ''}</small></div><div><b>${med == null ? '—' : nf(Math.round(med)) + ' h'}</b><small>horímetro médio MCP</small></div></div>
@@ -8082,20 +8082,21 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-rkf]
 <script>
 /* ===== Medidas de mitigação (abaixo da gestão de riscos) ===== */
 function mitigHTML() {
-  const C = falhasDados(12), L = C.filter(o => (o.mitig || '').trim() || o.classe === 'Crítica' || o.classe === 'Alta')
+  const C = falhasDados(FALPER), L = C.filter(o => (o.mitig || '').trim() || o.classe === 'Crítica' || o.classe === 'Alta')
     .sort((a, b) => (pDT(b.abertura) || 0) - (pDT(a.abertura) || 0)).slice(0, 15);
   const cls = { ok: 'ok', and: 'and', atraso: 'bad', falta: 'bad', nd: 'nd' };
   const rei = o => { const n = C.filter(p => p._reinc === o).length; if (n) return `<span style="color:#DC2626">Sim (${n + 1}ª vez)</span>`;
     if (o.mitigSt === 'Concluída') { const ref = o.liberacao ? pDT(o.liberacao) : o.updatedAt ? new Date(o.updatedAt) : null, d = ref ? Math.max(0, Math.floor((hoje() - ref) / 864e5)) : null; return `<span style="color:#16A34A">Não${d != null ? ' (' + d + ' d)' : ''}</span>`; }
     return (o.mitig || '').trim() ? '<span style="color:#64748B">Em observação</span>' : '—'; };
   const pz = o => o.mitigPrazo ? brD(o.mitigPrazo).slice(0, 5) : '—';
-  return `<div class="card mg" data-lk="Medidas de mitigacao"><div class="row"><div><h2>Medidas de mitigação</h2><p class="mg-sub">Falha, causa, ação executada e se voltou a ocorrer depois da ação</p></div><span class="sp"></span><a class="mbtn sm" href="#falhas">Ver na Análise de falhas</a></div>
+  return `<div class="card mg" data-lk="Medidas de mitigacao"><div class="row"><div><h2>Medidas de mitigação</h2><p class="mg-sub">Falha, causa, ação executada e se voltou a ocorrer depois da ação</p></div></div>
   ${L.length ? `<div class="tw"><table class="mg-t"><thead><tr><th>Embarcação</th><th>Falha</th><th>Causa</th><th>Ação</th><th>Resp.</th><th>Prazo</th><th>Status</th><th>Reincidência</th></tr></thead><tbody>
-  ${L.map(o => { const s = mitigSit(o); return `<tr><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.descricao || '—')}</td><td>${esc(o.causa || '—')}</td><td>${esc(o.mitig || '—')}</td><td>${esc(o.mitigResp || '—')}</td><td>${pz(o)}</td><td><span class="mg-st ${cls[s.k]}">${esc(s.t.toUpperCase())}</span></td><td>${rei(o)}</td></tr>`; }).join('')}
+  ${L.map(o => { const s = mitigSit(o); return `<tr class="click" data-open="${o.id}" title="Abrir a OM ${esc(o.num || '')}"><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.descricao || '—')}</td><td>${esc(o.causa || '—')}</td><td>${esc(o.mitig || '—')}</td><td>${esc(o.mitigResp || '—')}</td><td>${pz(o)}</td><td><span class="mg-st ${cls[s.k]}">${esc(s.t.toUpperCase())}</span></td><td>${rei(o)}</td></tr>`; }).join('')}
   </tbody></table></div>` : '<div class="note">Nenhuma falha registrada nos últimos 12 meses.</div>'}
-  <div class="note" style="margin-top:8px">Últimos 12 meses · a medida é registrada na própria corretiva (campo A9 · Análise) · reincidência = mesma falha no mesmo barco depois da ação.</div></div>`;
+  <div class="note" style="margin-top:8px">Últimos ${FALPER} meses · clique numa linha para abrir a OM · a medida é registrada na própria corretiva (campo A9 · Análise) · reincidência = mesma falha no mesmo barco depois da ação.</div></div>`;
 }
 { const k1 = vKpi; vKpi = function () { return k1() + mitigHTML(); }; VX.kpi = vKpi; }
+document.addEventListener('click', e => { const p = e.target.closest('[data-falper]'); if (!p || VIEW !== 'kpi') return; FALPER = +p.dataset.falper; render(); });
 { const st = document.createElement('style'); st.textContent = `
 .card.mg h2{margin:0}.mg-sub{margin:2px 0 10px;color:#334155;font-size:13.5px}
 .mg-t{width:100%;border-collapse:collapse;font-size:13px}.mg-t th{background:#F8FAFC;text-align:left;font-weight:600;color:#0F172A;padding:9px 10px;border-bottom:1px solid #E3E8EF;white-space:nowrap}
