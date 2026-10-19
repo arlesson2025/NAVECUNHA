@@ -6599,7 +6599,6 @@ function vCxr() {
    ${cxCargaCard(L, ano)}
    <div class="card"><div class="row"><h2>Aderência por embarcação · ${ano}</h2><span class="sp"></span><span class="note">clique na embarcação para ver o cronograma dela</span></div>
     <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr class="click" data-cxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${x.c.ok}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table></div></div>
-   <div class="card"><div class="row"><h2>Aderência por sistema · ${CX.v ? esc(vName(CX.v)) : 'frota toda'}</h2><span class="sp"></span><span class="note">os 11 sistemas do Anexo I · clique para filtrar</span></div><div class="tw">${cxSisTab(CX.sis ? cxDados(ano, CX.v, '') : L)}</div></div>
    <div class="card"><div class="row"><h2>Cronograma × Realizado${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota toda'}</h2><span class="sp"></span><div class="cx-leg"><span><i class="cx-c ok">R</i>feito no prazo</span><span><i class="cx-c late">R</i>feito com atraso</span><span><i class="cx-c miss">P</i>venceu e não foi feito</span><span><i class="cx-c pl">P</i>vencimento (feito depois)</span><span><i class="cx-c plan">P</i>programado</span></div></div>
     ${!CX.v && L.length > 400 ? '<p class="note">A frota toda gera uma tabela muito grande: escolha uma embarcação para ver o detalhe.</p>' : `<div class="tw cx-w">${cxTabela(L, ano)}</div>`}
     <p class="note">Passe o mouse numa célula para ver a data, a OM ou o FR 049_B. Aderência = realizados no prazo ÷ (no prazo + com atraso + vencidos não realizados). Os registros começam em outubro de 2026 (implantação do SGMF); o histórico anterior pode ser importado.</p></div>`;
@@ -6627,7 +6626,6 @@ function cxPDF() {
    <div class="hd"><img src="${LOGOS.nav}" alt="Navecunha"><img src="${LOGOS.vda}" alt="VDA"><div><h1>Cronograma × Realizado · Manutenção preventiva · ${ano}</h1><p>Plano de Manutenção (Anexo I · NP Navecunha 055) · ${CX.v ? esc(vName(CX.v)) : 'frota em operação'} · ${esc(sisN)} · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SGMF</p></div><span class="sp"></span></div>
    <div class="k"><div><b>${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b>aderência ao plano (${T.ok} de ${T.den})</div><div><b style="color:#188038">${T.ok}</b>no prazo</div><div><b style="color:#E37400">${T.late}</b>com atraso</div><div><b style="color:#D93025">${T.miss}</b>não realizados</div><div><b>${T.plan}</b>programados até dez.</div></div>
    ${!CX.v ? `<h2>Aderência por embarcação</h2><table><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr><td style="text-align:left">${esc(x.v.nome)}</td><td>${x.c.ok}</td><td>${x.c.late}</td><td>${x.c.miss}</td><td>${x.c.plan}</td><td><b>${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table>` : ''}
-   <h2>Aderência por sistema${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota'}</h2>${cxSisTab(cxDados(ano, CX.v, ''), true)}
    <p class="lg"><span><i class="cx-c ok">R</i> feito no prazo</span><span><i class="cx-c late">R</i> feito com atraso</span><span><i class="cx-c miss">P</i> venceu e não foi feito</span><span><i class="cx-c pl">P</i> vencimento (feito depois)</span><span><i class="cx-c plan">P</i> programado</span> · número sob o R = OM ou FR 049_B · aderência = no prazo ÷ (no prazo + com atraso + não realizados)</p>
    ${blocos}
    <div class="ass"><div>Supervisor de Manutenção</div><div>Gerência</div><div>Data</div></div>
@@ -6976,7 +6974,7 @@ function cronoMarcas(v, ano) {   // por PACOTE: uma execução programada por ve
       if (m.k === 'ok' || m.k === 'late') { feitos[m.d.getMonth()].add((m.ev && m.ev.num) || m.d.toISOString().slice(0, 10)); c[m.k === 'late' ? 'late' : 'ok'] = 1; c.its.push(t.id + ' · ' + (m.ev && m.ev.src ? m.ev.src : 'feito') + (m.k === 'late' ? ' (atraso)' : '')); }
       if (m.k === 'miss') { c.miss = 1; c.its.push(t.id + ' venceu e não foi feito'); }
       if ((m.k === 'plan' || m.k === 'miss') && (!prox || m.d < prox)) prox = m.d; }); });
-    M.forEach((c, i) => { if (c.ok || c.late) { c.ok = c.late ? 0 : feitos[i].size || 1; c.late = c.late ? feitos[i].size || 1 : 0; } });
+    const cap = Math.max(1, Math.round(30.44 / passoD)); M.forEach((c, i) => { if (c.ok || c.late) { const n = Math.min(cap, feitos[i].size || 1); c.ok = c.late ? 0 : n; c.late = c.late ? n : 0; } });   // uma execução do pacote por mês (mais só se o intervalo for menor que um mês)
     // programados: do primeiro vencimento do pacote em diante, no passo do pacote
     if (prox) { let d = new Date(Math.max(prox.getTime(), Math.min(hj.getTime(), fim.getTime()))); if (prox < hj && prox >= ini) d = new Date(prox); let n = 0;
       while (d < fim && n++ < 60) { if (d >= ini && d >= new Date(hj.getFullYear(), hj.getMonth(), 1)) { const c = M[d.getMonth()]; if (!c.ok && !c.late && !c.miss) { c.plan++; } } d = new Date(d.getTime() + passoD * 864e5); } }
@@ -7060,6 +7058,60 @@ AFTER.crono = function () { const m = $('#main');
 { const r0 = vRotina; vRotina = function () { let h = r0(); const hv = hViagem(); const L = S.cfg.frota.filter(v => !foraOp(v)).map(v => { const o = cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null && x.p.rest < hv); return { v, o }; }).filter(x => x.o.length);
   if (!L.length) return h; const card = `<div class="card"><h2>Troca de óleo · vence na próxima viagem</h2><p class="note">Se der, trocar no porto antes da saída (equipe de manutenção + CTF/MFM). Se não, mandar óleo e filtros: a tripulação troca em viagem com os itens de 250 h, você acompanha pela câmera e lança o FR 049_B.</p><div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Motor</th><th>Situação</th><th></th></tr></thead><tbody>${L.flatMap(x => x.o.map(({ l, p }) => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${esc(l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''))}</td><td class="mono">${p.rest < 0 ? `<b style="color:#D93025">${nf(-p.rest)} h vencido</b>` : 'faltam ' + nf(p.rest) + ' h'}</td><td><a class="mbtn sm" href="#lubreg">Lançar FR 049_B</a></td></tr>`)).join('')}</tbody></table></div></div>`;
   const i = h.indexOf('<div class="card"><div class="tw"><table class="t rt-t">'); return i > 0 ? h.slice(0, i) + card + h.slice(i) : h + card; }; VX.rotina = vRotina; }
+
+</script>
+<script>
+/* ===== Cronograma × Realizado por SERVIÇO (pacote do cronograma), não por item ===== */
+'use strict';
+function cx2Dados(ano) {
+  return S.cfg.frota.filter(v => !foraOp(v)).map(v => { const R = cronoMarcas(v, ano), c = { ok: 0, late: 0, miss: 0, plan: 0 }, mes = Array.from({ length: 12 }, () => ({ ok: 0, late: 0, miss: 0, plan: 0, oleo: 0, jan: 0 }));
+    R.forEach(l => l.M.forEach((m, i) => { ['ok', 'late', 'miss', 'plan'].forEach(k => { c[k] += m[k]; mes[i][k] += m[k]; }); if (m.plan) { if (l.tr === 'bordo') mes[i].oleo += m.plan; else mes[i].jan = 1; } }));
+    c.den = c.ok + c.late + c.miss; c.ad = c.den ? c.ok / c.den * 100 : null; return { v, R, c, mes }; });
+}
+vCxr = function () {
+  const ano = +CX.ano, D = cx2Dados(ano), sel = CX.v ? D.filter(x => x.v.id === CX.v) : D;
+  const T = sel.reduce((a, x) => { ['ok', 'late', 'miss', 'plan'].forEach(k => a[k] += x.c[k]); return a; }, { ok: 0, late: 0, miss: 0, plan: 0 }); T.den = T.ok + T.late + T.miss; T.ad = T.den ? T.ok / T.den * 100 : null;
+  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'], hm = hoje().getFullYear() === ano ? hoje().getMonth() : -1;
+  const carga = MES.map((_, i) => ({ oleo: sel.reduce((a, x) => a + x.mes[i].oleo, 0), om: sel.reduce((a, x) => a + x.mes[i].jan, 0) }));
+  const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#D93025';
+  const anos = []; for (let y = 2026; y <= hoje().getFullYear() + 1; y++) anos.push(y);
+  const s2 = (k, ops, val) => `<select data-cx="${k}">${ops.map(([a, b]) => `<option value="${a}"${String(a) === String(val) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
+  let grade = '';
+  if (CX.v) { const s0 = { v: CR2.v, ano: CR2.ano }; CR2.v = CX.v; CR2.ano = ano; const h = vCrono2(); Object.assign(CR2, s0); const i = h.indexOf('<div class="card"><div class="row"><h2>3 ·'); grade = i > 0 ? h.slice(i).replace(/<button[^>]*data-c2apr[^>]*>[^<]*<\/button>/g, '') : ''; }
+  return `<div class="vh"><div><h1>Cronograma × Realizado · ${ano}</h1><p>Conta <b>serviços do cronograma</b> (troca de óleo, revisões da janela, trimestral, semestral, anual), não itens soltos: cada serviço reúne os itens do Anexo I feitos juntos. Aderência = serviços feitos no prazo ÷ serviços que já venceram.</p></div><span class="sp"></span><button class="mbtn pri" data-cxpdf>⬇ PDF para auditoria (A4 deitado)</button></div>
+   <div class="card"><div class="g"><label class="f s2">Ano${s2('ano', anos.map(y => [y, y]), ano)}</label><label class="f s3">Embarcação${s2('v', [['', 'Frota toda']].concat(D.map(x => [x.v.id, x.v.nome])), CX.v)}</label></div></div>
+   <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao cronograma</span><small>${T.ok} de ${T.den} serviços vencidos feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>serviços no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>serviços com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>vencidos e não feitos</span></div><div><b style="color:#5F6368">${T.plan}</b><span>serviços programados até dezembro</span><small>${sel.length === 1 ? 'nesta embarcação' : 'na frota (' + sel.length + ' embarcações)'}</small></div></div>
+   <div class="card"><div class="row"><h2>O que vem por mês${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota toda'}</h2><span class="sp"></span><span class="note">trocas de óleo (FR 049_B) e OMs de janela (uma por embarcação)</span></div>
+    <div class="tw"><table class="t cx-cg"><thead><tr><th style="text-align:left">Mês</th>${MES.map((m, i) => `<th${i === hm ? ' class="cx-hj"' : ''}>${m}</th>`).join('')}</tr></thead><tbody>
+     <tr><td style="text-align:left">Trocas de óleo previstas</td>${carga.map((c, i) => `<td>${i < hm ? '' : c.oleo || '—'}</td>`).join('')}</tr>
+     <tr><td style="text-align:left"><b>OMs de janela (equipe de terra)</b></td>${carga.map((c, i) => `<td><b>${i < hm ? '' : c.om || '—'}</b></td>`).join('')}</tr></tbody></table></div>
+    <p class="note">Previsão pela média de horas de cada barco; as trocas de óleo e revisões por hora acompanham o horímetro.</p></div>
+   ${CX.v ? grade : `<div class="card"><div class="row"><h2>Aderência por embarcação · ${ano}</h2><span class="sp"></span><span class="note">clique para ver o cronograma × realizado do barco</span></div>
+    <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não feitos</th><th>Programados até dez.</th><th>Cronograma aprovado</th><th>Aderência</th></tr></thead><tbody>${D.map(x => { const B = cronoBase(ano, x.v.id); return `<tr class="click" data-cxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${x.c.ok}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan}</td><td>${B ? `<span class="pill p-ok">rev. ${B.rev} · ${brD(B.aprovAt)}</span>` : '<span class="pill p-warn">não aprovado</span>'}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`; }).join('')}</tbody></table></div></div>`}
+   <p class="note">Os registros começam em outubro de 2026 (implantação do SGMF). Meses anteriores aparecem vazios até o histórico ser importado.</p>`;
+};
+VX.cxr = vCxr;
+cxPDF = function () {
+  const ano = +CX.ano, D = cx2Dados(ano), vs = CX.v ? D.filter(x => x.v.id === CX.v) : D;
+  const T = vs.reduce((a, x) => { ['ok', 'late', 'miss', 'plan'].forEach(k => a[k] += x.c[k]); return a; }, { ok: 0, late: 0, miss: 0, plan: 0 }); T.den = T.ok + T.late + T.miss; T.ad = T.den ? T.ok / T.den * 100 : null;
+  const s0 = { v: CR2.v, ano: CR2.ano };
+  const grades = vs.map(x => { CR2.v = x.v.id; CR2.ano = ano; const h = vCrono2(), i = h.indexOf('<div class="card"><div class="row"><h2>3 ·'); return '<div class="pb">' + (i > 0 ? h.slice(i) : '') + '</div>'; }).join('');
+  Object.assign(CR2, s0);
+  const css = `@page{size:A4 landscape;margin:9mm}body{font-family:Arial,sans-serif;font-size:9.5px;color:#202124;margin:0}.hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:8px}.hd img{height:36px}.hd h1{font-size:15px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368}
+   button,.mbtn,select{display:none!important}.pill{font-size:9px;border:1px solid #DADCE0;border-radius:10px;padding:1px 6px}.row{display:flex;gap:8px;align-items:center}.sp{flex:1}h2{font-size:12px;color:#16244A;margin:0}.pb{page-break-before:always}
+   .k{display:flex;gap:10px;margin:6px 0 10px}.k div{border:1px solid #DADCE0;border-radius:4px;padding:5px 10px}.k b{display:block;font-size:16px}
+   table{width:100%;border-collapse:collapse}th,td{border:1px solid #DADCE0;padding:2px 3px;text-align:center}th{background:#16244A;color:#fff}td.c2-n{text-align:left}td.c2-n small{display:block;color:#5F6368;font-size:7.5px}tr.c2-tr td{background:#E8EEF8;text-align:left}tr.c2-tr span{margin-left:8px;color:#5F6368}
+   .c2{display:inline-block;min-width:16px;border-radius:3px;color:#fff;font-weight:700;padding:0 3px}.c2 small{font-size:7px;margin-left:1px}.plan{background:#80868B}.est{background:#fff;color:#5F6368;border:1px dashed #80868B}.ok{background:#188038}.late{background:#E37400}.miss{background:#D93025}
+   .c2-leg{margin:6px 0}.c2-leg span{margin-right:12px}.note{color:#5F6368}.ass{display:flex;gap:60px;margin-top:26px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{page-break-inside:avoid}thead{display:table-header-group}`;
+  const w = window.open('', '_blank'); if (!w) { toast('Permita pop-ups para gerar o PDF.'); return; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma x Realizado ${ano}</title><style>${css}</style></head><body>
+   <div class="hd"><img src="${LOGOS.nav}" alt=""><img src="${LOGOS.vda}" alt=""><div><h1>Cronograma × Realizado · manutenção preventiva · ${ano}</h1><p>Cronograma tirado do Anexo I da NP Navecunha 055 · ${CX.v ? esc(vName(CX.v)) : 'frota em operação'} · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SGMF</p></div></div>
+   <div class="k"><div><b>${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b>aderência (${T.ok} de ${T.den} serviços)</div><div><b style="color:#188038">${T.ok}</b>no prazo</div><div><b style="color:#E37400">${T.late}</b>com atraso</div><div><b style="color:#D93025">${T.miss}</b>não feitos</div><div><b>${T.plan}</b>programados até dez.</div></div>
+   <table><thead><tr><th style="text-align:left">Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não feitos</th><th>Programados até dez.</th><th>Cronograma aprovado</th><th>Aderência</th></tr></thead><tbody>${vs.map(x => { const B = cronoBase(ano, x.v.id); return `<tr><td style="text-align:left">${esc(x.v.nome)}</td><td>${x.c.ok}</td><td>${x.c.late}</td><td>${x.c.miss}</td><td>${x.c.plan}</td><td>${B ? 'rev. ' + B.rev + ' · ' + esc(B.aprovBy) + ' · ' + brD(B.aprovAt) : 'não aprovado'}</td><td><b>${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`; }).join('')}</tbody></table>
+   <p class="note">Serviço = pacote do cronograma (troca de óleo com itens de 250 h, revisões por hora da janela, trimestral, semestral, anual). Aderência = serviços feitos no prazo ÷ serviços já vencidos.</p>
+   ${grades}
+   <div class="ass"><div>Supervisor de Manutenção</div><div>Gerência</div><div>Data</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
+};
 
 </script>
 </body>
