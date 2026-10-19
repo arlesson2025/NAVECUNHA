@@ -8053,7 +8053,7 @@ function riscoHTML() {
     ${L.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${x.hr == null ? '—' : nf(x.hr, 1)}</td><td style="color:${x.ol != null && x.ol < 0 ? '#DC2626' : ''}">${x.ol == null ? '—' : sg(x.ol) + ' h'}</td><td style="color:${x.cal != null && x.cal < 0 ? '#DC2626' : ''}">${x.cal == null ? '—' : sg(x.cal) + ' d'}</td><td><span class="rk-bd ${x.nivel}">${x.nivel === 'medio' ? 'MÉDIO' : x.nivel.toUpperCase()}</span></td></tr>`).join('') || '<tr><td colspan="5" class="note">Nenhuma embarcação neste filtro.</td></tr>'}
     </tbody></table><div class="note">Até óleo = horas até a troca do MCP mais próxima · Calibração = dias até a próxima calibração · negativo = vencido</div></div></div></div>`;
 }
-{ const k0 = vKpi; vKpi = function () { const h = k0(), i = h.indexOf('<div class="two">'); return i < 0 ? h + riscoHTML() : h.slice(0, i) + riscoHTML() + h.slice(i); }; VX.kpi = vKpi; }
+{ const k0 = vKpi; vKpi = function () { const h = k0(), i = h.indexOf('<div class="two">'); return (i < 0 ? h : h.slice(0, i)) + riscoHTML(); }; VX.kpi = vKpi; }
 
 /* layout da tela Indicadores volta ao padrão uma vez (cards novos + gestão de riscos logo abaixo) */
 { const a0 = layApply; layApply = function () { try { if (typeof LAY !== 'undefined' && LAY && Object.keys(LAY).length && !LAY._kr1) { delete LAY.kpi; LAY._kr1 = 1; kvSet('layout', LAY).catch(() => { }); } } catch (e) { } return a0.apply(this, arguments); }; }
