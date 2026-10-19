@@ -8105,6 +8105,18 @@ function mitigHTML() {
 `; document.head.appendChild(st); }
 
 </script>
+<script>
+/* ===== Controle da condição enxuto: sem Lubrificação, sem Horímetros, sem "item mais urgente" da calibração e sem escopo da docagem ===== */
+if (VX.controle) { const c0 = VX.controle; VX.controle = function () {
+  const t = document.createElement('div'); t.innerHTML = c0();
+  const corta = id => { const a = t.querySelector('#' + id); if (!a) return; let n = a; while (n) { const nx = n.nextElementSibling; n.remove(); n = nx; if (n && n.id && /^cs-/.test(n.id)) break; } };
+  corta('cs-lub'); corta('cs-hor');
+  t.querySelectorAll('[data-csgo="lub"],[data-csgo="hor"]').forEach(b => b.remove());
+  t.querySelectorAll('.kgrid').forEach(g => { if (/caixa de mar vence na viagem/.test(g.textContent)) g.remove(); });
+  t.querySelectorAll('.card').forEach(c => { const h = ((c.querySelector('h2') || {}).textContent || '').trim(); if (/^B · (Frota: o item mais urgente|Todos os itens, por urgência)/.test(h) || /^B · Escopo de serviços da docagem/.test(h)) c.remove(); });
+  return t.innerHTML; }; }
+
+</script>
 <style>/* previsto x realizado: todas as linhas finas */.pr-t td,.pr-t th{border-width:1px!important}.pr-r td{border-bottom:1px solid #BDC1C6!important}.pr-ms,.pr-me{border-color:#BDC1C6!important}.pr-c.hj{outline:1px solid #1967D2!important;outline-offset:-1px!important}</style>
 </body>
 </html>
