@@ -7382,5 +7382,87 @@ AFTER.barco = function () { const m = $('#main');
 if (!location.hash || location.hash === '#rotina') { try { history.replaceState(null, '', '#rotina'); } catch (e) { } }
 
 </script>
+<script>
+/* ===== SGMF v2 · simples: Hoje · Óleo · Cronograma · OMs ===== */
+'use strict';
+/* ---------- Cronograma no formato do modelo: Sistema · Equipamento · Item · Checklist · Frequência + situação no barco ---------- */
+const CRV = { v: '', so: false };
+function cvSit(v, pos, t) {
+  const s = situacao(v, pos, t), L = ultimoServico(v.id, pos, t.id);
+  let k = s.st === 'venc' ? 'venc' : s.st === 'viag' ? 'viag' : s.st === 'ok' ? 'ok' : s.st === 'sem' ? 'sem' : 'cond';
+  if (foraJanela(t.id, v, pos) && k === 'viag') k = 'ok';
+  return { k, s, L };
+}
+function vCronoV2() {
+  const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (!CRV.v || !ativos.some(v => v.id === CRV.v)) CRV.v = (ativos[0] || {}).id;
+  const v = vessel(CRV.v); if (!v) return '<div class="empty">Nenhuma embarcação em operação.</div>';
+  const ps = posicoes(v), linhas = [];
+  A1.forEach(t => { if (t.kind !== 'prog' || (typeof CRONO_FORA !== 'undefined' && CRONO_FORA.includes(t.id))) return;
+    const pp = ps.filter(p => aplica(v, p, t)); if (!pp.length) return;
+    const sits = pp.map(p => Object.assign({ pos: p }, cvSit(v, p, t)));
+    if (CRV.so && !sits.some(x => x.k === 'venc' || x.k === 'viag')) return;
+    linhas.push({ t, sits }); });
+  const nm = { venc: 'Vencido', viag: 'Vence na viagem', ok: 'Em dia', sem: 'Sem registro', cond: 'Por condição' };
+  const lado = (p) => p === 'UN' ? '' : isMcp(p) ? (mcpPos(v).length > 1 ? p : '') : posCurtoE(v, p).replace(/^MCA\s*/, '');
+  const cel = x => `<span class="cv-s ${x.k}" title="${esc(x.s.txt || '')}">${lado(x.pos) ? '<b>' + esc(lado(x.pos)) + '</b> ' : ''}${nm[x.k]}</span>`;
+  const ult = x => x.L ? brD(x.L.date).replace(/\/(\d{2})(\d{2})$/, '/$2') + (x.L.h != null ? ' · ' + nf(x.L.h) + ' h' : '') : '—';
+  const dc = d => brD(isoD(d)).replace(/\/(\d{2})(\d{2})$/, '/$2'); const prox = x => x.s.alvoH != null ? nf(x.s.alvoH) + ' h' + (x.s.alvoD ? ' · ' + dc(x.s.alvoD) : '') : x.s.alvoD ? dc(x.s.alvoD) : '—';
+  // agrupar: sistema → equipamento
+  let html = '', sisA = '', eqA = '', n = 0;
+  const cnt = k => linhas.reduce((a, l) => a + l.sits.filter(x => x.k === k).length, 0);
+  linhas.forEach(l => { const t = l.t;
+    if (t.sis !== sisA) { sisA = t.sis; eqA = ''; html += `<tr class="cv-sis"><td colspan="7">${esc(t.sis)}</td></tr>`; }
+    if (t.eqn !== eqA) { eqA = t.eqn; html += `<tr class="cv-eq"><td colspan="7">${esc(t.eqn)}</td></tr>`; }
+    html += `<tr><td class="cv-n">${t.id}</td><td class="cv-i">${esc(t.item)}</td><td>${esc(t.chk)}</td><td class="cv-f">${esc(t.freq || '')}</td><td class="cv-d">${l.sits.map(ult).join('<br>')}</td><td class="cv-d">${l.sits.map(prox).join('<br>')}</td><td>${l.sits.map(cel).join('')}</td></tr>`; n++; });
+  const sel = `<select id="cvV" style="font-size:18px;font-weight:600;width:auto;min-width:160px">${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>`;
+  return `<div class="vh"><div><h1>Cronograma · ${esc(v.nome)}</h1><p>O plano de manutenção do barco (Anexo I), item por item, com quando foi feito, quando vence e a situação.</p></div><span class="sp"></span><button class="mbtn" data-cvprint>🖨 Imprimir</button></div>
+   <div class="card row cv-bar" style="gap:12px;flex-wrap:wrap">${sel}
+    <span class="cv-s venc">${cnt('venc')} vencidos</span><span class="cv-s viag">${cnt('viag')} vencem na viagem</span><span class="cv-s ok">${cnt('ok')} em dia</span>${cnt('sem') ? `<span class="cv-s sem">${cnt('sem')} sem registro</span>` : ''}
+    <span class="sp"></span><label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="cvSo" ${CRV.so ? 'checked' : ''}> só o que está vencendo</label>
+    ${cnt('venc') + cnt('viag') ? `<a class="mbtn pri" href="#emitir/${v.id}">Abrir OM com o que vence</a>` : ''}</div>
+   <div class="card cv-card"><div class="tw"><table class="cv-t"><colgroup><col style="width:52px"><col style="width:170px"><col><col style="width:120px"><col style="width:150px"><col style="width:150px"><col style="width:180px"></colgroup><thead><tr><th>Nº</th><th>Item</th><th>Checklist</th><th>Frequência</th><th>Última vez</th><th>Próxima</th><th>Situação</th></tr></thead><tbody>${html || '<tr><td colspan="7" class="note">Nada vencendo neste barco.</td></tr>'}</tbody></table></div></div>`;
+}
+VX.crono = vCronoV2;
+AFTER.crono = function () { const m = $('#main');
+  m.onchange = e => { if (e.target.id === 'cvV') { CRV.v = e.target.value; render(); } if (e.target.id === 'cvSo') { CRV.so = e.target.checked; render(); } };
+  m.onclick = e => { const t = e.target.closest('button'); if (t && 'cvprint' in t.dataset) window.print(); }; };
+VX.audit = vCrono3; AFTER.audit = AFTER.cxr;   // planejado × realizado (auditoria) continua disponível
+
+/* ---------- OMs: abertas e encerradas, numa lista ---------- */
+function vOMs() {
+  const ab = [], vis = new Set();
+  oms().filter(o => o.status !== 'encerrada').forEach(o => { const g = o.grupo || o.id; if (vis.has(g)) return; vis.add(g); const P = o.grupo ? omGrupo(o.grupo) : [o]; ab.push({ o: P[0], P, g, st: o.grupo ? grpStatus(P) : o.status }); });
+  const enc = []; const vis2 = new Set();
+  oms().filter(o => o.status === 'encerrada').sort((a, b) => (b.fechadoAt || 0) - (a.fechadoAt || 0)).forEach(o => { const g = o.grupo || o.id; if (vis2.has(g)) return; vis2.add(g); enc.push(o); });
+  const passo = x => { const o = x.o; if (o.tipo === 'C') return `<a class="mbtn sm pri" href="#om/${o.id}">Abrir</a>`;
+    if (!o.grupo) return `<a class="mbtn sm pri" href="#om/${o.id}">Abrir</a>`;
+    const nx = grpNext[x.st]; return `<button class="mbtn sm" data-ficha="${o.id}">🖨 Formulário</button>${x.st === 'executada' || x.st === 'conferencia' ? `<a class="mbtn sm pri" href="#omg/${encodeURIComponent(x.g)}">${x.st === 'conferencia' ? 'Conferir e aprovar' : 'Lançar o formulário'}</a>` : nx ? `<button class="mbtn sm pri" data-gadv="${esc(x.g)}|${nx[0]}">${nx[1]}</button>` : ''}`; };
+  return `<div class="vh"><div><h1>OMs</h1><p>Preventivas da janela (equipe de terra) e corretivas (falhas).</p></div><span class="sp"></span><button class="mbtn pri" data-act="novaCorr">⚠ Registrar falha</button></div>
+   <div class="card"><h2>Em aberto</h2><div class="tw"><table class="t"><tbody>${ab.map(x => `<tr><td class="mono"><b>OM ${esc(x.o.num)}</b></td><td><b>${esc(vName(x.o.vessel))}</b></td><td>${x.o.tipo === 'C' ? '<span class="pill p-bad">Falha</span> ' + esc(x.o.descricao || '') : `Preventiva · ${grpItens(x.P)} itens`}</td><td class="note">${esc(omStatusTxt(Object.assign({}, x.o, { status: x.st })))}</td><td class="rt-b">${passo(x)}</td></tr>`).join('') || '<tr><td class="note">Nenhuma OM em aberto.</td></tr>'}</tbody></table></div></div>
+   <div class="card"><h2>Encerradas</h2><div class="tw" style="max-height:420px"><table class="t"><tbody>${enc.slice(0, 40).map(o => `<tr><td class="mono">${brD(o.dreal || isoD(new Date(o.fechadoAt || 0)))}</td><td class="mono">OM ${esc(o.num)}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${o.tipo === 'C' ? 'Falha · ' + esc(o.descricao || '') : 'Preventiva · ' + (o.grupo ? grpItens(omGrupo(o.grupo)) : (o.items || []).length) + ' itens'}</td><td><a class="mbtn sm" href="${o.grupo ? '#omg/' + encodeURIComponent(o.grupo) : '#om/' + o.id}">Ver</a></td></tr>`).join('') || '<tr><td class="note">Nenhuma ainda.</td></tr>'}</tbody></table></div></div>`;
+}
+VX.oms = vOMs;
+AFTER.oms = function () { $('#main').onclick = async e => { const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
+  if (t.dataset.gadv) { if (!precisa(false)) return; const [g, st] = t.dataset.gadv.split('|'); await grpAvancar(g, st); render(); } }; };
+
+/* ---------- menu: só 4 itens ---------- */
+{ ICO.hoje = ICO.hoje || ICO.inicio; ICO.omsv2 = ICO.oms || ICO.exec;
+  SECOES.splice(0, SECOES.length,
+    { id: 'hoje', nome: 'Hoje', views: [['rotina', 'Hoje']], extra: ['barco'] },
+    { id: 'oleo', nome: 'Óleo', views: [['oleo', 'Óleo da frota'], ['lubreg', 'Trocas lançadas']] },
+    { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma do barco'], ['audit', 'Planejado × realizado'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
+    { id: 'omsv2', nome: 'OMs', views: [['oms', 'OMs']], extra: ['emitir', 'omg', 'om', 'acomp', 'prev', 'corr', 'hist'] },
+    { id: 'adm', nome: 'Administração', views: [['admin', 'Administração'], ['hor', 'Horímetros'], ['matriz', 'Anexo I'], ['frota', 'Vencimentos (detalhe)']], cfg: true });
+}
+['crono', 'oms', 'oleo', 'rotina', 'audit'].forEach(k => { const i = LAY_VIEWS.indexOf(k); if (i >= 0) LAY_VIEWS.splice(i, 1); });
+{ const st = document.createElement('style'); st.textContent = `.cv-t{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed}.cv-t th{position:sticky;top:0;background:#16244A;color:#fff;text-align:left;padding:8px;font-weight:600;z-index:1}.cv-t td{padding:6px 8px;border-bottom:1px solid #EEF0F2;vertical-align:top}
+ .cv-t tr.cv-sis td{background:#16244A;color:#fff;font-weight:700;font-size:14px;padding:8px}.cv-t tr.cv-eq td{background:#E8F0FE;color:#16244A;font-weight:700;padding:6px 8px}
+ .cv-n{white-space:nowrap;color:#5F6368}.cv-i{font-weight:600;min-width:150px}.cv-f{white-space:normal}.cv-t td:last-child .cv-s{display:table;margin:0 0 3px}.cv-d{white-space:nowrap;color:#3C4043;font-size:12.5px}
+ .cv-s{display:inline-block;margin:1px 4px 1px 0;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap}.cv-s.venc{background:#FCE8E6;color:#B3261E}.cv-s.viag{background:#FEF3E0;color:#9A5B00}.cv-s.ok{background:#E6F4EA;color:#1E7A3A}.cv-s.sem,.cv-s.cond{background:#F1F3F4;color:#5F6368}
+ .cv-card .tw{max-height:72vh;overflow:auto}
+ @media print{@page{size:A4 landscape;margin:8mm}#nav,.side,aside,.vh button,.cv-bar a,.cv-bar label,.banner{display:none!important}.cv-card .tw{max-height:none;overflow:visible}.cv-t{font-size:9.5px}.cv-t th{position:static}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`; document.head.appendChild(st); }
+
+</script>
 </body>
 </html>
