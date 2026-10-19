@@ -7661,5 +7661,72 @@ cr3Aprovar = prAprovar;
  @media print{@page{size:A4 landscape;margin:7mm}#nav,.side,aside,.vh,.card.row,.banner,.subnav,.tabs{display:none!important}.pr-card{border:0!important;box-shadow:none!important;padding:0!important}.pr-card .tw{max-height:none;overflow:visible}.pr-t{font-size:8.5px}.pr-t th{position:static}.pr-ass{display:flex;gap:80px;margin-top:22px}.pr-ass div{flex:1;border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}tr{page-break-inside:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`; document.head.appendChild(st); }
 
 </script>
+<script>
+/* ===== Óleo da frota v2: tabela por barco (horímetro atual, última e próxima troca, falta) + gráfico atraso × restante ===== */
+'use strict';
+const OL2 = { ab: null, modo: 'frota', v: '' };
+function ol2Dados() {
+  return lubDados().filter(x => !x.saida && !foraOp(x.v)).map(x => {
+    const v = x.v, e = x.e, hp = lubHp(v, e), hr = horAtual(v.id, hp), iv = intervalo(x.t, v, e.pos), L = x.s.L || ultimoServico(v.id, e.pos, x.t.id);
+    const st2 = olStatus(x), porD = x.porData || (x.horas != null && iv.h == null);
+    const pct = x.horas == null ? null : porD ? (iv.m ? Math.max(-1, Math.min(1, (x.dias || 0) / (iv.m * 30.44))) : null) : (iv.h ? Math.max(-1, Math.min(1, x.horas / iv.h)) : null);
+    const rate = (typeof horasDiaPos === 'function' && horasDiaPos(v.id, hp)) || 10, dH = !porD && x.horas != null ? new Date(hoje().getTime() + x.horas / rate * 864e5) : null, aD = x.s.alvoD ? (x.s.alvoD instanceof Date ? x.s.alvoD : pD(x.s.alvoD)) : null;
+    const prevD = dH && aD ? (dH < aD ? dH : aD) : (dH || aD);
+    const curto = (eqNomeC(v, e) || '').replace(/^Motobomba de incêndio.*/, 'Motobomba').replace(/^Governo.*/, 'Governo').replace(/MCA 1 \(Linha de centro\)/, 'MCA Centro').replace(/\(Linha de centro\)/, 'Centro');
+    return { x, v, e, nome: curto, hr, L, iv, st2, porD, falta: x.horas, dias: x.dias, pct, alvoH: x.s.alvoH, alvoD: prevD };
+  });
+}
+const ol2Falta = d => d.falta == null ? '—' : d.porD && d.dias != null ? (Math.round(d.dias) < 0 ? '−' + (-Math.round(d.dias)) + ' d' : Math.round(d.dias) + ' d') : (d.falta < 0 ? '−' + nf(-d.falta) + ' h' : nf(d.falta) + ' h');
+const ol2D = d => d ? brD(isoD(d instanceof Date ? d : pD(d))).replace(/\/(\d{2})(\d{2})$/, '/$2') : '—';
+function ol2Barras(L, rot) {   // esquerda = atraso (horas) · direita = % do intervalo que ainda resta
+  const mxA = Math.max(1, ...L.filter(d => d.falta != null && d.falta < 0).map(d => -(d.porD ? (d.dias || 0) : d.falta)));
+  return `<div class="o2-bars">${L.map(d => { const atr = d.falta != null && d.falta < 0, wl = atr ? Math.max(4, Math.round(-(d.porD ? (d.dias || 0) : d.falta) / mxA * 100)) : 0, wr = !atr && d.pct != null ? Math.max(2, Math.round(d.pct * 100)) : 0, cor = d.st2 === 'aten' ? '#E37400' : '#1E8E3E';
+    return `<div class="o2-br" data-frv="${d.v.id}" title="${esc(d.v.nome + ' · ' + d.nome)} · clique para lançar a troca"><span class="o2-bn">${esc(rot(d))}</span><span class="o2-bl"><i style="width:${wl}%"></i></span><span class="o2-bz"></span><span class="o2-bri"><i style="width:${wr}%;background:${cor}"></i></span><b style="color:${atr ? '#C5221F' : d.st2 === 'aten' ? '#B06000' : '#1E7A3A'}">${ol2Falta(d)}</b></div>`; }).join('')}
+   <div class="o2-ax"><span></span><span>${L.some(d => d.falta != null && d.falta < 0) ? atrTxt(mxA) : ''}</span><span></span><span style="display:flex;justify-content:space-between"><em>0%</em><em>100%</em></span><span></span></div></div>`;
+  function atrTxt(m) { return nf(Math.round(m)) + (L.some(d => d.porD && d.falta < 0) && !L.some(d => !d.porD && d.falta < 0) ? ' d' : ' h'); }
+}
+vOleo = function () {
+  const D = ol2Dados(), V = S.cfg.frota.filter(v => !foraOp(v)), cnt = k => D.filter(d => d.st2 === k).length;
+  if (OL2.ab == null) OL2.ab = new Set(V.filter(v => D.some(d => d.v === v && d.st2 === 'venc')).map(v => v.id));
+  if (!OL2.v || !V.some(v => v.id === OL2.v)) OL2.v = (V.find(v => OL2.ab.has(v.id)) || V[0] || {}).id;
+  const sit = v => { const s = situDe(v); return s ? (s.st === 'porto' ? ' <span title="no porto">⚓</span>' : ' <span title="em viagem">⛴</span>') : ''; };
+  const ord = d => d.falta == null ? 1e9 : d.porD ? (d.dias || 0) * 20 : d.falta;
+  let corpo = '';
+  V.forEach(v => { const L = D.filter(d => d.v === v); if (!L.length) return; const nV = L.filter(d => d.st2 === 'venc').length, nA = L.filter(d => d.st2 === 'aten').length, ab = OL2.ab.has(v.id), pr = L.slice().sort((a, b) => ord(a) - ord(b))[0];
+    const badge = nV ? `<span class="o2-bd venc">${nV} vencida${nV > 1 ? 's' : ''}</span>` : nA ? `<span class="o2-bd aten">${nA} vencendo</span>` : `<span class="o2-bd ok">${L.length} em dia</span>`;
+    if (!ab) { corpo += `<tr class="o2-v fech" data-o2v="${v.id}"><td class="o2-n"><span class="o2-tg">▸</span> <b>${esc(v.nome)}</b>${sit(v)}</td><td colspan="6">${badge} <span class="o2-px">próxima: <b>${esc(pr.nome)}</b> em ${ol2D(pr.alvoD)}${pr.alvoH != null ? ' · ' + nf(pr.alvoH) + ' h' : ''}</span></td><td class="o2-f ${pr.st2}">${ol2Falta(pr)}</td></tr>`; return; }
+    L.forEach((d, i) => { corpo += `<tr class="o2-e${i === 0 ? ' pri' : ''}" data-frv="${v.id}" title="Clique para lançar a troca de ${esc(d.nome)}">${i === 0 ? `<td class="o2-n o2-nb" rowspan="${L.length}" data-o2v="${v.id}"><span class="o2-tg">▾</span> <b>${esc(v.nome)}</b>${sit(v)}<div>${badge}</div></td>` : ''}<td>${esc(d.nome)}</td><td class="num">${d.hr ? nf(d.hr.h) : '—'}</td><td class="num">${d.L && d.L.h != null ? nf(d.L.h) : '—'}</td><td class="num">${d.L ? ol2D(d.L.date) : '—'}</td><td class="num nx ${d.st2}">${d.alvoH != null ? nf(d.alvoH) : '—'}</td><td class="num nx ${d.st2}">${ol2D(d.alvoD)}</td><td class="o2-f ${d.st2}">${ol2Falta(d)}</td></tr>`; }); });
+  const vSel = vessel(OL2.v), LV = D.filter(d => d.v === vSel);
+  const frotaL = V.map(v => D.filter(d => d.v === v).sort((a, b) => ord(a) - ord(b))[0]).filter(Boolean);
+  const painel = OL2.modo === 'frota'
+    ? `<div class="o2-ph"><b>Frota inteira</b><span class="note">o motor mais urgente de cada barco</span></div>${ol2Barras(frotaL, d => d.v.nome)}`
+    : `<div class="o2-ph"><b>${esc(vSel ? vSel.nome : '')}</b>${LV.filter(d => d.st2 === 'venc').length ? `<span class="o2-bd venc">${LV.filter(d => d.st2 === 'venc').length} vencidas</span>` : ''}</div><p class="note" style="margin:-4px 0 8px">${situDe(vSel) ? (situDe(vSel).st === 'porto' ? '⚓ no porto · equipe de manutenção + CTF/MFM' : '⛴ em viagem · MFM troca, você acompanha pela câmera') : ''} · esquerda = atraso · direita = % restante</p>${ol2Barras(LV, d => d.nome.replace('Motobomba de incêndio', 'Motobomba'))}`;
+  return `<div class="o2-top"><h1>Óleo da frota</h1><span class="o2-pl venc"><b>${cnt('venc')}</b> vencidas</span><span class="o2-pl aten"><b>${cnt('aten')}</b> ≤ ${OL_ALERTA_H} h</span><span class="o2-pl ok"><b>${cnt('ok')}</b> em dia</span><span class="sp"></span><button class="mbtn pri" data-frv="">+ Lançar troca</button></div>
+   <div class="o2-wrap"><div class="card o2-tab"><div class="tw"><table class="o2-t"><thead><tr><th rowspan="2">Embarcação</th><th rowspan="2">Equipamento</th><th rowspan="2" class="num">Hor. atual</th><th colspan="2" class="o2-gu">Última troca</th><th colspan="2" class="o2-gp">Próx. troca</th><th rowspan="2" class="num">Falta</th></tr><tr><th class="num o2-gu">Horímetro</th><th class="num o2-gu">Data</th><th class="num o2-gp">Horímetro</th><th class="num o2-gp">Data</th></tr></thead><tbody>${corpo}</tbody></table></div>
+     <p class="note">Clique no nome do barco para abrir ou fechar. Clique num equipamento para lançar a troca (FR 049_B).</p></div>
+    <div class="card o2-pn"><div class="o2-sg"><button data-o2m="frota" class="${OL2.modo === 'frota' ? 'on' : ''}">Frota inteira</button><label class="${OL2.modo === 'um' ? 'on' : ''}">1 empurrador: <select id="o2V">${V.map(v => `<option value="${v.id}"${v.id === OL2.v ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label></div>${painel}</div></div>
+   <div class="card"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver todas</a></div><div class="tw"><table class="t"><tbody>${recs('lub').filter(r => r.tipo === 'fr049').sort((a, b) => (b.date || '') < (a.date || '') ? -1 : 1).slice(0, 6).map(r => `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(vName(r.vessel) || r.vNome || '')}</b></td><td>${(r.eq || []).filter(q => q.status === 'T').map(q => { const vv = vessel(r.vessel), e = lubEq(vv, q.key); return esc(e ? eqNomeC(vv, e) : q.key); }).join(', ')}</td><td class="note">O.M. ${esc(r.om || '')}</td></tr>`).join('') || '<tr><td class="note">Nenhuma troca lançada ainda.</td></tr>'}</tbody></table></div></div>`;
+};
+VX.oleo = vOleo;
+AFTER.oleo = function () { const m = $('#main');
+  m.onchange = e => { if (e.target.id === 'o2V') { OL2.v = e.target.value; OL2.modo = 'um'; render(); } };
+  m.onclick = e => { const tg = e.target.closest('[data-o2v]'); if (tg) { const id = tg.dataset.o2v; if (OL2.ab.has(id)) OL2.ab.delete(id); else { OL2.ab.add(id); OL2.v = id; OL2.modo = 'um'; } render(); return; }
+    const md = e.target.closest('[data-o2m]'); if (md) { OL2.modo = md.dataset.o2m; render(); return; }
+    if (e.target.closest('label') && e.target.closest('.o2-sg')) { OL2.modo = 'um'; render(); return; }
+    const t = e.target.closest('[data-frv]'); if (!t) return; if (!precisa(false)) return; lubAbrirForm(t.dataset.frv || undefined); }; };
+{ const st = document.createElement('style'); st.textContent = `.o2-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 14px}.o2-top h1{margin:0 8px 0 0}.o2-pl{border:1px solid #DADCE0;border-radius:20px;padding:5px 14px;background:#fff;font-size:15px}.o2-pl b{font-size:17px;margin-right:3px}.o2-pl.venc b{color:#C5221F}.o2-pl.aten b{color:#E37400}.o2-pl.ok b{color:#1E8E3E}
+ .o2-wrap{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(300px,1fr);gap:16px;align-items:start}@media(max-width:1100px){.o2-wrap{grid-template-columns:1fr}}
+ .o2-t{width:100%;border-collapse:collapse;font-size:14px}.o2-t th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#5F6368;padding:7px 8px;text-align:left;border-bottom:1px solid #E8EAED}.o2-t th.num,.o2-t td.num{text-align:right;font-variant-numeric:tabular-nums}.o2-t th.o2-gu{background:#F4F6F9;text-align:center}.o2-t th.o2-gp{background:#E8F0FE;color:#1967D2;text-align:center}
+ .o2-t td{padding:6px 8px;border-bottom:1px solid #F1F3F4}.o2-e{cursor:pointer}.o2-e:hover td{background:#F8FAFD}.o2-n{white-space:nowrap;vertical-align:top}.o2-nb{background:#F4F8FE;border-left:4px solid #1967D2;cursor:pointer}.o2-nb div{margin-top:6px}.o2-tg{color:#5F6368;font-size:11px}
+ .o2-v.fech{cursor:pointer}.o2-v.fech:hover td{background:#F8FAFD}.o2-px{color:#5F6368;margin-left:6px}.o2-px b{color:#202124}
+ .o2-f{text-align:right;font-weight:700;white-space:nowrap}.o2-f.venc,.nx.venc{color:#C5221F}.o2-f.aten,.nx.aten{color:#B06000}.o2-f.ok{color:#1E8E3E}.o2-f.sem{color:#5F6368}.nx.venc{font-weight:700}
+ .o2-bd{display:inline-block;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700}.o2-bd.venc{background:#D93025;color:#fff}.o2-bd.aten{background:#FEF3E0;color:#B06000}.o2-bd.ok{background:#E6F4EA;color:#1E7A3A}
+ .o2-sg{display:flex;background:#F1F3F4;border-radius:10px;padding:4px;gap:4px;margin-bottom:14px}.o2-sg>*{flex:1;border:0;background:transparent;border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;color:#3C4043;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}.o2-sg>.on{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15);color:#202124;font-weight:600}.o2-sg>*{white-space:nowrap}.o2-sg select{border:0;background:transparent;font:inherit;font-weight:600;width:auto;padding:0}
+ .o2-ph{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:6px}.o2-ph b{font-size:18px}
+ .o2-bars{display:flex;flex-direction:column;gap:8px}.o2-br{display:grid;grid-template-columns:minmax(90px,1.1fr) 1fr 2px 1fr 70px;align-items:center;gap:0;cursor:pointer;font-size:13.5px}.o2-br:hover{background:#F8FAFD}.o2-bn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;font-weight:600}
+ .o2-bl{display:flex;justify-content:flex-end;height:14px}.o2-bl i{display:block;height:14px;background:#D93025;border-radius:3px 0 0 3px}.o2-bz{height:22px;background:#9AA0A6}.o2-bri{height:14px}.o2-bri i{display:block;height:14px;border-radius:0 3px 3px 0}.o2-br b{text-align:right;white-space:nowrap}
+ .o2-ax{display:grid;grid-template-columns:minmax(90px,1.1fr) 1fr 2px 1fr 70px;font-size:11px;color:#5F6368;margin-top:2px}.o2-ax span:nth-child(2){text-align:left}.o2-ax em{font-style:normal}`; document.head.appendChild(st); }
+
+</script>
 </body>
 </html>
