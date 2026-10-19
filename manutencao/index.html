@@ -7417,7 +7417,7 @@ function vCronoV2() {
     if (ke !== eqA) { eqA = ke; pre += `<td class="cv-me" rowspan="${spE[ke]}">${esc(t.eqn)}</td>`; }
     html += `<tr>${pre}<td class="cv-n" title="${t.id}">${n}</td><td class="cv-i">${esc(t.item)}</td><td>${esc(t.chk)}</td><td class="cv-f">${esc(t.freq || '')}</td><td class="cv-d">${l.sits.map(ult).join('<br>')}</td><td class="cv-d">${l.sits.map(prox).join('<br>')}</td><td>${l.sits.map(cel).join('')}</td></tr>`; });
   const sel = `<select id="cvV" style="font-size:18px;font-weight:600;width:auto;min-width:160px">${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>`;
-  return `<div class="vh"><div><h1>Cronograma · ${esc(v.nome)}</h1><p>O plano de manutenção do barco (Anexo I), item por item, com quando foi feito, quando vence e a situação.</p></div><span class="sp"></span><button class="mbtn" data-cvprint>🖨 Imprimir</button></div>
+  return `<div class="vh"><div><h1>Item por item · ${esc(v.nome)}</h1><p>O plano de manutenção do barco (Anexo I), item por item, com quando foi feito, quando vence e a situação.</p></div><span class="sp"></span><a class="mbtn" href="#cxr">← Cronograma</a><button class="mbtn" data-cvprint>🖨 Imprimir</button></div>
    <div class="card row cv-bar" style="gap:12px;flex-wrap:wrap">${sel}
     <span class="cv-s venc">${cnt('venc')} vencidos</span><span class="cv-s viag">${cnt('viag')} vencem na viagem</span><span class="cv-s ok">${cnt('ok')} em dia</span>${cnt('sem') ? `<span class="cv-s sem">${cnt('sem')} sem registro</span>` : ''}
     <span class="sp"></span><label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="cvSo" ${CRV.so ? 'checked' : ''}> só o que está vencendo</label>
@@ -7500,7 +7500,7 @@ function vAudit() {
   const barras = D.mes.map((c, i) => { const hP = Math.round(c.prev / mx * 120), hR = Math.round((c.ok + c.late) / mx * 120), fut = i > D.hm;
     return `<div class="au-b${i === mesSel ? ' sel' : ''}" data-aumes="${i}" title="${MESL[i]}: previsto ${c.prev} · realizado ${c.ok + c.late} (${c.late} com atraso) · não feito ${c.miss}"><div class="au-bb"><i class="p" style="height:${hP}px"></i><span class="au-rs" style="height:${fut ? 0 : hR}px"><i class="au-l" style="height:${fut || !(c.ok + c.late) ? 0 : Math.round(c.late / (c.ok + c.late) * hR)}px"></i><i class="au-o"></i></span></div><b>${MESL[i]}</b><small>${fut ? c.prev : (c.ok + c.late) + '/' + c.prev}</small></div>`; }).join('');
   const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
-  return `<div class="vh"><div><h1>Auditoria · ${ano}</h1><p>O que o auditor pede, num lugar só: o cronograma aprovado, o previsto × realizado no mês e no ano, e a evidência de cada execução.</p></div><span class="sp"></span><button class="mbtn pri" data-aupdf>⬇ PDF para o auditor</button></div>
+  return `<div class="vh"><div><h1>Histórico e evidências · ${ano}</h1><p>O que o auditor pede, num lugar só: o cronograma aprovado, o previsto × realizado no mês e no ano, e a evidência de cada execução.</p></div><span class="sp"></span><a class="mbtn" href="#cxr">← Cronograma</a><button class="mbtn pri" data-aupdf>⬇ PDF para o auditor</button></div>
    <div class="card row" style="gap:12px;flex-wrap:wrap"><label class="f s2">Ano<select data-au="ano">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
     <label class="f s2">Período das evidências<select data-au="mes"><option value="ano"${AUD.mes === 'ano' ? ' selected' : ''}>Ano todo</option>${MESL.map((m, i) => `<option value="${i}"${String(AUD.mes) === String(i) ? ' selected' : ''}>${m}/${String(ano).slice(2)}</option>`).join('')}</select></label></div>
    <div class="au-k">
@@ -7615,7 +7615,7 @@ function vPR() {
   const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (PRV.v !== 'frota' && !ativos.some(v => v.id === PRV.v)) PRV.v = 'frota';
   const v = PRV.v === 'frota' ? null : vessel(PRV.v), ano = +PRV.ano, B = v && cronoBase(ano, v.id), nAp = ativos.filter(a => cronoBase(ano, a.id)).length;
   const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
-  return `<div class="vh"><div><h1>Previsto × realizado · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada barco)</button></div>
+  return `<div class="vh"><div><h1>Cronograma · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span>${v ? `<a class="mbtn" href="#crono" data-prit="${v.id}">📋 Item por item (Anexo I)</a>` : ''}<a class="mbtn" href="#audit">📁 Histórico e evidências</a><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada barco)</button></div>
    <div class="card row" style="gap:12px;flex-wrap:wrap"><select id="prV" style="font-size:18px;font-weight:600;width:auto;min-width:150px"><option value="frota"${PRV.v === 'frota' ? ' selected' : ''}>Frota toda</option>${ativos.map(a => `<option value="${a.id}"${a.id === PRV.v ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>
     <select id="prA" style="width:auto">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select>
     ${v ? (B ? `<span class="pill p-ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : `<span class="pill p-warn">Previsto ainda não aprovado</span>`) : `<span class="pill ${nAp === ativos.length ? 'p-ok' : 'p-warn'}">${nAp}/${ativos.length} barcos com o previsto aprovado</span>`}<span class="sp"></span>
@@ -7626,7 +7626,7 @@ function vPR() {
 VX.cxr = vPR;
 AFTER.cxr = function () { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'prV') { PRV.v = e.target.value; render(); } if (e.target.id === 'prA') { PRV.ano = +e.target.value; render(); } };
-  m.onclick = async e => { const a = e.target.closest('[data-prv]'); if (a) { e.preventDefault(); PRV.v = a.dataset.prv; render(); window.scrollTo(0, 0); return; } const b = e.target.closest('button'); if (!b) return;
+  m.onclick = async e => { const it = e.target.closest('[data-prit]'); if (it) { CRV.v = it.dataset.prit; return; } const a = e.target.closest('[data-prv]'); if (a) { e.preventDefault(); PRV.v = a.dataset.prv; render(); window.scrollTo(0, 0); return; } const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.prpdf) { const all = S.cfg.frota.filter(v => !foraOp(v)); return prPDF(b.dataset.prpdf === 'um' ? [vessel(PRV.v)] : b.dataset.prpdf === 'resumo' ? [] : all, +PRV.ano, b.dataset.prpdf !== 'um'); }
     if ('prapr' in b.dataset) { if (!precisa(true)) return; b.disabled = true; await prAprovar(S.cfg.frota.filter(v => !foraOp(v)), +PRV.ano); toast('Previsto de ' + PRV.ano + ' aprovado para a frota.'); render(); } }; };
 function prPDF(vs, ano, resumo) {
@@ -7646,7 +7646,7 @@ async function prAprovar(vs, ano) {   // congela o previsto (linha de base) de c
     await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasPR, linhasEq }); }
 }
 cr3Aprovar = prAprovar;
-{ const s = SECOES.find(x => x.id === 'crono'); if (s) { const c = s.views.find(x => x[0] === 'cxr'); if (c) c[1] = 'Previsto × realizado'; const i = s.views.findIndex(x => x[0] === 'cxr'); if (i > 1) { const [it] = s.views.splice(i, 1); s.views.splice(1, 0, it); } } }
+{ const s = SECOES.find(x => x.id === 'crono'); if (s) { s.views = [['cxr', 'Cronograma'], ['rel', 'Relatório do mês']]; s.extra = ['crono', 'audit']; } }
 ['cxr'].forEach(k => { const i = LAY_VIEWS.indexOf(k); if (i >= 0) LAY_VIEWS.splice(i, 1); });
 { const st = document.createElement('style'); st.textContent = `.pr-hd{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px;font-size:15px}.pr-hd span{color:#3C4043}
  .pr-t{width:100%;border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000}
