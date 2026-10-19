@@ -7546,5 +7546,118 @@ AFTER.audit = function () { const m = $('#main');
  .au-bb{height:124px;display:flex;align-items:flex-end;gap:3px}.au-bb i,.au-lg i{display:inline-block;width:14px;border-radius:3px 3px 0 0}.au-bb i.p,.au-lg i.p{background:#C6D4EA}.au-bb i.r,.au-lg i.r{background:#188038}.au-bb i.r.l,.au-lg i.r.l{background:#E37400}.au-lg{font-size:12.5px;color:#3C4043}.au-lg i{height:10px;margin:0 4px 0 10px;border-radius:2px}.au-rs{display:flex;flex-direction:column-reverse;width:14px;border-radius:3px 3px 0 0;overflow:hidden}.au-rs .au-o{flex:1;background:#188038;width:14px}.au-rs .au-l{background:#E37400;width:14px;display:block}.au-b b{font-size:12px}.au-b small{font-size:11px;color:#5F6368}`; document.head.appendChild(st); }
 
 </script>
+<script>
+/* ===== Previsto × Realizado no formato clássico: uma linha por serviço, P e R mês a mês ===== */
+'use strict';
+const PRV = { v: 'frota', ano: hoje().getFullYear() };
+const PR_MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+function prServ(v, l) {   // nome do serviço, frequência e ordem
+  if (l.tr === 'bordo') { const oil = l.its.find(x => !compDe(v, x.pos, x.t)) || l.its[0], iv = intervalo(oil.t, v, oil.pos);
+    return { nome: 'Troca de óleo e filtros' + (l.its.some(x => compDe(v, x.pos, x.t)) ? ' (+ itens de 250 h)' : ''), freq: [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' meses' : ''].filter(Boolean).join(' ou '), o: 0 }; }
+  if (l.tr === 'janela') { const h = Math.min(...l.its.map(x => intervalo(x.t, v, x.pos).h || 1e9)); return { nome: h >= 4000 ? 'Revisão de ' + nf(h) + ' h ou mais' : 'Revisão de ' + nf(h) + ' h', freq: nf(h) + ' h', o: 1 + h / 1e5 }; }
+  if (l.tr === 'doca') return { nome: 'Docagem', freq: '5 anos', o: 9 };
+  const m = Math.min(...l.its.map(x => intervalo(x.t, v, x.pos).m || 99)), nm = m <= 3 ? 'trimestral' : m <= 6 ? 'semestral' : m <= 12 ? 'anual' : 'de longo prazo';
+  return { nome: 'Inspeção ' + nm, freq: m <= 12 ? m + (m === 1 ? ' mês' : ' meses') : m + ' meses', o: 5 + m / 100 };
+}
+function prLinhas(v, ano) {
+  const R = cronoMarcas(v, ano), B = cronoBase(ano, v.id), G = {};
+  R.forEach(l => { const sv = prServ(v, l), k = l.eqKey + '|' + sv.nome;
+    const g = G[k] = G[k] || { k, v, eqKey: l.eqKey, sv, its: [], M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, tx: [] })), sis: 99 };
+    g.its.push(...l.its); l.its.forEach(x => { g.sis = Math.min(g.sis, parseInt(x.t.id)); });
+    l.M.forEach((m, i) => { const c = g.M[i]; c.plan += m.plan; c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.tx.push(...m.its.filter(s => /OM|FR|feito|venceu/.test(s))); }); });
+  const L = Object.values(G).map(g => { g.eq = eqNome(v, g.eqKey); g.base = B && B.linhasPR ? B.linhasPR[g.k] : null; g.crit = g.its.reduce((a, x) => PRIO_ORD[x.t.prio] < PRIO_ORD[a] ? x.t.prio : a, 'Baixa'); return g; });
+  const EQO = ['MCP', 'REV', 'EIXO', 'HELICE', 'CXMAR', 'FAE80', 'ALTPE', 'RACOR', 'MCA', 'FAE50', 'BAMB30'];
+  return L.sort((a, b) => a.sis - b.sis || ((EQO.indexOf(a.eqKey.split('|')[0]) + 1 || 50) - (EQO.indexOf(b.eqKey.split('|')[0]) + 1 || 50)) || a.eqKey.localeCompare(b.eqKey) || a.sv.o - b.sv.o);
+}
+function prTabela(v, ano, pdf) {
+  const L = prLinhas(v, ano), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1;
+  const spS = {}, spE = {}; L.forEach(g => { const s = SISTEMAS[g.sis - 1] || ''; spS[s] = (spS[s] || 0) + 2; spE[s + '|' + g.eqKey] = (spE[s + '|' + g.eqKey] || 0) + 2; });
+  let sisA = '', eqA = '', rows = '';
+  const tot = PR_MES.map(() => ({ p: 0, r: 0, ok: 0, den: 0 }));
+  L.forEach(g => { const s = SISTEMAS[g.sis - 1] || '', ke = s + '|' + g.eqKey;
+    let pre = '';
+    if (pdf) { if (s !== sisA) { sisA = s; eqA = ''; rows += `<tr class="pr-gs"><td colspan="${PR_MES.length + 4}">${esc(s)}</td></tr>`; } if (ke !== eqA) { eqA = ke; rows += `<tr class="pr-ge"><td colspan="${PR_MES.length + 4}">${esc(g.eq.n)}${g.eq.m ? ' · ' + esc(g.eq.m) : ''}</td></tr>`; } }
+    else { if (s !== sisA) { sisA = s; eqA = ''; pre += `<td class="pr-ms" rowspan="${spS[s]}">${esc(s)}</td>`; } if (ke !== eqA) { eqA = ke; pre += `<td class="pr-me" rowspan="${spE[ke]}">${esc(g.eq.n)}${g.eq.m ? `<small>${esc(g.eq.m)}</small>` : ''}</td>`; } }
+    const P = g.M.map((m, i) => { const pv = g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late; tot[i].p += pv; return pv; });
+    const cP = P.map((n, i) => `<td class="pr-c p${i === hm ? ' hj' : ''}">${n ? (n > 1 ? n : '●') : ''}</td>`).join('');
+    const cR = g.M.map((m, i) => { const r = m.ok + m.late; tot[i].r += r; tot[i].ok += m.ok; if (i <= hm) tot[i].den += m.ok + m.late + m.miss; const tip = esc(m.tx.join('\n'));
+      if (r) return `<td class="pr-c r ${m.late ? 'late' : 'ok'}${i === hm ? ' hj' : ''}" title="${tip}">${r > 1 ? r + '×' : '✓'}</td>`;
+      if (m.miss) return `<td class="pr-c r miss${i === hm ? ' hj' : ''}" title="${tip}">✗</td>`;
+      return `<td class="pr-c r${i === hm ? ' hj' : ''}"></td>`; }).join('');
+    const sP = P.reduce((a, x) => a + x, 0), sR = g.M.reduce((a, m) => a + m.ok + m.late, 0);
+    rows += `<tr class="pr-p">${pre}<td class="pr-sv" rowspan="2"><b>${esc(g.sv.nome)}</b><small>${esc(g.crit)}</small></td><td class="pr-f" rowspan="2">${esc(g.sv.freq)}</td><td class="pr-l">P</td>${cP}<td class="pr-t">${sP}</td></tr><tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${sR}</td></tr>`; });
+  const cs = pdf ? 3 : 5; const foot = `<tr class="pr-tot"><td colspan="${cs}">Total previsto</td>${tot.map(t => `<td class="pr-c">${t.p || ''}</td>`).join('')}<td class="pr-t">${tot.reduce((a, t) => a + t.p, 0)}</td></tr>
+    <tr class="pr-tot"><td colspan="${cs}">Total realizado</td>${tot.map(t => `<td class="pr-c">${t.r || ''}</td>`).join('')}<td class="pr-t">${tot.reduce((a, t) => a + t.r, 0)}</td></tr>
+    <tr class="pr-tot"><td colspan="${cs}">Aderência (feito no prazo ÷ vencido)</td>${tot.map((t, i) => `<td class="pr-c"><b>${i <= hm && t.den ? Math.round(t.ok / t.den * 100) + '%' : ''}</b></td>`).join('')}<td class="pr-t"><b>${(() => { const ok = tot.reduce((a, t) => a + t.ok, 0), d = tot.reduce((a, t) => a + t.den, 0); return d ? Math.round(ok / d * 100) + '%' : '—'; })()}</b></td></tr>`;
+  return `<table class="pr-t"><colgroup>${pdf ? '' : '<col style="width:105px"><col style="width:120px">'}<col style="width:190px"><col style="width:86px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:40px"></colgroup>
+   <thead><tr>${pdf ? '' : '<th>Sistema</th><th>Equipamento</th>'}<th>Serviço</th><th>Frequência</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${rows || '<tr><td colspan="18">Sem serviços.</td></tr>'}</tbody><tfoot>${foot}</tfoot></table>`;
+}
+function prFrota(ano, pdf) {
+  const V = S.cfg.frota.filter(v => !foraOp(v)), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1;
+  const tot = PR_MES.map(() => ({ p: 0, r: 0, ok: 0, den: 0 })); let tF = 0, tFm = 0;
+  const rows = V.map(v => { const L = prLinhas(v, ano), P = Array(12).fill(0), Rr = Array(12).fill(0), Ok = Array(12).fill(0), Lt = Array(12).fill(0), Ms = Array(12).fill(0);
+    L.forEach(g => g.M.forEach((m, i) => { P[i] += g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late; Rr[i] += m.ok + m.late; Ok[i] += m.ok; Lt[i] += m.late; Ms[i] += m.miss; }));
+    const venc = Ms.reduce((a, x) => a + x, 0), mesFalta = hm >= 0 && hm < 12 ? Math.max(0, P[hm] - Rr[hm] - Ms[hm]) : 0, ok = Ok.slice(0, hm + 1).reduce((a, x) => a + x, 0), den = ok + Lt.slice(0, hm + 1).reduce((a, x) => a + x, 0) + Ms.slice(0, hm + 1).reduce((a, x) => a + x, 0), ad = den ? Math.round(ok / den * 100) : null;
+    tF += venc; tFm += mesFalta; P.forEach((x, i) => { tot[i].p += x; tot[i].r += Rr[i]; tot[i].ok += Ok[i]; if (i <= hm) tot[i].den += Ok[i] + Lt[i] + Ms[i]; });
+    const cP = P.map((n, i) => `<td class="pr-c p${i === hm ? ' hj' : ''}">${n || ''}</td>`).join('');
+    const cR = Rr.map((n, i) => `<td class="pr-c r ${i > hm ? '' : Ms[i] ? 'miss' : Lt[i] ? 'late' : n ? 'ok' : ''}${i === hm ? ' hj' : ''}" title="${n} realizados · ${Lt[i]} com atraso · ${Ms[i]} não feitos">${i > hm ? '' : (n || (P[i] ? '0' : '')) + (Ms[i] ? '<small> ✗' + Ms[i] + '</small>' : '')}</td>`).join('');
+    const nome = pdf ? `<b>${esc(v.nome)}</b>` : `<a href="#cxr" data-prv="${v.id}"><b>${esc(v.nome)}</b></a>`;
+    return `<tr class="pr-p"><td class="pr-sv" rowspan="2">${nome}</td><td class="pr-l">P</td>${cP}<td class="pr-t">${P.reduce((a, x) => a + x, 0)}</td><td class="pr-fa" rowspan="2">${venc ? `<b style="color:#C5221F">${venc} vencido${venc > 1 ? 's' : ''}</b>` : '<span style="color:#188038">nada vencido</span>'}${mesFalta ? `<small>${mesFalta} ainda neste mês</small>` : ''}</td><td class="pr-ad" rowspan="2"><b style="color:${ad == null ? '#5F6368' : ad >= 90 ? '#188038' : ad >= 75 ? '#B06000' : '#C5221F'}">${ad == null ? '—' : ad + '%'}</b></td></tr>
+     <tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${Rr.reduce((a, x) => a + x, 0)}</td></tr>`; }).join('');
+  const okT = tot.reduce((a, t) => a + t.ok, 0), dT = tot.reduce((a, t) => a + t.den, 0);
+  const foot = `<tr class="pr-tot"><td colspan="2">Frota · previsto</td>${tot.map(x => `<td class="pr-c">${x.p || ''}</td>`).join('')}<td class="pr-t">${tot.reduce((a, x) => a + x.p, 0)}</td><td rowspan="3" class="pr-fa"><b style="color:${tF ? '#C5221F' : '#188038'}">${tF} vencidos</b>${tFm ? `<small>${tFm} ainda neste mês</small>` : ''}</td><td rowspan="3" class="pr-ad"><b>${dT ? Math.round(okT / dT * 100) + '%' : '—'}</b></td></tr>
+   <tr class="pr-tot"><td colspan="2">Frota · realizado</td>${tot.map((x, i) => `<td class="pr-c">${i > hm ? '' : x.r}</td>`).join('')}<td class="pr-t">${tot.reduce((a, x) => a + x.r, 0)}</td></tr>
+   <tr class="pr-tot"><td colspan="2">Aderência</td>${tot.map((x, i) => `<td class="pr-c"><b>${i <= hm && x.den ? Math.round(x.ok / x.den * 100) + '%' : ''}</b></td>`).join('')}<td class="pr-t"></td></tr>`;
+  return `<table class="pr-t"><colgroup><col style="width:120px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:46px"><col style="width:150px"><col style="width:80px"></colgroup>
+   <thead><tr><th>Embarcação</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Falta fazer</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`;
+}
+function vPR() {
+  const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (PRV.v !== 'frota' && !ativos.some(v => v.id === PRV.v)) PRV.v = 'frota';
+  const v = PRV.v === 'frota' ? null : vessel(PRV.v), ano = +PRV.ano, B = v && cronoBase(ano, v.id), nAp = ativos.filter(a => cronoBase(ano, a.id)).length;
+  const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
+  return `<div class="vh"><div><h1>Previsto × realizado · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada barco)</button></div>
+   <div class="card row" style="gap:12px;flex-wrap:wrap"><select id="prV" style="font-size:18px;font-weight:600;width:auto;min-width:150px"><option value="frota"${PRV.v === 'frota' ? ' selected' : ''}>Frota toda</option>${ativos.map(a => `<option value="${a.id}"${a.id === PRV.v ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>
+    <select id="prA" style="width:auto">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select>
+    ${v ? (B ? `<span class="pill p-ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : `<span class="pill p-warn">Previsto ainda não aprovado</span>`) : `<span class="pill ${nAp === ativos.length ? 'p-ok' : 'p-warn'}">${nAp}/${ativos.length} barcos com o previsto aprovado</span>`}<span class="sp"></span>
+    ${can.admin() ? `<button class="mbtn ${(v ? B : nAp === ativos.length) ? '' : 'pri'}" data-prapr>${(v ? B : nAp) ? 'Revisar aprovação da frota' : '✓ Aprovar o previsto de ' + ano + ' (frota)'}</button>` : ''}</div>
+   <div class="card pr-card"><div class="pr-hd"><b>Cronograma de manutenção preventiva · previsto × realizado</b><span>${esc(v ? v.nome : 'Frota toda')} · ${ano}</span></div>${v ? '' : '<p class="note" style="margin:-2px 0 8px">Número = quantidade de serviços no mês. Clique no barco para ver serviço por serviço.</p>'}<div class="tw">${v ? prTabela(v, ano) : prFrota(ano)}</div>
+    <div class="pr-ass"><div>Supervisor de Manutenção</div><div>Data</div></div></div>`;
+}
+VX.cxr = vPR;
+AFTER.cxr = function () { const m = $('#main');
+  m.onchange = e => { if (e.target.id === 'prV') { PRV.v = e.target.value; render(); } if (e.target.id === 'prA') { PRV.ano = +e.target.value; render(); } };
+  m.onclick = async e => { const a = e.target.closest('[data-prv]'); if (a) { e.preventDefault(); PRV.v = a.dataset.prv; render(); window.scrollTo(0, 0); return; } const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.prpdf) { const all = S.cfg.frota.filter(v => !foraOp(v)); return prPDF(b.dataset.prpdf === 'um' ? [vessel(PRV.v)] : b.dataset.prpdf === 'resumo' ? [] : all, +PRV.ano, b.dataset.prpdf !== 'um'); }
+    if ('prapr' in b.dataset) { if (!precisa(true)) return; b.disabled = true; await prAprovar(S.cfg.frota.filter(v => !foraOp(v)), +PRV.ano); toast('Previsto de ' + PRV.ano + ' aprovado para a frota.'); render(); } }; };
+function prPDF(vs, ano, resumo) {
+  const css = [...document.querySelectorAll('style')].map(x => x.textContent).filter(x => x.includes('.pr-t{')).join('\n');
+  const pg = vs.map((v, i0) => { const i = i0 + (resumo ? 1 : 0); const B = cronoBase(ano, v.id); return `<section${i ? ' style="page-break-before:always"' : ''}><div class="hd"><img src="${LOGOS.nav}" alt=""><img src="${LOGOS.vda}" alt=""><div><h1>Cronograma de manutenção preventiva · previsto × realizado · ${ano}</h1><p><b>${esc(v.nome)}</b> · plano: Anexo I da NP Navecunha 055 · ${B ? 'previsto aprovado por ' + esc(B.aprovBy) + ' em ' + brD(B.aprovAt) + ' (rev. ' + B.rev + ')' : 'previsto não aprovado'} · emitido em ${hoje().toLocaleDateString('pt-BR')}</p></div></div>
+   <p class="lg"><b>P</b> previsto · <b>R</b> realizado: <span style="color:#188038">✓ no prazo</span> · <span style="color:#B06000">✓ com atraso</span> · <span style="color:#C5221F">✗ venceu e não foi feito</span> · número = quantidade no mês</p>${prTabela(v, ano, true)}
+   <div class="ass"><div>Supervisor de Manutenção</div><div>Data</div></div></section>`; }).join('');
+  const capa = resumo ? `<section><div class="hd"><img src="${LOGOS.nav}" alt=""><img src="${LOGOS.vda}" alt=""><div><h1>Cronograma de manutenção preventiva · previsto × realizado · ${ano} · frota</h1><p>Plano: Anexo I da NP Navecunha 055 · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SGMF</p></div></div><p class="lg">P previsto · R realizado (quantidade de serviços no mês) · ✗ = venceram e não foram feitos</p>${prFrota(ano, true)}<div class="ass"><div>Supervisor de Manutenção</div><div>Data</div></div></section>` : '';
+  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para gerar o PDF.');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Previsto x realizado ${ano}</title><style>${css}
+   @page{size:A4 landscape;margin:7mm}body{margin:0;font-family:Arial,sans-serif}.hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:5px;margin-bottom:5px}.hd img{height:32px}.hd h1{font-size:14px;margin:0;color:#16244A}.hd p{margin:2px 0 0;font-size:10px;color:#3C4043}.lg{font-size:9.5px;margin:3px 0 5px}
+   .pr-t{font-size:8.3px}.pr-t th{position:static}.pr-c{height:13px}.ass{display:flex;gap:80px;margin-top:18px}.ass div{flex:1;border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}tr{page-break-inside:avoid}thead{display:table-header-group}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${capa}${pg}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
+}
+async function prAprovar(vs, ano) {   // congela o previsto (linha de base) de cada serviço, além do resumo por equipamento
+  for (const v of vs) { const L = prLinhas(v, ano), id = 'crono-' + ano + '-' + v.id, B0 = S.recs.get(id), linhasPR = {}, linhasEq = {};
+    L.forEach(g => { const pv = g.M.map(m => m.plan + m.miss + m.ok + m.late); linhasPR[g.k] = pv; linhasEq[g.eqKey] = (linhasEq[g.eqKey] || Array(12).fill(0)).map((x, i) => x + pv[i]); });
+    await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasPR, linhasEq }); }
+}
+cr3Aprovar = prAprovar;
+{ const s = SECOES.find(x => x.id === 'crono'); if (s) { const c = s.views.find(x => x[0] === 'cxr'); if (c) c[1] = 'Previsto × realizado'; const i = s.views.findIndex(x => x[0] === 'cxr'); if (i > 1) { const [it] = s.views.splice(i, 1); s.views.splice(1, 0, it); } } }
+['cxr'].forEach(k => { const i = LAY_VIEWS.indexOf(k); if (i >= 0) LAY_VIEWS.splice(i, 1); });
+{ const st = document.createElement('style'); st.textContent = `.pr-hd{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px;font-size:15px}.pr-hd span{color:#3C4043}
+ .pr-t{width:100%;border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000}
+ .pr-t th{background:#16244A;color:#fff;border:1px solid #16244A;padding:5px 2px;font-weight:700;text-align:center;position:sticky;top:0;z-index:1}.pr-t th.hj{background:#1967D2}
+ .pr-t td{border:1px solid #BDC1C6;padding:2px 4px;vertical-align:middle}.pr-ms,.pr-me{font-weight:700;vertical-align:top!important;padding-top:6px!important;border-color:#5F6368!important;background:#fff}.pr-me small{display:block;font-weight:400;color:#5F6368;font-size:10.5px}
+ .pr-sv b{display:block;font-weight:600}.pr-sv small{color:#5F6368;font-size:10.5px}.pr-f{text-align:center;font-size:11px}.pr-l{text-align:center;font-weight:700;font-size:11px;color:#3C4043;background:#F8F9FA}
+ .pr-c{text-align:center;font-weight:700;height:20px}.pr-c.p{color:#5F6368;background:#F1F3F4}.pr-c.hj{outline:2px solid #1967D2;outline-offset:-2px}.pr-c.r.ok{background:#E6F4EA;color:#188038}.pr-c.r.late{background:#FEF3E0;color:#B06000}.pr-c.r.miss{background:#FCE8E6;color:#C5221F}
+ .pr-r td{border-bottom:2px solid #9AA0A6}.pr-t td.pr-t{text-align:center;font-weight:700;background:#F8F9FA}.pr-tot td{background:#E8F0FE;font-weight:600}.pr-fa small{display:block;color:#5F6368;font-size:11px}.pr-fa,.pr-ad{text-align:center;background:#fff}.pr-c small{color:#C5221F;font-weight:700}.pr-gs td{background:#16244A;color:#fff;font-weight:700}.pr-ge td{background:#E8F0FE;font-weight:700}.pr-tot td:first-child{text-align:right}
+ .pr-card .tw{max-height:74vh;overflow:auto}.pr-ass{display:none}
+ @media print{@page{size:A4 landscape;margin:7mm}#nav,.side,aside,.vh,.card.row,.banner,.subnav,.tabs{display:none!important}.pr-card{border:0!important;box-shadow:none!important;padding:0!important}.pr-card .tw{max-height:none;overflow:visible}.pr-t{font-size:8.5px}.pr-t th{position:static}.pr-ass{display:flex;gap:80px;margin-top:22px}.pr-ass div{flex:1;border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}tr{page-break-inside:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`; document.head.appendChild(st); }
+
+</script>
 </body>
 </html>
