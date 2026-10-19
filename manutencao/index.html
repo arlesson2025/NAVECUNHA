@@ -6776,7 +6776,7 @@ function rgPend(P) {
   if (semR) out.push(semR + (semR === 1 ? ' item sem marcação' : ' itens sem marcação') + ' (OK / NOK / NA)');
   if (semObs) out.push(semObs + ' NOK/NA sem motivo');
   if (medF) out.push(medF + (medF === 1 ? ' medição faltando ou fora da especificação' : ' medições faltando ou fora da especificação'));
-  if (P.some(o => o.alvoH && R.hr[o.pos] && +R.hr[o.pos] > o.alvoH) && !(R.justif || '').trim()) out.push('Justificativa: executada depois da hora-alvo');
+  { const L = P.filter(o => o.alvoH && R.hr[o.pos] && +R.hr[o.pos] > o.alvoH); if (L.length && !(R.justif || '').trim()) out.push('Justificativa de atraso (campo no item 1): ' + L.map(o => posCurtoE(v, o.pos) + ' feito com ' + nf(+R.hr[o.pos]) + ' h, devia ser até ' + nf(o.alvoH) + ' h').join(' · ')); }
   const regs = rgRegs(P); regs.forEach(r => { if (!((R.regs[r] || '').trim())) out.push(REGN[r]); });
   if (regs.length === 0 && P.some(o => regsDe({ items: o.itensProg || o.items }).includes('pt')) && !(R.pt || '').trim()) out.push('Nº da PT do SESMT');
   if (R.resid === 'Sim' && !(R.fr016 || '').trim()) out.push('Nº do FR 016_E (resíduos)'); if (!R.resid) out.push('Resíduos: gerou ou não');
