@@ -7209,5 +7209,57 @@ AFTER.crono = after3; AFTER.cxr = after3;
 { const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'cxr'); if (i >= 0) s.views.splice(i, 1); const c = s.views.find(x => x[0] === 'crono'); if (c) c[1] = 'Cronograma (planejado × realizado)'; s.extra = (s.extra || []).concat(['cxr']); } }
 
 </script>
+<script>
+/* ===== Onde está cada barco: "Chegou em Manaus" / "Saiu de viagem" · Rotina do dia só com o que é para agora ===== */
+'use strict';
+const situDe = v => v.situ || null;   // { st: 'porto' | 'viagem', at: 'AAAA-MM-DD', by }
+async function situSalvar(vid, st) {
+  const v = vessel(vid); if (!v) return; v.situ = { st, at: isoD(hoje()), by: S.session ? S.session.name : '' };
+  S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg);
+  if (S.url && can.admin()) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } } catch (e) { } }
+}
+const diasDesde = d => d ? Math.max(0, Math.round((hoje() - pD(d)) / 864e5)) : null;
+function oleoDoBarco(v) {
+  return cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA|Motobomba/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null)
+    .map(x => ({ nome: MCAS.includes(x.p.pos) ? posCurtoE(v, x.p.pos) : x.l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''), rest: x.p.rest, pos: x.p.pos })).sort((a, b) => a.rest - b.rest);
+}
+vRotina = function () {
+  const D = rotinaDados(), A = D.filter(x => !x.fora), hv = hViagem();
+  const porto = A.filter(x => situDe(x.v) && x.v.situ.st === 'porto'), viag = A.filter(x => situDe(x.v) && x.v.situ.st === 'viagem'), sem = A.filter(x => !situDe(x.v));
+  const hrTxt = x => x.hr ? nf(x.hr.h) + ' h · ' + (x.dHr === 0 ? 'hoje' : 'há ' + x.dHr + ' d') : 'sem leitura';
+  const omPasso = x => { const p = rotinaPasso(x); return p.n >= 2 && p.n <= 5 ? `<div class="rt2-l"><span class="rt-n" style="background:#1967D2">${p.n}</span><span>${p.txt}</span><span class="sp"></span>${p.btn}</div>` : ''; };
+  const cardPorto = x => { const v = x.v, O = oleoDoBarco(v), oleoAgora = O.filter(o => o.rest < hv), n = x.venc.length + x.viag.length, d = diasDesde(v.situ.at), crit = x.crit;
+    const hrVelho = !x.hr || pD(x.hr.date) < pD(v.situ.at);
+    return `<div class="rt2-c porto"><div class="rt2-h"><b>${esc(v.nome)}</b><span class="note">no porto ${d === 0 ? 'desde hoje' : 'há ' + d + (d === 1 ? ' dia' : ' dias')}</span><span class="sp"></span><button class="mbtn sm" data-situ="${v.id}|viagem">⛴ Saiu de viagem</button></div>
+     ${crit ? `<div class="rt2-l bad">⛔ <b>Saída bloqueada:</b> item Crítico vencido sem OM.</div>` : ''}
+     ${hrVelho ? `<div class="rt2-l"><span>⏱ Lançar o horímetro da chegada</span><span class="sp"></span><a class="mbtn sm" href="#hor">Lançar</a></div>` : ''}
+     ${omPasso(x) || (n ? `<div class="rt2-l"><span>🔧 <b>OM da janela:</b> ${x.venc.length ? `<b style="color:#D93025">${x.venc.length} vencidos</b> + ` : ''}${x.viag.length} vencem antes da volta</span><span class="sp"></span><a class="mbtn sm pri" href="#emitir/${v.id}">Programar OM</a></div>` : '<div class="rt2-l ok">✓ Nada da janela vence antes da volta</div>')}
+     ${oleoAgora.length ? `<div class="rt2-l"><span>🛢 <b>Troca de óleo antes de sair</b> (equipe + CTF/MFM) ou mandar óleo e filtros: ${oleoAgora.map(o => esc(o.nome) + (o.rest < 0 ? ' <b style="color:#D93025">vencida</b>' : ' faltam ' + nf(o.rest) + ' h')).join(' · ')}</span><span class="sp"></span><a class="mbtn sm" href="#lubreg">FR 049_B</a></div>` : '<div class="rt2-l ok">✓ Óleo aguenta a próxima viagem</div>'}
+    </div>`; };
+  const linhaViag = x => { const v = x.v, O = oleoDoBarco(v), o = O[0], d = diasDesde(v.situ.at), rate = (typeof horasDiaPos === 'function' && o && horasDiaPos(v.id, o.pos)) || 20;
+    const quando = o ? (o.rest < 0 ? `<b style="color:#D93025">${esc(o.nome)}: troca vencida (${nf(-o.rest)} h)</b>` : `${esc(o.nome)}: faltam ${nf(o.rest)} h ≈ ${o.rest / rate < 1 ? 'hoje/amanhã' : 'em ' + Math.round(o.rest / rate) + ' dias'}`) : 'sem horímetro';
+    const urg = o && o.rest < rate * 2;
+    return `<tr class="${urg ? 'rt2-urg' : ''}"><td><b>${esc(v.nome)}</b></td><td class="note">viajando ${d === 0 ? 'desde hoje' : 'há ' + d + ' d'}</td><td>🛢 ${quando}${urg ? ' · <b>acompanhar a troca pela câmera e lançar o FR 049_B</b>' : ''}</td><td class="note mono">${hrTxt(x)}</td><td class="rt-b">${urg ? '<a class="mbtn sm" href="#lubreg">FR 049_B</a>' : ''}<button class="mbtn sm" data-situ="${v.id}|porto">⚓ Chegou em Manaus</button></td></tr>`; };
+  const corr = A.reduce((a, x) => a + x.corr.length, 0);
+  return `<div class="vh"><div><h1>Rotina do dia</h1><p>Barco no porto: o que fazer antes de sair. Barco viajando: só a troca de óleo quando chegar a hora. Informe quando o barco chega e sai.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
+   ${sem.length ? `<div class="card rt2-sem"><h2>Onde está cada barco?</h2><p class="note">Informe uma vez. Depois é só clicar quando o barco chegar ou sair.</p>${sem.map(x => `<div class="rt2-l"><b style="min-width:90px">${esc(x.v.nome)}</b><span class="sp"></span><button class="mbtn sm" data-situ="${x.v.id}|porto">⚓ Está no porto</button><button class="mbtn sm" data-situ="${x.v.id}|viagem">⛴ Está viajando</button></div>`).join('')}</div>` : ''}
+   <h2 class="rt2-t">⚓ No porto de Manaus <span>${porto.length}</span></h2>
+   ${porto.length ? `<div class="rt2-g">${porto.map(cardPorto).join('')}</div>` : '<p class="note">Nenhum barco no porto.</p>'}
+   <h2 class="rt2-t">⛴ Em viagem <span>${viag.length}</span></h2>
+   ${viag.length ? `<div class="card"><div class="tw"><table class="t rt-t">${viag.map(linhaViag).join('')}</table></div></div>` : '<p class="note">Nenhum barco em viagem.</p>'}
+   ${corr ? `<p class="note" style="margin-top:14px">Corretivas abertas: <b>${corr}</b> · <a href="#acomp">ver OMs em execução</a></p>` : ''}
+   ${D.filter(x => x.fora).length ? `<p class="note">Fora de operação: ${D.filter(x => x.fora).map(x => esc(x.v.nome)).join(', ')}</p>` : ''}`;
+};
+VX.rotina = vRotina;
+AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
+  if (t.dataset.situ) { if (!precisa(false)) return; const [vid, st] = t.dataset.situ.split('|'); await situSalvar(vid, st); toast(vName(vid) + (st === 'porto' ? ' no porto de Manaus.' : ' saiu de viagem.')); render(); return; }
+  if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); } render(); } }; };
+{ const st = document.createElement('style'); st.textContent = `.rt2-t{display:flex;align-items:center;gap:8px;font-size:17px;margin:18px 0 8px;color:#16244A}.rt2-t span{background:#E8F0FE;color:#1967D2;border-radius:10px;padding:0 9px;font-size:13px}
+ .rt2-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px}.rt2-c{background:#fff;border:1px solid var(--line,#DADCE0);border-left:5px solid #1967D2;border-radius:10px;padding:10px 14px}
+ .rt2-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}.rt2-h b{font-size:16px}.rt2-l{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #F1F3F4;font-size:14px;line-height:1.35}.rt2-l .mbtn{white-space:nowrap}
+ .rt2-l.ok{color:#188038}.rt2-l.bad{color:#C5221F}.rt2-urg td{background:#FEF7E0}.rt2-sem .rt2-l{border-top:1px solid #F1F3F4}@media (max-width:760px){.rt2-g{grid-template-columns:1fr}}`; document.head.appendChild(st); }
+
+</script>
 </body>
 </html>
