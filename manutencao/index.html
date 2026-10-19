@@ -7455,7 +7455,9 @@ AFTER.oms = function () { $('#main').onclick = async e => { const t = e.target.c
     { id: 'oleo', nome: 'Óleo', views: [['oleo', 'Óleo da frota'], ['lubreg', 'Trocas lançadas']] },
     { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma do barco'], ['audit', 'Planejado × realizado'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
     { id: 'omsv2', nome: 'OMs', views: [['oms', 'Abertas e encerradas']], extra: ['emitir', 'omg', 'om', 'acomp', 'prev', 'corr', 'hist'] },
+    { id: 'graf', nome: 'Gráficos', views: [['controle', 'Docagem, calibração, MBC, óleo'], ['geral', 'Painel de gestão'], ['falhas', 'Análise de falhas'], ['kpi', 'Indicadores']], cfg: true },
     { id: 'adm', nome: 'Administração', views: [['admin', 'Administração'], ['hor', 'Horímetros'], ['matriz', 'Anexo I'], ['frota', 'Vencimentos (detalhe)']], cfg: true });
+  ICO.graf = ICO.ger || ICO.anal || ICO.cond;
 }
 ['crono', 'oms', 'oleo', 'rotina', 'audit'].forEach(k => { const i = LAY_VIEWS.indexOf(k); if (i >= 0) LAY_VIEWS.splice(i, 1); });
 { const st = document.createElement('style'); st.textContent = `.cv-tit{font-weight:700;font-size:15px;margin:0 0 8px}.cv-t{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;color:#000}
