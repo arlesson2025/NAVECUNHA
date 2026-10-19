@@ -6984,7 +6984,7 @@ function cronoMarcas(v, ano) {   // por PACOTE: uma execução programada por ve
 }
 /* ---------- próximo vencimento por linha (para a janela e o óleo) ---------- */
 function proxLinha(v, l) {
-  let best = null; l.its.forEach(({ t, pos }) => { const s = situacao(v, pos, t); if (!s.L && s.st === 'sem') return; const hr = horAtual(v.id, posHor(pos, t, v.id)), rest = s.alvoH != null && hr ? s.alvoH - hr.h : null;
+  let best = null; l.its.filter(({ t, pos }) => l.tr !== 'bordo' || !compDe(v, pos, t)).forEach(({ t, pos }) => { const s = situacao(v, pos, t); if (!s.L && s.st === 'sem') return; const hr = horAtual(v.id, posHor(pos, t, v.id)), rest = s.alvoH != null && hr ? s.alvoH - hr.h : null;
     const dd0 = s.alvoD ? Math.round((pD(s.alvoD) - hoje()) / 864e5) : null, dd = dd0 != null && dd0 < -3650 ? null : dd0; const sc = rest != null ? rest / Math.max(1, horasDiaPos ? (horasDiaPos(v.id, posHor(pos, t, v.id)) || 10) : 10) : dd;
     if (sc == null) return; if (!best || sc < best.sc) best = { sc, rest, dd, s, t, pos }; });
   return best;
@@ -7055,9 +7055,9 @@ AFTER.crono = function () { const m = $('#main');
       t.disabled = true; t.textContent = 'Aprovando…'; await cronoAprovar(vs, +CR2.ano); toast('Cronograma ' + CR2.ano + ' aprovado' + (vs.length > 1 ? ' para ' + vs.length + ' embarcações.' : '.')); render(); } }; };
 { const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'crono'); if (i >= 0) s.views[i][1] = 'Cronograma anual'; const m = s.views.findIndex(x => x[0] === 'matriz'); if (m >= 0) s.views[m][1] = 'Anexo I · consulta'; }
   const c = s && s.views.splice(s.views.findIndex(x => x[0] === 'crono'), 1)[0]; if (c) s.views.unshift(c); }
-// rotina: mostrar a próxima troca de óleo a bordo
-{ const r0 = vRotina; vRotina = function () { let h = r0(); const hv = hViagem(); const L = S.cfg.frota.filter(v => !foraOp(v)).map(v => { const o = cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null && x.p.rest < hv); return { v, o }; }).filter(x => x.o.length);
-  if (!L.length) return h; const card = `<div class="card"><h2>Troca de óleo · vence na próxima viagem</h2><p class="note">Se der, trocar no porto antes da saída (equipe de manutenção + CTF/MFM). Se não, mandar óleo e filtros: a tripulação troca em viagem com os itens de 250 h, você acompanha pela câmera e lança o FR 049_B.</p><div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Motor</th><th>Situação</th><th></th></tr></thead><tbody>${L.flatMap(x => x.o.map(({ l, p }) => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${esc(l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''))}</td><td class="mono">${p.rest < 0 ? `<b style="color:#D93025">${nf(-p.rest)} h vencido</b>` : 'faltam ' + nf(p.rest) + ' h'}</td><td><a class="mbtn sm" href="#lubreg">Lançar FR 049_B</a></td></tr>`)).join('')}</tbody></table></div></div>`;
+// rotina: troca de óleo só aparece quando estiver VENCIDA, numa linha curta
+{ const r0 = vRotina; vRotina = function () { let h = r0(); const L = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, o: cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null && x.p.rest < 0) })).filter(x => x.o.length);
+  if (!L.length) return h; const card = `<div class="banner bad" style="margin-bottom:12px"><b>Troca de óleo vencida:</b> ${L.map(x => esc(x.v.nome) + ' (' + x.o.map(({ l }) => esc(l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''))).join(', ') + ')').join(' · ')}. <a href="#lubreg">Lançar FR 049_B</a></div>`;
   const i = h.indexOf('<div class="card"><div class="tw"><table class="t rt-t">'); return i > 0 ? h.slice(0, i) + card + h.slice(i) : h + card; }; VX.rotina = vRotina; }
 
 </script>
