@@ -8041,25 +8041,26 @@ function riscoHTML() {
   const { out, alertas } = riscoDados(), alto = out.filter(x => x.nivel === 'alto'), sg = n => (n > 0 ? '+' : n < 0 ? '−' : '+') + nf(Math.abs(n));
   const omA = alto.reduce((a, x) => a + x.ab, 0), hm = out.filter(x => x.hr != null), med = hm.length ? hm.reduce((a, x) => a + x.hr, 0) / hm.length : null;
   const L = out.filter(x => RK_F === 'todas' || x.nivel === RK_F);
-  return `<div class="card rk" data-lk="Gestao de riscos"><div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:10px"><div><h2>Gestão de riscos &amp; alertas críticos</h2><p class="rk-sub">Embarcações em risco, pendências regulatórias e matriz completa da frota.</p></div><span class="sp"></span><div class="seg">${[6, 12, 24].map(m => `<button data-falper="${m}" class="${m === FALPER ? 'on' : ''}">${m} meses</button>`).join('')}</div><button class="mbtn pri" style="margin-right:40px" data-act="novaCorr">＋ Nova corretiva</button></div>
-  <div class="rk-g"><div class="rk-p"><div class="rk-h"><b>Embarcações em risco alto</b>${alto.length ? '<span class="rk-bd alto">AÇÃO IMEDIATA</span>' : '<span class="rk-bd baixo">SOB CONTROLE</span>'}</div>
+  const cab = `<div class="ab4-sec rk-sec"><h2>Gestão de riscos &amp; alertas críticos</h2><span class="note">embarcações em risco, pendências regulatórias e matriz da frota</span><span class="sp"></span><div class="seg">${[6, 12, 24].map(m => `<button data-falper="${m}" class="${m === FALPER ? 'on' : ''}">${m} meses</button>`).join('')}</div><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>`;
+  const c1 = `<div class="card rk" data-lk="Risco alto"><div class="rk-h"><h2>Embarcações em risco alto</h2>${alto.length ? '<span class="rk-bd alto">AÇÃO IMEDIATA</span>' : '<span class="rk-bd baixo">SOB CONTROLE</span>'}</div>
     <div class="rk-big"><span style="color:${alto.length ? '#DC2626' : '#16A34A'}">${alto.length}</span><em>de ${out.length} embarcações ativas</em></div>
-    <div class="rk-2"><div><b>${omA}</b><small>OM aberta${omA === 1 ? '' : 's'}${alto.length ? ' nos barcos em risco' : ''}</small></div><div><b>${med == null ? '—' : nf(Math.round(med)) + ' h'}</b><small>horímetro médio MCP</small></div></div>
-    <div class="rk-at">Alertas críticos</div>
+    <div class="rk-2"><div><b>${omA}</b><small>OM aberta${omA === 1 ? '' : 's'}${alto.length ? ' nos barcos em risco' : ''}</small></div><div><b>${med == null ? '—' : nf(Math.round(med)) + ' h'}</b><small>horímetro médio MCP</small></div></div></div>`;
+  const c2 = `<div class="card rk" data-lk="Alertas criticos"><div class="rk-h"><h2>Alertas críticos</h2><span class="note"><b style="color:#DC2626">${alertas.filter(a => a.p === 1).length}</b> P1 · <b style="color:#D97706">${alertas.filter(a => a.p === 2).length}</b> P2</span></div>
     ${alertas.length ? alertas.slice(0, 12).map(a => `<div class="rk-al"><span class="rk-pp p${a.p}">P${a.p}</span>${esc(a.t)}</div>`).join('') + (alertas.length > 12 ? `<div class="note">+ ${alertas.length - 12} alertas</div>` : '') : '<div class="note">Nenhum alerta crítico.</div>'}
-    <div class="note" style="margin-top:8px">P1 = vencido ou interditado · P2 = vence em breve (docagem ≤ 90 d, calibração ≤ 30 d, óleo ≤ 50 h)</div></div>
-   <div class="rk-p"><b>Matriz de risco da frota</b><div class="rk-f">${[['todas', 'Todas'], ['alto', 'Alto'], ['medio', 'Médio'], ['baixo', 'Baixo']].map(([k, n]) => `<button data-rkf="${k}" class="${RK_F === k ? 'on' : ''}">${n}</button>`).join('')}</div>
-    <table class="rk-t"><thead><tr><th>Embarcação</th><th>Horímetro MCP</th><th>Até óleo</th><th>Calibração</th><th>Risco</th></tr></thead><tbody>
-    ${L.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${x.hr == null ? '—' : nf(x.hr, 1)}</td><td style="color:${x.ol != null && x.ol < 0 ? '#DC2626' : ''}">${x.ol == null ? '—' : sg(x.ol) + ' h'}</td><td style="color:${x.cal != null && x.cal < 0 ? '#DC2626' : ''}">${x.cal == null ? '—' : sg(x.cal) + ' d'}</td><td><span class="rk-bd ${x.nivel}">${x.nivel === 'medio' ? 'MÉDIO' : x.nivel.toUpperCase()}</span></td></tr>`).join('') || '<tr><td colspan="5" class="note">Nenhuma embarcação neste filtro.</td></tr>'}
-    </tbody></table><div class="note">Até óleo = horas até a troca do MCP mais próxima · Calibração = dias até a próxima calibração · negativo = vencido</div></div></div></div>`;
+    <div class="note" style="margin-top:8px">P1 = vencido ou interditado · P2 = vence em breve (docagem ≤ 90 d, calibração ≤ 30 d, óleo ≤ 50 h)</div></div>`;
+  const c3 = `<div class="card rk" data-lk="Matriz de risco"><h2>Matriz de risco da frota</h2><div class="rk-f">${[['todas', 'Todas'], ['alto', 'Alto'], ['medio', 'Médio'], ['baixo', 'Baixo']].map(([k, n]) => `<button data-rkf="${k}" class="${RK_F === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+    <div class="tw"><table class="rk-t"><thead><tr><th>Embarcação</th><th>Horímetro MCP</th><th>Até óleo</th><th>Calibração</th><th>OMs abertas</th><th>Risco</th></tr></thead><tbody>
+    ${L.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${x.hr == null ? '—' : nf(x.hr, 1)}</td><td style="color:${x.ol != null && x.ol < 0 ? '#DC2626' : ''}">${x.ol == null ? '—' : sg(x.ol) + ' h'}</td><td style="color:${x.cal != null && x.cal < 0 ? '#DC2626' : ''}">${x.cal == null ? '—' : sg(x.cal) + ' d'}</td><td>${x.ab || '—'}</td><td><span class="rk-bd ${x.nivel}">${x.nivel === 'medio' ? 'MÉDIO' : x.nivel.toUpperCase()}</span></td></tr>`).join('') || '<tr><td colspan="6" class="note">Nenhuma embarcação neste filtro.</td></tr>'}
+    </tbody></table></div><div class="note">Até óleo = horas até a troca do MCP mais próxima · Calibração = dias até a próxima calibração · negativo = vencido</div></div>`;
+  return cab + `<div class="two">${c1}${c2}</div>` + c3;
 }
 { const k0 = vKpi; vKpi = function () { const h = k0(), i = h.indexOf('<div class="two">'); return (i < 0 ? h : h.slice(0, i)) + riscoHTML(); }; VX.kpi = vKpi; }
 
 /* layout da tela Indicadores volta ao padrão uma vez (cards novos + gestão de riscos logo abaixo) */
-{ const a0 = layApply; layApply = function () { try { if (typeof LAY !== 'undefined' && LAY && Object.keys(LAY).length && !LAY._kr1) { delete LAY.kpi; LAY._kr1 = 1; kvSet('layout', LAY).catch(() => { }); } } catch (e) { } return a0.apply(this, arguments); }; }
+{ const a0 = layApply; layApply = function () { try { if (typeof LAY !== 'undefined' && LAY && Object.keys(LAY).length && !LAY._kr2) { delete LAY.kpi; LAY._kr1 = LAY._kr2 = 1; kvSet('layout', LAY).catch(() => { }); } } catch (e) { } return a0.apply(this, arguments); }; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-rkf]'); if (!b) return; RK_F = b.dataset.rkf; render(); });
 { const st = document.createElement('style'); st.textContent = `
-.card.rk h2{margin:0}.rk-sub{margin:2px 0 14px;color:#64748B;font-size:13px}
+.card.rk h2{margin:0;font-size:16px}.rk-sec .seg{margin:0}.rk-sec{align-items:center!important;flex-wrap:wrap}.card.rk .rk-h{margin-bottom:6px;padding-right:62px}.rk-sub{margin:2px 0 14px;color:#64748B;font-size:13px}
 .rk-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}@media(max-width:1000px){.rk-g{grid-template-columns:1fr}}
 .rk-p{border:1px solid #E3E8EF;border-radius:14px;padding:16px 18px;background:#fff;min-width:0;overflow:auto}
 .rk-p>b,.rk-h b{font-size:15px;font-weight:700;color:#0F172A}
