@@ -6783,7 +6783,7 @@ function rgPend(P) {
   const f = P[0].fotos || []; if (!f.some(x => x.tipo === 'ANTES')) out.push('Foto ANTES'); if (!f.some(x => x.tipo === 'DEPOIS')) out.push('Foto DEPOIS'); if (f.length && !f.every(x => (x.leg || '').trim())) out.push('Legenda em todas as fotos');
   return out;
 }
-const rgRegs = P => { const s = new Set(); P.forEach(o => regsDe({ items: o.itensProg || o.items }).forEach(r => s.add(r))); return [...s].filter(r => ['lote', 'fr049', 'instr', 'end', 'cert'].includes(r)); };
+const rgRegs = P => { const s = new Set(); P.forEach(o => regsDe({ items: o.itensProg || o.items }).forEach(r => s.add(r))); return [...s].filter(r => ['end', 'cert'].includes(r)); };   // lote do lubrificante, FR 049_B e instrumento ficam no formulário de troca de óleo
 function vOmg() {
   const g = ARG, P = omGrupo(g); if (!P.length) return '<div class="empty">OM não encontrada. Talvez ainda não tenha sincronizado.</div>';
   const o1 = P[0], v = vessel(o1.vessel), R = rgDados(P), st = grpStatus(P), fechada = st === 'encerrada', ro = fechada || !can.edit(), idx = grpOrd.indexOf(st);
@@ -6835,7 +6835,7 @@ async function rgAplicar(P) {
     o.liberacao = o.liberacao || (R.termino || (R.dreal ? R.dreal + 'T17:00' : '')); });
   for (const o of P) await saveRec(o);
 }
-{ const g0 = gateIIB; gateIIB = function (o) { const g = g0(o); if (!o.grupo || o.parte === 1) return g; const L = omGrupo(o.grupo)[0], f = (L && L.fotos) || [];
+{ const g0 = gateIIB; gateIIB = function (o) { let g = g0(o); if (o.grupo) { const fora = ['lote', 'fr049', 'instr'].map(r => REGN[r]); g = g.filter(x => !fora.includes(x[0])); } if (!o.grupo || o.parte === 1) return g; const L = omGrupo(o.grupo)[0], f = (L && L.fotos) || [];
   return g.filter(x => !/^Pelo menos uma foto|^Todas as fotos/.test(x[0])).concat([['Fotos da OM (na parte 1)', f.some(x => x.tipo === 'ANTES') && f.some(x => x.tipo === 'DEPOIS')]]); }; }
 VX.omg = vOmg;
 AFTER.omg = function () {
