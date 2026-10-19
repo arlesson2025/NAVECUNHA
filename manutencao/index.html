@@ -8115,7 +8115,7 @@ if (VX.controle) { const c0 = VX.controle; VX.controle = function () {
   const corta = id => { const a = t.querySelector('#' + id); if (!a) return; let n = a; while (n) { const nx = n.nextElementSibling; n.remove(); n = nx; if (n && n.id && /^cs-/.test(n.id)) break; } };
   corta('cs-lub'); corta('cs-hor');
   t.querySelectorAll('[data-csgo="lub"],[data-csgo="hor"]').forEach(b => b.remove());
-  t.querySelectorAll('.kgrid').forEach(g => { if (/caixa de mar vence na viagem/.test(g.textContent)) g.remove(); });
+  t.querySelectorAll('.kgrid').forEach(g => { if (/caixa de mar vence na viagem|docagens vencidas/.test(g.textContent)) g.remove(); });
   t.querySelectorAll('.card').forEach(c => { const h = ((c.querySelector('h2') || {}).textContent || '').trim(); if (/^B · (Frota: o item mais urgente|Todos os itens, por urgência)/.test(h) || /^B · Escopo de serviços da docagem/.test(h)) c.remove(); });
   return t.innerHTML; }; }
 
