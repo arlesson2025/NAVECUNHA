@@ -4019,7 +4019,7 @@ async function lubSalvarForm(data, win) {
     // motor de popa e motobomba 5 HP não têm horímetro (NP 7.3): a troca vale pelo horímetro do MCP na data
     const hMcp = (() => { const m = (data.eq || []).find(q => q.key === 'mcp1' && q.hr != null); if (m) return m.hr; const r = v && horEm(v.id, mpos(v.id), data.date); return r ? r.h : null; })();
     const eq = (data.eq || []).map(q => { const o = Object.assign({}, q); if (['popa', 'bomba'].includes(q.key) && q.status === 'T' && q.hr == null) { o.hr = hMcp; o.hrMcp = true; } if (v && q.status === 'T') { const e = lubEq(v, q.key); if (e) { o.pos = e.pos; o.hp = lubHp(v, e); o.itens = e.itens.filter((id, i) => i === 0 || (id === '1.6.2' && (q.filters || []).length));
-      if (o.hr != null && +o.hr < VOLTA && !['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) { const c = horCalc(v.id, o.hp, +o.hr, data.date); if (c && c.total) { o.hrPainel = +o.hr; o.hr = c.total; } } /* número do painel (volta a zero em 10.000 h) → horímetro total */ } } return o; });
+      if (o.hr != null && +o.hr < VOLTA && !['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) { const tot = horPainelTotal(v.id, o.hp, +o.hr, data.date); if (tot != null) { o.hrPainel = +o.hr; o.hr = tot; } } /* número do painel (volta a zero em 10.000 h) → horímetro total */ } } return o; });
     const rec = { id: uid('lub'), kind: 'lub', tipo: 'fr049', vessel: v ? v.id : '', vNome: data.vessel, tipoEmb: data.tipo || (v ? 'emp' : 'bal'), om: data.om, num: data.om, date: data.date, local: data.local, localTx: data.localTx, eq, me: data.me, nc: data.nc, atn: data.atn, obs: data.obs, residuos: data.residuos, nomes: data.nomes, fotos: data.fotos, fotosLocais: (fl.a.length || fl.d.length) ? fl : null, pages: out.pages, pdfName: data.pdfName, by: S.session.name };
     const b64 = out.pdf.output('datauristring').split(',')[1];
     await saveRec(rec, { pdfB64: b64 });
@@ -7225,13 +7225,19 @@ function oleoDoBarco(v) {
   return cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA|Motobomba/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null)
     .map(x => ({ nome: MCAS.includes(x.p.pos) ? posCurtoE(v, x.p.pos) : x.l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''), rest: x.p.rest, pos: x.p.pos })).sort((a, b) => a.rest - b.rest);
 }
+function horPainelTotal(vid, pos, h, date) {   // devolve o total se 'h' é com certeza o número do painel; senão null
+  if (h == null || +h >= VOLTA) return null;
+  const L = recs('hor').filter(r => r.vessel === vid && r.pos === pos && !r.est).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.h - b.h);
+  const ant = L.filter(r => r.date <= date).pop() || L[0]; if (!ant || ant.h < VOLTA) return null;
+  let t = Math.floor(ant.h / VOLTA) * VOLTA + +h; if (t < ant.h - 0.05 && ant.date <= date) t += VOLTA; return Math.round(t * 10) / 10;
+}
 let FRFIX = false;
 async function frPainelFix() {   // FR 049_B lançados com o número do painel (antes da correção): converte para o horímetro total
   if (FRFIX || !S.session) return; FRFIX = true; let n = 0;
   for (const r of recs('lub').filter(r => r.tipo === 'fr049' && r.vessel)) { const v = vessel(r.vessel); if (!v) continue; let mud = false;
     for (const q of r.eq || []) { if (q.status !== 'T' || q.hr == null || !q.hp || q.hrPainel != null || +q.hr >= VOLTA || ['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) continue;
-      const a = horAtual(v.id, q.hp); if (!a || a.est || a.h <= +q.hr + 1) continue; const c = horCalc(v.id, q.hp, +q.hr, r.date); if (!c || !c.total) continue;
-      q.hrPainel = +q.hr; q.hr = c.total; mud = true; await lubHor(v.id, q.hp, c.total, r.date, 'FR 049_B OM ' + r.om); }
+      if (r.seed) continue; const tot = horPainelTotal(v.id, q.hp, +q.hr, r.date); if (tot == null) continue;
+      q.hrPainel = +q.hr; q.hr = tot; mud = true; await lubHor(v.id, q.hp, tot, r.date, 'FR 049_B OM ' + r.om); }
     if (mud) { await saveRec(r); n++; } }
   if (n) { toast(n + (n === 1 ? ' FR 049_B corrigido' : ' FR 049_B corrigidos') + ': horímetro do painel convertido para o total.', 6000); render(); }
 }
@@ -7273,6 +7279,107 @@ AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { cons
  .rt2-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px}.rt2-c{background:#fff;border:1px solid var(--line,#DADCE0);border-left:5px solid #1967D2;border-radius:10px;padding:10px 14px}
  .rt2-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}.rt2-h b{font-size:16px}.rt2-l{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #F1F3F4;font-size:14px;line-height:1.35}.rt2-l .mbtn{white-space:nowrap}
  .rt2-l.ok{color:#188038}.rt2-l.bad{color:#C5221F}.rt2-urg td{background:#FEF7E0}.rt2-sem .rt2-l{border-top:1px solid #F1F3F4}@media (max-width:760px){.rt2-g{grid-template-columns:1fr}}`; document.head.appendChild(st); }
+
+</script>
+<script>
+/* ===== SGMF simples: Hoje · Óleo · Barcos · Cronograma · Consultas ===== */
+'use strict';
+/* ---------- Óleo da frota: bater o olho e ver vencido / vencendo / em dia ---------- */
+const OL_ALERTA_H = 50, OL_ALERTA_D = 3;
+const eqNomeC = (v, e) => !e ? '' : e.key === 'inc' ? 'Motobomba de incêndio' : e.g === 'mca' && v ? posCurtoE(v, e.pos) : e.nome;
+function olStatus(x) { if (x.s.st === 'sem' || x.horas == null) return 'sem'; if (x.horas < 0) return 'venc'; if (x.horas <= OL_ALERTA_H || (x.porData && x.dias != null && x.dias <= OL_ALERTA_D)) return 'aten'; return 'ok'; }
+function olValor(x) { if (x.horas == null) return '—'; if (x.porData && x.dias != null) { const d = Math.round(x.dias); return d < 0 ? 'vencido há ' + (-d) + ' d' : d === 0 ? 'vence hoje' : d + ' d'; } return x.horas < 0 ? nf(-x.horas) + ' h vencido' : nf(x.horas) + ' h'; }
+function olRotulo(v, e) {
+  if (e.g === 'mcp') return mcpPos(v).length > 1 ? e.pos : 'MCP';
+  if (e.g === 'crp') return mcpPos(v).length > 1 ? e.pos : 'Reversor';
+  if (e.key === 'inc') return 'Motobomba';
+  if (e.g === 'mca') { const n = posCurtoE(v, e.pos), m = n.match(/\(([^)]*)\)/); return m ? m[1].replace(/Linha de centro/i, 'Centro') : n.replace(/^MCA\s*/, '') || n; }
+  if (e.g === 'hid') return 'Governo';
+  return e.nome;
+}
+const OL_COLS = [['mcp', 'MCP'], ['crp', 'Reversor'], ['mca', 'MCA'], ['inc', 'Motobomba de incêndio'], ['hid', 'Governo (hidráulico)']];
+const olCol = e => e.key === 'inc' ? 'inc' : e.g;
+function vOleo() {
+  const LD = lubDados().filter(x => !x.saida && !foraOp(x.v)), V = S.cfg.frota.filter(v => !foraOp(v));
+  const st = LD.map(x => Object.assign(x, { st2: olStatus(x) })), cnt = k => st.filter(x => x.st2 === k).length;
+  const cor = { venc: '#C5221F', aten: '#E37400', ok: '#188038', sem: '#9AA0A6' };
+  const pill = x => `<button class="ol-p ${x.st2}" data-frv="${x.v.id}" title="${esc(x.v.nome + ' · ' + x.e.nome + ' · ' + (x.s.txt || ''))} · clique para lançar a troca"><b>${esc(olRotulo(x.v, x.e))}</b><span>${olValor(x)}</span></button>`;
+  const linhas = V.map(v => { const L = st.filter(x => x.v === v); const pior = ['venc', 'aten', 'ok', 'sem'].find(k => L.some(x => x.st2 === k)) || 'sem'; const s = situDe(v);
+    return `<tr><td class="ol-v"><span class="ol-dot" style="background:${cor[pior]}"></span><b>${esc(v.nome)}</b><small>${s ? (s.st === 'porto' ? '⚓ no porto' : '⛴ em viagem') : ''}</small></td>${OL_COLS.map(([c]) => `<td>${L.filter(x => olCol(x.e) === c).map(pill).join('') || '<span class="note">—</span>'}</td>`).join('')}</tr>`; }).join('');
+  const agora = st.filter(x => x.st2 === 'venc' || x.st2 === 'aten').sort((a, b) => (a.horas ?? 0) - (b.horas ?? 0));
+  const lanc = recs('lub').filter(r => r.tipo === 'fr049').sort((a, b) => (b.date || '') < (a.date || '') ? -1 : 1).slice(0, 8);
+  return `<div class="vh"><div><h1>Óleo da frota</h1><p>Troca de óleo, filtros e caixa de mar. Em viagem quem troca é o MFM, você acompanha pela câmera. No porto, a equipe de manutenção com o CTF/MFM. Clique num motor para lançar a troca.</p></div><span class="sp"></span><button class="mbtn pri" data-frv="">🛢 Lançar troca de óleo</button></div>
+   <div class="ol-k"><div class="venc"><b>${cnt('venc')}</b><span>vencidas</span></div><div class="aten"><b>${cnt('aten')}</b><span>vencendo (até ${OL_ALERTA_H} h)</span></div><div class="ok"><b>${cnt('ok')}</b><span>em dia</span></div>${cnt('sem') ? `<div class="sem"><b>${cnt('sem')}</b><span>sem histórico</span></div>` : ''}</div>
+   <div class="card"><div class="tw"><table class="ol-t"><thead><tr><th>Embarcação</th>${OL_COLS.map(([, n]) => `<th>${n}</th>`).join('')}</tr></thead><tbody>${linhas}</tbody></table></div>
+    <p class="note">Número = horas que faltam para a troca (ou dias, quando vence por data). <b style="color:#C5221F">Vermelho</b> vencido · <b style="color:#E37400">laranja</b> até ${OL_ALERTA_H} h · <b style="color:#188038">verde</b> em dia.</p></div>
+   ${agora.length ? `<div class="card"><h2>Agora</h2><div class="tw"><table class="t"><tbody>${agora.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${esc(eqNomeC(x.v, x.e))}</td><td style="color:${cor[x.st2]};font-weight:600">${olValor(x)}</td><td class="note">${situDe(x.v) ? (situDe(x.v).st === 'porto' ? 'no porto: trocar antes de sair' : 'em viagem: acompanhar pela câmera') : ''}</td><td class="rt-b"><button class="mbtn sm pri" data-frv="${x.v.id}">Lançar troca</button></td></tr>`).join('')}</tbody></table></div></div>` : ''}
+   <div class="card"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver todas</a></div><div class="tw"><table class="t"><tbody>${lanc.map(r => `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(vName(r.vessel) || r.vNome || '')}</b></td><td>${(r.eq || []).filter(q => q.status === 'T').map(q => { const vv = vessel(r.vessel), e = lubEq(vv, q.key); return esc(e ? eqNomeC(vv, e) : q.key); }).join(', ')}</td><td class="note">O.M. ${esc(r.om || '')}</td></tr>`).join('') || '<tr><td class="note">Nenhuma troca lançada ainda.</td></tr>'}</tbody></table></div></div>`;
+}
+VX.oleo = vOleo;
+AFTER.oleo = function () { $('#main').onclick = e => { const t = e.target.closest('[data-frv]'); if (!t) return; if (!precisa(false)) return; lubAbrirForm(t.dataset.frv || undefined); }; };
+
+/* ---------- Barco: tudo de uma embarcação numa página ---------- */
+const BR = { v: '' };
+function vBarco() {
+  const ativos = S.cfg.frota.filter(v => !foraOp(v)); const vid = ARG || BR.v || (ativos[0] || {}).id; BR.v = vid; const v = vessel(vid); if (!v) return '<div class="empty">Embarcação não encontrada.</div>';
+  const x = rotinaDados().find(d => d.v === v) || { venc: [], viag: [], corr: [] }, s = situDe(v), LD = lubDados().filter(d => d.v === v && !d.saida).map(d => Object.assign(d, { st2: olStatus(d) }));
+  const cor = { venc: '#C5221F', aten: '#E37400', ok: '#188038', sem: '#5F6368' };
+  const mot = LD.filter(d => ['mcp', 'mca'].includes(d.e.g) || d.e.key === 'inc').map(d => { const h = horAtual(v.id, lubHp(v, d.e)); return `<div class="br-m"><b>${esc(d.e.g === 'mca' ? posCurtoE(v, d.e.pos) : d.e.nome)}</b><span class="br-h">${h ? nf(h.h) + ' h' : '—'}</span><small>${h ? 'lido ' + (h.est ? 'estimado' : brD(h.date)) : 'sem leitura'}</small><span style="color:${cor[d.st2]};font-weight:600">óleo: ${d.st2 === 'venc' ? 'vencido' : d.st2 === 'sem' ? 'sem histórico' : 'faltam ' + olValor(d)}</span></div>`; }).join('');
+  const outros = LD.filter(d => !(['mcp', 'mca'].includes(d.e.g) || d.e.key === 'inc')).map(d => `<span style="color:${cor[d.st2]}">${esc(eqNomeC(v, d.e))}: ${olValor(d)}</span>`).join(' · ');
+  const p = x.v ? rotinaPasso(x) : { n: 0, txt: '', btn: '' }, n = (x.venc || []).length + (x.viag || []).length;
+  const hist = [];
+  oms().filter(o => o.vessel === v.id && o.status === 'encerrada').forEach(o => hist.push({ d: o.dreal || isoD(new Date(o.fechadoAt || 0)), t: o.tipo === 'C' ? `Falha · ${esc(o.descricao || o.sistema || '')} · OM ${esc(o.num)}` : `OM ${esc(o.num)} · preventiva · ${(o.items || []).length} itens` }));
+  recs('lub').filter(r => r.tipo === 'fr049' && r.vessel === v.id).forEach(r => hist.push({ d: r.date, t: 'Troca de óleo (FR 049_B) · ' + (r.eq || []).filter(q => q.status === 'T').map(q => { const e = lubEq(v, q.key); return esc(e ? eqNomeC(v, e) : q.key); }).join(', ') }));
+  hist.sort((a, b) => a.d < b.d ? 1 : -1);
+  const sel = `<select id="brV" style="font-size:18px;font-weight:600;width:auto;min-width:160px">${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>`;
+  return `<div class="vh"><div><h1>Barco</h1></div></div>
+   <div class="card row" style="gap:12px;flex-wrap:wrap">${sel}${s ? `<span class="pill ${s.st === 'porto' ? 'p-inf' : 'p-mut'}">${s.st === 'porto' ? '⚓ no porto desde ' + brD(s.at) : '⛴ em viagem desde ' + brD(s.at)}</span>` : '<span class="pill p-warn">situação não informada</span>'}
+    <button class="mbtn sm" data-situ="${v.id}|${s && s.st === 'porto' ? 'viagem' : 'porto'}">${s && s.st === 'porto' ? '⛴ Saiu de viagem' : '⚓ Chegou em Manaus'}</button><span class="sp"></span><a class="mbtn sm" href="#corr">Registrar falha</a></div>
+   <div class="card"><h2>Motores · horímetro e troca de óleo</h2><div class="br-g">${mot || '<p class="note">Sem motores cadastrados.</p>'}</div>${outros ? `<p class="note" style="margin-top:8px">${outros}</p>` : ''}
+    <div class="row" style="gap:8px;margin-top:10px"><a class="mbtn" href="#hor">⏱ Lançar horímetro</a><button class="mbtn pri" data-frv="${v.id}">🛢 Lançar troca de óleo</button></div></div>
+   <div class="two"><div class="card"><h2>Preventivas (equipe de terra)</h2>
+     ${p.n >= 2 && p.n <= 5 ? `<p>${p.txt}</p><div class="row" style="gap:8px">${p.btn}</div>` : n ? `<p>${x.venc.length ? `<b style="color:#C5221F">${x.venc.length} vencidos</b> + ` : ''}${x.viag.length} vencem antes da volta</p><a class="mbtn pri" href="#emitir/${v.id}">Abrir OM e imprimir formulário</a>` : '<p style="color:#188038">✓ Nada vence antes da próxima volta.</p>'}
+     ${x.crit ? '<div class="banner bad" style="margin-top:8px">Saída bloqueada: item Crítico vencido sem OM.</div>' : ''}</div>
+    <div class="card"><h2>Histórico</h2><div class="tw" style="max-height:300px"><table class="t"><tbody>${hist.slice(0, 15).map(h => `<tr><td class="mono" style="white-space:nowrap">${brD(h.d)}</td><td>${h.t}</td></tr>`).join('') || '<tr><td class="note">Nada registrado ainda.</td></tr>'}</tbody></table></div></div></div>`;
+}
+VX.barco = vBarco;
+AFTER.barco = function () { const m = $('#main');
+  m.onchange = e => { if (e.target.id === 'brV') go('barco/' + e.target.value); };
+  m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
+    if ('frv' in t.dataset) { if (!precisa(false)) return; return lubAbrirForm(t.dataset.frv); }
+    if (t.dataset.situ) { if (!precisa(false)) return; const [vid, st] = t.dataset.situ.split('|'); await situSalvar(vid, st); render(); return; }
+    if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
+    if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; await saveRec(o); } render(); } }; };
+
+/* ---------- menu simples ---------- */
+{ const old = SECOES.slice(), ja = new Set(), todas = [];
+  old.forEach(s => s.views.forEach(([k, n]) => { if (!ja.has(k)) { ja.add(k); todas.push([k, n]); } }));
+  const principais = new Set(['rotina', 'oleo', 'barco', 'crono', 'cxr', 'admin', 'emitir', 'omg']);
+  const nomes = { geral: 'Painel de gestão', acomp: 'OMs em execução', lubreg: 'Trocas de óleo (FR 049_B)', rel: 'Relatório do mês' };
+  const cons = todas.filter(([k]) => !principais.has(k)).map(([k, n]) => [k, nomes[k] || n]);
+  const extraAll = old.flatMap(s => s.extra || []);
+  ICO.hoje = ICO.inicio; ICO.oleo = ICO.lub || ICO.exec; ICO.barcos = ICO.cond || ICO.oms; ICO.crono = ICO.plan; ICO.cons = ICO.apoio || ICO.ref;
+  SECOES.splice(0, SECOES.length,
+    { id: 'hoje', nome: 'Hoje', views: [['rotina', 'Hoje']] },
+    { id: 'oleo', nome: 'Óleo', views: [['oleo', 'Óleo da frota'], ['lubreg', 'Trocas lançadas']] },
+    { id: 'barcos', nome: 'Barcos', views: [['barco', 'Barco'], ['emitir', 'Abrir OM']], extra: ['omg', 'om'] },
+    { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
+    { id: 'cons', nome: 'Consultas', views: cons.filter(([k]) => !['lubreg', 'rel'].includes(k)), extra: extraAll.filter(k => !['omg', 'om', 'cxr'].includes(k)) },
+    { id: 'adm', nome: 'Administração', views: [['admin', 'Administração']], cfg: true });
+}
+/* ---------- "ficha" passa a se chamar "formulário" ---------- */
+{ const troca = h => h.replace(/(^|[\s>(“"])([Ff])icha(?![\w])/g, (m, a, f) => a + (f === 'F' ? 'Formulário' : 'formulário')).replace(/\b([Aa]) formulário/g, (m, a) => (a === 'A' ? 'O' : 'o') + ' formulário').replace(/\bda formulário/g, 'do formulário').replace(/\bna formulário/g, 'no formulário').replace(/\bpela formulário/g, 'pelo formulário').replace(/\bDa formulário/g, 'Do formulário');
+  ['vRotina', 'vAcomp', 'vOmg', 'vEmitir', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
+  VX.rotina = window.vRotina; VX.acomp = window.vAcomp; VX.omg = window.vOmg; VX.barco = window.vBarco;
+  const d0 = docFichaEmb; docFichaEmb = function (g) { return d0(g).map(troca); };
+  const m0 = fichaModal; fichaModal = function (o) { m0(o); const h = $('#modal'); if (h) h.querySelectorAll('h2,p,button').forEach(el => { if (el.children.length === 0 || el.tagName === 'P') el.innerHTML = troca(el.innerHTML); }); }; }
+{ const st = document.createElement('style'); st.textContent = `.ol-k{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 14px}.ol-k>div{flex:1;min-width:150px;background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;align-items:baseline;gap:10px}.ol-k b{font-size:30px}.ol-k .venc b{color:#C5221F}.ol-k .aten b{color:#E37400}.ol-k .ok b{color:#188038}.ol-k .sem b{color:#9AA0A6}
+ .ol-t{width:100%;border-collapse:collapse}.ol-t th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5F6368;padding:8px 6px;border-bottom:2px solid #E8EAED}.ol-t td{padding:8px 6px;border-bottom:1px solid #F1F3F4;vertical-align:middle}
+ .ol-v{white-space:nowrap}.ol-v b{font-size:15px}.ol-v small{display:block;color:#5F6368;margin-left:18px}.ol-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
+ .ol-p{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:78px;margin:2px 4px 2px 0;padding:5px 9px;border-radius:8px;border:0;color:#fff;font:inherit;cursor:pointer;text-align:left}.ol-p b{font-size:11px;font-weight:600;opacity:.92}.ol-p span{font-size:14px;font-weight:700;white-space:nowrap}
+ .ol-p.venc{background:#C5221F}.ol-p.aten{background:#E37400}.ol-p.ok{background:#188038}.ol-p.sem{background:#9AA0A6}.ol-p:hover{filter:brightness(1.1)}
+ .br-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}.br-m{border:1px solid #E8EAED;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}.br-h{font-size:22px;font-weight:700}.br-m small{color:#5F6368}`; document.head.appendChild(st); }
+if (!location.hash || location.hash === '#rotina') { try { history.replaceState(null, '', '#rotina'); } catch (e) { } }
 
 </script>
 </body>
