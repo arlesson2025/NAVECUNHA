@@ -3059,7 +3059,7 @@ function fotosHtml(o) {
   return `<div class="note">Quantas fotos precisar. Obrigatório pelo menos uma ANTES e uma DEPOIS, todas com legenda. As fotos ficam neste aparelho até a aprovação e seguem dentro do PDF para o Drive.</div>
    <div class="phgrid">${f.map((x, i) => `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span></div>
      <div class="meta"><select data-k="fotos|${i}|tipo">${['ANTES', 'DURANTE', 'DEPOIS'].map(t => `<option${t === x.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select><input data-k="fotos|${i}|leg" placeholder="Legenda (o que mostra)" value="${esc(x.leg || '')}"><button class="xbtn" data-delrow="fotos|${i}" aria-label="Remover foto">✕</button></div></div>`).join('')}
-    <label class="addph" for="addFoto"><span style="font-size:28px;line-height:1">+</span>Adicionar foto<small>uma ou várias de uma vez</small><input type="file" id="addFoto" accept="image/*" multiple></label></div>`;
+    <label class="addph cam"><span style="font-size:28px;line-height:1">📷</span>Tirar foto<small>abre a câmera · vai direto para o formulário</small><input type="file" id="addFoto" accept="image/*" capture="environment"></label><label class="addph"><span style="font-size:28px;line-height:1">🖼</span>Da galeria<small>escolher uma ou várias fotos já tiradas</small><input type="file" id="addFoto" accept="image/*" multiple></label></div>`;
 }
 function gateIIB(o) {
   const g = [], regs = regsDe(o), anexo = tercAnexo(o);
@@ -6815,7 +6815,7 @@ function vOmg() {
    ${regs.length ? `<div class="card"><h2>3 · Registros exigidos por estes itens</h2><div class="g">${regs.map(r => `<label class="f s3">${REGN[r]}<input data-rgr="${r}" value="${esc(R.regs[r] || '')}"></label>`).join('')}</div></div>` : ''}
    <div class="card"><h2>${regs.length ? 4 : 3} · Fotos (antes e depois)</h2><div class="phgrid">${f.map((x, i) => `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span></div>
      <div class="meta"><select data-rgf="${i}|tipo">${['ANTES', 'DURANTE', 'DEPOIS'].map(t => `<option${t === x.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select><input data-rgf="${i}|leg" placeholder="Legenda (o que mostra)" value="${esc(x.leg || '')}"><button class="xbtn" data-rgfdel="${i}" aria-label="Remover foto">✕</button></div></div>`).join('')}
-    <label class="addph" for="rgFoto"><span style="font-size:28px;line-height:1">+</span>Adicionar foto<small>uma ou várias de uma vez</small><input type="file" id="rgFoto" accept="image/*" multiple></label></div></div>
+    <label class="addph cam"><span style="font-size:28px;line-height:1">📷</span>Tirar foto<small>abre a câmera · vai direto para o formulário</small><input type="file" id="rgFoto" accept="image/*" capture="environment"></label><label class="addph"><span style="font-size:28px;line-height:1">🖼</span>Da galeria<small>escolher uma ou várias fotos já tiradas</small><input type="file" id="rgFoto" accept="image/*" multiple></label></div></div>
    </div>
    <div class="card rg-fim"><h2>${regs.length ? 5 : 4} · Conferência e encerramento</h2>
     ${fechada ? '<p class="note">Encerrada.</p>' : pend.length ? `<div class="banner warn"><b>Falta:</b> ${pend.map(esc).join(' · ')}</div>` : '<div class="banner ok">Tudo preenchido. Pode aprovar.</div>'}
@@ -8276,6 +8276,25 @@ document.addEventListener('click', e => { if (VIEW !== 'controle') return; const
 .fs-sv{text-align:right}.fs-sv.v{color:#B3261E}.fs-sv.a{color:#B06000}.fs-sv.o{color:#2E7D4F}.fs-sv.z{color:#9AA0A6}.fs-bv{color:#64748B;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 `; document.head.appendChild(st); }
 
+</script>
+<script>
+/* ===== fotos: "Tirar foto" abre a câmera direto; a mesma foto vai para o formulário e uma cópia fica no celular ===== */
+const ehIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function fotoNome() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `SGMF_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.jpg`; }
+function fotoGuardar(files) {
+  if (ehIOS) {   // no iPhone o navegador não grava sozinho na galeria: um toque em "Salvar imagem" resolve
+    const t = document.createElement('div'); t.className = 'toast fsave'; t.innerHTML = 'Foto anexada ao formulário. <button>Salvar cópia no celular</button>'; document.body.appendChild(t);
+    t.querySelector('button').onclick = async () => { try { await navigator.share({ files: files.map(f => new File([f], fotoNome(), { type: f.type || 'image/jpeg' })) }); } catch (e) { } t.remove(); };
+    setTimeout(() => t.remove(), 9000); return;
+  }
+  files.forEach(f => { try { const a = document.createElement('a'), u = URL.createObjectURL(f); a.href = u; a.download = fotoNome(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); } catch (e) { } });
+  toast('Foto anexada ao formulário · cópia salva no celular (pasta Downloads).');
+}
+document.addEventListener('change', e => { const i = e.target; if (!i || i.type !== 'file' || !i.hasAttribute('capture') || !i.files || !i.files.length) return; fotoGuardar([...i.files]); }, true);
+// formulários dentro de janela (FR 049_B): mesma regra
+document.addEventListener('load', e => { const f = e.target; if (!f || f.tagName !== 'IFRAME') return; try { const d = f.contentDocument; if (!d || d.__fotoOk) return; d.__fotoOk = 1; d.addEventListener('change', ev => { const i = ev.target; if (i && i.type === 'file' && i.hasAttribute('capture') && i.files && i.files.length) fotoGuardar([...i.files]); }, true); } catch (er) { } }, true);
+{ const st = document.createElement('style'); st.textContent = `.addph.cam{border-color:#1A73E8!important;color:#1A73E8}
+.toast.fsave{display:flex;align-items:center;gap:10px}.toast.fsave button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:6px 10px;background:#fff;color:#1A73E8;cursor:pointer}`; document.head.appendChild(st); }
 </script>
 <style>/* previsto x realizado: todas as linhas finas */.pr-t td,.pr-t th{border-width:1px!important}.pr-r td{border-bottom:1px solid #BDC1C6!important}.pr-ms,.pr-me{border-color:#BDC1C6!important}.pr-c.hj{outline:1px solid #1967D2!important;outline-offset:-1px!important}</style>
 </body>
