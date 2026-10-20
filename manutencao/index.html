@@ -5298,7 +5298,7 @@ async function tecExemplo() {
 { const lb0 = lubBoot; lubBoot = async function () { await lb0(); await tecExemplo(); }; }
 
 /* ---------- 7 · matriz de condição da frota (substitui os cartões como vista padrão) ---------- */
-let FROTAMODO = 'matriz';
+let FROTAMODO = 'matriz';   // só a matriz (os botões Matriz/Cartões saíram)
 const SIS_CURTO = ['Propulsão', 'Governo', 'Geração', 'Emergência', 'Salvag.', 'Combust.', 'Comunic.', 'Amarra', 'Casco', 'Habitab.', 'Naveg.'];
 function frotaMatriz() {
   const SO = { venc: 3, viag: 2, ok: 1, sem: 0 };
@@ -5338,7 +5338,7 @@ function frotaMatrizHtml() {
 }
 { const v0 = vFrota; vFrota = function () {
   const h = v0(), seg = `<div class="seg"><button data-fmodo="matriz" class="${FROTAMODO === 'matriz' ? 'on' : ''}">Matriz</button><button data-fmodo="cartoes" class="${FROTAMODO === 'cartoes' ? 'on' : ''}">Cartões</button></div>`;
-  const h2 = h.replace('<button class="mbtn" data-act="lancarHor">', seg + '<button class="mbtn" data-act="lancarHor">');
+  const h2 = h;
   if (FROTAMODO === 'cartoes') return h2; const i = h2.indexOf('<div class="fleet">'); return h2.slice(0, i) + frotaMatrizHtml(); }; }
 { const a0 = AFTER.frota; AFTER.frota = () => { if (a0) a0(); const m = $('#main'), c0 = m.onclick; m.onclick = e => { const b = e.target.closest('[data-fmodo]'); if (b) { FROTAMODO = b.dataset.fmodo; render(); return; } return c0 && c0(e); }; }; }
 
