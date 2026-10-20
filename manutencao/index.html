@@ -7454,10 +7454,10 @@ AFTER.oms = function () { $('#main').onclick = async e => { const t = e.target.c
 { ICO.hoje = ICO.hoje || ICO.inicio; ICO.omsv2 = ICO.oms || ICO.exec;
   SECOES.splice(0, SECOES.length,
     { id: 'hoje', nome: 'Hoje', views: [['rotina', 'Rotina do dia']], extra: ['barco'] },
+    { id: 'omsv2', nome: 'OMs', views: [['oms', 'Abertas e encerradas']], extra: ['emitir', 'omg', 'om', 'acomp', 'prev', 'corr', 'hist'] },
     { id: 'oleo', nome: 'Óleo', views: [['oleo', 'Óleo da frota'], ['lubreg', 'Trocas lançadas']] },
     { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma do empurrador'], ['audit', 'Planejado × realizado'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
-    { id: 'omsv2', nome: 'OMs', views: [['oms', 'Abertas e encerradas']], extra: ['emitir', 'omg', 'om', 'acomp', 'prev', 'corr', 'hist'] },
-    { id: 'graf', nome: 'Gráficos', views: [['controle', 'Docagem, calibração, MBC, óleo'], ['kpi', 'Indicadores']], extra: ['falhas', 'geral'], cfg: true },
+    { id: 'graf', nome: 'Indicadores', views: [['kpi', 'Indicadores e riscos'], ['controle', 'Vencimentos, calibração, análise de óleo e docagem']], extra: ['falhas', 'geral'] },
     { id: 'apoio2', nome: 'Biblioteca', views: [['bib', 'Biblioteca'], ['pecas', 'Sobressalentes críticos'], ['terc', 'Prestadores de serviço'], ['trein', 'Treinamentos']], cfg: true },
     { id: 'adm', nome: 'Administração', views: [['admin', 'Administração'], ['hor', 'Horímetros'], ['matriz', 'Anexo I'], ['frota', 'Vencimentos (detalhe)']], cfg: true });
   ICO.apoio2 = ICO.bib || ICO.apoio || ICO.ref;
