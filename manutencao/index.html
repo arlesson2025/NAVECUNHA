@@ -8211,6 +8211,72 @@ if (VX.controle) { const c1 = VX.controle; VX.controle = function () { const h =
 document.addEventListener('click', e => { if (VIEW !== 'controle') return; const l = e.target.closest('[data-laudo2]'); if (l) { e.stopPropagation(); laudoModal(); return; } const v = e.target.closest('[data-laudov2]'); if (v) { e.stopPropagation(); laudoLista(...v.dataset.laudov2.split('|')); } }, true);
 
 </script>
+<script>
+/* ===== Vencimentos: lista da frota (esquerda) + detalhe da embarcação ou da frota toda (direita) ===== */
+let FS_SEL = 'frota';
+const FS_NOME = ['Propulsão', 'Governo', 'Geração', 'Emergência', 'Salvatagem', 'Combustível', 'Comunicação', 'Amarração', 'Casco', 'Habitabilidade', 'Navegação'];
+function fsHTML() {
+  const L = frotaMatriz(), sel = FS_SEL === 'frota' ? null : L.find(x => x.v.id === FS_SEL) || null;
+  const sit = x => x.it ? ['v', 'Interditada'] : x.bq.length ? ['v', 'Saída bloqueada'] : x.n.venc ? ['a', 'Liberada com restrição'] : ['o', 'Liberada'];
+  const semH = x => !x.n.venc && !x.n.viag && !x.n.ok;
+  const tot = { venc: 0, viag: 0, ok: 0 }; L.forEach(x => { tot.venc += x.n.venc; tot.viag += x.n.viag; tot.ok += x.n.ok; });
+  const aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null, lib = L.filter(x => x.sit < 2).length;
+  const corA = a => a == null ? '#5F6368' : a >= 95 ? '#188038' : a >= 85 ? '#B06000' : '#C5221F';
+  const lista = `<div class="fs-l"><div class="fs-lh"><h2>Frota CJA</h2><div class="note">ordenada por criticidade</div></div>
+   <table class="fs-t"><thead><tr><th>Embarcação</th><th>Venc.</th><th>Viag.</th><th>Ader.</th></tr></thead><tbody>
+   <tr class="fs-r fs-all${!sel ? ' on' : ''}" data-fsel="frota"><td><b>Frota toda</b> <span class="note">${L.length} barcos</span></td><td class="${tot.venc ? 'v' : 'z'}">${tot.venc}</td><td class="${tot.viag ? 'a' : 'z'}">${tot.viag}</td><td style="color:${corA(aderF)}">${aderF == null ? '—' : nf(aderF, 0) + '%'}</td></tr>
+   ${L.map(x => { const s = sit(x), sh = semH(x); return `<tr class="fs-r${sel === x ? ' on' : ''}" data-fsel="${x.v.id}"><td><i class="fs-d ${sh ? 'g' : s[0]}"></i>${esc(x.v.nome)}</td><td class="${sh ? 'z' : x.n.venc ? 'v' : 'z'}">${sh ? '—' : x.n.venc}</td><td class="${sh ? 'z' : x.n.viag ? 'a' : 'z'}">${sh ? '—' : x.n.viag}</td><td style="color:${corA(x.ader)}">${x.ader == null ? '—' : nf(x.ader, 0) + '%'}</td></tr>`; }).join('')}
+   </tbody></table></div>`;
+  const ader = (a, sub) => `<div class="fs-k"><span>Aderência</span><b style="color:${corA(a)}">${a == null ? '—' : nf(a, 0) + '%'}</b><div class="fs-ab"><i style="width:${a == null ? 0 : Math.max(2, a)}%;background:${corA(a)}"></i><em style="left:95%"></em></div><small>${a == null ? 'sem histórico' : a >= 95 ? 'meta de 95% atingida' : 'faltam ' + nf(95 - a, 0) + ' p.p. para a meta de 95%'}${sub ? ' · ' + sub : ''}</small></div>`;
+  let det;
+  if (!sel) {
+    const sis = FS_NOME.map((n, i) => { let v = 0, a = 0, ok = 0, ap = 0; const bv = []; L.forEach(x => { const s = x.sis[i]; if (!s) return; ap++; v += s.c.venc; a += s.c.viag; ok += s.c.ok; if (s.c.venc) bv.push([x.v.nome, s.c.venc]); }); return { n, i, v, a, ok, ap, bv: bv.sort((p, q) => q[1] - p[1]) }; }).sort((p, q) => q.v - p.v || q.a - p.a || p.i - q.i);
+    const mx = Math.max(1, ...sis.map(s => s.v));
+    det = `<div class="fs-dh"><h1>Frota toda</h1><span class="fs-p ${lib === L.length ? 'o' : 'a'}">${lib}/${L.length} liberadas</span><span class="sp"></span><a class="mbtn pri" href="#emitir">Gerar OMs</a></div>
+     <p class="fs-sub">${tot.venc} itens vencidos em ${sis.filter(s => s.v).length} sistema${sis.filter(s => s.v).length === 1 ? '' : 's'} · ${tot.viag} vence${tot.viag === 1 ? '' : 'm'} na próxima viagem · ${L.filter(x => x.n.venc).length} embarcação(ões) com pendência</p>
+     <div class="fs-ks">${ader(aderF)}<div class="fs-k"><span>Embarcações liberadas</span><b>${lib}/${L.length}</b><small>${L.length - lib ? (L.length - lib) + ' com saída bloqueada ou interditada' : 'nenhuma bloqueada'}</small></div><div class="fs-k"><span>Itens vencidos · na viagem</span><b><span style="color:${tot.venc ? '#C5221F' : '#188038'}">${tot.venc}</span> · <span style="color:${tot.viag ? '#B06000' : '#188038'}">${tot.viag}</span></b><small>backlog preventivo da frota</small></div></div>
+     <div class="fs-sb">${sis.map(s => `<div class="fs-sr"><span class="fs-n">${s.i + 1}.0</span><span class="fs-sn${s.v ? ' b' : ''}">${FS_NOME[s.i]}</span><span class="fs-bar">${s.v ? `<i style="width:${Math.max(4, s.v / mx * 100)}%;background:#B3261E"></i>` : s.a ? `<i style="width:100%;background:#FCEFC7"></i>` : `<i style="width:100%;background:#D6E9DA"></i>`}</span><span class="fs-sv ${s.v ? 'v' : s.a ? 'a' : 'o'}">${s.v ? s.v + ' vencido' + (s.v > 1 ? 's' : '') : s.a ? s.a + ' na viagem' : 'em dia'}</span><span class="fs-bv">${s.bv.slice(0, 3).map(b => esc(b[0]) + ' ' + b[1]).join(' · ')}</span></div>`).join('')}</div>`;
+  } else {
+    const x = sel, s = sit(x), nsV = x.sis.filter(c => c && c.c.venc).length, mx = Math.max(1, ...x.sis.map(c => c ? c.c.venc : 0));
+    const ord = x.sis.map((c, i) => ({ c, i })).sort((p, q) => (q.c ? q.c.c.venc : -1) - (p.c ? p.c.c.venc : -1) || (q.c ? q.c.c.viag : -1) - (p.c ? p.c.c.viag : -1) || p.i - q.i);
+    const hor = x.mcp.map(m => { const d = m.h ? Math.round((hoje() - pD(m.h.date)) / 864e5) : null; return `<div class="fs-k"><span>Horímetro MCP${x.v.mcp === 'mono' ? '' : ' · ' + m.pos}</span><b>${m.h ? nf(m.h.h) + ' h' : '—'}</b><small style="color:${d > 7 ? '#C5221F' : ''}">${d == null ? 'sem leitura' : 'leitura há ' + (d === 0 ? 'menos de 1 d' : d + ' d')}</small></div>`; }).join('');
+    det = `<div class="fs-dh"><h1>${esc(x.v.nome)}</h1><span class="fs-p ${s[0]}">${s[1]}</span><span class="sp"></span><a class="mbtn pri" href="#emitir/${x.v.id}">Gerar OMs</a><button class="mbtn" data-vessel="${x.v.id}">Abrir embarcação</button></div>
+     <p class="fs-sub">${semH(x) ? 'sem histórico: cadastre o último serviço' : `${x.n.venc} itens vencidos em ${nsV} sistema${nsV === 1 ? '' : 's'} · ${x.n.viag} vence${x.n.viag === 1 ? '' : 'm'} na próxima viagem${x.comOM ? ' · ' + x.comOM + ' já programados em OM' : ''}`}</p>
+     <div class="fs-ks">${ader(x.ader)}${hor}</div>
+     <div class="fs-sb">${ord.map(({ c, i }) => `<div class="fs-sr"><span class="fs-n">${i + 1}.0</span><span class="fs-sn${c && c.c.venc ? ' b' : ''}">${FS_NOME[i]}</span><span class="fs-bar">${!c ? '' : c.c.venc ? `<i style="width:${Math.max(4, c.c.venc / mx * 100)}%;background:#B3261E"></i>` : c.c.viag ? '<i style="width:100%;background:#FCEFC7"></i>' : c.c.ok ? '<i style="width:100%;background:#D6E9DA"></i>' : ''}</span><span class="fs-sv ${!c ? 'z' : c.c.venc ? 'v' : c.c.viag ? 'a' : c.c.ok ? 'o' : 'z'}">${!c ? 'não se aplica' : c.c.venc ? c.c.venc + ' vencido' + (c.c.venc > 1 ? 's' : '') : c.c.viag ? c.c.viag + ' na viagem' : c.c.ok ? 'em dia' : 'sem histórico'}</span><span class="fs-bv"></span></div>`).join('')}</div>`;
+  }
+  return `<div class="card fs-card" data-lk="Vencimentos da frota"><div class="fs-g">${lista}<div class="fs-dt">${det}</div></div></div>`;
+}
+if (VX.controle) { const c2 = VX.controle; VX.controle = function () {
+  const t = document.createElement('div'); t.innerHTML = c2();
+  t.querySelectorAll('.kgrid').forEach(g => { if (/embarcações liberadas para operação/.test(g.textContent)) g.remove(); });
+  const m = t.querySelector('.card.m2-card'); if (m) { const d = document.createElement('div'); d.innerHTML = fsHTML(); const n = d.firstElementChild; n.dataset.sec = m.dataset.sec || 'venc'; m.replaceWith(n); }
+  return t.innerHTML; }; }
+document.addEventListener('click', e => { if (VIEW !== 'controle') return; const r = e.target.closest('[data-fsel]'); if (!r) return; e.stopPropagation(); FS_SEL = r.dataset.fsel; render(); }, true);
+{ const st = document.createElement('style'); st.textContent = `
+.card.fs-card{padding:0;overflow:hidden}
+.fs-g{display:grid;grid-template-columns:minmax(260px,34%) 1fr;min-height:100%}@media(max-width:900px){.fs-g{grid-template-columns:1fr}}
+.fs-l{border-right:1px solid #E3E8EF;background:#fff}.fs-lh{padding:18px 20px 12px}.fs-lh h2{margin:0;font-size:18px}
+.fs-t{width:100%;border-collapse:collapse;font-size:14px}.fs-t th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#64748B;font-weight:500;text-align:right;padding:8px 14px;border-bottom:1px solid #E3E8EF;border-top:1px solid #E3E8EF}.fs-t th:first-child{text-align:left;padding-left:20px}
+.fs-t td{padding:12px 14px;border-bottom:1px solid #EEF2F6;text-align:right;color:#0F172A}.fs-t td:first-child{text-align:left;padding-left:20px;font-weight:500}
+.fs-r{cursor:pointer}.fs-r:hover td{background:#F8FAFC}.fs-r.on td{background:#EEF3FB}.fs-r.on td:first-child{box-shadow:inset 3px 0 0 #1E3A5F}
+.fs-all td{background:#F8FAFC}.fs-t td.v{color:#C5221F}.fs-t td.a{color:#B06000}.fs-t td.z{color:#9AA0A6}
+.fs-d{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:10px;vertical-align:middle}.fs-d.v{background:#C5221F}.fs-d.a{background:#E3A008}.fs-d.o{background:#2E7D4F}.fs-d.g{background:#9AA0A6}
+.fs-dt{background:#F3F5F8;padding:22px 26px}
+.fs-dh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-right:46px}.fs-dh h1{margin:0;font-size:26px}
+.fs-p{font-size:12px;font-weight:600;border-radius:999px;padding:4px 12px}.fs-p.a{background:#FDF0C8;color:#8A5A00}.fs-p.v{background:#FCE8E6;color:#B3261E}.fs-p.o{background:#E6F4EA;color:#137333}
+.fs-sub{color:#475569;margin:8px 0 16px;font-size:14px}
+.fs-ks{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
+.fs-k{background:#fff;border:1px solid #E3E8EF;border-radius:12px;padding:16px 18px}.fs-k>span{display:block;color:#475569;font-size:13px}.fs-k>b{display:block;font-size:28px;font-weight:600;margin:6px 0 8px;color:#0F172A}.fs-k small{color:#64748B;font-size:12px}
+.fs-ab{position:relative;height:8px;background:#EEF2F6;border-radius:4px;margin-bottom:8px}.fs-ab i{display:block;height:100%;border-radius:4px}.fs-ab em{position:absolute;top:-4px;width:2px;height:16px;background:#0F172A}
+.fs-sb{background:#fff;border:1px solid #E3E8EF;border-radius:12px;padding:6px 18px}
+.fs-sr{display:grid;grid-template-columns:44px 150px 1fr 120px minmax(0,170px);align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #EEF2F6;font-size:14px}.fs-sr:last-child{border-bottom:0}
+.fs-n{color:#64748B;font-size:12px}.fs-sn{color:#334155}.fs-sn.b{font-weight:700;color:#0F172A}
+.fs-bar{height:8px;background:#F1F3F4;border-radius:4px;overflow:hidden}.fs-bar i{display:block;height:100%;border-radius:4px}
+.fs-sv{text-align:right}.fs-sv.v{color:#B3261E}.fs-sv.a{color:#B06000}.fs-sv.o{color:#2E7D4F}.fs-sv.z{color:#9AA0A6}.fs-bv{color:#64748B;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+`; document.head.appendChild(st); }
+
+</script>
 <style>/* previsto x realizado: todas as linhas finas */.pr-t td,.pr-t th{border-width:1px!important}.pr-r td{border-bottom:1px solid #BDC1C6!important}.pr-ms,.pr-me{border-color:#BDC1C6!important}.pr-c.hj{outline:1px solid #1967D2!important;outline-offset:-1px!important}</style>
 </body>
 </html>
