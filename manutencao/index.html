@@ -7787,12 +7787,12 @@ const O3HTML = `<div class="bar">
 </div>
 <div class="ws" id="o3ws">
   <section class="win" id="wTab" aria-label="Tabela de equipamentos">
-    <div class="wh"><span class="grip">⋮⋮</span><span class="t">Equipamentos</span><span class="sp"></span><button class="ib" data-min title="Minimizar">–</button></div>
+    <div class="wh"><span class="grip">⋮⋮</span><span class="t">Equipamentos</span><span class="sp"></span><button class="ib" data-max title="Abrir em tela cheia (apresentação)">⛶</button><button class="ib" data-min title="Minimizar">–</button></div>
     <div class="wb"><table id="o3t"></table></div>
     <div class="rz"></div>
   </section>
   <section class="win" id="wCh" aria-label="Gráfico vencido e saldo">
-    <div class="wh"><span class="grip">⋮⋮</span><span class="t">Gráfico</span><span class="sp"></span><button class="ib" data-min title="Minimizar">–</button></div>
+    <div class="wh"><span class="grip">⋮⋮</span><span class="t">Gráfico</span><span class="sp"></span><button class="ib" data-max title="Abrir em tela cheia (apresentação)">⛶</button><button class="ib" data-min title="Minimizar">–</button></div>
     <div class="wb cb" id="o3chart"></div>
     <div class="rz"></div>
   </section>
@@ -7873,7 +7873,8 @@ AFTER.oleo = function () {
   if (!O3.L) O3.L = O3.G('layout', null);
   if (!O3.L || !O3.L.wTab || !O3.L.wCh || O3.L.wCh.x > ws.clientWidth - 60) O3.L = defaults();
   const L = () => O3.L;
-  function apply() { wins.forEach(w => { const s = L()[w.id]; w.style.left = s.x + 'px'; w.style.top = s.y + 'px'; w.style.width = s.w + 'px'; w.style.height = s.h + 'px'; w.classList.toggle('min', !!s.m); w.querySelector('[data-min]').textContent = s.m ? '+' : '–'; }); }
+  function apply() { wins.forEach(w => { const s = L()[w.id]; w.style.left = s.x + 'px'; w.style.top = s.y + 'px'; w.style.width = s.w + 'px'; w.style.height = s.h + 'px'; w.classList.toggle('min', !!s.m); w.querySelector('[data-min]').textContent = s.m ? '+' : '–'; });
+    if (innerWidth > 760) { const base = Math.max(520, innerHeight - ws.getBoundingClientRect().top - 16), fundo = Math.max(...wins.map(w => { const s = L()[w.id]; return s.y + (s.m ? 40 : s.h); })) + 6; ws.style.height = Math.max(base, fundo) + 'px'; } }
   wins.forEach(w => {
     const s = () => L()[w.id];
     w.addEventListener('pointerdown', () => { w.style.zIndex = ++O3.z; });
@@ -7889,6 +7890,9 @@ AFTER.oleo = function () {
       const up = () => { rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); O3.S('layout', L()); };
       rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up); });
     w.querySelector('[data-min]').onclick = () => { s().m = !s().m; apply(); O3.S('layout', L()); };
+    w.querySelector('[data-max]').onclick = () => { const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      if (fsEl || w.classList.contains('full')) { if (fsEl) (document.exitFullscreen || document.webkitExitFullscreen).call(document); w.classList.remove('full'); return; }
+      const rq = w.requestFullscreen || w.webkitRequestFullscreen; if (rq) rq.call(w).catch(() => w.classList.add('full')); else w.classList.add('full'); };
   });
   q('#o3reset').onclick = () => { fit(); O3.L = defaults(); apply(); O3.S('layout', O3.L); };
   apply();
@@ -7920,6 +7924,9 @@ button,select{font:inherit;color:inherit}
 .ib{border:0;background:transparent;width:24px;height:22px;border-radius:5px;cursor:pointer;color:var(--mute);font-size:14px;line-height:1;padding:0;min-height:0}
 .ib:hover{background:var(--line)}
 .wb{flex:1;overflow:auto;min-height:0}
+.win:fullscreen,.win.full{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;border-radius:0;z-index:9999;font-size:15px}
+.win:fullscreen td,.win.full td{font-size:15px;height:24px}.win:fullscreen .rz,.win.full .rz{display:none}.win:fullscreen .cr .l,.win:fullscreen .cr .val{font-size:15px}.win:fullscreen .ch h2{font-size:22px}
+.win:-webkit-full-screen{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important}
 .rz{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;touch-action:none;
  background:linear-gradient(135deg,transparent 50%,var(--faint) 50%,var(--faint) 56%,transparent 56%,transparent 68%,var(--faint) 68%,var(--faint) 74%,transparent 74%)}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:12.5px;background:none;border:0;margin:0}
