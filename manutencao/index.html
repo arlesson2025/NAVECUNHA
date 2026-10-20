@@ -1870,9 +1870,9 @@ function ultimoServico(vid, pos, itemId) {
 }
 function omAberta(vid, pos, itemId) { return oms().find(o => o.tipo === 'P' && o.status !== 'encerrada' && o.vessel === vid && o.pos === pos && (o.items || []).includes(itemId)); }
 // situação de um item: venc | viag | ok | sem (sem histórico) | cond (por condição)
-// próxima viagem: cada barco tem a sua (120 h a 1.500 h, conforme o trecho); sem informação, usa a viagem padrão
+// próxima viagem: cada empurrador tem a sua (120 h a 1.500 h, conforme o trecho); sem informação, usa a viagem padrão
 const viagemDe = v => (v && +v.viagH > 0) ? +v.viagH : S.cfg.viagemH;
-// horas de MCP por dia do barco (últimos ~90 dias de horímetro BB); sem dados, 20 h/dia
+// horas de MCP por dia do empurrador (últimos ~90 dias de horímetro BB); sem dados, 20 h/dia
 let _hdMemo = { n: -1, m: {} };
 function horasDia(vid) {
   if (_hdMemo.n !== S.recs.size) _hdMemo = { n: S.recs.size, m: {} };
@@ -2232,7 +2232,7 @@ function vFrota() {
    ===================================================================== */
 const CALIB = [['1.1.11', 'Folga de válvulas'], ['1.1.12', 'Bicos injetores'], ['1.1.13', 'Ponto de injeção'], ['1.1.15', 'Rótulas do controle de combustível'], ['1.1.17', 'Trocador de calor'], ['1.4.1', 'Caixa de mar']];
 const CALN = Object.fromEntries(CALIB);
-const CAL_VIAGEM = ['1.4.1']; // pode ser feito com o barco em viagem; os demais são serviço técnico, só no porto
+const CAL_VIAGEM = ['1.4.1']; // pode ser feito com o empurrador em viagem; os demais são serviço técnico, só no porto
 const calPorto = id => !CAL_VIAGEM.includes(id);
 // fração da vida que ainda resta (1 = recém-feito, 0 = vence agora, < 0 = vencido); null = sem dado
 function calibVida(t, s) {
@@ -2270,7 +2270,7 @@ function vCalib() {
   // B · ranking dos mais urgentes (cada barra = um item de um motor)
   const SO = { venc: 0, viag: 1, ok: 2 };
   const rk = D.filter(x => x.vida !== null).sort((a, b) => SO[a.s.st] - SO[b.s.st] || a.vida - b.vida);
-  // padrão: a frota toda, uma linha por barco com o item mais urgente; CALTODOS = todos os itens de todos os motores
+  // padrão: a frota toda, uma linha por empurrador com o item mais urgente; CALTODOS = todos os itens de todos os motores
   const pendDe = vid => D.filter(x => x.v.id === vid && (x.s.st === 'venc' || x.s.st === 'viag')).length;
   const vis = CALTODOS ? rk : S.cfg.frota.map(v => { const x = rk.find(y => y.v.id === v.id); return x ? Object.assign({}, x, { porBarco: true, mais: Math.max(0, pendDe(v.id) - (x.s.st === 'ok' ? 0 : 1)) }) : { v, semHist: true }; })
     .sort((a, b) => (a.semHist ? 1 : 0) - (b.semHist ? 1 : 0) || (a.semHist ? 0 : SO[a.s.st] - SO[b.s.st] || a.vida - b.vida));
@@ -2279,7 +2279,7 @@ function vCalib() {
   const linhas = vis.map(x => {
     if (x.semHist) return `<div class="rkrow" data-calib="${x.v.id}"><div class="rklb"><b>${esc(x.v.nome)}</b> · <span class="mut">sem histórico: registre o último serviço</span></div><div class="rktr"><i class="rkz"></i></div></div>`;
     const x0 = X(x.vida), l = Math.min(x0, 40), w = Math.max(0.6, Math.abs(x0 - 40)), c = CORST[x.s.st];
-    return `<div class="rkrow" data-calib="${x.v.id}" data-tip="${esc(x.s.txt || '')} · clique para ver o barco"><div class="rklb">${x.porBarco ? `<b>${esc(x.v.nome)}</b> · ${x.pos} ${x.t.id} ${esc(x.nm)}` : `<b>${esc(x.v.nome)} ${x.pos}</b> · ${x.t.id} ${esc(x.nm)}`}${x.s.st !== 'ok' ? (calPorto(x.t.id) ? ` <span class="pill ${x.s.st === 'venc' ? 'p-bad' : 'p-warn'}">${x.s.st === 'venc' ? 'fazer no porto' : 'antecipar no porto'}</span>` : ' <span class="pill p-inf">pode a bordo</span>') : ''}${x.om ? ` <span class="pill p-inf">OM ${esc(x.om.num)}</span>` : ''}${x.mais ? ` <span class="pill p-mut">+${x.mais} pendente${x.mais > 1 ? 's' : ''}</span>` : ''}</div>
+    return `<div class="rkrow" data-calib="${x.v.id}" data-tip="${esc(x.s.txt || '')} · clique para ver o empurrador"><div class="rklb">${x.porBarco ? `<b>${esc(x.v.nome)}</b> · ${x.pos} ${x.t.id} ${esc(x.nm)}` : `<b>${esc(x.v.nome)} ${x.pos}</b> · ${x.t.id} ${esc(x.nm)}`}${x.s.st !== 'ok' ? (calPorto(x.t.id) ? ` <span class="pill ${x.s.st === 'venc' ? 'p-bad' : 'p-warn'}">${x.s.st === 'venc' ? 'fazer no porto' : 'antecipar no porto'}</span>` : ' <span class="pill p-inf">pode a bordo</span>') : ''}${x.om ? ` <span class="pill p-inf">OM ${esc(x.om.num)}</span>` : ''}${x.mais ? ` <span class="pill p-mut">+${x.mais} pendente${x.mais > 1 ? 's' : ''}</span>` : ''}</div>
      <div class="rktr"><i class="rkz"></i><i class="rkbr" style="left:${l}%;width:${w}%;background:${c}"></i><span class="rkvl" style="${x.vida < 0 ? `right:${100 - l + 1}%` : `left:${l + w + 1}%`};color:${c}">${calVal(x)}</span></div></div>`;
   }).join('');
   return `<div class="vh"><div><h1>Ajustes e calibração do MCP</h1><p>Itens de ajuste do Anexo I (folga de válvulas, bicos, ponto de injeção, rótulas, trocador de calor) e a limpeza da caixa de mar. Vencimento = horas OU meses, o que ocorrer primeiro. "Na viagem" = vence antes do fim da próxima viagem de cada embarcação (horas informadas na Programação da janela; sem informação, ${S.cfg.viagemH} h). Os serviços técnicos só são feitos no porto; a caixa de mar pode ser feita a bordo.</p></div><span class="sp"></span><button class="mbtn" onclick="go('emitir')">＋ Programar janela</button></div>
@@ -2292,9 +2292,9 @@ function vCalib() {
    <div class="card mini"><b>${emOM}</b><span>já com OM aberta</span></div>
   </div>
   <div class="card"><div class="row"><h2>A · Resumo por item</h2><span class="sp"></span><span class="note">Serviço técnico só é feito no porto: o que vence durante a viagem tem que ser antecipado antes de sair.</span></div>
-   <div class="tw"><table class="t calt"><thead><tr><th>Item</th><th>Intervalo</th><th>Onde faz</th><th class="c">Vencidos</th><th class="c">Vencem na próxima viagem</th><th class="c">Em dia</th><th>Pendentes (clique para abrir o barco)</th></tr></thead><tbody>${placar}</tbody></table></div></div>
-  <div class="card"><div class="row"><h2>B · ${CALTODOS ? 'Todos os itens, por urgência' : 'Frota: o item mais urgente de cada embarcação'}</h2><span class="sp"></span><button class="mbtn sm" data-caltodos>${CALTODOS ? 'Ver por barco' : 'Ver todos os itens (' + rk.length + ')'}</button></div>
-   <div class="note">${CALTODOS ? 'Cada barra é um item de um motor.' : 'Uma linha por barco, mostrando o item mais apertado dele ("+N pendentes" = outros itens vencidos ou vencendo).'} À esquerda da linha = vencido (quanto atrasou); à direita = quanto falta. O tamanho é proporcional ao intervalo do item. h = horas · d = dias (caixa de mar). Clique numa linha para ver o barco.</div>
+   <div class="tw"><table class="t calt"><thead><tr><th>Item</th><th>Intervalo</th><th>Onde faz</th><th class="c">Vencidos</th><th class="c">Vencem na próxima viagem</th><th class="c">Em dia</th><th>Pendentes (clique para abrir o empurrador)</th></tr></thead><tbody>${placar}</tbody></table></div></div>
+  <div class="card"><div class="row"><h2>B · ${CALTODOS ? 'Todos os itens, por urgência' : 'Frota: o item mais urgente de cada embarcação'}</h2><span class="sp"></span><button class="mbtn sm" data-caltodos>${CALTODOS ? 'Ver por empurrador' : 'Ver todos os itens (' + rk.length + ')'}</button></div>
+   <div class="note">${CALTODOS ? 'Cada barra é um item de um motor.' : 'Uma linha por empurrador, mostrando o item mais apertado dele ("+N pendentes" = outros itens vencidos ou vencendo).'} À esquerda da linha = vencido (quanto atrasou); à direita = quanto falta. O tamanho é proporcional ao intervalo do item. h = horas · d = dias (caixa de mar). Clique numa linha para ver o empurrador.</div>
    <div class="clegend note"><span><i style="background:var(--bad)"></i>vencido</span><span><i style="background:var(--warn)"></i>vence na próxima viagem</span><span><i style="background:var(--ok)"></i>em dia</span>${n.sem ? `<span class="sp"></span><span>${n.sem} sem histórico ficam fora (registre o último serviço)</span>` : ''}</div>
    <div class="rk">${linhas || '<div class="note">Nenhum item com histórico ainda.</div>'}
     <div class="rkrow rkax"><span></span><div class="rktr"><span style="left:0">◂ mais atrasado</span><span style="left:40%;transform:translateX(-50%)">vence agora</span><span style="right:0">mais folga ▸</span></div></div></div></div>`;
@@ -2450,7 +2450,7 @@ function exemploComp() {
 /* =====================================================================
    DOCAGEM (Anexo I, item 9.1.5 – 5 anos) · data-limite do CSN prevalece
    ===================================================================== */
-// junto: itens que exigem o barco fora d'água – ajustar com o Supervisor; janela: vencem até 6 meses depois da docagem
+// junto: itens que exigem o empurrador fora d'água – ajustar com o Supervisor; janela: vencem até 6 meses depois da docagem
 const DOCA = { item: '9.1.5', planejarMeses: 12, janela: 6, junto: ['1.8.4'] };
 function docaLim(vid) { let b = null; recs('doclim').forEach(r => { if (r.vessel === vid && (!b || r.updatedAt > b.updatedAt)) b = r; }); return b; }
 function docaVessel(v) {
@@ -2459,7 +2459,7 @@ function docaVessel(v) {
   if (lim && lim.date) { const d = pD(lim.date); if (!due || d < due) { due = d; fonte = 'Certificado (CSN)'; } }
   const dias = due ? Math.floor((due - hoje()) / 864e5) : null;
   const st = !due ? 'sem' : dias < 0 ? 'venc' : dias <= DOCA.planejarMeses * 30.4 ? 'viag' : 'ok';
-  // itens que só se faz (ou é melhor fazer) com o barco fora d'água e vencem até 12 meses depois da docagem
+  // itens que só se faz (ou é melhor fazer) com o empurrador fora d'água e vencem até 12 meses depois da docagem
   const junto = [];
   if (due) { const ate = addM(due, DOCA.janela); DOCA.junto.forEach(id => { const ti = A1M[id]; if (!ti) return; posicoes(v).forEach(pos => { if (!aplica(v, pos, ti)) return; const s = situacao(v, pos, ti); const alvo = s.alvoD || null; const perto = (due - hoje()) / 864e5 <= DOCA.planejarMeses * 30.4; if ((perto && (s.st === 'venc' || s.st === 'sem')) || (alvo && alvo >= addM(due, -DOCA.planejarMeses) && alvo <= ate)) junto.push({ id, pos, nm: ti.chk, s }); }); }); }
   return { v, L, lim, due, dias, st, fonte, junto, om: omAberta(v.id, 'UN', DOCA.item) };
@@ -2481,7 +2481,7 @@ function vDoca() {
     return `<div class="rkrow" data-doca="${x.v.id}"><div class="rklb"><b>${esc(x.v.nome)}</b> ${tag}${x.om ? ` <span class="pill p-inf">OM ${esc(x.om.num)}</span>` : ''}${x.junto.length ? ` <span class="pill p-mut">+${x.junto.length} ${x.junto.length > 1 ? 'itens' : 'item'} para levar</span>` : ''}<div class="note">${info}</div></div><div class="dctr">${anos.map(y => `<i class="dcy" style="left:${X(new Date(y, 0, 1))}%"></i>`).join('')}<i class="dchj" style="left:${hj}%"></i>${tl}</div></div>`;
   }).join('');
   const prox = D.filter(x => x.st === 'venc' || x.st === 'viag');
-  return `<div class="vh"><div><h1>Docagem</h1><p>Anexo I, item 9.1.5: docagem a cada ${intervalo(A1M[DOCA.item]).m / 12} anos (jateamento, medição de espessura por ultrassom e repintura). Quando o certificado do barco (CSN) tiver uma data-limite de vistoria em seco anterior, ela prevalece. "Planejar" = vence nos próximos ${DOCA.planejarMeses} meses.</p></div><span class="sp"></span></div>
+  return `<div class="vh"><div><h1>Docagem</h1><p>Anexo I, item 9.1.5: docagem a cada ${intervalo(A1M[DOCA.item]).m / 12} anos (jateamento, medição de espessura por ultrassom e repintura). Quando o certificado do empurrador (CSN) tiver uma data-limite de vistoria em seco anterior, ela prevalece. "Planejar" = vence nos próximos ${DOCA.planejarMeses} meses.</p></div><span class="sp"></span></div>
   <div class="kgrid six">
    <div class="card mini ${n.venc ? 'bad' : 'ok'}"><b>${n.venc}</b><span>docagens vencidas</span></div>
    <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>vencem em até ${DOCA.planejarMeses} meses · planejar estaleiro</span></div>
@@ -2490,12 +2490,12 @@ function vDoca() {
    <div class="card mini"><b>${porAno[hoje().getFullYear() + 1] || 0}</b><span>docagens previstas em ${hoje().getFullYear() + 1}</span></div>
    <div class="card mini"><b>${Math.max(...anos.slice(1).map(y => porAno[y]))}</b><span>maior nº de docagens num mesmo ano</span></div>
   </div>
-  <div class="card"><div class="row"><h2>A · Cronograma de docagem</h2><span class="sp"></span><span class="note">Clique num barco para registrar a última docagem ou a data-limite do CSN.</span></div>
+  <div class="card"><div class="row"><h2>A · Cronograma de docagem</h2><span class="sp"></span><span class="note">Clique num empurrador para registrar a última docagem ou a data-limite do CSN.</span></div>
    <div class="clegend note"><span><i style="background:var(--line2);border-radius:50%"></i>última docagem</span><span><i style="background:var(--warnb)"></i>janela de planejamento (${DOCA.planejarMeses} meses)</span><span><i style="background:var(--bad);transform:rotate(45deg)"></i>limite</span><span><i style="background:var(--acc);width:2px"></i>hoje</span></div>
    <div class="rk dcrk">${linhas}
     <div class="rkrow rkax"><span></span><div class="dctr ax">${anos.map(y => `<span style="left:${(X(new Date(y, 0, 1)) + X(new Date(y + 1, 0, 1))) / 2}%">${y}${porAno[y] ? ` <b>· ${porAno[y]}</b>` : ''}</span>`).join('')}</div></div></div>
-   <p class="note">O número ao lado do ano é quantas docagens vencem naquele ano. Se dois ou mais barcos caírem no mesmo período, dá para antecipar um deles e não parar dois de uma vez.</p></div>
-  <div class="card"><div class="row"><h2>B · Escopo de serviços da docagem</h2><span class="sp"></span><span class="note">Itens que precisam do barco fora d'água (hoje: ${DOCA.junto.join(', ')}) e vencem até ${DOCA.janela} meses depois da docagem: fazer junto.</span></div>
+   <p class="note">O número ao lado do ano é quantas docagens vencem naquele ano. Se dois ou mais empurradores caírem no mesmo período, dá para antecipar um deles e não parar dois de uma vez.</p></div>
+  <div class="card"><div class="row"><h2>B · Escopo de serviços da docagem</h2><span class="sp"></span><span class="note">Itens que precisam do empurrador fora d'água (hoje: ${DOCA.junto.join(', ')}) e vencem até ${DOCA.janela} meses depois da docagem: fazer junto.</span></div>
    ${prox.length ? `<div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Limite da docagem</th><th>Itens para fazer junto</th><th></th></tr></thead><tbody>${prox.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${brD(isoD(x.due))}${x.st === 'venc' ? ' <span class="pill p-bad">vencida</span>' : ''}</td><td>${x.junto.length ? x.junto.map(j => `<span class="pd ${j.s.st === 'venc' ? 'venc' : 'viag'}" data-tip="${esc(j.s.txt || '')}">${j.id} ${esc(j.nm)}${j.pos !== 'UN' ? ' ' + j.pos : ''}</span>`).join('') : '<span class="mut">nenhum</span>'}</td><td><a class="mbtn sm pri" href="#emitir/${x.v.id}">Emitir OM</a></td></tr>`).join('')}</tbody></table></div>` : '<div class="note">Nenhuma docagem nos próximos 12 meses.</div>'}</div>`;
 }
 function docaModal(vid) {
@@ -2511,7 +2511,7 @@ function docaModal(vid) {
   $('#modal').addEventListener('click', e => { const bs = e.target.closest('[data-base]'); if (bs) baseModal(...bs.dataset.base.split('|')); });
   $('#dlEd').onclick = () => {
     if (!precisa(false)) return;
-    modal(`<h2>Data-limite do CSN · ${esc(x.v.nome)}</h2><p class="note">Data até a qual o barco precisa passar pela vistoria em seco, conforme o Certificado de Segurança da Navegação. Deixe em branco para usar só o prazo do Anexo I.</p>
+    modal(`<h2>Data-limite do CSN · ${esc(x.v.nome)}</h2><p class="note">Data até a qual o empurrador precisa passar pela vistoria em seco, conforme o Certificado de Segurança da Navegação. Deixe em branco para usar só o prazo do Anexo I.</p>
      <div class="g"><label class="f s3">Data-limite<input id="dlD" type="date" value="${x.lim ? x.lim.date || '' : ''}"></label><label class="f s3">Observação (nº do certificado, CP/AG)<input id="dlO" value="${esc(x.lim ? x.lim.obs || '' : '')}"></label></div>
      <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="dlOk">Salvar</button></div>`);
     $('#dlOk').onclick = async () => { await saveRec({ id: uid('doclim'), kind: 'doclim', vessel: vid, date: $('#dlD').value, obs: $('#dlO').value.trim(), by: S.session.name }); closeModal(); toast('Data-limite salva.'); render(); };
@@ -2534,7 +2534,7 @@ function falhasDados(meses) {
     o._h = l && a ? Math.max(0, (l - a) / 36e5) : null;
     o._comp = (o.equip || '').trim() || (o.descricao || '').trim().split(/[,.;(]/)[0];
   });
-  // reincidência: mesmo barco + mesmo sistema (+ mesmo componente, se informado) em até 180 dias antes
+  // reincidência: mesmo empurrador + mesmo sistema (+ mesmo componente, se informado) em até 180 dias antes
   const todas = oms().filter(o => o.tipo === 'C' && o.abertura);
   const compK = o => ((o.equip || '').trim() || (o.descricao || '').trim().split(/[,.;(:]/)[0]).toLowerCase();
   C.forEach(o => {
@@ -2567,7 +2567,7 @@ function vFalhas() {
   const SO = { falta: 0, atraso: 1, and: 2, nd: 3, ok: 4 };
   let med = C.map(o => ({ o, s: mitigSit(o) })).sort((a, b) => SO[a.s.k] - SO[b.s.k] || (b.o.abertura > a.o.abertura ? 1 : -1));
   if (FALMED === 'abertas') med = med.filter(x => x.s.k !== 'ok' && x.s.k !== 'nd');
-  return `<div class="vh"><div><h1>Análise de falhas e ações de bloqueio</h1><p>Corretivas (Anexo II-A) dos últimos ${FALPER} meses: distribuição de falhas por sistema (Pareto), modo e causa (ISO 14224), reincidência e acompanhamento das ações de bloqueio. Reincidência = mesma falha (barco + sistema + componente) em até ${REINC_DIAS} dias.</p></div><span class="sp"></span>
+  return `<div class="vh"><div><h1>Análise de falhas e ações de bloqueio</h1><p>Corretivas (Anexo II-A) dos últimos ${FALPER} meses: distribuição de falhas por sistema (Pareto), modo e causa (ISO 14224), reincidência e acompanhamento das ações de bloqueio. Reincidência = mesma falha (empurrador + sistema + componente) em até ${REINC_DIAS} dias.</p></div><span class="sp"></span>
    <div class="seg">${[6, 12, 24].map(m => `<button data-falper="${m}" class="${m === FALPER ? 'on' : ''}">${m} meses</button>`).join('')}</div><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>
   <div class="kgrid six">
    <div class="card mini"><b>${C.length}</b><span>corretivas no período</span></div>
@@ -2696,12 +2696,12 @@ function vHor() {
   const frotaMes = ativo.reduce((a, b) => a + b, 0);
   return `<div class="vh"><div><h1>Controle de horímetros (FR 027_L)</h1><p>O horímetro é a base de todos os vencimentos por hora: se ele está atrasado, o painel mostra itens "em dia" que já venceram. Em dia = lançado nos últimos ${HOR.ok} dias · atenção até ${HOR.aten} dias · depois disso, desatualizado.</p></div><span class="sp"></span><button class="mbtn pri" data-act="lancarHor">⏱ Registrar horímetros</button></div>
   <div class="kgrid six">
-   <div class="card mini ok"><b>${n.ok}</b><span>barcos com horímetro em dia (≤ ${HOR.ok} dias)</span></div>
+   <div class="card mini ok"><b>${n.ok}</b><span>empurradores com horímetro em dia (≤ ${HOR.ok} dias)</span></div>
    <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>atenção (${HOR.ok + 1} a ${HOR.aten} dias)</span></div>
    <div class="card mini ${n.venc + n.sem ? 'bad' : 'ok'}"><b>${n.venc + n.sem}</b><span>leituras desatualizadas ou ausentes</span></div>
    <div class="card mini ${sus.length ? 'bad' : 'ok'}"><b>${sus.length}</b><span>leituras inconsistentes</span></div>
    <div class="card mini"><b>${nf(frotaMes)}</b><span>horas ${HORPOS === 'BB' ? 'de MCP (BB ou central)' : HORPOS === 'BE' ? 'de MCP BE' : 'do ' + HORPOS} da frota em ${meses[ultFech]}</span></div>
-   <div class="card mini"><b>${ativo.length ? nf(Math.round(frotaMes / ativo.length / diasMes(1) * 10) / 10) : '—'}</b><span>média de horas por dia, por barco (${meses[ultFech]})</span></div>
+   <div class="card mini"><b>${ativo.length ? nf(Math.round(frotaMes / ativo.length / diasMes(1) * 10) / 10) : '—'}</b><span>média de horas por dia, por empurrador (${meses[ultFech]})</span></div>
   </div>
   <div class="card"><div class="row"><h2>A · Última leitura por embarcação</h2><span class="sp"></span><span class="note">Barra = dias desde o último lançamento (escala até 30 dias).</span></div>
    <div class="rk">${linhas}</div></div>
@@ -2721,7 +2721,7 @@ AFTER.hor = () => { $('#main').onclick = async e => {
   const p = e.target.closest('[data-horpos]'); if (p) { HORPOS = p.dataset.horpos; render(); return; }
   const x = e.target.closest('[data-horexc]'); if (x) { if (!precisa(true)) return; const r = S.recs.get(x.dataset.horexc); if (!r) return; if (!confirm('Excluir o lançamento de ' + nf(r.h) + ' h de ' + brD(r.date) + '?')) return; r.excluido = true; await saveRec(r); toast('Lançamento excluído.'); render(); }
 }; };
-// exemplo: dois barcos atrasados e dois lançamentos com erro de digitação
+// exemplo: dois empurradores atrasados e dois lançamentos com erro de digitação
 function exemploHor() {
   const out = [], F = S.cfg.frota;
   const marca = (v, ks) => recs('hor').forEach(r => { if (r.seed && r.vessel === v.id && ks.some(k => r.id.endsWith(r.pos + k))) { r.excluido = true; out.push(r); } });
@@ -2795,7 +2795,7 @@ function vEmitir() {
   };
   return `<div class="vh"><div><h1>Programação da janela de manutenção · preventivas da viagem</h1><p>Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.</p></div></div>
    <div class="card row"><label class="f" style="min-width:200px">Embarcação<select id="emV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
-    <label class="f" style="width:230px">Horas previstas da próxima viagem<input type="number" id="emH" value="${vh}" min="0" step="10"><span class="note" style="font-size:11px">${+v.viagH > 0 ? 'salvo para este barco' : 'padrão (' + S.cfg.viagemH + ' h): informe o trecho'} · ~${Math.round(horasDia(v.id))} h/dia</span></label>
+    <label class="f" style="width:230px">Horas previstas da próxima viagem<input type="number" id="emH" value="${vh}" min="0" step="10"><span class="note" style="font-size:11px">${+v.viagH > 0 ? 'salvo para este empurrador' : 'padrão (' + S.cfg.viagemH + ' h): informe o trecho'} · ~${Math.round(horasDia(v.id))} h/dia</span></label>
     <div class="seg" style="align-self:flex-end"><button data-mostra="pend" class="${EM.mostrar === 'pend' ? 'on' : ''}">Só vencendo</button><button data-mostra="todos" class="${EM.mostrar === 'todos' ? 'on' : ''}">Todos os itens</button></div>
     ${interditada(vid) ? '<span class="pill p-bad">Interditada por falha Crítica</span>' : ''}${bloqueioSaida(vid).length ? '<span class="pill p-bad">Saída bloqueada: item Crítico vencido</span>' : ''}</div>
    ${posicoes(v).map(bloco).join('')}`;
@@ -3422,7 +3422,7 @@ function docRelatorio() {
     <div><span>Conformidade de fotos · meta 100%</span><b>${fmtv(fot, 0)}%</b>${st(fot, fot >= 99.95)}</div></div>
     ${pr ? `<p class="fl" style="margin-top:6px;text-transform:none;letter-spacing:0">Plano preditivo (NP 055 revisada): ${pr.feito} de ${pr.prog} realizados · tendência trimestral ${pr.d.tend[1]}/${pr.d.tend[0]} · programa de amostragem de óleo ${pr.d.oleo[1]}/${pr.d.oleo[0]} · ensaio de compressão junto com os bicos ${pr.d.comp[1]}/${pr.d.comp[0]}</p>` : ''}`));
   B.push(blk('2', 'Tendência dos últimos 6 meses', '', `<div class="row" style="grid-template-columns:1fr 1fr 1fr"><div><span class="fl">Disponibilidade (%)</span>${relLinha(disp, ms.map(x => x.lab), 95, '%', 1)}</div><div><span class="fl">MTBF (h)</span>${relLinha(mtbf, ms.map(x => x.lab), 500, ' h', 0)}</div><div><span class="fl">MTTR (h)</span>${relLinha(mttr, ms.map(x => x.lab), 8, ' h', 1, true)}</div></div>`));
-  B.push(blk('3', 'Resumo do mês', '', `<div class="row" style="grid-template-columns:repeat(3,1fr)">${dv('OMs encerradas', enc.length)}${dv('Preventivas / preditivas', enc.filter(o => o.tipo === 'P').length)}${dv('Corretivas abertas no mês', corr.length)}${dv('Falhas Crítica/Alta', corr.filter(ehFalha).length)}${dv('Horas de MCP BB da frota', horasFrota.length ? nf(hMes) + ' h' : '—')}${dv('Média por barco', horasFrota.length ? nf(Math.round(hMes / horasFrota.length / diasM * 10) / 10) + ' h/dia' : '—')}</div>`));
+  B.push(blk('3', 'Resumo do mês', '', `<div class="row" style="grid-template-columns:repeat(3,1fr)">${dv('OMs encerradas', enc.length)}${dv('Preventivas / preditivas', enc.filter(o => o.tipo === 'P').length)}${dv('Corretivas abertas no mês', corr.length)}${dv('Falhas Crítica/Alta', corr.filter(ehFalha).length)}${dv('Horas de MCP BB da frota', horasFrota.length ? nf(hMes) + ' h' : '—')}${dv('Média por empurrador', horasFrota.length ? nf(Math.round(hMes / horasFrota.length / diasM * 10) / 10) + ' h/dia' : '—')}</div>`));
   // ---- 4 · situação da frota (norte da manutenção)
   const calTab = CALIB.map(([id, nm]) => { const L = CAL.filter(x => x.t.id === id), n = s => L.filter(x => x.s.st === s).length; return [id + ' ' + nm, n('venc') ? cor(n('venc'), RED) : '–', n('viag') ? cor(n('viag'), AMB) : '–', n('ok') + ' / ' + L.length, calPorto(id) ? 'Porto' : 'A bordo']; });
   B.push(blk('4A', 'Situação da frota · Ajustes e calibração do MCP', 'situação na emissão', tbl(['Item', 'Vencidos', 'Vencem na próx. viagem', 'Em dia', 'Onde faz'], calTab, ['44%', '13%', '19%', '12%', '12%'])
@@ -3433,7 +3433,7 @@ function docRelatorio() {
   const dcList = dcV.concat(dcP).map(x => [x.v.nome, brD(isoD(x.due)), x.fonte, x.st === 'venc' ? cor('Vencida', RED) : cor('Planejar', AMB), x.junto.map(j => j.id + (j.pos !== 'UN' ? ' ' + j.pos : '')).join(', ') || '—']);
   B.push(blk('4C', 'Situação da frota · Docagem', `${dcV.length} vencida(s) · ${dcP.length} nos próximos 12 meses · ${DC.filter(x => x.st === 'sem').length} sem registro`, dcList.length ? tbl(['Embarcação', 'Limite', 'Fonte', 'Situação', 'Incluir no escopo da docagem'], dcList, ['16%', '14%', '24%', '14%', '32%']) : '<div class="v">Nenhuma docagem vencida ou nos próximos 12 meses.</div>'));
   B.push(blk('4D', 'Situação da frota · Horímetro', `${HR.filter(x => x.st === 'ok').length} em dia · ${HR.filter(x => x.st === 'viag').length} atenção · ${hrD.length} desatualizado(s) · ${SUS.length} lançamento(s) suspeito(s)`,
-    hrD.length || SUS.length ? tbl(['Embarcação', 'Último lançamento', 'Situação'], hrD.map(x => [x.v.nome, x.last ? brD(x.last) : '—', cor(x.last ? 'há ' + x.dias + ' dias' : 'sem lançamento', RED)]).concat(SUS.slice(0, 5).map(s => [s.v.nome + ' ' + s.p, brD(s.r.date), cor(s.t, RED)])), ['24%', '22%', '54%']) : '<div class="v">Todos os barcos com horímetro em dia.</div>'));
+    hrD.length || SUS.length ? tbl(['Embarcação', 'Último lançamento', 'Situação'], hrD.map(x => [x.v.nome, x.last ? brD(x.last) : '—', cor(x.last ? 'há ' + x.dias + ' dias' : 'sem lançamento', RED)]).concat(SUS.slice(0, 5).map(s => [s.v.nome + ' ' + s.p, brD(s.r.date), cor(s.t, RED)])), ['24%', '22%', '54%']) : '<div class="v">Todos os empurradores com horímetro em dia.</div>'));
   if (typeof lubBlocosRel === 'function') lubBlocosRel(ini, fim).forEach(b => B.push(b));
   // ---- 5/6 · OMs e corretivas do mês
   const linhas = enc.map(o => [o.num, o.tipo === 'C' ? 'Corretiva ' + (o.classe || '') : ((o.items || []).every(i => A1M[i].pred) ? 'Preditiva' : 'Preventiva'), vName(o.vessel) + ' · ' + o.pos, o.tipo === 'C' ? (o.descricao || '') : (o.items || []).join(', '), new Date(o.fechadoAt).toLocaleDateString('pt-BR')]);
@@ -3480,9 +3480,9 @@ function vAdmin() {
     <div class="row"><input id="adUrl" value="${esc(S.url)}" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:240px"><button class="mbtn" data-act="testar">Testar</button><button class="mbtn pri" data-act="salvarUrl">Salvar</button><button class="mbtn" data-act="sync">↻ Sincronizar agora</button></div><div class="note" id="adUrlMsg">${esc(S.syncMsg)}</div></div>
    <div class="card"><h2>Senhas</h2><p class="note">${S.url ? 'Trocadas no servidor: valem para todos.' : 'Modo local: valem só neste aparelho.'} Mínimo de 6 caracteres. Deixe em branco o que não quer trocar.</p>
     <div class="g"><label class="f s3">Nova senha do Analista (operador)<input id="pwOp" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label><label class="f s3">Nova senha do Supervisor (administrador)<input id="pwAd" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label></div><div class="row"><button class="mbtn" data-act="senhas" ${a ? '' : 'disabled'}>Trocar senhas</button></div></div>
-   <div class="card"><div class="row"><h2>Frota</h2><span class="sp"></span><label class="f" style="width:260px">Viagem padrão (h) · só para barco sem a próxima viagem informada<input type="number" id="adViag" value="${S.cfg.viagemH}" ${a ? '' : 'disabled'}></label></div>
+   <div class="card"><div class="row"><h2>Frota</h2><span class="sp"></span><label class="f" style="width:260px">Viagem padrão (h) · só para empurrador sem a próxima viagem informada<input type="number" id="adViag" value="${S.cfg.viagemH}" ${a ? '' : 'disabled'}></label></div>
     <p class="note">Cadastro conforme a <b>Matriz técnica de equipamentos e lubrificação</b>. Monomotor tem um MCP central; bimotor, BB e BE. O reversor decide o bloco do Anexo I (1.5 Hitachi, 1.6 Masson, 1.7 REINTJES) e o modelo do MCA decide o bloco 3.1 (MWM) ou 3.2 (Yanmar). Desmarque os equipamentos que a embarcação não tem.</p>
-    <div class="row"><button class="mbtn" data-act="matriz" ${a ? '' : 'disabled'}>↺ Recarregar o cadastro da matriz técnica</button><span class="note">Substitui propulsão, reversores e MCAs dos 12 barcos pelos dados da matriz. Depois clique em Salvar frota.</span></div>
+    <div class="row"><button class="mbtn" data-act="matriz" ${a ? '' : 'disabled'}>↺ Recarregar o cadastro da matriz técnica</button><span class="note">Substitui propulsão, reversores e MCAs dos 12 empurradores pelos dados da matriz. Depois clique em Salvar frota.</span></div>
     <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Propulsão</th><th>Reversor</th><th>MCA 1</th><th>MCA 2</th><th>MCA 3</th><th>Equipamentos que não tem</th></tr></thead><tbody>
     ${S.cfg.frota.map((v, i) => `<tr><td><input data-fr="${i}|nome" value="${esc(v.nome)}" ${a ? '' : 'disabled'} style="min-width:110px"></td>
      <td><select data-fr="${i}|mcp" ${a ? '' : 'disabled'}><option value="bi"${v.mcp !== 'mono' ? ' selected' : ''}>Bimotor (BB/BE)</option><option value="mono"${v.mcp === 'mono' ? ' selected' : ''}>Monomotor (central)</option></select><div class="note" style="font-size:11px">${esc(Object.values(v.mcpMod || {})[0] || '')}</div></td>
@@ -3759,7 +3759,7 @@ function vLub() {
        return `<div class="dvr click" data-lubv="${r.v.id}"><span class="dvn"><b>${esc(r.v.nome)}</b><small>${esc(r.x.e.nome)}${r.mais ? ' · +' + r.mais + ' pendente' + (r.mais > 1 ? 's' : '') : ''}</small></span><span class="dvt"><i class="dvz" style="left:${z}%"></i><i class="dvb" style="${d < 0 ? `right:${100 - z}%` : `left:${z}%`};width:${Math.max(0.8, w)}%;background:${cor[st]}"></i></span><span class="dvv" style="color:${cor[st]}">${d < 0 ? '−' + nf(-d) + ' h' : nf(d) + ' h'}<small>${r.x.porData ? (d < 0 ? 'venceu por data ' : 'limite: data ') + (r.x.s.alvoD ? r.x.s.alvoD.toLocaleDateString('pt-BR') : '') : d < 0 ? 'vencida por horas' : 'próx. ' + nf(r.x.s.alvoH) + ' h'}</small></span></div>`; }).join('')}</div>
 
      <div class="row" style="margin-top:8px"><button class="mbtn sm" data-lubtab>${LV.tab ? '▲ Esconder' : '▼ Ver'} todos os equipamentos (tabela)</button></div></div>`; })()}
-  ${LV.tab ? `<div class="card"><div class="row"><h2>Todos os equipamentos por barco</h2><span class="sp"></span><span class="note">h = horas · d = dias que faltam (− = vencida). Clique na embarcação para ver o detalhe.</span></div>
+  ${LV.tab ? `<div class="card"><div class="row"><h2>Todos os equipamentos por empurrador</h2><span class="sp"></span><span class="note">h = horas · d = dias que faltam (− = vencida). Clique na embarcação para ver o detalhe.</span></div>
    <div class="clegend note"><span><i style="background:var(--bad)"></i>vencida</span><span><i style="background:var(--warn)"></i>vence na próxima viagem</span><span><i style="background:var(--ok)"></i>em dia</span><span><i style="background:var(--acc)"></i>OM aberta</span><span><i style="background:var(--line2)"></i>sem histórico</span></div>
    <div class="tw"><table class="t lubt"><thead><tr><th>Embarcação</th>${GCOLS.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${linhas}</tbody></table></div></div>` : ''}
   <div class="card"><div class="row"><h2>B · Programação das próximas trocas</h2><span class="sp"></span><div class="seg">${[15, 30, 60, 90].map(d => `<button data-lubprazo="${d}" class="${LV.prazo === d ? 'on' : ''}">${d} dias</button>`).join('')}</div></div>
@@ -3804,9 +3804,9 @@ function vLubCons() {
   const res = ks.map(k => { const L = F.filter(r => r.date.slice(0, 7) === k); return { k, n: L.length, oleo: L.reduce((a, r) => a + litros((r.residuos || {}).oleo), 0), flt: L.reduce((a, r) => a + litros((r.residuos || {}).filtros), 0), tamb: L.reduce((a, r) => a + litros((r.residuos || {}).tambores), 0), fr016: [...new Set(L.map(r => (r.residuos || {}).fr016).filter(Boolean))], sem016: L.filter(r => litros((r.residuos || {}).oleo) > 0 && !(r.residuos || {}).fr016).length }; });
   const queim = res.reduce((a, r) => a + r.oleo, 0), sem016 = res.reduce((a, r) => a + r.sem016, 0);
   const fotos4 = F.filter(r => (r.fotos || {}).antes >= 2 && (r.fotos || {}).depois >= 2).length;
-  const barcos = [...new Set(S.cfg.frota.map(v => v.nome).concat(lubLanc().map(x => x.nome)))];
+  const empurradores = [...new Set(S.cfg.frota.map(v => v.nome).concat(lubLanc().map(x => x.nome)))];
   return `<div class="vh"><div><h1>Consumo de lubrificantes e OLUC</h1><p>Litros usados nas trocas (FR 049_B) e nos complementos, por tipo de óleo, por mês e por embarcação; OLUC (óleo lubrificante usado) gerado e rastreabilidade pelo FR 016_E (NP 5.7 · CONAMA 362/2005).</p></div><span class="sp"></span><button class="mbtn" data-act="lubFr016">🖨 FR 016_E em branco</button></div>
-  <div class="card"><div class="g"><label class="f s2">Período<select id="lcM">${[6, 12, 24].map(m => `<option value="${m}"${LC.meses === m ? ' selected' : ''}>Últimos ${m} meses</option>`).join('')}</select></label><label class="f s3">Barco<select id="lcB"><option value="">Frota toda</option>${barcos.map(b => `<option${LC.barco === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></label></div></div>
+  <div class="card"><div class="g"><label class="f s2">Período<select id="lcM">${[6, 12, 24].map(m => `<option value="${m}"${LC.meses === m ? ' selected' : ''}>Últimos ${m} meses</option>`).join('')}</select></label><label class="f s3">Empurrador<select id="lcB"><option value="">Frota toda</option>${empurradores.map(b => `<option${LC.barco === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></label></div></div>
   <div class="kgrid six">
    <div class="card mini"><b>${nf(tot)} L</b><span>de óleo no período</span></div>
    <div class="card mini"><b>${nf(totT)} L</b><span>nas trocas (${LA.filter(x => x.tipo === 'troca').length} equipamentos)</span></div>
@@ -3818,7 +3818,7 @@ function vLubCons() {
   <div class="card"><div class="row"><h2>A · Consumo mensal por tipo de lubrificante (L)</h2></div>${stackChart(ms.map(m => m.lab), serie, ' L')}${legOleos(tipos)}</div>
   <div class="two">
    <div class="card"><div class="row"><h2>B · Consumo de lubrificante por embarcação</h2><span class="sp"></span><span class="note">trocas + complementos</span></div>${hbar(rk.slice(0, 14).map(([n, L]) => [n, Math.round(L)]), ' L')}
-    ${rk.length > 2 ? `<p class="note">${(() => { let a = 0, k = 0; for (const [, L] of rk) { a += L; k++; if (a >= tot * 0.8) break; } return k + ' de ' + rk.length + ' barcos respondem por ~80% do óleo.'; })()}</p>` : ''}</div>
+    ${rk.length > 2 ? `<p class="note">${(() => { let a = 0, k = 0; for (const [, L] of rk) { a += L; k++; if (a >= tot * 0.8) break; } return k + ' de ' + rk.length + ' empurradores respondem por ~80% do óleo.'; })()}</p>` : ''}</div>
    <div class="card"><div class="row"><h2>C · Geração de OLUC por mês</h2></div>
     <div class="tw"><table class="t"><thead><tr><th>Mês</th><th class="c">FR 049_B</th><th class="c">OLUC</th><th class="c">Filtros</th><th>FR 016_E</th></tr></thead><tbody>${res.slice().reverse().map((r, i) => `<tr><td>${ms[ms.length - 1 - i].lab}</td><td class="c">${r.n || '–'}</td><td class="c mono">${r.oleo ? nf(r.oleo) + ' L' : '–'}</td><td class="c mono">${r.flt ? nf(r.flt) : '–'}</td><td class="note">${r.fr016.length ? `<span data-tip="${esc(r.fr016.join(', '))}">${r.fr016.length > 3 ? r.fr016.slice(0, 2).map(esc).join(', ') + ' +' + (r.fr016.length - 2) : r.fr016.map(esc).join(', ')}</span>` : '–'}${r.sem016 ? ` <span class="pill p-warn">${r.sem016} sem nº</span>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
   </div>`;
@@ -3831,15 +3831,15 @@ AFTER.lubcons = () => { $('#main').onchange = e => { if (e.target.id === 'lcM') 
 const LR = { barco: '', mes: '' };
 function vLubReg() {
   const L = recs('lub').filter(r => (!LR.barco || (r.vessel ? vName(r.vessel) : nomeCurto(r.vNome)) === LR.barco) && (!LR.mes || (r.date || '').slice(0, 7) === LR.mes)).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt || 0) - (a.createdAt || 0)));
-  const ms = mesesAte(12).reverse(), barcos = [...new Set(S.cfg.frota.map(v => v.nome).concat(recs('lub').map(r => r.vessel ? vName(r.vessel) : nomeCurto(r.vNome))))];
+  const ms = mesesAte(12).reverse(), empurradores = [...new Set(S.cfg.frota.map(v => v.nome).concat(recs('lub').map(r => r.vessel ? vName(r.vessel) : nomeCurto(r.vNome))))];
   const rows = L.slice(0, 300).map(r => {
     const nome = r.vessel ? vName(r.vessel) : nomeCurto(r.vNome);
     if (r.tipo === 'comp') { const v = vessel(r.vessel), e = v && lubEq(v, r.key); return `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(nome)}</b></td><td><span class="pill p-mut">Complemento</span></td><td>—</td><td>${esc(e ? e.nome : r.key)}</td><td class="mono">${nf1(+r.L)} L</td><td class="note">${r.hr ? nf(r.hr) + ' h' : '—'}</td><td>—</td><td>${can.admin() ? `<button class="mbtn sm" data-lubexc="${r.id}">Excluir</button>` : ''}</td></tr>`; }
     const T = (r.eq || []).filter(q => q.status === 'T'), Lt = T.reduce((a, q) => a + litros(q.qtd), 0), f = r.fotos || {};
     return `<tr class="click" data-lubver="${r.id}"><td class="mono">${brD(r.date)}</td><td><b>${esc(nome)}</b>${r.tipoEmb === 'bal' ? ' <span class="pill p-mut">balsa</span>' : ''}</td><td><span class="pill p-inf">FR 049_B</span> <span class="mono">OM ${esc(r.om || '—')}</span></td><td>${esc(r.local || '')}${r.localTx ? ' · ' + esc(r.localTx) : ''}</td><td>${T.map(q => esc(q.name)).join(', ') || '—'}${(r.me || []).length || (r.nc || []).length ? ' <span class="pill p-warn">' + ((r.me || []).length + (r.nc || []).length) + ' ME/NC</span>' : ''}</td><td class="mono">${nf1(Lt)} L</td><td>${(() => { if (!lubEmp(r)) return '<span class="pill p-mut">NP 024</span>'; const o = omDoFr(r); return !o ? '<span class="pill p-warn">OM não lançada</span>' : o.status === 'encerrada' ? `<a class="pill p-ok" href="#om/${o.id}">OM ${esc(o.num)} encerrada</a>` : `<a class="pill p-inf" href="#om/${o.id}">OM ${esc(o.num)} · ${omStatusTxt(o)}</a>`; })()}</td><td>${(f.antes || 0) >= 2 && (f.depois || 0) >= 2 ? '<span class="pill p-ok">4 fotos</span>' : `<span class="pill p-warn">${(f.antes || 0) + (f.depois || 0)}/4</span>`}</td><td><button class="mbtn sm" data-lubver="${r.id}">Ver</button></td></tr>`;
   }).join('');
-  return `<div class="vh"><div><h1>Registros de lubrificação</h1><p>Todos os FR 049_B salvos (com o PDF das 2 folhas, que vai para a pasta do barco no Google Drive) e os complementos de óleo.</p></div><span class="sp"></span><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn pri" data-act="lubForm">📝 Preencher FR 049_B</button></div>
-  <div class="card"><div class="g"><label class="f s3">Barco<select id="lrB"><option value="">Todos</option>${barcos.map(b => `<option${LR.barco === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></label><label class="f s2">Mês<select id="lrM"><option value="">Todos</option>${ms.map(m => `<option value="${m.k}"${LR.mes === m.k ? ' selected' : ''}>${m.lab}</option>`).join('')}</select></label></div>
+  return `<div class="vh"><div><h1>Registros de lubrificação</h1><p>Todos os FR 049_B salvos (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e os complementos de óleo.</p></div><span class="sp"></span><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn pri" data-act="lubForm">📝 Preencher FR 049_B</button></div>
+  <div class="card"><div class="g"><label class="f s3">Empurrador<select id="lrB"><option value="">Todos</option>${empurradores.map(b => `<option${LR.barco === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></label><label class="f s2">Mês<select id="lrM"><option value="">Todos</option>${ms.map(m => `<option value="${m.k}"${LR.mes === m.k ? ' selected' : ''}>${m.lab}</option>`).join('')}</select></label></div>
    ${rows ? `<div class="tw"><table class="t"><thead><tr><th>Data</th><th>Embarcação</th><th>Registro</th><th>Local</th><th>Equipamentos trocados</th><th>Litros</th><th>Anexo II-B</th><th>Fotos</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${L.length > 300 ? '<p class="note">Mostrando os 300 mais recentes. Use os filtros.</p>' : ''}` : '<div class="note">Nenhum registro neste filtro.</div>'}</div>`;
 }
 AFTER.lubreg = () => { const m = $('#main');
@@ -3887,10 +3887,10 @@ function vPlano() {
     ['Conferir', ['Válvulas 3 vias de volta em "Run"', 'Partir em marcha lenta e olhar vazamentos', 'Parar ~30 min e conferir o nível entre MIN e MAX', 'Óleo leitoso = água no óleo: parar e abrir OM']],
     ['Registrar', ['Preencher o FR 049_B: horímetro, óleo, litros, lote e validade (NP 5.9)', '2 fotos antes e 2 depois (NP 5.8)', 'Salvar no SMF: o último serviço e o horímetro atualizam sozinhos']],
     ['Resíduos', ['Óleo usado e filtros: registrar no FR 016_E (NP 5.7)', 'Destinação conforme CONAMA 362/2005', 'NR-12 durante o serviço']]];
-  return `<div class="vh"><div><h1>Plano de lubrificação</h1><p>Equipamentos, óleo, marcas aprovadas, volume e intervalo de troca de cada família, conforme a Matriz técnica de equipamentos e lubrificação. Escolha um barco para ver quantos litros leva uma troca completa.</p></div><span class="sp"></span><button class="mbtn" data-act="lubFr016">🖨 FR 016_E em branco</button><button class="mbtn pri" data-act="lubForm">📝 Preencher FR 049_B</button></div>
-  <div class="card"><div class="g"><label class="f s3">Barco<select id="lpB"><option value="">Frota toda</option>${FROTA_PADRAO.map(b => `<option${LP.barco === b ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
+  return `<div class="vh"><div><h1>Plano de lubrificação</h1><p>Equipamentos, óleo, marcas aprovadas, volume e intervalo de troca de cada família, conforme a Matriz técnica de equipamentos e lubrificação. Escolha um empurrador para ver quantos litros leva uma troca completa.</p></div><span class="sp"></span><button class="mbtn" data-act="lubFr016">🖨 FR 016_E em branco</button><button class="mbtn pri" data-act="lubForm">📝 Preencher FR 049_B</button></div>
+  <div class="card"><div class="g"><label class="f s3">Empurrador<select id="lpB"><option value="">Frota toda</option>${FROTA_PADRAO.map(b => `<option${LP.barco === b ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
    ${vi >= 0 ? `<div class="f s3"><span>Óleo para trocar tudo no ${esc(LP.barco)}</span><div class="note" style="font-size:13px">${Object.entries(tot).map(([o, l]) => `<i class="dotc" style="background:${OLEO_COR[o]}"></i>${o === 'Outros' ? 'SAE 90' : o}: <b>${nf1(l)} L</b>`).join(' · ')}</div></div>` : ''}</div>
-   <div class="tw"><table class="t plt"><thead><tr><th>Equipamento</th><th class="c">${vi < 0 ? 'Qtd na frota' : 'Qtd no barco'}</th><th>Troca</th><th>Óleo e marcas</th><th>Volume por equip.</th>${vi >= 0 ? '<th>Total p/ 1 troca</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></div></div>
+   <div class="tw"><table class="t plt"><thead><tr><th>Equipamento</th><th class="c">${vi < 0 ? 'Qtd na frota' : 'Qtd no empurrador'}</th><th>Troca</th><th>Óleo e marcas</th><th>Volume por equip.</th>${vi >= 0 ? '<th>Total p/ 1 troca</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></div></div>
   <div class="card"><div class="row"><h2>Procedimento de troca de óleo (FR 049_B)</h2></div><div class="mmgrid">${MM.map(([t, l], i) => `<div class="mmc"><b><i>${i + 1}</i>${t}</b><ul>${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div></div>`;
 }
 AFTER.plano = () => { $('#main').onchange = e => { if (e.target.id === 'lpB') { LP.barco = e.target.value; render(); } }; };
@@ -4457,7 +4457,7 @@ function treinModal(r) {
     <label class="f s3">Função<select id="rF">${FUNCOES.map(f => `<option${o.funcao === f ? ' selected' : ''}>${f}</option>`).join('')}</select></label>
     <label class="f s2">Tipo<select id="rT">${TREIN_TIPOS.map(t => `<option value="${t[0]}"${o.tipo === t[0] ? ' selected' : ''}>${t[1]}</option>`).join('')}</select></label><label class="f s2">Data<input id="rD" type="date" value="${esc(o.data)}"></label><label class="f s2">Carga (h)<input id="rH" inputmode="decimal" value="${esc(o.horas || '')}"></label>
     <label class="f s4">Tema / NR<input id="rM" value="${esc(o.tema || '')}" placeholder="ex.: NR-10 básico, resposta a emergências, RNC 2026-033"></label><label class="f s2">Validade (NR/curso)<input id="rV" type="date" value="${esc(o.validade || '')}"></label>
-    <label class="f s3">Barco<select id="rB"><option value="">—</option>${S.cfg.frota.map(v => `<option${o.barco === v.nome ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label><label class="f s3">Ministrante<input id="rI" value="${esc(o.ministrante || '')}" placeholder="SESMT, Supervisor, Assist. técnica"></label>
+    <label class="f s3">Empurrador<select id="rB"><option value="">—</option>${S.cfg.frota.map(v => `<option${o.barco === v.nome ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label><label class="f s3">Ministrante<input id="rI" value="${esc(o.ministrante || '')}" placeholder="SESMT, Supervisor, Assist. técnica"></label>
     <label class="f s6">Link da evidência (lista de presença, certificado no Drive)<input id="rU" value="${esc(o.url || '')}" placeholder="https://"></label></div>
    <div class="note" id="rErr" style="color:var(--badt)"></div>
    <div class="row end">${r && can.admin() ? '<button class="mbtn" id="rX">Excluir</button><span class="sp"></span>' : ''}<button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="rOk">Salvar</button></div>`, true);
@@ -4515,7 +4515,7 @@ formIIA = function (o) {
 
   <div class="card cblk">${blkH(2, 'Ação de contenção', 'proteger pessoas, meio ambiente e operação · ISO 9001 10.2.1 · ISO 14001 · ISO 45001', 'amb')}<div class="g">
     ${fMul(o, 'impacto', 'A falha afetou', IMPACTOS, 's6')}
-    ${fTA(o, 'contencao', 'Ação de contenção executada' + (ca ? ' (obrigatório)' : ''), 's6', 2, 'ex.: motor parado, vazamento contido com absorvente, área isolada, barco fundeado')}
+    ${fTA(o, 'contencao', 'Ação de contenção executada' + (ca ? ' (obrigatório)' : ''), 's6', 2, 'ex.: motor parado, vazamento contido com absorvente, área isolada, empurrador fundeado')}
     ${fIn(o, 'pt', 'Nº da PT do SESMT (só atividade de risco · 5.11.2)', 's3', 'placeholder="N/A"')}${fIn(o, 'sesmt', 'Liberação do SESMT · responsável', 's3', 'placeholder="N/A"')}</div></div>
 
   <div class="card cblk">${blkH(3, 'Reparo e restabelecimento', 'execução e condição final (“depois”)')}<div class="g">
@@ -4584,7 +4584,7 @@ docIIA = function (o) {
   if (!o || o.tipo !== 'C' || o.status !== 'encerrada' || !ehCA(o)) return h;
   const pv = efPrev(o), venc = !o.efRes && pv && pv <= isoD(hoje()), reinc = typeof falhasDados === 'function' && falhasDados(24).some(f => f.id !== o.id && f.vessel === o.vessel && f._comp && (f._comp || '').toLowerCase() === String(o.equip || '').toLowerCase() && pD(f.abertura) > pD(o.liberacao || o.abertura));
   const card = `<div class="card cblk ef">${blkH('✓', 'Verificação da eficácia', 'ISO 9001 10.2.1 d · a ação funcionou?')}
-   ${reinc ? '<div class="banner bad">Atenção: houve nova falha do mesmo componente neste barco depois desta corretiva.</div>' : ''}
+   ${reinc ? '<div class="banner bad">Atenção: houve nova falha do mesmo componente neste empurrador depois desta corretiva.</div>' : ''}
    ${o.efRes ? `<p>${o.efRes === 'Eficaz' ? '<span class="pill p-ok">Eficaz</span>' : '<span class="pill p-bad">Não eficaz</span>'} verificada em ${brD(o.efData)} por ${esc(o.efBy || '')}${o.efObs ? ' · ' + esc(o.efObs) : ''}</p>` : `<p class="note">${venc ? '<b style="color:var(--badt)">Verificação vencida</b> desde ' + brD(pv) : 'Verificar a partir de ' + brD(pv)} (${EF_DIAS} dias depois da liberação ou do prazo da medida). Confira se a falha voltou, se a medida foi aplicada e se precisa mudar o Anexo I.</p>`}
    ${can.admin() ? `<div class="g"><label class="f s2">Resultado<select id="efR"><option value="">Escolha…</option>${['Eficaz', 'Não eficaz'].map(x => `<option${o.efRes === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label><label class="f s2">Data<input id="efD" type="date" value="${esc(o.efData || isoD(hoje()))}"></label><label class="f s4">Observação<input id="efO" value="${esc(o.efObs || '')}" placeholder="ex.: 4 meses sem reincidência; não eficaz → nova OM 48xxx"></label></div><div class="row"><button class="mbtn pri" data-ef="salvar">Registrar verificação</button></div>` : '<p class="note">Somente o Supervisor registra a verificação.</p>'}</div>`;
   return h.replace('<div class="work">', card + '<div class="work">');
@@ -6149,7 +6149,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-prm]
 function docaStats() { const H = S.cfg.frota.flatMap(v => docaHist(v)); const par = H.filter(x => x.parada != null).map(x => x.parada), pont = H.filter(x => x.atraso != null);
   return { parada: par.length ? par.reduce((a, b) => a + b, 0) / par.length : null, nPar: par.length, pont: pont.length ? pont.filter(x => x.atraso <= 0).length / pont.length * 100 : null, nPont: pont.length, okPont: pont.filter(x => x.atraso <= 0).length }; }
 { const c0 = docaCrono; docaCrono = function (D) { const h = c0(D), s = docaStats();
-    const box = `<div class="ds-row"><div class="ds"><b>${s.parada == null ? '—' : nf(s.parada, 0) + ' d'}</b><span>parada média em estaleiro</span><small>${s.nPar ? s.nPar + ' docagem(ns) com entrada e saída' : 'registre entrada e saída'}</small></div><div class="ds"><b style="color:${s.pont == null ? '#202124' : s.pont >= 80 ? '#188038' : s.pont >= 60 ? '#E37400' : '#D93025'}">${s.pont == null ? '—' : nf(s.pont, 0) + '%'}</b><span>pontualidade de entrada</span><small>${s.nPont ? s.okPont + ' de ' + s.nPont + ' entraram no prazo' : 'precisa de 2 docagens do mesmo barco'}</small></div></div>`;
+    const box = `<div class="ds-row"><div class="ds"><b>${s.parada == null ? '—' : nf(s.parada, 0) + ' d'}</b><span>parada média em estaleiro</span><small>${s.nPar ? s.nPar + ' docagem(ns) com entrada e saída' : 'registre entrada e saída'}</small></div><div class="ds"><b style="color:${s.pont == null ? '#202124' : s.pont >= 80 ? '#188038' : s.pont >= 60 ? '#E37400' : '#D93025'}">${s.pont == null ? '—' : nf(s.pont, 0) + '%'}</b><span>pontualidade de entrada</span><small>${s.nPont ? s.okPont + ' de ' + s.nPont + ' entraram no prazo' : 'precisa de 2 docagens do mesmo empurrador'}</small></div></div>`;
     const i = h.indexOf('<div class="clegend'); return i > 0 ? h.slice(0, i) + box + h.slice(i) : h; }; }
 
 </script>
@@ -6807,7 +6807,7 @@ function vOmg() {
    <div ${ro ? 'inert' : ''} id="rgForm">
    <div class="card"><div class="row"><h2>1 · Dados da execução</h2></div><div class="g">
     ${inp('dreal', 'Data da execução', 's2', 'type="date"')}${inp('inicio', 'Início', 's2', 'type="datetime-local"')}${inp('termino', 'Término', 's2', 'type="datetime-local"')}
-    ${inp('execn', 'Equipe executora (nomes)', 's4', 'placeholder="Ex.: João (mecânico), Pedro (auxiliar)"')}${inp('indispH', 'Barco parado para a manutenção (h)', 's2', 'inputmode="decimal" placeholder="0 se não parou"')}
+    ${inp('execn', 'Equipe executora (nomes)', 's4', 'placeholder="Ex.: João (mecânico), Pedro (auxiliar)"')}${inp('indispH', 'Empurrador parado para a manutenção (h)', 's2', 'inputmode="decimal" placeholder="0 se não parou"')}
     <label class="f s2">Gerou resíduo?<select data-rg="resid"><option value="">Escolha…</option>${['Não', 'Sim'].map(x => `<option${R.resid === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>${inp('fr016', 'Nº FR 016_E', 's2')}${inp('pt', 'Nº da PT do SESMT (se houver)', 's2')}
     ${inp('justif', 'Justificativa (se passou da hora-alvo)', 's6')}</div></div>
    <div class="card"><div class="row"><h2>2 · Itens da ficha</h2><span class="sp"></span><span class="note" id="rgCnt">${ok} OK · ${nok} NOK · ${na} NA · ${tot - ok - nok - na} sem marcação</span><button class="mbtn" data-rgall="ok">Marcar todos sem marcação como OK</button></div>
@@ -6895,7 +6895,7 @@ function vRotina() {
   const passos = [['1', 'Programar', 'marcar o que vence e abrir a OM no Sankhya'], ['2', 'Imprimir', 'ficha checklist para a equipe de terra'], ['3', 'Executar', 'equipe de terra faz e marca OK / NOK / NA'], ['4', 'Lançar', 'copiar a ficha para o sistema'], ['5', 'Conferir', 'Supervisor aprova; PDF vai para o Drive']];
   const corP = { 1: '#D93025', 2: '#E37400', 3: '#1967D2', 4: '#E37400', 5: '#188038', 6: '#188038', 0: '#9AA0A6' };
   const ordem = Pa.slice().sort((a, b) => (a.p.n || 9) - (b.p.n || 9) || (b.x.venc ? b.x.venc.length : 0) - (a.x.venc ? a.x.venc.length : 0));
-  return `<div class="vh"><div><h1>Rotina do dia</h1><p>O que fazer agora, barco por barco, na ordem do processo. Cada linha mostra o próximo passo e o botão para fazê-lo.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
+  return `<div class="vh"><div><h1>Rotina do dia</h1><p>O que fazer agora, empurrador por empurrador, na ordem do processo. Cada linha mostra o próximo passo e o botão para fazê-lo.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
    <div class="rt-passos">${passos.map(([n, t, d], i) => `<div><b>${n}</b><span>${t}</span><small>${d}</small><em>${cont(i + 1)}</em></div>`).join('<i>›</i>')}</div>
    ${crit.length || hrOld.length || corr ? `<div class="card rt-al"><h2>Antes de tudo</h2><ul>
     ${crit.map(x => `<li><b style="color:#D93025">${esc(x.v.nome)}: saída bloqueada</b>, item Crítico vencido sem OM. <a href="#emitir/${x.v.id}">Programar agora</a></li>`).join('')}
@@ -7024,14 +7024,14 @@ function vCrono2() {
     <div class="s6 c2-ciclo"><b>Ciclo de viagem</b> ida <input data-cic="ida" value="${c.ida}"> d · descargas <input data-cic="desc" value="${c.desc}"> d · volta <input data-cic="volta" value="${c.volta}"> d · porto <input data-cic="porto" value="${c.porto}"> d<br><span class="note">1 viagem ≈ <b>${nf(hv)} h de MCP</b> (${c.hNav} h/dia navegando, ${c.hDesc} h/dia nas descargas) · ≈ ${(365 / (c.ida + c.desc + c.volta + c.porto)).toFixed(1).replace('.', ',')} viagens por ano</span></div></div></div>
    <div class="two">
     <div class="card"><h2>1 · Troca de óleo: próximas</h2><div class="tw"><table class="t"><thead><tr><th>Serviço</th><th>Próximo</th><th></th></tr></thead><tbody>${oleo.map(({ l, p }) => `<tr><td><b>${esc(l.nome.replace('Troca de óleo · ', ''))}</b><div class="note">${l.its.length} itens · FR 049_B</div></td><td class="mono">${falta(p)}</td><td>${quandoO(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="note">Sem dados.</td></tr>'}</tbody></table></div><p class="note">Junto com o óleo são feitos os itens de 250 h (correias, pré-filtro, filtros de combustível e de ar, baterias, zincos). Em viagem: a tripulação, com o Supervisor acompanhando pela câmera. No porto: a equipe de manutenção com o CTF ou MFM disponível. Nos dois casos lança-se o FR 049_B, e a troca e esses itens contam como feitos.</p></div>
-    <div class="card"><div class="row"><h2>2 · Janela em Manaus: antes da próxima saída</h2><span class="sp"></span><a class="mbtn sm pri" href="#emitir/${v.id}">Programar OM</a></div><div class="tw"><table class="t"><thead><tr><th>Revisão</th><th>Próximo item</th><th></th></tr></thead><tbody>${jan.map(({ l, p }) => `<tr><td><b>${esc(l.nome)}</b><div class="note">${l.its.length} itens</div></td><td class="mono">${falta(p)}<div class="note">${p.t.id} ${esc(p.t.chk)}</div></td><td>${quando(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="note">Sem dados.</td></tr>'}</tbody></table></div><p class="note">Vence na próxima viagem: trocar no porto antes da saída ou mandar óleo e filtros para a tripulação. "Fazer nesta janela" = vence antes de o barco voltar da próxima viagem (≈ ${nf(hv)} h).</p></div>
+    <div class="card"><div class="row"><h2>2 · Janela em Manaus: antes da próxima saída</h2><span class="sp"></span><a class="mbtn sm pri" href="#emitir/${v.id}">Programar OM</a></div><div class="tw"><table class="t"><thead><tr><th>Revisão</th><th>Próximo item</th><th></th></tr></thead><tbody>${jan.map(({ l, p }) => `<tr><td><b>${esc(l.nome)}</b><div class="note">${l.its.length} itens</div></td><td class="mono">${falta(p)}<div class="note">${p.t.id} ${esc(p.t.chk)}</div></td><td>${quando(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="note">Sem dados.</td></tr>'}</tbody></table></div><p class="note">Vence na próxima viagem: trocar no porto antes da saída ou mandar óleo e filtros para a tripulação. "Fazer nesta janela" = vence antes de o empurrador voltar da próxima viagem (≈ ${nf(hv)} h).</p></div>
    </div>
    <div class="card"><div class="row"><h2>3 · Cronograma anual ${ano} · ${esc(v.nome)}</h2><span class="sp"></span>
     ${B ? `<span class="pill p-ok">Aprovado por ${esc(B.aprovBy)} em ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : '<span class="pill p-warn">Ainda não aprovado</span>'}
     ${can.admin() ? `<button class="mbtn sm ${B ? '' : 'ok'}" data-c2apr="um">${B ? 'Revisar e reaprovar' : '✓ Aprovar este cronograma'}</button><button class="mbtn sm" data-c2apr="frota">Aprovar para a frota toda</button>` : ''}</div>
     <div class="c2-leg"><span><i class="c2 plan">P</i>programado (mês fixo)</span><span><i class="c2 est">P</i>previsto pelo horímetro</span><span><i class="c2 ok">R</i>realizado no prazo</span><span><i class="c2 late">R</i>realizado com atraso</span><span><i class="c2 miss">P</i>venceu e não foi feito</span></div>
     <div class="tw"><table class="c2-t"><thead><tr><th>Serviço</th>${MES.map((m, i) => `<th${i === mesH ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>R / P</th></tr></thead><tbody>${corpo}</tbody></table></div>
-    <p class="note">${B ? 'Os P mostram o cronograma aprovado; o Cronograma × Realizado compara com ele. ' : 'Ao aprovar, os P de cada mês ficam congelados como linha de base do ano. '}Trilhas 1 e 2 são por horímetro: o mês é a previsão pela média de horas do barco e acompanha as leituras. Passe o mouse numa célula para ver os itens e o nº da OM ou do FR 049_B.</p></div>`;
+    <p class="note">${B ? 'Os P mostram o cronograma aprovado; o Cronograma × Realizado compara com ele. ' : 'Ao aprovar, os P de cada mês ficam congelados como linha de base do ano. '}Trilhas 1 e 2 são por horímetro: o mês é a previsão pela média de horas do empurrador e acompanha as leituras. Passe o mouse numa célula para ver os itens e o nº da OM ou do FR 049_B.</p></div>`;
 }
 async function cronoAprovar(vs, ano) {
   for (const v of vs) { const R = cronoMarcas(v, ano), id = 'crono-' + ano + '-' + v.id, B0 = S.recs.get(id), linhas = {};
@@ -7088,8 +7088,8 @@ vCxr = function () {
     <div class="tw"><table class="t cx-cg"><thead><tr><th style="text-align:left">Mês</th>${MES.map((m, i) => `<th${i === hm ? ' class="cx-hj"' : ''}>${m}</th>`).join('')}</tr></thead><tbody>
      <tr><td style="text-align:left">Trocas de óleo previstas</td>${carga.map((c, i) => `<td>${i < hm ? '' : c.oleo || '—'}</td>`).join('')}</tr>
      <tr><td style="text-align:left"><b>OMs de janela (equipe de terra)</b></td>${carga.map((c, i) => `<td><b>${i < hm ? '' : c.om || '—'}</b></td>`).join('')}</tr></tbody></table></div>
-    <p class="note">Previsão pela média de horas de cada barco; as trocas de óleo e revisões por hora acompanham o horímetro.</p></div>
-   ${CX.v ? grade : `<div class="card"><div class="row"><h2>Aderência por embarcação · ${ano}</h2><span class="sp"></span><span class="note">clique para ver o cronograma × realizado do barco</span></div>
+    <p class="note">Previsão pela média de horas de cada empurrador; as trocas de óleo e revisões por hora acompanham o horímetro.</p></div>
+   ${CX.v ? grade : `<div class="card"><div class="row"><h2>Aderência por embarcação · ${ano}</h2><span class="sp"></span><span class="note">clique para ver o cronograma × realizado do empurrador</span></div>
     <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não feitos</th><th>Programados até dez.</th><th>Cronograma aprovado</th><th>Aderência</th></tr></thead><tbody>${D.map(x => { const B = cronoBase(ano, x.v.id); return `<tr class="click" data-cxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${x.c.ok}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan}</td><td>${B ? `<span class="pill p-ok">rev. ${B.rev} · ${brD(B.aprovAt)}</span>` : '<span class="pill p-warn">não aprovado</span>'}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`; }).join('')}</tbody></table></div></div>`}
    <p class="note">Os registros começam em outubro de 2026 (implantação do SMF). Meses anteriores aparecem vazios até o histórico ser importado.</p>`;
 };
@@ -7172,7 +7172,7 @@ function vCrono3() {
   return `<div class="vh"><div><h1>Cronograma de manutenção · planejado × realizado · ${ano}</h1><p>Uma linha por equipamento de cada embarcação: criticidade, serviços (tirados do Anexo I, que fica para consulta) e, mês a mês, o que está <b>P</b>lanejado e o que foi <b>R</b>ealizado.</p></div><span class="sp"></span><button class="mbtn pri" data-k3pdf>⬇ PDF para auditoria</button></div>
    <div class="card"><div class="g"><label class="f s2">Ano${sel('ano', [hoje().getFullYear(), hoje().getFullYear() + 1].map(y => [y, y]), ano)}</label><label class="f s2">Embarcação${sel('v', [['', 'Frota toda']].concat(ativos.map(v => [v.id, v.nome])), CR3.v)}</label><label class="f s2">Criticidade${sel('crit', [['', 'Todas'], ['CA', 'Crítica e Alta'], ['Crítica', 'Só Crítica'], ['Alta', 'Só Alta'], ['Média', 'Só Média'], ['Baixa', 'Só Baixa']], CR3.crit)}</label>
     <div class="s6 c2-ciclo">Ciclo: ida <input data-cic="ida" value="${c.ida}"> d · descargas <input data-cic="desc" value="${c.desc}"> d · volta <input data-cic="volta" value="${c.volta}"> d · porto <input data-cic="porto" value="${c.porto}"> d <span class="note">≈ ${nf(hv)} h de MCP por viagem</span></div></div></div>
-   <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao cronograma</span><small>${T.ok} de ${T.den} serviços vencidos feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>realizados no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>realizados com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>venceram e não foram feitos</span></div><div><b>${nB}/${ativos.length}</b><span>cronogramas aprovados</span>${can.admin() ? `<small><a href="#" data-k3apr="${CR3.v || 'frota'}">${CR3.v ? 'aprovar este barco' : 'aprovar a frota toda'} (${ano})</a></small>` : ''}</div></div>
+   <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao cronograma</span><small>${T.ok} de ${T.den} serviços vencidos feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>realizados no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>realizados com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>venceram e não foram feitos</span></div><div><b>${nB}/${ativos.length}</b><span>cronogramas aprovados</span>${can.admin() ? `<small><a href="#" data-k3apr="${CR3.v || 'frota'}">${CR3.v ? 'aprovar este empurrador' : 'aprovar a frota toda'} (${ano})</a></small>` : ''}</div></div>
    <div class="card"><div class="k3-leg"><span><i class="k3 plan">P</i> planejado</span><span><i class="k3 ok">R</i> realizado no prazo</span><span><i class="k3 late">R</i> realizado com atraso</span><span><i class="k3 miss">P</i> venceu e não foi feito</span><span class="note">Serviços: troca de óleo (+ itens de 250 h, FR 049_B) · revisões por hora na janela em Manaus · trimestral / semestral / anual · docagem. Passe o mouse no mês para ver o serviço.</span></div>
     <div class="tw k3-w">${cr3Tabela(L, ano)}</div></div>`;
 }
@@ -7260,12 +7260,12 @@ vRotina = function () {
     const urg = o && o.rest < rate * 2;
     return `<tr class="${urg ? 'rt2-urg' : ''}"><td><b>${esc(v.nome)}</b></td><td class="note">viajando ${d === 0 ? 'desde hoje' : 'há ' + d + ' d'}</td><td>🛢 ${quando}${urg ? ' · <b>acompanhar a troca pela câmera e lançar o FR 049_B</b>' : ''}</td><td class="note mono">${hrTxt(x)}</td><td class="rt-b">${urg ? '<button class="mbtn sm pri" data-frv="${v.id}">🛢 Lançar troca de óleo</button>' : ''}<button class="mbtn sm" data-situ="${v.id}|porto">⚓ Chegou em Manaus</button></td></tr>`; };
   const corr = A.reduce((a, x) => a + x.corr.length, 0);
-  return `<div class="vh"><div><h1>Rotina do dia</h1><p>Barco no porto: o que fazer antes de sair. Barco viajando: só a troca de óleo quando chegar a hora. Informe quando o barco chega e sai.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
-   ${sem.length ? `<div class="card rt2-sem"><h2>Onde está cada barco?</h2><p class="note">Informe uma vez. Depois é só clicar quando o barco chegar ou sair.</p>${sem.map(x => `<div class="rt2-l"><b style="min-width:90px">${esc(x.v.nome)}</b><span class="sp"></span><button class="mbtn sm" data-situ="${x.v.id}|porto">⚓ Está no porto</button><button class="mbtn sm" data-situ="${x.v.id}|viagem">⛴ Está viajando</button></div>`).join('')}</div>` : ''}
+  return `<div class="vh"><div><h1>Rotina do dia</h1><p>Empurrador no porto: o que fazer antes de sair. Empurrador viajando: só a troca de óleo quando chegar a hora. Informe quando o empurrador chega e sai.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
+   ${sem.length ? `<div class="card rt2-sem"><h2>Onde está cada empurrador?</h2><p class="note">Informe uma vez. Depois é só clicar quando o empurrador chegar ou sair.</p>${sem.map(x => `<div class="rt2-l"><b style="min-width:90px">${esc(x.v.nome)}</b><span class="sp"></span><button class="mbtn sm" data-situ="${x.v.id}|porto">⚓ Está no porto</button><button class="mbtn sm" data-situ="${x.v.id}|viagem">⛴ Está viajando</button></div>`).join('')}</div>` : ''}
    <h2 class="rt2-t">⚓ No porto de Manaus <span>${porto.length}</span></h2>
-   ${porto.length ? `<div class="rt2-g">${porto.map(cardPorto).join('')}</div>` : '<p class="note">Nenhum barco no porto.</p>'}
+   ${porto.length ? `<div class="rt2-g">${porto.map(cardPorto).join('')}</div>` : '<p class="note">Nenhum empurrador no porto.</p>'}
    <h2 class="rt2-t">⛴ Em viagem <span>${viag.length}</span></h2>
-   ${viag.length ? `<div class="card"><div class="tw"><table class="t rt-t">${viag.map(linhaViag).join('')}</table></div></div>` : '<p class="note">Nenhum barco em viagem.</p>'}
+   ${viag.length ? `<div class="card"><div class="tw"><table class="t rt-t">${viag.map(linhaViag).join('')}</table></div></div>` : '<p class="note">Nenhum empurrador em viagem.</p>'}
    ${corr ? `<p class="note" style="margin-top:14px">Corretivas abertas: <b>${corr}</b> · <a href="#acomp">ver OMs em execução</a></p>` : ''}
    ${D.filter(x => x.fora).length ? `<p class="note">Fora de operação: ${D.filter(x => x.fora).map(x => esc(x.v.nome)).join(', ')}</p>` : ''}`;
 };
@@ -7282,7 +7282,7 @@ AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { cons
 
 </script>
 <script>
-/* ===== SMF simples: Hoje · Óleo · Barcos · Cronograma · Consultas ===== */
+/* ===== SMF simples: Hoje · Óleo · Empurradores · Cronograma · Consultas ===== */
 'use strict';
 /* ---------- Óleo da frota: bater o olho e ver vencido / vencendo / em dia ---------- */
 const OL_ALERTA_H = 50, OL_ALERTA_D = 3;
@@ -7332,7 +7332,7 @@ function vBarco() {
   recs('lub').filter(r => r.tipo === 'fr049' && r.vessel === v.id).forEach(r => hist.push({ d: r.date, t: 'Troca de óleo (FR 049_B) · ' + (r.eq || []).filter(q => q.status === 'T').map(q => { const e = lubEq(v, q.key); return esc(e ? eqNomeC(v, e) : q.key); }).join(', ') }));
   hist.sort((a, b) => a.d < b.d ? 1 : -1);
   const sel = `<select id="brV" style="font-size:18px;font-weight:600;width:auto;min-width:160px">${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>`;
-  return `<div class="vh"><div><h1>Barco</h1></div></div>
+  return `<div class="vh"><div><h1>Empurrador</h1></div></div>
    <div class="card row" style="gap:12px;flex-wrap:wrap">${sel}${s ? `<span class="pill ${s.st === 'porto' ? 'p-inf' : 'p-mut'}">${s.st === 'porto' ? '⚓ no porto desde ' + brD(s.at) : '⛴ em viagem desde ' + brD(s.at)}</span>` : '<span class="pill p-warn">situação não informada</span>'}
     <button class="mbtn sm" data-situ="${v.id}|${s && s.st === 'porto' ? 'viagem' : 'porto'}">${s && s.st === 'porto' ? '⛴ Saiu de viagem' : '⚓ Chegou em Manaus'}</button><span class="sp"></span><a class="mbtn sm" href="#corr">Registrar falha</a></div>
    <div class="card"><h2>Motores · horímetro e troca de óleo</h2><div class="br-g">${mot || '<p class="note">Sem motores cadastrados.</p>'}</div>${outros ? `<p class="note" style="margin-top:8px">${outros}</p>` : ''}
@@ -7362,7 +7362,7 @@ AFTER.barco = function () { const m = $('#main');
   SECOES.splice(0, SECOES.length,
     { id: 'hoje', nome: 'Hoje', views: [['rotina', 'Hoje']] },
     { id: 'oleo', nome: 'Óleo', views: [['oleo', 'Óleo da frota'], ['lubreg', 'Trocas lançadas']] },
-    { id: 'barcos', nome: 'Barcos', views: [['barco', 'Barco'], ['emitir', 'Abrir OM']], extra: ['omg', 'om'] },
+    { id: 'barcos', nome: 'Empurradores', views: [['barco', 'Empurrador'], ['emitir', 'Abrir OM']], extra: ['omg', 'om'] },
     { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
     { id: 'cons', nome: 'Consultas', views: cons.filter(([k]) => !['lubreg', 'rel'].includes(k)), extra: extraAll.filter(k => !['omg', 'om', 'cxr'].includes(k)) },
     { id: 'adm', nome: 'Administração', views: [['admin', 'Administração']], cfg: true });
@@ -7385,7 +7385,7 @@ if (!location.hash || location.hash === '#rotina') { try { history.replaceState(
 <script>
 /* ===== SMF v2 · simples: Hoje · Óleo · Cronograma · OMs ===== */
 'use strict';
-/* ---------- Cronograma no formato do modelo: Sistema · Equipamento · Item · Checklist · Frequência + situação no barco ---------- */
+/* ---------- Cronograma no formato do modelo: Sistema · Equipamento · Item · Checklist · Frequência + situação no empurrador ---------- */
 const CRV = { v: '', so: false };
 function cvSit(v, pos, t) {
   const s = situacao(v, pos, t), L = ultimoServico(v.id, pos, t.id);
@@ -7417,12 +7417,12 @@ function vCronoV2() {
     if (ke !== eqA) { eqA = ke; pre += `<td class="cv-me" rowspan="${spE[ke]}">${esc(t.eqn)}</td>`; }
     html += `<tr>${pre}<td class="cv-n" title="${t.id}">${n}</td><td class="cv-i">${esc(t.item)}</td><td>${esc(t.chk)}</td><td class="cv-f">${esc(t.freq || '')}</td><td class="cv-d">${l.sits.map(ult).join('<br>')}</td><td class="cv-d">${l.sits.map(prox).join('<br>')}</td><td>${l.sits.map(cel).join('')}</td></tr>`; });
   const sel = `<select id="cvV" style="font-size:18px;font-weight:600;width:auto;min-width:160px">${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>`;
-  return `<div class="vh"><div><h1>Item por item · ${esc(v.nome)}</h1><p>O plano de manutenção do barco (Anexo I), item por item, com quando foi feito, quando vence e a situação.</p></div><span class="sp"></span><a class="mbtn" href="#cxr">← Cronograma</a><button class="mbtn" data-cvprint>🖨 Imprimir</button></div>
+  return `<div class="vh"><div><h1>Item por item · ${esc(v.nome)}</h1><p>O plano de manutenção do empurrador (Anexo I), item por item, com quando foi feito, quando vence e a situação.</p></div><span class="sp"></span><a class="mbtn" href="#cxr">← Cronograma</a><button class="mbtn" data-cvprint>🖨 Imprimir</button></div>
    <div class="card row cv-bar" style="gap:12px;flex-wrap:wrap">${sel}
     <span class="cv-s venc">${cnt('venc')} vencidos</span><span class="cv-s viag">${cnt('viag')} vencem na viagem</span><span class="cv-s ok">${cnt('ok')} em dia</span>${cnt('sem') ? `<span class="cv-s sem">${cnt('sem')} sem registro</span>` : ''}
     <span class="sp"></span><label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="cvSo" ${CRV.so ? 'checked' : ''}> só o que está vencendo</label>
     ${cnt('venc') + cnt('viag') ? `<a class="mbtn pri" href="#emitir/${v.id}">Abrir OM com o que vence</a>` : ''}</div>
-   <div class="card cv-card"><div class="tw"><div class="cv-tit">Cronograma empurradores · ${esc(v.nome)}</div><table class="cv-t"><colgroup><col style="width:110px"><col style="width:120px"><col style="width:38px"><col style="width:150px"><col><col style="width:96px"><col style="width:132px"><col style="width:132px"><col style="width:150px"></colgroup><thead><tr><th>Sistema</th><th>Equipamento</th><th>Nº</th><th>Item</th><th>Checklist</th><th>Frequência / Intervalo</th><th>Última vez</th><th>Próxima</th><th>Situação</th></tr></thead><tbody>${html || '<tr><td colspan="9" class="note">Nada vencendo neste barco.</td></tr>'}</tbody></table></div></div>`;
+   <div class="card cv-card"><div class="tw"><div class="cv-tit">Cronograma empurradores · ${esc(v.nome)}</div><table class="cv-t"><colgroup><col style="width:110px"><col style="width:120px"><col style="width:38px"><col style="width:150px"><col><col style="width:96px"><col style="width:132px"><col style="width:132px"><col style="width:150px"></colgroup><thead><tr><th>Sistema</th><th>Equipamento</th><th>Nº</th><th>Item</th><th>Checklist</th><th>Frequência / Intervalo</th><th>Última vez</th><th>Próxima</th><th>Situação</th></tr></thead><tbody>${html || '<tr><td colspan="9" class="note">Nada vencendo neste empurrador.</td></tr>'}</tbody></table></div></div>`;
 }
 VX.crono = vCronoV2;
 AFTER.crono = function () { const m = $('#main');
@@ -7453,7 +7453,7 @@ AFTER.oms = function () { $('#main').onclick = async e => { const t = e.target.c
   SECOES.splice(0, SECOES.length,
     { id: 'hoje', nome: 'Hoje', views: [['rotina', 'Rotina do dia']], extra: ['barco'] },
     { id: 'oleo', nome: 'Óleo', views: [['oleo', 'Óleo da frota'], ['lubreg', 'Trocas lançadas']] },
-    { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma do barco'], ['audit', 'Planejado × realizado'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
+    { id: 'crono', nome: 'Cronograma', views: [['crono', 'Cronograma do empurrador'], ['audit', 'Planejado × realizado'], ['rel', 'Relatório do mês']], extra: ['cxr'] },
     { id: 'omsv2', nome: 'OMs', views: [['oms', 'Abertas e encerradas']], extra: ['emitir', 'omg', 'om', 'acomp', 'prev', 'corr', 'hist'] },
     { id: 'graf', nome: 'Gráficos', views: [['controle', 'Docagem, calibração, MBC, óleo'], ['kpi', 'Indicadores']], extra: ['falhas', 'geral'], cfg: true },
     { id: 'apoio2', nome: 'Biblioteca', views: [['bib', 'Biblioteca'], ['pecas', 'Sobressalentes críticos'], ['terc', 'Prestadores de serviço'], ['trein', 'Treinamentos']], cfg: true },
@@ -7533,7 +7533,7 @@ function audPDF() {
     <tr><td><b>Aderência</b></td>${D.mes.map((c, i) => `<td class="c"><b>${i > D.hm ? '' : pc(D.ad(c))}</b></td>`).join('')}<td class="c"><b>${pc(D.ad(D.ano_))}</b></td></tr></tbody></table>
    <h2>2 · Por embarcação</h2><table><thead><tr><th>Embarcação</th><th>Cronograma</th><th class="c">Previsto</th><th class="c">No prazo</th><th class="c">Atraso</th><th class="c">Não feito</th><th class="c">Aderência</th></tr></thead><tbody>${D.porV.map(x => `<tr><td>${esc(x.v.nome)}</td><td>${x.aprov ? 'aprovado rev. ' + x.aprov.rev + ' · ' + esc(x.aprov.aprovBy) + ' · ' + brD(x.aprov.aprovAt) : 'não aprovado'}</td><td class="c">${x.prev}</td><td class="c">${x.ok}</td><td class="c">${x.late}</td><td class="c">${x.miss}</td><td class="c"><b>${pc(D.ad(x))}</b></td></tr>`).join('')}</tbody></table>
    <h2>3 · Histórico e evidências${mesSel != null ? ' · ' + MESL[mesSel] + '/' + ano : ''}</h2><table><thead><tr><th>Data</th><th>Embarcação</th><th>Tipo</th><th>Documento</th><th>O que foi feito</th><th>Executor</th><th>Aprovado / lançado</th><th>Evidência</th></tr></thead><tbody>${E.map(x => `<tr><td>${brD(x.d)}</td><td>${esc(x.v)}</td><td>${esc(x.tipo)}</td><td>${esc(x.doc)}</td><td>${esc(x.oque)}</td><td>${esc(x.quem)}</td><td>${esc(x.aprov)}</td><td>${x.pdf.length ? 'PDF no Drive (' + x.pdf.length + ')' : '—'}${x.fotos ? ' · ' + x.fotos + ' fotos' : ''}</td></tr>`).join('') || '<tr><td colspan="8">Nenhuma execução no período.</td></tr>'}</tbody></table>
-   <p style="color:#5F6368">Os PDFs do Anexo II e do FR 049_B ficam no Google Drive da empresa, na pasta de cada embarcação, com o número da OM no nome do arquivo. O cronograma detalhado de cada barco sai em Cronograma → Imprimir.</p>
+   <p style="color:#5F6368">Os PDFs do Anexo II e do FR 049_B ficam no Google Drive da empresa, na pasta de cada embarcação, com o número da OM no nome do arquivo. O cronograma detalhado de cada empurrador sai em Cronograma → Imprimir.</p>
    <div class="ass"><div>Supervisor de Manutenção</div><div>Gerência</div><div>Data</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
 }
 VX.audit = vAudit;
@@ -7543,7 +7543,7 @@ AFTER.audit = function () { const m = $('#main');
     if ('aupdf' in b.dataset) return audPDF();
     if (b.dataset.aumes != null && 'aumes' in b.dataset) { AUD.mes = b.dataset.aumes; render(); return; }
     if ('auapr' in b.dataset) { if (!precisa(true)) return; await cr3Aprovar(S.cfg.frota.filter(v => !foraOp(v)), +AUD.ano); toast('Cronograma ' + AUD.ano + ' aprovado para a frota.'); render(); } }; };
-{ const s = SECOES.find(x => x.id === 'crono'); if (s) { s.views = [['crono', 'Cronograma do barco'], ['audit', 'Auditoria'], ['cxr', 'Planejado × realizado (detalhe)'], ['rel', 'Relatório do mês']]; s.extra = []; }
+{ const s = SECOES.find(x => x.id === 'crono'); if (s) { s.views = [['crono', 'Cronograma do empurrador'], ['audit', 'Auditoria'], ['cxr', 'Planejado × realizado (detalhe)'], ['rel', 'Relatório do mês']]; s.extra = []; }
   VX.cxr = vCrono3; AFTER.cxr = after3; }
 { const st = document.createElement('style'); st.textContent = `.au-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 14px}.au-k>div{background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:2px}.au-k span{font-size:12px;font-weight:700;color:#5F6368;text-transform:uppercase;letter-spacing:.03em}.au-k b{font-size:28px}.au-k small{color:#5F6368}
  .au-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;padding:6px 0}.au-b{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border-radius:8px;padding:4px 0}.au-b.sel{background:#E8F0FE}.au-b:hover{background:#F1F3F4}
@@ -7619,12 +7619,12 @@ function vPR() {
   const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (PRV.v !== 'frota' && !ativos.some(v => v.id === PRV.v)) PRV.v = 'frota';
   const v = PRV.v === 'frota' ? null : vessel(PRV.v), ano = +PRV.ano, B = v && cronoBase(ano, v.id), nAp = ativos.filter(a => cronoBase(ano, a.id)).length;
   const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
-  return `<div class="vh"><div><h1>Cronograma · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span>${v ? `<a class="mbtn" href="#crono" data-prit="${v.id}">📋 Item por item (Anexo I)</a>` : ''}<a class="mbtn" href="#audit">📁 Histórico e evidências</a><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada barco)</button></div>
+  return `<div class="vh"><div><h1>Cronograma · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span>${v ? `<a class="mbtn" href="#crono" data-prit="${v.id}">📋 Item por item (Anexo I)</a>` : ''}<a class="mbtn" href="#audit">📁 Histórico e evidências</a><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada empurrador)</button></div>
    <div class="card row" style="gap:12px;flex-wrap:wrap"><select id="prV" style="font-size:18px;font-weight:600;width:auto;min-width:150px"><option value="frota"${PRV.v === 'frota' ? ' selected' : ''}>Frota toda</option>${ativos.map(a => `<option value="${a.id}"${a.id === PRV.v ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>
     <select id="prA" style="width:auto">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select>
-    ${v ? (B ? `<span class="pill p-ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : `<span class="pill p-warn">Previsto ainda não aprovado</span>`) : `<span class="pill ${nAp === ativos.length ? 'p-ok' : 'p-warn'}">${nAp}/${ativos.length} barcos com o previsto aprovado</span>`}<span class="sp"></span>
+    ${v ? (B ? `<span class="pill p-ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : `<span class="pill p-warn">Previsto ainda não aprovado</span>`) : `<span class="pill ${nAp === ativos.length ? 'p-ok' : 'p-warn'}">${nAp}/${ativos.length} empurradores com o previsto aprovado</span>`}<span class="sp"></span>
     ${can.admin() ? `<button class="mbtn ${(v ? B : nAp === ativos.length) ? '' : 'pri'}" data-prapr>${(v ? B : nAp) ? 'Revisar aprovação da frota' : '✓ Aprovar o previsto de ' + ano + ' (frota)'}</button>` : ''}</div>
-   <div class="card pr-card"><div class="pr-hd"><b>Cronograma de manutenção preventiva · previsto × realizado</b><span>${esc(v ? v.nome : 'Frota toda')} · ${ano}</span></div>${v ? '' : '<p class="note" style="margin:-2px 0 8px">Número = quantidade de serviços no mês. Clique no barco para ver serviço por serviço.</p>'}<div class="tw">${v ? prTabela(v, ano) : prFrota(ano)}</div>
+   <div class="card pr-card"><div class="pr-hd"><b>Cronograma de manutenção preventiva · previsto × realizado</b><span>${esc(v ? v.nome : 'Frota toda')} · ${ano}</span></div>${v ? '' : '<p class="note" style="margin:-2px 0 8px">Número = quantidade de serviços no mês. Clique no empurrador para ver serviço por serviço.</p>'}<div class="tw">${v ? prTabela(v, ano) : prFrota(ano)}</div>
     <div class="pr-ass"><div>Supervisor de Manutenção</div><div>Data</div></div></div>`;
 }
 VX.cxr = vPR;
@@ -7664,7 +7664,7 @@ cr3Aprovar = prAprovar;
 
 </script>
 <script>
-/* ===== Óleo da frota v2: tabela por barco (horímetro atual, última e próxima troca, falta) + gráfico atraso × restante ===== */
+/* ===== Óleo da frota v2: tabela por empurrador (horímetro atual, última e próxima troca, falta) + gráfico atraso × restante ===== */
 'use strict';
 const OL2 = { ab: null, modo: 'frota', v: '' };
 function ol2Dados() {
@@ -7701,11 +7701,11 @@ vOleo = function () {
   const vSel = vessel(OL2.v), LV = D.filter(d => d.v === vSel);
   const frotaL = V.map(v => D.filter(d => d.v === v).sort((a, b) => ord(a) - ord(b))[0]).filter(Boolean);
   const painel = OL2.modo === 'frota'
-    ? `<div class="o2-ph"><b>Frota inteira</b><span class="note">o motor mais urgente de cada barco</span></div>${ol2Barras(frotaL, d => d.v.nome)}`
+    ? `<div class="o2-ph"><b>Frota inteira</b><span class="note">o motor mais urgente de cada empurrador</span></div>${ol2Barras(frotaL, d => d.v.nome)}`
     : `<div class="o2-ph"><b>${esc(vSel ? vSel.nome : '')}</b>${LV.filter(d => d.st2 === 'venc').length ? `<span class="o2-bd venc">${LV.filter(d => d.st2 === 'venc').length} vencidas</span>` : ''}</div><p class="note" style="margin:-4px 0 8px">${situDe(vSel) ? (situDe(vSel).st === 'porto' ? '⚓ no porto · equipe de manutenção + CTF/MFM' : '⛴ em viagem · MFM troca, você acompanha pela câmera') : ''} · esquerda = atraso · direita = % restante</p>${ol2Barras(LV, d => d.nome.replace('Motobomba de incêndio', 'Motobomba'))}`;
   return `<div class="o2-top"><h1>Óleo da frota</h1><span class="o2-pl venc"><b>${cnt('venc')}</b> vencidas</span><span class="o2-pl aten"><b>${cnt('aten')}</b> ≤ ${OL_ALERTA_H} h</span><span class="o2-pl ok"><b>${cnt('ok')}</b> em dia</span><span class="sp"></span><button class="mbtn pri" data-frv="">+ Lançar troca</button></div>
    <div class="o2-wrap"><div class="card o2-tab"><div class="tw"><table class="o2-t"><thead><tr><th rowspan="2">Embarcação</th><th rowspan="2">Equipamento</th><th rowspan="2" class="num">Hor. atual</th><th colspan="2" class="o2-gu">Última troca</th><th colspan="2" class="o2-gp">Próx. troca</th><th rowspan="2" class="num">Falta</th></tr><tr><th class="num o2-gu">Horímetro</th><th class="num o2-gu">Data</th><th class="num o2-gp">Horímetro</th><th class="num o2-gp">Data</th></tr></thead><tbody>${corpo}</tbody></table></div>
-     <p class="note">Clique no nome do barco para abrir ou fechar. Clique num equipamento para lançar a troca (FR 049_B).</p></div>
+     <p class="note">Clique no nome do empurrador para abrir ou fechar. Clique num equipamento para lançar a troca (FR 049_B).</p></div>
     <div class="card o2-pn"><div class="o2-sg"><button data-o2m="frota" class="${OL2.modo === 'frota' ? 'on' : ''}">Frota inteira</button><label class="${OL2.modo === 'um' ? 'on' : ''}">1 empurrador: <select id="o2V">${V.map(v => `<option value="${v.id}"${v.id === OL2.v ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label></div>${painel}</div></div>
    <div class="card"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver todas</a></div><div class="tw"><table class="t"><tbody>${recs('lub').filter(r => r.tipo === 'fr049').sort((a, b) => (b.date || '') < (a.date || '') ? -1 : 1).slice(0, 6).map(r => `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(vName(r.vessel) || r.vNome || '')}</b></td><td>${(r.eq || []).filter(q => q.status === 'T').map(q => { const vv = vessel(r.vessel), e = lubEq(vv, q.key); return esc(e ? eqNomeC(vv, e) : q.key); }).join(', ')}</td><td class="note">O.M. ${esc(r.om || '')}</td></tr>`).join('') || '<tr><td class="note">Nenhuma troca lançada ainda.</td></tr>'}</tbody></table></div></div>`;
 };
@@ -7841,7 +7841,7 @@ AFTER.oleo = function () {
       const rows = F.map(b => { const c = crit(b.id); return c ? { l: `${esc(b.n)}<small>${esc(c.name)}</small>`, v: c.v, p: c.pct, st: c.st, t: c.restTxt, go: b.id } : null; }).filter(Boolean);
       const ok = ENG.filter(e => !e.sem), nb = F.filter(b => hasBad(b.id)).length, worst = ok.filter(e => e.v < 0).sort((a, z) => a.v - z.v)[0], nxt = ok.filter(e => e.v >= 0).sort((a, z) => a.daysLeft - z.daysLeft)[0];
       body = `<div class="ch"><h2>Frota inteira</h2><span class="pill ${nb ? 'r' : 'g'}">${nb ? nb + ' com vencidas' : 'tudo em dia'}</span></div>
-    <div class="cap">equipamento mais crítico de cada empurrador · esquerda = horas de atraso · direita = % do intervalo restante · clique numa barra para abrir o barco</div>${bars(rows)}
+    <div class="cap">equipamento mais crítico de cada empurrador · esquerda = horas de atraso · direita = % do intervalo restante · clique numa barra para abrir o empurrador</div>${bars(rows)}
     <div class="foot"><div>Mais atrasado<span class="s-red">${worst ? esc(worst.b + ' · ' + worst.name + ' · ' + worst.restTxt.replace('−', '')) : '<span class="s-green">nenhum</span>'}</span></div><div>Próxima a vencer<span>${nxt ? esc(nxt.b + ' · ' + nxt.name + ' · ' + o3dt(nxt.proxD)) : '—'}</span></div></div>`;
     } else {
       const b = F.find(x => x.id === O3.ves) || F[0]; if (!b) { chart.innerHTML = seg; return; }
@@ -8045,7 +8045,7 @@ function riscoHTML() {
   const cab = `<div class="ab4-sec rk-sec"><h2>Gestão de riscos &amp; alertas críticos</h2><span class="note">embarcações em risco, pendências regulatórias e matriz da frota</span><span class="sp"></span><div class="seg">${[6, 12, 24].map(m => `<button data-falper="${m}" class="${m === FALPER ? 'on' : ''}">${m} meses</button>`).join('')}</div><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>`;
   const c1 = `<div class="card rk" data-lk="Risco alto"><div class="rk-h"><h2>Embarcações em risco alto</h2>${alto.length ? '<span class="rk-bd alto">AÇÃO IMEDIATA</span>' : '<span class="rk-bd baixo">SOB CONTROLE</span>'}</div>
     <div class="rk-big"><span style="color:${alto.length ? '#DC2626' : '#16A34A'}">${alto.length}</span><em>de ${out.length} embarcações ativas</em></div>
-    <div class="rk-2"><div><b>${omA}</b><small>OM aberta${omA === 1 ? '' : 's'}${alto.length ? ' nos barcos em risco' : ''}</small></div><div><b>${med == null ? '—' : nf(Math.round(med)) + ' h'}</b><small>horímetro médio MCP</small></div></div></div>`;
+    <div class="rk-2"><div><b>${omA}</b><small>OM aberta${omA === 1 ? '' : 's'}${alto.length ? ' nos empurradores em risco' : ''}</small></div><div><b>${med == null ? '—' : nf(Math.round(med)) + ' h'}</b><small>horímetro médio MCP</small></div></div></div>`;
   const c2 = `<div class="card rk" data-lk="Alertas criticos"><div class="rk-h"><h2>Alertas críticos</h2><span class="note"><b style="color:#DC2626">${alertas.filter(a => a.p === 1).length}</b> P1 · <b style="color:#D97706">${alertas.filter(a => a.p === 2).length}</b> P2</span></div>
     ${alertas.length ? alertas.slice(0, 12).map(a => `<div class="rk-al"><span class="rk-pp p${a.p}">P${a.p}</span>${esc(a.t)}</div>`).join('') + (alertas.length > 12 ? `<div class="note">+ ${alertas.length - 12} alertas</div>` : '') : '<div class="note">Nenhum alerta crítico.</div>'}
     <div class="note" style="margin-top:8px">P1 = vencido ou interditado · P2 = vence em breve (docagem ≤ 90 d, calibração ≤ 30 d, óleo ≤ 50 h)</div></div>`;
@@ -8095,7 +8095,7 @@ function mitigHTML() {
   ${L.length ? `<div class="tw"><table class="mg-t"><thead><tr><th>Embarcação</th><th>Falha</th><th>Causa</th><th>Ação</th><th>Resp.</th><th>Prazo</th><th>Status</th><th>Reincidência</th></tr></thead><tbody>
   ${L.map(o => { const s = mitigSit(o); return `<tr class="click" data-open="${o.id}" title="Abrir a OM ${esc(o.num || '')}"><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.descricao || '—')}</td><td>${esc(o.causa || '—')}</td><td>${esc(o.mitig || '—')}</td><td>${esc(o.mitigResp || '—')}</td><td>${pz(o)}</td><td><span class="mg-st ${cls[s.k]}">${esc(s.t.toUpperCase())}</span></td><td>${rei(o)}</td></tr>`; }).join('')}
   </tbody></table></div>` : '<div class="note">Nenhuma falha registrada nos últimos 12 meses.</div>'}
-  <div class="note" style="margin-top:8px">Últimos ${FALPER} meses · clique numa linha para abrir a OM · a medida é registrada na própria corretiva (campo A9 · Análise) · reincidência = mesma falha no mesmo barco depois da ação.</div></div>`;
+  <div class="note" style="margin-top:8px">Últimos ${FALPER} meses · clique numa linha para abrir a OM · a medida é registrada na própria corretiva (campo A9 · Análise) · reincidência = mesma falha no mesmo empurrador depois da ação.</div></div>`;
 }
 { const k1 = vKpi; vKpi = function () { return k1() + mitigHTML(); }; VX.kpi = vKpi; }
 document.addEventListener('click', e => { const p = e.target.closest('[data-falper]'); if (!p || VIEW !== 'kpi') return; FALPER = +p.dataset.falper; render(); });
@@ -8224,7 +8224,7 @@ function fsHTML() {
   const corA = a => a == null ? '#5F6368' : a >= 95 ? '#188038' : a >= 85 ? '#B06000' : '#C5221F';
   const lista = `<div class="fs-l"><div class="fs-lh"><h2>Frota CJA</h2><div class="note">ordenada por criticidade</div></div>
    <table class="fs-t"><thead><tr><th>Embarcação</th><th>Venc.</th><th>Viag.</th><th>Ader.</th></tr></thead><tbody>
-   <tr class="fs-r fs-all${!sel ? ' on' : ''}" data-fsel="frota"><td><b>Frota toda</b> <span class="note">${L.length} barcos</span></td><td class="${tot.venc ? 'v' : 'z'}">${tot.venc}</td><td class="${tot.viag ? 'a' : 'z'}">${tot.viag}</td><td style="color:${corA(aderF)}">${aderF == null ? '—' : nf(aderF, 0) + '%'}</td></tr>
+   <tr class="fs-r fs-all${!sel ? ' on' : ''}" data-fsel="frota"><td><b>Frota toda</b> <span class="note">${L.length} empurradores</span></td><td class="${tot.venc ? 'v' : 'z'}">${tot.venc}</td><td class="${tot.viag ? 'a' : 'z'}">${tot.viag}</td><td style="color:${corA(aderF)}">${aderF == null ? '—' : nf(aderF, 0) + '%'}</td></tr>
    ${L.map(x => { const s = sit(x), sh = semH(x); return `<tr class="fs-r${sel === x ? ' on' : ''}" data-fsel="${x.v.id}"><td><i class="fs-d ${sh ? 'g' : s[0]}"></i>${esc(x.v.nome)}</td><td class="${sh ? 'z' : x.n.venc ? 'v' : 'z'}">${sh ? '—' : x.n.venc}</td><td class="${sh ? 'z' : x.n.viag ? 'a' : 'z'}">${sh ? '—' : x.n.viag}</td><td style="color:${corA(x.ader)}">${x.ader == null ? '—' : nf(x.ader, 0) + '%'}</td></tr>`; }).join('')}
    </tbody></table></div>`;
   const ader = (a, sub) => `<div class="fs-k"><span>Aderência</span><b style="color:${corA(a)}">${a == null ? '—' : nf(a, 0) + '%'}</b><div class="fs-ab"><i style="width:${a == null ? 0 : Math.max(2, a)}%;background:${corA(a)}"></i><em style="left:95%"></em></div><small>${a == null ? 'sem histórico' : a >= 95 ? 'meta de 95% atingida' : 'faltam ' + nf(95 - a, 0) + ' p.p. para a meta de 95%'}${sub ? ' · ' + sub : ''}</small></div>`;
