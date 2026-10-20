@@ -1,4 +1,4 @@
-/* SGMF · service worker: deixa o painel abrir sem internet. Os dados vão ao Google quando houver sinal. */
+/* SMF · service worker: deixa o painel abrir sem internet. Os dados vão ao Google quando houver sinal. */
 const CACHE='ctle-man-v3';
 const ARQ=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./apple-touch-icon.png','./icon-maskable-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ARQ)).then(()=>self.skipWaiting()));});
