@@ -8169,6 +8169,48 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-rmm]
 { const st = document.createElement('style'); st.textContent = `.card.rm h2{margin:0;font-size:15px}.rm-sub{margin:3px 0 8px;color:#334155;font-size:13px}.rm-sec{align-items:center!important;flex-wrap:wrap}`; document.head.appendChild(st); }
 
 </script>
+<script>
+/* ===== Análise de óleo do MCP · programa de amostragem (NP: 1 MCP por semestre, em rodízio, indicado pelo Supervisor) ===== */
+function amoDados() {
+  const d = hoje(), s0 = new Date(d.getFullYear(), d.getMonth() < 6 ? 0 : 6, 1), s1 = new Date(d.getFullYear(), d.getMonth() < 6 ? 6 : 12, 1);
+  const semTxt = (d.getMonth() < 6 ? '1º' : '2º') + ' semestre/' + d.getFullYear();
+  const CM = typeof lubConsumoMCP === 'function' ? lubConsumoMCP(120) : { out: [] };
+  const M = [];
+  S.cfg.frota.filter(v => !foraOp(v)).forEach(v => mcpPos(v).forEach(pos => { if ((v.off || []).includes('MCP')) return;
+    const L = laudos(v.id, pos), ul = L[L.length - 1], us = ultimoServico(v.id, pos, '1.1.29');
+    const dt = ul ? ul.date : us ? us.date : null, meses = dt ? Math.floor((d - pD(dt)) / (864e5 * 30.4)) : null;
+    const ls = ul ? laudoSt(ul) : { st: 'sem', alertas: [] }, c = CM.out.find(y => y.v === v && y.p === pos) || { st: 'sem', taxa: null };
+    const noSem = L.some(r => pD(r.date) >= s0 && pD(r.date) < s1);
+    M.push({ v, pos, ul, dt, meses, ls, c, noSem, om: omAberta(v.id, pos, '1.1.29') }); }));
+  // fila do rodízio: laudo com alerta (coleta extra) → nunca analisado → há mais tempo sem amostra → maior consumo de óleo
+  const pri = x => x.ls.st === 'venc' ? 0 : x.ls.st === 'viag' ? 1 : !x.dt ? 2 : 3;
+  const fila = M.slice().sort((a, b) => pri(a) - pri(b) || (b.meses ?? 1e3) - (a.meses ?? 1e3) || (b.c.taxa || 0) - (a.c.taxa || 0));
+  const feito = M.filter(x => x.noSem);
+  return { M, fila, feito, semTxt };
+}
+function amoCard() {
+  const { fila, feito, semTxt } = amoDados(), vez = fila.find(x => !x.noSem);
+  const motivo = x => x.ls.st === 'venc' || x.ls.st === 'viag' ? 'último laudo com alerta: coleta extra' : !x.dt ? 'nunca analisado' : 'sem amostra há ' + x.meses + ' meses' + (x.c.taxa != null ? ' · consumo ' + nf(x.c.taxa, 2) + ' L/100 h' : '');
+  const nm = x => esc(x.v.nome) + (x.v.mcp === 'mono' ? '' : ' ' + x.pos);
+  const st = feito.length
+    ? `<div class="banner ok"><b>Amostra do ${semTxt} feita:</b>&nbsp;${feito.map(nm).join(', ')} · meta da NP cumprida (1 por semestre).<span class="sp"></span><button class="mbtn sm" data-laudo2="">＋ Registrar laudo</button></div>`
+    : vez ? `<div class="banner info"><b>Amostra do ${semTxt}: ${nm(vez)}</b>&nbsp;· ${esc(motivo(vez))}${vez.om ? ' · OM ' + esc(vez.om.num) + ' já aberta' : ''}. Coletar na próxima troca de óleo desse motor.<span class="sp"></span>${vez.om ? '' : `<a class="mbtn sm pri" href="#emitir/${vez.v.id}">Emitir OM</a>`}<button class="mbtn sm" data-laudo2="">＋ Registrar laudo</button></div>` : '';
+  return `<div class="card amo"><div class="row"><h2>Análise de óleo do MCP · programa de amostragem</h2><span class="sp"></span><span class="note">NP: 1 amostra por semestre, em rodízio entre os MCPs (Anexo I, item 1.1.29)</span></div>${st}
+   <div class="tw"><table class="t"><thead><tr><th>Ordem</th><th>Motor</th><th>Última amostra</th><th>Resultado do laudo</th><th>Consumo de óleo</th><th>Situação no rodízio</th></tr></thead><tbody>
+   ${fila.map((x, i) => `<tr class="click" data-laudov2="${x.v.id}|${x.pos}"><td>${i + 1}º</td><td><b>${nm(x)}</b></td>
+    <td>${x.dt ? brD(x.dt) + ' <span class="note">· há ' + x.meses + ' meses</span>' : '<span class="mut">nunca</span>'}</td>
+    <td>${x.ul ? (x.ls.alertas.length ? '<span style="color:' + (x.ls.st === 'venc' ? '#C5221F' : '#B06000') + '">' + x.ls.alertas.slice(0, 2).map(a => a.nome.split(' (')[0] + ' ' + nf(a.v, a.v < 10 ? 1 : 0)).join(', ') + '</span>' : '<span style="color:#188038">normal</span>') : '<span class="mut">sem laudo</span>'}</td>
+    <td>${x.c.taxa != null ? nf(x.c.taxa, 2) + ' L/100 h' : '<span class="mut">sem complementos</span>'}</td>
+    <td>${x.noSem ? '<span class="pill p-ok">amostrado neste semestre</span>' : x === vez ? '<span class="pill p-inf">amostra da vez</span>' : x.ls.st === 'venc' || x.ls.st === 'viag' ? '<span class="pill p-warn">coleta extra (suspeita)</span>' : '<span class="pill p-mut">aguarda o rodízio</span>'}</td></tr>`).join('')}
+   </tbody></table></div>
+   <p class="note">Ordem do rodízio: laudo anterior com alerta, depois nunca analisado, depois quem está há mais tempo sem amostra e, no empate, o maior consumo de óleo. O Supervisor confirma o motor do semestre. Clique num motor para ver os laudos.</p></div>`;
+}
+if (VX.controle) { const c1 = VX.controle; VX.controle = function () { const h = c1(), i = h.indexOf('id="cs-doca"'); const bloco = `<div class="ab4-sec" id="cs-amo" data-sec="amo"><h2>Análise de óleo do MCP</h2><span class="note">programa de amostragem da NP</span></div>${amoCard().replace('<div class="card amo"', '<div class="card amo" data-sec="amo"')}`;
+  if (i < 0) return h + bloco; const j = h.lastIndexOf('<', i); let r = h.slice(0, j) + bloco + h.slice(j);
+  return r.replace('<button data-csgo="doca">', '<button data-csgo="amo">Análise de óleo</button><button data-csgo="doca">'); }; }
+document.addEventListener('click', e => { if (VIEW !== 'controle') return; const l = e.target.closest('[data-laudo2]'); if (l) { e.stopPropagation(); laudoModal(); return; } const v = e.target.closest('[data-laudov2]'); if (v) { e.stopPropagation(); laudoLista(...v.dataset.laudov2.split('|')); } }, true);
+
+</script>
 <style>/* previsto x realizado: todas as linhas finas */.pr-t td,.pr-t th{border-width:1px!important}.pr-r td{border-bottom:1px solid #BDC1C6!important}.pr-ms,.pr-me{border-color:#BDC1C6!important}.pr-c.hj{outline:1px solid #1967D2!important;outline-offset:-1px!important}</style>
 </body>
 </html>
