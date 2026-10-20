@@ -1653,6 +1653,8 @@ const A1=[{"id":"1.1.1","sis":"1. Sistema de Propulsão","eq":"MCP","eqn":"MCP �
 const VERSAO_APP = '1.1';
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
+// motobomba de incêndio fora do plano (pedido do Supervisor): some do Anexo I, cronograma e OMs; registros antigos continuam legíveis pelo A1M
+for (let i = A1.length - 1; i >= 0; i--) if (A1[i].eq === 'MBINC') A1.splice(i, 1);
 const REGN = { fr049:'Nº FR 049_B (troca de óleo/filtros)', fr016:'Nº FR 016_E (resíduos)', lote:'Lote e validade do lubrificante/fluido (5.9)', instr:'Nº do instrumento calibrado (5.9)', end:'Nº do laudo de END (5.9)', cert:'Certificado do material (5.9)', terc:'Relatório técnico do terceiro (5.8)', pt:'Nº da PT do SESMT (5.11.2)', desg:'Controle de desgaste NP 6.1 (novo / limite / medido)' };
 const EQN = { MCP:'MCP Mitsubishi S6R2-MPTK2', FAE80:'Bomba FAE 80', ALTPE:'Alternador ponta de eixo', CXMAR:'Caixa de mar', HITACHI:'Reversor Hitachi Nico MGN91BL', MASSON:'Reversor Masson MM W3700', REINTJES:'Reversor REINTJES WAF 364', EIXO:'Eixo propulsor', HELICE:'Hélice', GOV:'Sistema de governo', MWM:'MCA MWM D229-4NA', YANMAR:'MCA Yanmar 4TNV98-GGE', FAE50:'Bomba FAE 50', BAMB30:'Alternador Bambozzi 30 kVA', QGD:'QGD, aterramento e motores elétricos', MBINC:'Motobomba de incêndio', PEMERG:'Parada de emergência do MCP', PORAO:'Sensores e bombas de porão', RACOR:'Filtros Racor e válvulas', TANQ:'Tanques de combustível', TRANSF:'Transferência de combustível', NAV:'Rádio VHF e luzes de navegação', SOM:'Sinalização sonora', AMARRA:'Guinchos, molinetes e cabos', CASCO:'Casco, convés e estanqueidade', HAB:'Acomodações, cozinha e sanitários', POPA:'Motor de popa Yamaha 15 HP', BOTE:'Bote de alumínio', MB5:'Motobomba 5 HP' };
 const POSN = { BB:'Bombordo', BE:'Boreste', CE:'Central', MCA1:'MCA 1', MCA2:'MCA 2', MCA3:'MCA 3', UN:'Embarcação' };
@@ -3943,7 +3945,7 @@ function lubBusy(on, msg) { const b = document.querySelector('#lubFO .fo-busy');
 function lubAbrirForm(vid) {
   if (!precisa(false)) return;
   const inj = "try{const P=window.parent&&window.parent.OilApp,F=P&&P.frota?P.frota():null;if(F){Object.assign(FROTA,F);const s=document.getElementById('emb'),b=[...s.options].find(o=>/^VDA/.test(o.text));Object.keys(F).forEach(n=>{if(![...s.options].some(o=>o.text===n))s.insertBefore(new Option(n,n),b||null);});}}catch(e){}";
-  const src = b64txt(FR049_B64).replace("FROTA['Cap. José Alecrim XX'].inc=true;", inj);
+  const src = b64txt(FR049_B64).replace("FROTA['Cap. José Alecrim XX'].inc=true;", inj).replace("if('inc' in tr.dataset&&!cfg.inc)on=false;", "if('inc' in tr.dataset||tr.dataset.eq==='7')on=false;");
   const o = lubOverlay('lubFO', `📝 FR 049_B · Troca de óleo, filtros e fluidos · ${esc(S.session.name)}`);
   o.querySelector('[data-fo="fechar"]').onclick = () => { if (confirm('Fechar o formulário sem salvar? O que foi preenchido será perdido.')) lubFecharOverlay('lubFO'); };
   const fr = o.querySelector('iframe');
