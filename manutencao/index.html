@@ -3723,7 +3723,7 @@ function mesesAte(n, ref) { const d = ref || hoje(), o = []; for (let i = n - 1;
    TELA · TROCAS DE ÓLEO (situação, previsão, óleo a comprar, consumo do MCP)
    ===================================================================== */
 const LV = { prazo: 15, nec: 30, tab: false };
-const GCOLS = [['mcp', 'MCP'], ['crp', 'Reversor'], ['mca', 'MCA'], ['hid', 'Governo'], ['inc', 'Motobomba incêndio']];
+const GCOLS = [['mcp', 'MCP'], ['crp', 'Reversor'], ['mca', 'MCA'], ['hid', 'Governo']];
 function vLub() {
   const D = lubDados(), n = { venc: 0, viag: 0, ok: 0, sem: 0 }; let emOM = 0;
   D.forEach(x => { if (x.om) emOM++; else if (n[x.s.st] !== undefined) n[x.s.st]++; });
@@ -6389,7 +6389,7 @@ const GG = { az: '#1A73E8', az2: '#AECBFA', vd: '#188038', vdE: '#0F7B6C', ci: '
 /* ---------- 4.1 troca de óleo: barras horizontais (uma por sistema, por embarcação) ---------- */
 function oleoHoriz(o = {}) {
   const LD = lubDados(), V = S.cfg.frota.filter(v => !foraOp(v));
-  const SIS = [['mcp', 'MCP', GG.az], ['crp', 'Reversor', GG.vdE], ['mca', 'MCA', GG.ci], ['inc', 'Motobomba de incêndio', '#9334E6']];
+  const SIS = [['mcp', 'MCP', GG.az], ['crp', 'Reversor', GG.vdE], ['mca', 'MCA', GG.ci]];
   const val = (v, g) => { const L = LD.filter(x => x.v === v && (g === 'inc' ? x.e.key === 'inc' && x.e.g === 'mca' : x.e.g === g && x.e.key !== 'inc') && x.horas != null); if (!L.length) return null; const m = L.reduce((a, b) => a.horas <= b.horas ? a : b); return { h: Math.round(m.horas), e: m.e, om: m.om }; };
   const rows = V.map(v => ({ v, b: SIS.map(([g, n, c]) => ({ g, n, c, x: val(v, g) })).filter(s => s.x) })).filter(r => r.b.length);
   const vals = rows.flatMap(r => r.b.filter(s => s.g !== 'crp').map(s => s.x.h)), mx = Math.max(400, ...vals.filter(x => x > 0)), mn = Math.min(0, ...rows.flatMap(r => r.b.map(s => s.x.h)));
@@ -7222,7 +7222,7 @@ async function situSalvar(vid, st) {
 }
 const diasDesde = d => d ? Math.max(0, Math.round((hoje() - pD(d)) / 864e5)) : null;
 function oleoDoBarco(v) {
-  return cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA|Motobomba/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null)
+  return cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null)
     .map(x => ({ nome: MCAS.includes(x.p.pos) ? posCurtoE(v, x.p.pos) : x.l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''), rest: x.p.rest, pos: x.p.pos })).sort((a, b) => a.rest - b.rest);
 }
 function horPainelTotal(vid, pos, h, date) {   // devolve o total se 'h' é com certeza o número do painel; senão null
@@ -7297,7 +7297,7 @@ function olRotulo(v, e) {
   if (e.g === 'hid') return 'Governo';
   return e.nome;
 }
-const OL_COLS = [['mcp', 'MCP'], ['crp', 'Reversor'], ['mca', 'MCA'], ['inc', 'Motobomba de incêndio'], ['hid', 'Governo (hidráulico)']];
+const OL_COLS = [['mcp', 'MCP'], ['crp', 'Reversor'], ['mca', 'MCA'], ['hid', 'Governo (hidráulico)']];
 const olCol = e => e.key === 'inc' ? 'inc' : e.g;
 function vOleo() {
   const LD = lubDados().filter(x => !x.saida && !foraOp(x.v)), V = S.cfg.frota.filter(v => !foraOp(v));
@@ -7743,7 +7743,7 @@ const O3 = {
 };
 const o3nf = n => Math.round(n).toLocaleString('pt-BR');
 const o3dt = d => d ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
-const o3nome = (v, e) => String(eqNomeC(v, e) || '').replace(/^Motobomba de incêndio.*$/, 'Motobomba').replace(/^Governo.*$/, 'Governo');
+const o3nome = (v, e) => String(eqNomeC(v, e) || '').replace(/^Motobomba de incêndio.*$/, 'Motobomba').replace(/^Governo.*$/, 'Governo').replace(/ \(Linha de centro\)/, ' LC');
 function o3Carter(e) {
   if (e.carterTxt) return { t: e.carterTxt, s: e.carterSub };
   const r = e.key === 'inc' ? LUB_PLANO.find(x => /motobomba/i.test(x.eq)) : null;
@@ -7867,7 +7867,7 @@ AFTER.oleo = function () {
   fit();
   const wins = [q('#wTab'), q('#wCh')];
   function defaults() { const W = ws.clientWidth, cw = Math.min(430, Math.max(300, W * .34));
-    return { wTab: { x: 0, y: 0, w: Math.max(320, W - cw - 12), h: Math.max(420, ws.clientHeight), m: false }, wCh: { x: W - cw, y: 0, w: cw, h: Math.min(560, Math.max(420, ws.clientHeight)), m: false } }; }
+    return { wTab: { x: 0, y: 0, w: Math.max(320, W - cw - 12), h: Math.max(420, ws.clientHeight), m: false }, wCh: { x: W - cw, y: 0, w: cw, h: Math.min(680, Math.max(420, ws.clientHeight)), m: false } }; }
   if (!O3.L) O3.L = O3.G('layout', null);
   if (!O3.L || !O3.L.wTab || !O3.L.wCh || O3.L.wCh.x > ws.clientWidth - 60) O3.L = defaults();
   const L = () => O3.L;
@@ -7966,6 +7966,13 @@ tr.col td{height:22px}
 .foot div>span{display:block;font-size:12.5px;color:var(--fg);margin-top:1px}
 .foot div>span.s-red{color:var(--red)}
 .note{color:var(--faint);font-size:10.5px;margin-top:8px}
+/* mesmo padrão de letra da tabela em toda a tela de óleo */
+*{font-family:var(--sans)}
+td,td .sm,td .nm,td.v .nm{font-size:12.5px}
+.pill{font-size:11.5px;padding:0 7px}
+.cr .l{font-size:12.5px;line-height:1.15}.cr .l small{font-size:11px}.cr .val{font-size:12.5px}
+.cap{font-size:12px}.ax{font-size:11px}.foot div{font-size:12px}.foot div>span{font-size:12.5px}.note{font-size:11.5px}
+.seg button,.seg select{font-size:12.5px}.k{font-size:12.5px}.b{font-size:12.5px}
 @media (max-width:760px){
  .ws{min-height:0;display:flex;flex-direction:column;gap:12px}
  .win{position:static;width:auto!important;height:auto!important;max-height:none}
@@ -8339,6 +8346,10 @@ document.addEventListener('load', e => { const f = e.target; if (!f || f.tagName
 .cambar .camshot{width:76px;height:76px;background:transparent;border:4px solid #fff;padding:5px}.cambar .camshot i{display:block;width:100%;height:100%;border-radius:50%;background:#fff}
 `; document.head.appendChild(st); }
 
+</script>
+<script>
+/* ===== Motobomba de incêndio fora das listas de óleo (pedido do Supervisor) ===== */
+{ const le0 = lubEquip; lubEquip = function (v) { return le0(v).filter(e => e.key !== 'inc' && e.g !== 'inc'); }; }
 </script>
 <style>/* previsto x realizado: todas as linhas finas */.pr-t td,.pr-t th{border-width:1px!important}.pr-r td{border-bottom:1px solid #BDC1C6!important}.pr-ms,.pr-me{border-color:#BDC1C6!important}.pr-c.hj{outline:1px solid #1967D2!important;outline-offset:-1px!important}</style>
 </body>
