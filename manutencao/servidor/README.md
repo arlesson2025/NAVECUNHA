@@ -2,7 +2,7 @@
 
 Esta pasta guarda o código do back-end do SMF: o projeto Apps Script ligado à planilha **CTLE_MAN**, cuja implantação `/exec` está em `NUVEM_PADRAO`, no topo de `manutencao/index.html`.
 
-O arquivo é `Code.gs` (versão `VERSAO = 8`). O antigo `Code.gs` da raiz era do CTLE_LUB, já removido.
+O arquivo é `Code.gs` (versão `VERSAO = 9`). O antigo `Code.gs` da raiz era do CTLE_LUB, já removido.
 
 **Senhas iniciais:** nesta cópia, as senhas iniciais de `configurar()` e do cabeçalho foram trocadas pelos marcadores `<<SENHA_INICIAL_ANALISTA>>` e `<<SENHA_INICIAL_SUPERVISOR>>`. O resto do código é idêntico ao do editor. Ao colar este arquivo num projeto novo, troque os marcadores antes de rodar `configurar()`; num projeto já configurado eles não têm efeito, porque as senhas valem pelo que está nas Propriedades do script.
 
@@ -15,6 +15,7 @@ O app usa a **versão implantada**, que pode ser mais antiga que o código abert
 | Data da cópia | Versão implantada | Observação |
 |---|---|---|
 | 20/10/2026 | não informada (código com `VERSAO = 8`) | primeira cópia, colada do editor; senhas iniciais trocadas por marcadores |
+| 21/10/2026 | `VERSAO = 9` (colar e implantar nova versão) | tipo `saida` (registro de saída da viagem) em `TIPOS`; arquivo inteiro colado no editor |
 
 ## Como atualizar esta cópia
 
