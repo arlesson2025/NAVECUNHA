@@ -1993,7 +1993,7 @@ function ovModal(vid, pos) {
    <div class="row"><span class="pill ${{ venc: 'p-bad', viag: 'p-warn', ok: 'p-ok', sem: 'p-mut' }[x.st]}">${{ venc: 'Avaliar overhaul', viag: 'Atenção', ok: 'Boa', sem: 'Sem medição' }[x.st]}</span><span>${esc(x.txt)}</span><span class="sp"></span><span class="note">${x.ov ? 'Último overhaul: ' + (x.ov.h != null ? nf(x.ov.h) + ' h · ' : '') + brD(x.ov.date) : 'Último overhaul não registrado'} · ${x.oleo ? 'Última amostra de óleo: ' + brD(x.oleo.date) : 'Nunca analisado'}</span></div>
    ${H.length ? `<div class="tw" style="max-height:55vh"><table class="t"><thead><tr><th>Data</th><th>Horímetro</th><th>Cil. 1</th><th>Cil. 2</th><th>Cil. 3</th><th>Cil. 4</th><th>Cil. 5</th><th>Cil. 6</th><th>Pior</th><th>Diferença entre cilindros</th><th>Origem</th></tr></thead><tbody>
    ${H.map(p => `<tr><td>${brD(p.date)}</td><td class="mono">${p.h != null && p.h !== '' ? nf(p.h) + ' h' : '—'}</td>${[0, 1, 2, 3, 4, 5].map(i => cel(p.vals[i])).join('')}<td class="mono"><b>${fMPa(p.min)}</b> (cil. ${p.cil})</td><td class="mono">${p.vals.filter(v => v != null).length > 1 ? fMPa(p.max - p.min) + ' MPa' : '—'}</td><td>${p.om ? `<a href="#om/${p.om}" data-close>${esc(p.src)}</a>` : esc(p.src)}</td></tr>`).join('')}
-   </tbody></table></div><p class="note">Padrão 1,8 MPa {18,5 kgf/cm²} e limite 1,27 MPa {13 kgf/cm²}: Service Manual S6R2-MPTK, p. 2-3; abaixo do limite, inspeção de overhaul (p. 4-4). Critérios internos (Anexo I item 1.1.12): programar abaixo de 1,45 MPa; diferença acima de 0,3 MPa entre cilindros aponta falha localizada (válvula, anel ou junta), mesmo com a média boa.</p>` : '<div class="note">Nenhuma medição ainda. A compressão entra automaticamente quando a OM do item 1.1.12 (bicos) é encerrada com os 6 cilindros preenchidos. Testes antigos podem ser lançados em "＋ Registrar compressão".</div>'}`, true);
+   </tbody></table></div><p class="note">Padrão 1,8 MPa {18,5 kgf/cm²} e limite 1,27 MPa {13 kgf/cm²}: Service Manual S6R2-MPTK, p. 2-3; abaixo do limite, inspeção de overhaul (p. 4-4). Critérios internos (Anexo I item 1.1.12): programar abaixo de 1,45 MPa; diferença acima de 0,18 MPa {1,8 kgf/cm²} entre cilindros (10% do padrão) aponta falha localizada (válvula, anel ou junta), mesmo com a média boa.</p>` : '<div class="note">Nenhuma medição ainda. A compressão entra automaticamente quando a OM do item 1.1.12 (bicos) é encerrada com os 6 cilindros preenchidos. Testes antigos podem ser lançados em "＋ Registrar compressão".</div>'}`, true);
   $('#modal').addEventListener('click', e => { const bs = e.target.closest('[data-base]'); if (bs) baseModal(...bs.dataset.base.split('|')); const nc = e.target.closest('[data-novacomp]'); if (nc) compModal(...nc.dataset.novacomp.split('|')); });
 }
 function compModal(vid, pos) {
@@ -7485,7 +7485,7 @@ VX.rel = VX.apres = () => { setTimeout(() => location.replace('#cxr'), 0); retur
 /* ===== Compressão do MCP: tela própria no menu (matriz da frota, histórico, critérios com manual e página) + alertas no Hoje ===== */
 'use strict';
 // regras: fabricante onde o manual define; o resto é critério interno, sempre identificado como tal
-const CMP = { int: 1000, dif: 0.3, projProg: 2000, kgf: 10.197 };   // intervalo do ensaio (h) · diferença entre cilindros (MPa) · projeção que manda programar (h = 2 ensaios) · MPa → kgf/cm²
+const CMP = { int: 1000, dif: 0.18, projProg: 2000, kgf: 10.197 };   // intervalo do ensaio (h) · diferença entre cilindros (MPa) · projeção que manda programar (h = 2 ensaios) · MPa → kgf/cm²
 const kgf = x => x == null ? '—' : (x * CMP.kgf).toFixed(1).replace('.', ',');
 const CMP_ST = { fora: ['p-bad', 'Fora do limite', 0], prog: ['p-warn', 'Programar overhaul', 1], aten: ['p-warn', 'Atenção', 2], sem: ['p-mut', 'Sem ensaio', 3], ok: ['p-ok', 'OK', 4] };
 function cmpProj(H) {   // horas até 1,27 MPa pela reta das 3 últimas medições (pior cilindro × horímetro); Infinity = sem queda
@@ -7591,25 +7591,33 @@ function cmpHist(D) {
     leg.push(`<button class="cm-lg${CF.hv === cmpKey(x) ? ' on' : ''}" data-cmhv="${cmpKey(x)}"><i style="background:${c}"></i>${cmpNome(x)} ${x.u ? '<b>' + fMPa(x.u.min) + '</b>' : ''}</button>`); });
   const opts = `<select id="cmHv"><option value="">Frota (geral)</option>${D.map(x => `<option value="${cmpKey(x)}"${CF.hv === cmpKey(x) ? ' selected' : ''}>${cmpNome(x).replace(/&amp;/g, '&')}</option>`).join('')}</select>`;
   return `<div class="card"><div class="row"><h2>Histórico de compressão</h2><span class="sp"></span>${[[12, '12 meses'], [24, '24 meses'], [0, 'Tudo']].map(([k, t]) => `<button class="cm-chip${CF.per === k ? ' on' : ''}" data-cmper="${k}">${t}</button>`).join('')}${opts}</div>
-   <svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto" role="img" aria-label="Histórico da compressão do pior cilindro">${s}</svg><div class="cm-leg">${leg.join('')}</div>
+   <div class="cm-gw"><svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Histórico da compressão do pior cilindro">${s}</svg></div><div class="cm-leg">${leg.join('')}</div>
    <p class="note">Uma linha por motor = pior cilindro de cada ensaio · clique no nome para destacar · triângulo = próxima medição prevista (vermelho = vencida) · passe o mouse nos pontos para ver os valores.</p></div>`;
 }
 function cmpParam() {
-  const fab = [['Compressão padrão', '1,8 MPa · 18,5 kgf/cm²', 'SM p. 2-3'], ['Limite', '1,27 MPa · 13,0 kgf/cm²', 'SM p. 2-3'], ['Rotação de referência', '~120 rpm (partida)', 'SM p. 2-3'], ['Abaixo do limite', 'inspeção de overhaul', 'SM p. 4-4'], ['Revisão geral', 'por condição, sem intervalo em horas', 'SM p. 4-3'], ['Inspeção dos bicos', 'a cada 1.000 h', 'O&M cap. 5']];
-  const crit = [['p-bad', 'Fora do limite', 'cilindro abaixo de 1,27 MPa (fabricante)'], ['p-warn', 'Programar overhaul', 'menor cilindro abaixo de 1,45 MPa ou projeção de menos de 2.000 h'], ['p-warn', 'Atenção', 'diferença acima de 0,3 MPa entre cilindros ou queda de 0,15 MPa ou mais desde o ensaio anterior'], ['p-ok', 'OK', 'demais casos'], ['p-mut', 'Sem base', 'nenhum ensaio registrado'], ['p-bad', 'Vencida', 'mais de 1.000 h desde o último ensaio']];
-  return `<div class="card"><h2>Parâmetros, critérios e método</h2><div class="cm-par">
-   <div><h3>Fabricante</h3><table class="cm-kv">${fab.map(([k, v, f]) => `<tr><td>${k}</td><td><b>${esc(v)}</b></td><td class="mut">${esc(f)}</td></tr>`).join('')}</table>
-    <p class="note">SM = Service Manual Mitsubishi S6R/S6R2 (Pub. 29202-00120) · O&amp;M = Manual de Operação e Manutenção S6R2-MPTK2 (Pub. 99410-15100) · pasta MANUAIS_FABRICANTE\\MITSUBISHI\\MANUAL DE OPERAÇÃO.</p></div>
+  // o que o fabricante diz, documento por documento (Service Manual S6R/S6R2 Pub. 29202-00120 e Manual de O&M S6R2-MPTK2 Pub. 99410-15100)
+  const man = [
+    ['Service Manual S6R2-MPTK, p. 2-3', 'Padrão <b>1,8 MPa {18,5 kgf/cm²}</b>, limite <b>1,27 MPa {13 kgf/cm²}</b>, medidos na partida (~120 rpm).'],
+    ['Service Manual, p. 4-4', 'Medir <b>todos</b> os cilindros, porque "os cilindros são todos independentes"; conferir a rotação (a pressão varia com ela); medir em intervalos regulares e acompanhar a variação; acima do limite, inspeção de overhaul. <b>Não traz diferença máxima entre cilindros.</b>'],
+    ['Service Manual, p. 4-3', 'Overhaul por queda de compressão, apoiado nos sintomas: potência, consumo de combustível e de óleo, blow-by, vedação das válvulas, ruído e cor do escape. Sem intervalo em horas.'],
+    ['Service Manual, cap. 3 (ferramentas)', 'Manômetro P/N 33A91-01700, escala de <b>0 a 7 MPa {0 a 71 kgf/cm²}</b>; adaptador P/N 37591-12200.'],
+    ['Manual de O&amp;M S6R2-MPTK2, cap. 5', 'Inspeção dos bicos injetores a cada <b>1.000 h</b> — o ensaio é feito pelo furo do bico, por isso acompanha esse intervalo.'],
+  ];
+  const crit = [['p-bad', 'Fora do limite', 'cilindro abaixo de 1,27 MPa {13 kgf/cm²} — valor do fabricante'], ['p-warn', 'Programar overhaul', 'menor cilindro abaixo de 1,45 MPa {14,8 kgf/cm²} ou projeção de menos de 2.000 h até o limite'], ['p-warn', 'Atenção', 'diferença acima de 0,18 MPa {1,8 kgf/cm²} entre cilindros, ou queda de 0,15 MPa ou mais desde o ensaio anterior'], ['p-ok', 'OK', 'demais casos'], ['p-mut', 'Sem base', 'nenhum ensaio registrado'], ['p-bad', 'Vencida', 'mais de 1.000 h desde o último ensaio']];
+  return `<div class="card"><h2>Parâmetros, critérios e método</h2>
+   <div class="tw"><table class="t cm-man"><thead><tr><th>Documento</th><th>O que diz</th></tr></thead><tbody>${man.map(([d, t]) => `<tr><td><b>${d}</b></td><td>${t}</td></tr>`).join('')}</tbody></table></div>
+   <p class="note">Manuais na pasta MANUAIS_FABRICANTE\\MITSUBISHI\\MANUAL DE OPERAÇÃO. O treinamento Mitsubishi "Training PT 2025" (seção "Necessidade de overhaul") repete 1,8 / 1,27 MPa a 120 rpm, também sem diferença entre cilindros.</p>
+   <div class="cm-par" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px">
    <div><h3>Critérios internos</h3><ul class="cm-cr">${crit.map(([c, t, d]) => `<li><span class="pill ${c}">${t}</span> ${esc(d)}</li>`).join('')}</ul>
-    <p class="note">1,45 MPa, 0,3 MPa, 0,15 MPa e a projeção são critérios internos (Anexo I item 1.1.12), não constam do manual. O manual da S6R2 não traz diferença máxima entre cilindros.</p></div>
-   <div><h3>Método</h3><p>Medir os <b>6 cilindros</b> a cada <b>1.000 h</b>, aproveitando a retirada dos bicos (item 1.1.12). O fabricante não fixa intervalo para o ensaio, só manda medir "em intervalos regulares" (SM p. 4-4).</p>
-    <p>Partida com a injeção cortada, ~120 rpm, manômetro P/N 33A91-01700 com adaptador (SM 4-4). Registrar a <b>rotação</b> e o <b>horímetro</b>: a pressão varia com a rotação.</p>
-    <p class="note">Lançamento: a OM do item 1.1.12 encerrada com os 6 cilindros entra sozinha; testes avulsos em "＋ Registrar compressão" (aceita MPa ou kgf/cm²).</p></div></div></div>`;
+    <p class="note">Não constam do manual da S6R2 (Anexo I item 1.1.12). Diferença entre cilindros: 10% do padrão (0,18 MPa sobre 1,8 MPa), a mesma proporção do valor publicado num manual Mitsubishi de outra família de motores (0,29 MPa {3,0 kgf/cm²} sobre padrão de 2,9 MPa) e da prática de mercado de 10%. 1,45 MPa, 0,15 MPa e a projeção são critérios de programação da VDA.</p></div>
+   <div><h3>Método</h3><p>Medir os <b>6 cilindros</b> a cada <b>1.000 h</b>, aproveitando a retirada dos bicos (item 1.1.12).</p>
+    <p>Partida com a injeção cortada, bateria carregada, ~120 rpm, manômetro P/N 33A91-01700 com adaptador. Registrar a <b>rotação</b> e o <b>horímetro</b> (SM p. 4-4).</p>
+    <p class="note">Lançamento: a OM do item 1.1.12 encerrada com os 6 cilindros entra sozinha; testes avulsos em "＋ Nova medição" (aceita MPa ou kgf/cm²).</p></div></div></div>`;
 }
 function vCompr() {
   const D = cmpDados();
-  return `<div class="vh"><div><h1>Controle de compressão · MCP</h1><p>Mitsubishi S6R2 · padrão 1,8 MPa {18,5 kgf/cm²} · limite 1,27 MPa {13 kgf/cm²} @ ~120 rpm (SM p. 2-3) · ensaio a cada 1.000 h</p></div><span class="sp"></span><button class="mbtn pri" data-novacomp>＋ Nova medição</button></div>`
-    + cmpMatriz(D) + cmpDetalhe(D) + cmpHist(D) + cmpParam();
+  return `<div class="cm-v"><div class="vh"><div><h1>Controle de compressão · MCP</h1><p>Mitsubishi S6R2 · padrão 1,8 MPa {18,5 kgf/cm²} · limite 1,27 MPa {13 kgf/cm²} @ ~120 rpm (SM p. 2-3) · ensaio a cada 1.000 h</p></div><span class="sp"></span><button class="mbtn" data-cmreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn pri" data-novacomp>＋ Nova medição</button></div>`
+    + '<div class="cm-ws">' + cmpMatriz(D) + cmpDetalhe(D) + cmpHist(D) + cmpParam() + '</div></div>';
 }
 VX.compr = vCompr;
 AFTER.compr = () => { const m = $('#main');
@@ -7620,6 +7628,49 @@ AFTER.compr = () => { const m = $('#main');
     const hv = t.closest('[data-cmhv]'); if (hv) { CF.hv = CF.hv === hv.dataset.cmhv ? '' : hv.dataset.cmhv; render(); return; }
     const s = t.closest('[data-cmsel]'); if (s && !t.closest('a')) { CF.sel = s.dataset.cmsel; render(); const d = $('#cmSel'); if (d) d.closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
   m.onchange = e => { if (e.target.id === 'cmSel') { CF.sel = e.target.value; render(); } if (e.target.id === 'cmHv') { CF.hv = e.target.value; render(); } }; };
+// blocos como janelas (igual ao Óleo): alça para qualquer tamanho, minimizar e tela cheia para apresentação; tamanhos salvos neste aparelho
+const CMP_LAY = { G() { try { return JSON.parse(localStorage.getItem('smf_cmp_lay') || '{}'); } catch (e) { return {}; } }, S(v) { try { localStorage.setItem('smf_cmp_lay', JSON.stringify(v)); } catch (e) { } } };
+function cmpJanelas() {
+  const ws = document.querySelector('#main .cm-ws'); if (!ws) return;
+  const rb = document.querySelector('[data-cmreset]'); if (rb) rb.onclick = e => { e.stopPropagation(); CMP_LAY.S({}); render(); };
+  const cards = [...ws.children].filter(c => c.classList.contains('card')), L = CMP_LAY.G(), livre = innerWidth > 760, W = ws.clientWidth;
+  const nat = cards.map(c => ({ x: 0, y: c.offsetTop, w: W, h: c.offsetHeight }));   // padrão: empilhados na ordem da tela
+  const pos = k => L[k] || (L[k] = Object.assign({}, nat[+k.slice(1)]));
+  const salva = () => CMP_LAY.S(L);
+  const fundo = () => { if (livre) ws.style.height = Math.max(...cards.map(c => { const p = pos(c.dataset.k); return p.y + (p.m ? c.offsetHeight : p.h); })) + 12 + 'px'; };
+  const aplica = c => { const p = pos(c.dataset.k); c.classList.toggle('cm-min', !!p.m); if (!livre) return;
+    c.style.left = p.x + 'px'; c.style.top = p.y + 'px'; c.style.width = p.w + 'px'; c.style.height = p.m ? '' : p.h + 'px'; };
+  let z = 5;
+  cards.forEach((c, i) => {
+    const k = 'b' + i; c.dataset.k = k; c.classList.add('cm-win');
+    const tb = document.createElement('div'); tb.className = 'cm-tb';
+    tb.innerHTML = `${livre ? '<span class="cm-grip" title="Arraste para mover o bloco">⋮⋮</span>' : ''}<button class="cm-ib" data-cmmin title="Minimizar">${(L[k] || {}).m ? '+' : '–'}</button><button class="cm-ib" data-cmfull title="Tela cheia (apresentação)">⛶</button>`;
+    c.prepend(tb); if (livre) c.insertAdjacentHTML('beforeend', '<div class="cm-rz" title="Arraste para mudar o tamanho"></div>');
+    tb.querySelector('[data-cmmin]').onclick = e => { e.stopPropagation(); const p = pos(k); p.m = !p.m; e.currentTarget.textContent = p.m ? '+' : '–'; aplica(c); fundo(); salva(); };
+    tb.querySelector('[data-cmfull]').onclick = e => { e.stopPropagation(); const fs = document.fullscreenElement || document.webkitFullscreenElement;
+      if (fs || c.classList.contains('cm-full')) { if (fs) (document.exitFullscreen || document.webkitExitFullscreen).call(document); c.classList.remove('cm-full'); return; }
+      const rq = c.requestFullscreen || c.webkitRequestFullscreen; if (rq) rq.call(c).catch(() => c.classList.add('cm-full')); else c.classList.add('cm-full'); };
+  });
+  cards.forEach(aplica);
+  if (!livre) return;
+  ws.classList.add('cm-free'); cards.forEach(aplica); fundo();
+  cards.forEach(c => { const k = c.dataset.k;
+    c.addEventListener('pointerdown', () => { c.style.zIndex = ++z; });
+    const mover = e => { if (e.button !== 0 || (e.target.closest('button,select,input,a,textarea,option') && !e.target.closest('.cm-grip'))) return;
+      e.preventDefault(); const el = e.currentTarget, p = pos(k), sx = e.clientX, sy = e.clientY, ox = p.x, oy = p.y; el.setPointerCapture(e.pointerId); c.classList.add('cm-drag');
+      const mv = ev => { p.x = Math.max(0, ox + ev.clientX - sx); p.y = Math.max(0, oy + ev.clientY - sy); aplica(c); fundo(); };
+      const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); c.classList.remove('cm-drag'); salva(); };
+      el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); };
+    c.querySelector('.cm-grip').addEventListener('pointerdown', mover);
+    const hd = c.children[1]; if (hd && !hd.classList.contains('cm-rz')) { hd.classList.add('cm-hd'); hd.addEventListener('pointerdown', mover); }
+    const rz = c.querySelector('.cm-rz');
+    rz.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); const p = pos(k), sx = e.clientX, sy = e.clientY, ow = p.w, oh = p.m ? c.offsetHeight : p.h; rz.setPointerCapture(e.pointerId);
+      const mv = ev => { p.w = Math.max(300, ow + ev.clientX - sx); p.h = Math.max(90, oh + ev.clientY - sy); p.m = false; aplica(c); fundo(); };
+      const up = () => { rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); salva(); };
+      rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up); });
+  });
+}
+{ const a0 = AFTER.compr; AFTER.compr = () => { a0(); cmpJanelas(); }; }
 // menu: logo depois de Óleo
 { const i = SECOES.findIndex(s => s.id === 'oleo'); SECOES.splice(i < 0 ? 1 : i + 1, 0, { id: 'compr', nome: 'Compressão MCP', views: [['compr', 'Compressão do MCP']] });
   ICO.compr = '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4"/><path d="M9 3h6"/>'; }
@@ -7636,7 +7687,7 @@ function cmpCardHoje() {
     const mot = [...new Set(out.filter(r => r.kind === 'comp').map(r => r.vessel + '|' + r.pos))].filter(ativo);
     const de = k => out.filter(r => r.kind === 'comp' && r.vessel + '|' + r.pos === mot[k]).sort((a, b) => a.h - b.h), br = x => x.toFixed(2).replace('.', ',');
     if (mot[0]) { const L = de(0); L[L.length - 1].vals[3] = '1,21'; }                                                     // fora do limite (cil. 4)
-    if (mot[3]) de(3).forEach((r, i) => { r.vals = [1.80, 1.50 - i * 0.005, 1.79, 1.80, 1.78, 1.80].map(br); });           // atenção: cil. 2 ~0,3 MPa abaixo dos outros, estável
+    if (mot[3]) de(3).forEach((r, i) => { r.vals = [1.80, 1.50 - i * 0.005, 1.79, 1.80, 1.78, 1.80].map(br); });           // atenção: cil. 2 ~0,3 MPa abaixo dos outros (acima de 0,18), estável
     if (mot[6]) de(6).forEach(r => { if (r.h - 1400 > 0) r.h -= 1400; });                                                  // ensaio vencido
     if (mot[8]) out = out.filter(r => !(r.kind === 'comp' && r.vessel + '|' + r.pos === mot[8]));                           // sem ensaio
     return out; }; }
@@ -7647,7 +7698,11 @@ function cmpCardHoje() {
       const l = exemploComp().filter(r => r.kind === 'comp'); l.forEach(r => { r.updatedAt = r.createdAt = Date.now(); S.recs.set(r.id, r); }); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l);
       await kvSet('cmpExV', 3); render(); } catch (e) { console.warn(e); } }, 300); }
 { const r0 = VX.rotina; if (r0) VX.rotina = function () { const h = r0.apply(this, arguments), c = cmpCardHoje(); if (!c) return h; const i = h.indexOf('<div class="card'); return i >= 0 ? h.slice(0, i) + c + h.slice(i) : h + c; }; }
-{ const st = document.createElement('style'); st.textContent = `#cmSel,#cmHv{width:auto;min-width:190px;max-width:260px}.cm-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}.cm-chip{border:1px solid #DADCE0;background:#fff;border-radius:16px;padding:3px 11px;font:inherit;font-size:12.5px;cursor:pointer}.cm-chip b{color:var(--mut);font-weight:600}.cm-chip.on{background:#E8F0FE;border-color:#1967D2;color:#1967D2}.cm-chip.on b{color:#1967D2}.cm-t td,.cm-t th{white-space:nowrap}.cm-t .r{text-align:right}.cm-t tr.cm-on td{background:#E8F0FE}.cm-det{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}@media(max-width:1000px){.cm-det{grid-template-columns:1fr}}.cm-diag{margin-top:8px;padding:9px 12px;border-left:3px solid #1967D2;background:#F3F7FD;border-radius:6px;font-size:13px}.cm-leg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.cm-lg{border:1px solid #DADCE0;background:#fff;border-radius:14px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer}.cm-lg.on{border-color:#1967D2;background:#E8F0FE}.cm-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}.cm-par{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}@media(max-width:1000px){.cm-par{grid-template-columns:1fr}}.cm-par h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px}.cm-par p{font-size:13px;margin:0 0 8px}.cm-kv{font-size:13px;border-collapse:collapse}.cm-kv td{padding:3px 8px 3px 0;vertical-align:top}.cm-cr{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-direction:column;gap:6px;font-size:13px}.cm-hoje ul{margin:6px 0 0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = `.cm-ws{position:relative}.cm-ws.cm-free>.card{position:absolute;margin:0!important;box-sizing:border-box}.cm-v .card.cm-win{position:relative;overflow:auto;min-width:300px;min-height:70px}#main .cm-ws.cm-free>.card.cm-win{position:absolute}#main .card>.cm-tb{position:absolute}#main .card>.cm-rz{position:sticky}.cm-grip{cursor:grab;color:#9AA0A6;padding:2px 6px;letter-spacing:-2px;user-select:none;touch-action:none;font-size:13px}.cm-hd{cursor:grab;user-select:none}.cm-drag{box-shadow:0 12px 32px rgba(22,33,44,.22)!important;opacity:.96}.cm-drag,.cm-drag .cm-hd{cursor:grabbing}.cm-rz{position:sticky;bottom:0;align-self:flex-end;flex:none;width:16px;height:16px;margin:-16px -10px -8px auto;cursor:nwse-resize;touch-action:none;z-index:4;background:linear-gradient(135deg,transparent 50%,#9AA0A6 50%,#9AA0A6 56%,transparent 56%,transparent 68%,#9AA0A6 68%,#9AA0A6 74%,transparent 74%)}.cm-win.cm-min .cm-rz,.cm-win:fullscreen .cm-rz,.cm-win.cm-full .cm-rz{display:none}.cm-tb{position:absolute;top:6px;right:8px;display:flex;gap:2px;z-index:3}.cm-ib{border:0;background:transparent;width:26px;height:24px;border-radius:5px;cursor:pointer;color:var(--mut);font-size:15px;line-height:1;padding:0;min-height:0;box-shadow:none}.cm-ib:hover{background:#E8EAED}.cm-win>.row:nth-child(2),.cm-win>h2:nth-child(2){padding-right:86px}.cm-win.cm-min{height:auto!important;min-height:0}.cm-win.cm-min>:not(.cm-tb):not(:nth-child(2)){display:none!important}
+ .cm-gw{flex:1;min-height:0;display:flex}.cm-gw svg{width:100%;height:100%;min-height:180px}
+ .cm-win:fullscreen,.cm-win.cm-full{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;border-radius:0;z-index:9999;background:#fff;padding:18px 26px!important;resize:none;overflow:auto;font-size:15px}.cm-win:fullscreen h2,.cm-win.cm-full h2{font-size:22px}.cm-win:fullscreen .t td,.cm-win:fullscreen .t th,.cm-win.cm-full .t td,.cm-win.cm-full .t th{font-size:15px!important;padding:5px 10px!important}.cm-win:fullscreen .cm-gw svg,.cm-win.cm-full .cm-gw svg{max-height:calc(100vh - 170px)}.cm-win:fullscreen .cm-det svg,.cm-win.cm-full .cm-det svg{max-height:calc(100vh - 200px)}.cm-win:fullscreen .note,.cm-win:fullscreen p,.cm-win:fullscreen li{font-size:14px}
+ @media(max-width:760px){#main .cm-v .card.cm-win{position:relative!important;left:auto!important;top:auto!important;width:auto!important;height:auto!important}}
+ .cm-v .vh{margin-bottom:8px}.cm-v .vh p{margin:2px 0 0}.cm-v .card{padding:10px 14px;margin-bottom:10px;gap:4px}.cm-v .card h2{margin:0 0 4px}.cm-v .row{margin-bottom:2px}.cm-v .t th,.cm-v .t td{padding:3px 8px;line-height:1.25}.cm-v .note{margin:4px 0 0;line-height:1.3}.cm-v p{margin:0 0 4px;line-height:1.3}.cm-v h3{margin:0 0 4px}.cm-v .cm-chips{margin:2px 0 6px;gap:4px}.cm-v .cm-chip{padding:1px 9px}.cm-v .cm-cr{gap:3px;margin-bottom:4px}.cm-v .cm-cr li{line-height:1.3}.cm-v .cm-diag{margin-top:6px;padding:5px 10px;line-height:1.3}.cm-v .cm-leg{margin-top:4px;gap:4px}.cm-v .cm-lg{padding:1px 8px}.cm-v .cm-det{gap:12px}.cm-v .cm-par{gap:14px}.cm-v .cm-par[style]{margin-top:8px!important}.cm-h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:4px 0 6px}.cm-man td{white-space:normal!important;vertical-align:top}.cm-man td:first-child{width:230px}#cmSel,#cmHv{width:auto;min-width:190px;max-width:260px}.cm-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}.cm-chip{border:1px solid #DADCE0;background:#fff;border-radius:16px;padding:3px 11px;font:inherit;font-size:12.5px;cursor:pointer}.cm-chip b{color:var(--mut);font-weight:600}.cm-chip.on{background:#E8F0FE;border-color:#1967D2;color:#1967D2}.cm-chip.on b{color:#1967D2}.cm-t td,.cm-t th{white-space:nowrap}.cm-t .r{text-align:right}.cm-t tr.cm-on td{background:#E8F0FE}.cm-det{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}@media(max-width:1000px){.cm-det{grid-template-columns:1fr}}.cm-diag{margin-top:8px;padding:9px 12px;border-left:3px solid #1967D2;background:#F3F7FD;border-radius:6px;font-size:13px}.cm-leg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.cm-lg{border:1px solid #DADCE0;background:#fff;border-radius:14px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer}.cm-lg.on{border-color:#1967D2;background:#E8F0FE}.cm-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}.cm-par{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}@media(max-width:1000px){.cm-par{grid-template-columns:1fr}}.cm-par h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px}.cm-par p{font-size:13px;margin:0 0 8px}.cm-kv{font-size:13px;border-collapse:collapse}.cm-kv td{padding:3px 8px 3px 0;vertical-align:top}.cm-cr{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-direction:column;gap:6px;font-size:13px}.cm-hoje ul{margin:6px 0 0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `a[href="#rel"],a[href="#apres"],button[onclick*="go('rel')"],button[onclick*="go('apres')"]{display:none!important}`; document.head.appendChild(st); }
 </script>
 </body>
