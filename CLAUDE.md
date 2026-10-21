@@ -25,13 +25,14 @@ Não há build, lint, testes nem gerenciador de pacotes. Publicação: GitHub Pa
 - Dados de exemplo: o app gera uma frota simulada (`gerarExemplo` / `carregarExemplo`); o banner “Dados de exemplo” aparece enquanto existirem.
 - Servidor: o código é colado manualmente no editor do Apps Script e implantado como App da Web; a URL `/exec` vai em Administração → Nuvem.
 
-## Como ler `manutencao/index.html` (~1,5 MB, ~7.950 linhas)
+## Como ler `manutencao/index.html` (~1,3 MB, ~7.960 linhas)
 
 **Nunca leia o arquivo inteiro nem as linhas gigantes.** Use Grep e Read com `offset`/`limit`. Os números de linha abaixo são aproximados e mudam a cada edição — localize pelos marcadores citados.
 
 - Topo (~linha 22): `NUVEM_PADRAO` e `carregarLibsPdf()`. As bibliotecas de PDF (html2canvas, jsPDF) ficam em `manutencao/lib/` e só carregam quando `gerarPDF`, `lubMakePdf` ou `apPdf` são chamadas; não edite os `.min.js`.
 - Linhas ~32–1217: CSS principal.
-- `const LOGOS=` e `const A1=` (~1234–1235) têm centenas de KB cada (logos base64 e o Anexo I inteiro em JSON). Para consultar itens do Anexo I, use Grep com `-o` e um padrão específico (ex.: `"id":"1\.1\.1"[^}]*`). Outras linhas gigantes: `AP_FOTO`, `MOTOR_IMG` (imagens base64).
+- `const LOGOS=` (~1234) é uma linha gigante (logos base64). Outras: `AP_FOTO`, `MOTOR_IMG` (imagens base64).
+- **Anexo I (`A1`) fica em `manutencao/dados/anexo1.js`**, um item por linha, carregado por `<script src>` logo antes do núcleo (precisa estar disponível de forma síncrona: dezenas de blocos usam `A1` na carga). Para consultar um item, Grep em `dados/anexo1.js` por `"id":"1\.1\.1"`. Ao editar, mantenha cada linha um objeto JSON válido.
 - Formulários oficiais FR 049_B e FR 016_E ficam em `manutencao/forms/`, carregados por `lubFormTxt()` e postos no iframe via `srcdoc`. O FR 049_B recebe trocas de texto exatas em `lubAbrirForm` — se editar o formulário, mantenha esses trechos idênticos. `.gitattributes` (`-text`) guarda esses arquivos byte a byte (LF); não reformate nem converta quebras de linha.
 - No PowerShell, leia com `-Encoding UTF8`; sem isso os acentos saem corrompidos.
 
