@@ -1638,7 +1638,7 @@ function gerarExemplo() {
   out.push({ id: 'ex-om-48202', kind: 'om', tipo: 'C', num: '48202', vessel: 'v7', pos: 'UN', status: 'execucao', abertura: isoDT(a1), sistema: '2.0 Manobrabilidade e Governo', equip: 'Orbitrol do governo', classe: 'Alta', rnc: 'RNC-2026-036', descricao: 'Folga excessiva no volante e vazamento no bloco de válvulas', origem: 'Em viagem (Autotrac)', interd: 'N/A', inicio: isoDT(new Date(a1.getTime() + 3600e3)), fotos: [], seed: true });
   out.push({ id: 'ex-om-48195', kind: 'om', tipo: 'C', num: '48195', vessel: 'v10', pos: 'BE', status: 'aberta', abertura: isoDT(a2), sistema: '3.0 Geração Elétrica de Bordo', equip: 'Alternador de carga do MCP', classe: 'Média', rnc: '', descricao: 'Ruído no rolamento do alternador de carga', origem: 'FR 027_L', interd: 'N/A', fotos: [], seed: true });
   // preventivas em andamento
-  const mk = (n, vid, pos, items, status, diasEmit) => { pos = fixP(vid, pos); items = items.filter(id => aplica(vessel(vid), pos, A1M[id])); if (!items.length) return; const v = vessel(vid); const hp = pos; const dt = new Date(d0); dt.setDate(dt.getDate() - diasEmit); const ch = curH(v, hp); out.push({ id: 'ex-om-' + n, kind: 'om', tipo: 'P', num: String(n), vessel: vid, pos, items, status, emitAt: isoD(dt), alvoH: ch + 35, conf: {}, extras: [], fotos: [], exec: 'Equipe própria (CTF/MFM)', seed: true }); };
+  const mk = (n, vid, pos, items, status, diasEmit) => { pos = fixP(vid, pos); items = items.filter(id => aplica(vessel(vid), pos, A1M[id])); if (!items.length) return; const v = vessel(vid); const hp = pos; const dt = new Date(d0); dt.setDate(dt.getDate() - diasEmit); const ch = curH(v, hp); out.push({ id: 'ex-om-' + n, kind: 'om', tipo: 'P', num: String(n), vessel: vid, pos, items, status, emitAt: isoD(dt), alvoH: ch + 35, conf: {}, extras: [], fotos: [], exec: 'Equipe de manutenção', seed: true }); };
   mk(48213, 'v5', 'BE', ['1.1.1', '1.1.2', '1.1.3'], 'executada', 6);
   mk(48190, 'v1', 'BB', ['1.1.9', '1.1.10'], 'abordo', 3);
   mk(48177, 'v3', 'MCA1', [itensDe(vessel('v3'), 'MCA1').find(t => t.kind === 'prog').id], 'emitida', 1);
@@ -2419,7 +2419,7 @@ AFTER.emitir = () => {
       if (!/^\d{3,}$/.test(n)) { $('#emE').textContent = 'Digite o número da OM gerado pelo Sankhya (só números).'; return; }
       if (oms().some(o => o.num === n)) { $('#emE').textContent = 'Já existe uma OM com esse número no SMF.'; return; }
       const d = EM.draft;
-      const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, vessel: EM.vid, pos: d.pos, items: d.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: d.alvoH, alvoD: d.alvoD, conf: {}, extras: [], fotos: [], exec: 'Equipe própria (CTF/MFM)', hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] };
+      const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, vessel: EM.vid, pos: d.pos, items: d.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: d.alvoH, alvoD: d.alvoD, conf: {}, extras: [], fotos: [], exec: 'Equipe de manutenção', hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] };
       await saveRec(o); d.ids.forEach(id => EM.sel.delete(d.pos + '|' + id)); EM.draft = null;
       toast('OM ' + n + ' emitida.'); fichaModal(o); render();
     }
@@ -2611,7 +2611,7 @@ function formIIB(o) {
     ${fIn(o, 'sesmt', 'Liberação SESMT — responsável', 's3')}${fDT(o, 'sesmtDT', 'Data e hora', 's3')}${fIn(o, 'pt', 'Nº da PT' + (regs.includes('pt') ? ' (obrigatória)' : ''), 's2', 'placeholder="ou N/A"')}
     ${fRad(o, 'terceiroAut', 'Serviço de terceiro', ['Não', 'Sim — autorização da Gerência/Diretoria'], 's4')}${fIn(o, 'scoc', 'Nº SC / OC', 's2')}</div></div>
    <div class="card">${sec('B5', 'Execução', 'itens do Anexo I')}<div class="g">
-    ${fRad(o, 'exec', 'Executor', ['Equipe própria (CTF/MFM)', 'Terceiro'], 's2')}${fIn(o, 'execn', 'Nome / função ou empresa / responsável técnico', 's4')}
+    ${fRad(o, 'exec', 'Executor', ['Equipe de manutenção', 'Terceiro'], 's2')}${fIn(o, 'execn', 'Nome / função ou empresa / responsável técnico', 's4')}
     ${terc ? fRad(o, 'relTerc', 'Relatório de terceiro (5.8)', ['Relatório do fornecedor anexo', 'Fornecedor não emitiu — Supervisor preenche'], 's4') + fIn(o, 'relNum', 'Nº do relatório', 's2') : ''}
     ${fIn(o, 'rms', 'Nº das Requisições de Material (RMs)', 's3', 'placeholder="separe por vírgula"')}${fDT(o, 'inicio', 'Início da intervenção', 's3')}${fDT(o, 'termino', 'Término da intervenção', 's3')}</div>
     ${anexo ? '<div class="banner info">Relatório do fornecedor anexo: substitui serviços, medições e materiais (item 5.8). Os passos abaixo são opcionais.</div>' : ''}
@@ -2626,7 +2626,7 @@ function formIIB(o) {
    ${pred ? `<div class="card">${sec('B8', 'Manutenção preditiva', 'itens 1.1.29 / 1.1.30')}${tabelaLivre(o, 'predRows', 'Parâmetros monitorados', ['Parâmetro monitorado', 'Valor atual', 'Valor anterior', 'Limite de alerta', 'Tendência (estável / degradando / crítica)'])}
     <div class="g">${fDT(o, 'predProxD', 'Próxima medição — data', 's2', 'date')}${fIn(o, 'predProxH', 'ou horímetro (h)', 's2')}${fRad(o, 'predGera', 'Gera intervenção?', ['Não', 'Sim'], 's2')}${fIn(o, 'predOM', 'Nº da nova OM', 's2')}${fIn(o, 'laudo', 'Nº do laudo do laboratório', 's4')}</div></div>` : ''}
    <div class="card">${sec('B10', 'Registro fotográfico', 'item 5.8 · 4 fotos por folha no PDF')}${fotosHtml(o)}</div>
-   <div class="card">${sec('B9', 'Liberação e assinaturas')}<div class="g">${fIn(o, 'ass|exec', 'Executor (nome)', 's3')}${fIn(o, 'ass|cmd', 'Comandante — aceite técnico (4.7)', 's3')}${fDT(o, 'liberacao', 'Liberação à Operação', 's3')}${fIn(o, 'conferencia', 'Conferência documental (Analista) — nome e data', 's3')}</div>
+   <div class="card">${sec('B9', 'Liberação e assinaturas')}<div class="g">${fIn(o, 'ass|exec', 'Executor (nome)', 's3')}${fIn(o, 'ass|cmd', 'Recebido a bordo — Comandante ou Coordenador de Operações (4.7)', 's3')}${fDT(o, 'liberacao', 'Liberação à Operação', 's3')}${fIn(o, 'conferencia', 'Conferência documental (Analista) — nome e data', 's3')}</div>
     ${aprovacaoHtml(o)}</div>`;
 }
 function tabelaLivre(o, k, tit, cols) {
@@ -2703,7 +2703,7 @@ function formIIA(o) {
    <div class="card">${sec('A7', 'Condição final (“depois”)')}<div class="g">${fTA(o, 'teste', 'Teste funcional realizado', 's6', 2)}${fIn(o, 'criterio', 'Critério de aceitação', 's4')}${fRad(o, 'resultado', 'Resultado', ['Conforme', 'Não conforme'], 's2')}${fIn(o, 'inspecao', 'Nova inspeção de segurança (5.4.1) — responsável', 's6')}</div></div>
    <div class="card">${sec('A8', 'Registro fotográfico', 'item 5.8 · 4 fotos por folha no PDF')}${fotosHtml(o)}</div>
    <div class="card">${sec('A9', 'Análise', 'itens 5.2 e 10.3')}<div class="g">${fTA(o, 'causa', 'Causa raiz resumida (detalhamento obrigatório na RNC)', 's6', 3)}${fRad(o, 'revPlano', 'Revisão do plano preventivo', ['Não', 'Sim'], 's2')}${fIn(o, 'itemRev', 'Item do Anexo I a revisar', 's2')}${fTA(o, 'mitig', 'Medida de mitigação — o que será feito para a falha não se repetir' + (ca ? ' (obrigatório)' : ''), 's6', 2)}${fIn(o, 'mitigResp', 'Responsável pela medida', 's2')}${fDT(o, 'mitigPrazo', 'Prazo da medida', 's2', 'date')}${fSel(o, 'mitigSt', 'Situação da medida', ['Pendente', 'Em andamento', 'Concluída'], 's2')}${fDT(o, 'trPrev', 'Treinamento pós-falha (2 h) — previsto', 's1', 'date')}${fDT(o, 'trReal', 'Realizado', 's1', 'date')}</div></div>
-   <div class="card">${sec('A10', 'Liberação e assinaturas')}<div class="g">${fIn(o, 'ass|exec', 'Executor (nome)', 's3')}${fIn(o, 'ass|cmd', 'Comandante — aceite técnico (4.7)', 's3')}${crit ? fIn(o, 'ass|coord', 'Coordenador de Operações — liberação pós-falha Crítica', 's6') : ''}${fDT(o, 'liberacao', 'Liberação à Operação', 's3')}${fIn(o, 'conferencia', 'Conferência documental (Analista) — nome e data', 's3')}</div>
+   <div class="card">${sec('A10', 'Liberação e assinaturas')}<div class="g">${fIn(o, 'ass|exec', 'Executor (nome)', 's3')}${fIn(o, 'ass|cmd', 'Recebido a bordo — Comandante ou Coordenador de Operações (4.7)', 's3')}${crit ? fIn(o, 'ass|coord', 'Coordenador de Operações — liberação pós-falha Crítica', 's6') : ''}${fDT(o, 'liberacao', 'Liberação à Operação', 's3')}${fIn(o, 'conferencia', 'Conferência documental (Analista) — nome e data', 's3')}</div>
     ${crit ? '<div class="note">Na falha Crítica, a liberação exige a assinatura do Coordenador de Operações e a do Supervisor de Manutenção. Sem as duas, a embarcação permanece impedida de operar.</div>' : ''}${aprovacaoHtml(o)}</div>`;
 }
 function gateIIA(o) {
@@ -2825,7 +2825,7 @@ function paginasFotos(o, titulo) {
 function numerar(pages) { const N = pages.length; return pages.map((p, i) => p.replace(/@N/g, N).replace(/Página <b>[^<]*<\/b>/, 'Página <b>' + (i + 1) + '</b>')); }
 function assinaturas(o, extra) {
   const ap = o.status === 'encerrada' ? `<span class="stamp">✓ Conferido e aprovado no SMF · ${esc(o.aprovBy || '')}</span>` : '';
-  const rows = [['Executor', (o.ass || {}).exec || o.execn || '', '', ''], ['Supervisor de Manutenção — inspeção final e entrega do equipamento testado (5.8)', '', { h: ap }, o.status === 'encerrada' ? brDT(o.aprovAt) : ''], ['Comandante — aceite técnico (4.7)', (o.ass || {}).cmd || '', '', '']].concat(extra || []);
+  const rows = [['Executor', (o.ass || {}).exec || o.execn || '', '', ''], ['Supervisor de Manutenção — inspeção final e entrega do equipamento testado (5.8)', '', { h: ap }, o.status === 'encerrada' ? brDT(o.aprovAt) : ''], ['Recebido a bordo — Comandante ou Coordenador de Operações (4.7)', (o.ass || {}).cmd || '', '', '']].concat(extra || []);
   return tbl(['Função', 'Nome', 'Assinatura', 'Data e hora'], rows, ['40%', '22%', '22%', '16%']);
 }
 function docIIB(o) {
@@ -2842,7 +2842,7 @@ function docIIB(o) {
   B.push(blk('B4', 'Liberações prévias', 'item 5.11', grid('1.4fr 1fr 1fr', dv('Liberação de segurança do SESMT — responsável', o.sesmt || 'N/A (rotina com APR padrão – 5.11.1)') + dv('Data e hora', brDT(o.sesmtDT)) + dv('Nº da PT', o.pt || 'N/A') + dv('Serviço de terceiro', xo(o.terceiroAut || 'Não', ['Não', 'Sim — autorização da Gerência/Diretoria']), 2) + dv('Nº SC / OC', o.scoc || 'N/A'))));
   B.push(blk('B5', 'Execução', '', grid('1fr 1.6fr', dv('Executor', o.exec) + dv('Nome / função ou empresa / responsável técnico', o.execn)) + grid('2fr 1fr', dv('Relatório de terceiro (5.8)', o.exec === 'Terceiro' ? o.relTerc : 'N/A (equipe própria)') + dv('Nº do relatório', o.relNum || 'N/A')) + grid('1fr 1fr 1fr', dv('Nº das RMs', o.rms || 'N/A') + dv('Início da intervenção', brDT(o.inicio)) + dv('Término da intervenção', brDT(o.termino)))));
   (o.items || []).forEach(id => { const t = A1M[id], c = (o.conf || {})[id] || {}, st = c.steps || [], md = c.meds || [];
-    B.push(`<div class="fs"><h4><code>B5</code>${esc(id)} · ${esc(t.chk)}<span class="r">${esc(EQN[t.eq])} · ${esc(t.pag)}</span></h4>${tbl(['Procedimento aplicado (Anexo I)', 'Feito'], t.steps.map((s, i) => [s, { h: st[i] ? '☒' : anexo ? 'rel.' : '☐', c: st[i] ? 'ok' : '' }]), ['90%', '10%'])}${t.meds.length ? tbl(['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Un.'], t.meds.map((m, i) => [m[0], m[1], (md[i] || {}).enc || '', { t: (md[i] || {}).dei || '', c: medFora(m, (md[i] || {}).dei) ? 'bad' : '' }, m[2]])) : ''}</div>`); });
+    B.push(`<div class="fs"><h4><code>B5</code>${esc(id)} · ${esc(t.chk)}<span class="r">${esc(EQN[t.eq])} · ${esc(t.pag)}</span></h4>${tbl(['Procedimento aplicado (Anexo I)', 'Feito'], t.steps.map((s, i) => [s, { h: st[i] ? '☒' : anexo ? 'rel.' : o.passosFicha ? 'form.' : '☐', c: st[i] ? 'ok' : '' }]), ['90%', '10%'])}${t.meds.length ? tbl(['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Un.'], t.meds.map((m, i) => [m[0], m[1], (md[i] || {}).enc || '', { t: (md[i] || {}).dei || '', c: medFora(m, (md[i] || {}).dei) ? 'bad' : '' }, m[2]])) : ''}</div>`); });
   if ((o.medsX || []).length) B.push(blk('B5', 'Outras medições', '', tbl(['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Unidade'], o.medsX)));
   const regRows = regs.filter(r => ['lote', 'fr049', 'instr', 'end', 'cert'].includes(r)).map(r => [REGN[r], (o.reg || {})[r] || '']);
   B.push(blk('B5', 'Materiais e peças aplicados', '', tbl(['Descrição', 'Qtd.', 'Nº da RM / NF', 'Lote (lubrificantes)', 'Validade'], o.mats || []) + (regRows.length ? tbl(['Registro exigido (Anexo I)', 'Valor'], regRows, ['55%', '45%']) : '')));
@@ -3974,7 +3974,7 @@ formIIA = function (o) {
     ${fRad(o, 'revPlano', 'Mudar o plano preventivo?', ['Não', 'Sim'], 's2')}${fIn(o, 'itemRev', 'Item do Anexo I a revisar', 's2')}${ca ? fDT(o, 'trPrev', 'Treinamento pós-falha (2 h · 10.3)', 's2', 'date') : ''}</div>${ca ? '' : '</details>'}</div>
 
   <div class="card cblk">${blkH(5, 'Liberação para operação', 'assinaturas e aprovação do Supervisor')}<div class="g">
-    ${fIn(o, 'ass|exec', 'Executor', 's2')}${fIn(o, 'ass|cmd', 'Comandante · aceite (4.7)', 's2')}${crit ? fIn(o, 'ass|coord', 'Coordenador de Operações · liberação', 's2') : ''}${fDT(o, 'liberacao', 'Liberação à operação', 's2')}${fIn(o, 'conferencia', 'Conferência documental · nome', 's2')}</div>
+    ${fIn(o, 'ass|exec', 'Executor', 's2')}${fIn(o, 'ass|cmd', 'Recebido a bordo · Comandante ou Coordenador de Operações (4.7)', 's2')}${crit ? fIn(o, 'ass|coord', 'Coordenador de Operações · liberação', 's2') : ''}${fDT(o, 'liberacao', 'Liberação à operação', 's2')}${fIn(o, 'conferencia', 'Conferência documental · nome', 's2')}</div>
     <div class="note">${ca ? `Depois de encerrada, a corretiva pede a <b>verificação da eficácia</b> em ${EF_DIAS} dias (ISO 9001 10.2): confirmar que a falha não voltou.` : ''}</div>${aprovacaoHtml(o)}</div>`;
 };
 gateIIA = function (o) {
@@ -5827,7 +5827,7 @@ function embTexto(v, partes) {
       if (!/^\d{3,}$/.test(n)) { $('#emE').textContent = 'Digite o número da OM gerado pelo Sankhya (só números).'; return; }
       if (oms().some(o => o.num === n)) { $('#emE').textContent = 'Já existe uma OM com esse número no SMF.'; return; }
       const pt = EM.draft.partes || embPartes(v); let i = 0;
-      for (const p of pt) { const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, grupo: n, parte: ++i, partes: pt.length, vessel: v.id, pos: p.pos, items: p.ids.slice(), itensProg: p.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: p.pos === 'UN' ? null : p.alvoH, alvoD: p.alvoD, hEmit: p.hr ? p.hr.h : null, conf: {}, extras: [], fotos: [], exec: 'Equipe própria (CTF/MFM)', execTerra: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] }; await saveRec(o); }
+      for (const p of pt) { const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, grupo: n, parte: ++i, partes: pt.length, vessel: v.id, pos: p.pos, items: p.ids.slice(), itensProg: p.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: p.pos === 'UN' ? null : p.alvoH, alvoD: p.alvoD, hEmit: p.hr ? p.hr.h : null, conf: {}, extras: [], fotos: [], exec: 'Equipe de manutenção', execTerra: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] }; await saveRec(o); }
       EM.sel.clear(); EM.draft = null; toast('OM ' + n + ' emitida para ' + v.nome + '.'); fichaModal(omGrupo(n)[0]); render(); return; }
     if (c0) return c0(e); };
 }; }
@@ -5848,7 +5848,7 @@ function docFichaEmb(g) {
   if (M.length) B.push(blk('', 'Medições', 'anotar como encontrou e como deixou', tbl(['Motor', 'Nº', 'Medição', 'Especificado', 'Encontrado', 'Deixado'], M, ['13%', '8%', '33%', '16%', '15%', '15%'])).replace('<code></code>', ''));
   B.push(blk('', 'Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], [['', '', ''], ['', '', '']], ['60%', '12%', '28%'])).replace('<code></code>', ''));
   B.push(blk('', 'Observações, NOK e serviços fora do plano', 'fotos ANTES e DEPOIS dos serviços principais · resíduos no FR 016_E', '<div class="v" style="min-height:52px"></div>').replace('<code></code>', ''));
-  B.push(blk('', 'Assinaturas', '', grid('1fr 1fr 1fr', dv('Executor (terra) · nome e rubrica', '') + dv('Comandante · aceite', '') + dv('Supervisor · conferência', ''))).replace('<code></code>', ''));
+  B.push(blk('', 'Assinaturas', '', grid('1fr 1fr 1fr', dv('Executor (equipe de manutenção ou terceiro) · nome e rubrica', '') + dv('Recebido a bordo · Comandante ou Coord. de Operações', '') + dv('Supervisor · conferência', ''))).replace('<code></code>', ''));
   return numerar(paginar(fbar, B));
 }
 { const f0 = fichaModal; fichaModal = function (o) {
@@ -5899,13 +5899,13 @@ function rgSalvar(P) { clearTimeout(RG.t); RG.t = setTimeout(() => saveRec(P[0])
 function rgPend(P) {
   const R = rgDados(P), v = vessel(P[0].vessel), out = [];
   if (!R.dreal) out.push('Data da execução');
-  if (!(R.execn || '').trim()) out.push('Equipe executora (nomes)');
+  rgExecPend(P[0], R).forEach(x => out.push(x));
   P.filter(o => o.pos !== 'UN').forEach(o => { if (!R.hr[o.pos]) out.push('Horímetro na execução · ' + posCurtoE(v, o.pos)); });
   let semR = 0, semObs = 0, medF = 0; P.forEach(o => (o.itensProg || o.items || []).forEach(id => { const k = o.pos + '|' + id, r = R.res[k]; if (!r) semR++; else if (r !== 'ok' && !(R.obs[k] || '').trim()) semObs++;
     if (r === 'ok') A1M[id].meds.forEach((m, i) => { const d = ((R.med[k] || [])[i] || {}).dei; if (m[5] !== 'info' && (d === undefined || d === '' || medFora(m, d))) medF++; }); }));
   if (semR) out.push(semR + (semR === 1 ? ' item sem marcação' : ' itens sem marcação') + ' (OK / NOK / NA)');
   if (semObs) out.push(semObs + ' NOK/NA sem motivo');
-  if (medF) out.push(medF + (medF === 1 ? ' medição faltando ou fora da especificação' : ' medições faltando ou fora da especificação'));
+  if (medF && !(R.execTipo === 'terceiro' && R.relTerc === RG_REL[0])) out.push(medF + (medF === 1 ? ' medição faltando ou fora da especificação' : ' medições faltando ou fora da especificação'));   // relatório do fornecedor anexo substitui as medições (NP 5.8)
   { const L = P.filter(o => o.alvoH && R.hr[o.pos] && +R.hr[o.pos] > o.alvoH); if (L.length && !(R.justif || '').trim()) out.push('Justificativa de atraso (campo no item 1): ' + L.map(o => posCurtoE(v, o.pos) + ' feito com ' + nf(+R.hr[o.pos]) + ' h, devia ser até ' + nf(o.alvoH) + ' h').join(' · ')); }
   const regs = rgRegs(P); regs.forEach(r => { if (!((R.regs[r] || '').trim())) out.push(REGN[r]); });
   if (regs.length === 0 && P.some(o => regsDe({ items: o.itensProg || o.items }).includes('pt')) && !(R.pt || '').trim()) out.push('Nº da PT do SESMT');
@@ -5935,13 +5935,13 @@ function vOmg() {
    <div ${ro ? 'inert' : ''} id="rgForm">
    <div class="card"><div class="row"><h2>1 · Dados da execução</h2></div><div class="g">
     ${inp('dreal', 'Data da execução', 's2', 'type="date"')}${inp('inicio', 'Início', 's2', 'type="datetime-local"')}${inp('termino', 'Término', 's2', 'type="datetime-local"')}
-    ${inp('execn', 'Equipe executora (nomes)', 's4', 'placeholder="Ex.: João (mecânico), Pedro (auxiliar)"')}${inp('indispH', 'Empurrador parado para a manutenção (h)', 's2', 'inputmode="decimal" placeholder="0 se não parou"')}
+    ${rgExecHTML(R)}${inp('indispH', 'Empurrador parado para a manutenção (h)', 's2', 'inputmode="decimal" placeholder="0 se não parou"')}
     <label class="f s2">Gerou resíduo?<select data-rg="resid"><option value="">Escolha…</option>${['Não', 'Sim'].map(x => `<option${R.resid === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>${inp('fr016', 'Nº FR 016_E', 's2')}${inp('pt', 'Nº da PT do SESMT (se houver)', 's2')}
-    ${inp('justif', 'Justificativa (se passou da hora-alvo)', 's6')}</div></div>
+    ${inp('justif', 'Justificativa (se passou da hora-alvo)', 's6')}</div>${rgProvaHTML(P[0], R)}</div>
    <div class="card"><div class="row"><h2>2 · Itens da ficha</h2><span class="sp"></span><span class="note" id="rgCnt">${ok} OK · ${nok} NOK · ${na} NA · ${tot - ok - nok - na} sem marcação</span><button class="mbtn" data-rgall="ok">Marcar todos sem marcação como OK</button></div>
     <p class="note">Copie da ficha: OK = feito e conforme. NOK = não conforme ou não feito (escreva o motivo; se for falha, abra uma corretiva). NA = não se aplica. Item NOK ou NA não conta como feito: continua vencido e volta na próxima programação.</p>${partes}</div>
    ${regs.length ? `<div class="card"><h2>3 · Registros exigidos por estes itens</h2><div class="g">${regs.map(r => `<label class="f s3">${REGN[r]}<input data-rgr="${r}" value="${esc(R.regs[r] || '')}"></label>`).join('')}</div></div>` : ''}
-   <div class="card"><h2>${regs.length ? 4 : 3} · Fotos (antes e depois)</h2><div class="phgrid">${f.map((x, i) => `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span></div>
+   <div class="card"><h2>${regs.length ? 4 : 3} · Fotos (antes e depois)</h2><div class="phgrid">${f.map((x, i) => RG_PROVA.includes(x.tipo) ? '' : `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span></div>
      <div class="meta"><select data-rgf="${i}|tipo">${['ANTES', 'DURANTE', 'DEPOIS'].map(t => `<option${t === x.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select><input data-rgf="${i}|leg" placeholder="Legenda (o que mostra)" value="${esc(x.leg || '')}"><button class="xbtn" data-rgfdel="${i}" aria-label="Remover foto">✕</button></div></div>`).join('')}
     <label class="addph cam"><span style="font-size:28px;line-height:1">📷</span>Tirar foto<small>abre a câmera · vai direto para o formulário</small><input type="file" id="rgFoto" accept="image/*" capture="environment"></label><label class="addph"><span style="font-size:28px;line-height:1">🖼</span>Da galeria<small>escolher uma ou várias fotos já tiradas</small><input type="file" id="rgFoto" accept="image/*" multiple></label></div></div>
    </div>
@@ -5954,12 +5954,12 @@ async function rgAplicar(P) {
   P.forEach((o, n) => { const ids = o.itensProg = o.itensProg || (o.items || []).slice();
     o.items = ids.filter(id => R.res[o.pos + '|' + id] === 'ok');
     o.naoExec = ids.filter(id => R.res[o.pos + '|' + id] && R.res[o.pos + '|' + id] !== 'ok').map(id => ({ id, r: R.res[o.pos + '|' + id], motivo: R.obs[o.pos + '|' + id] || '' }));
-    o.conf = {}; o.items.forEach(id => { const k = o.pos + '|' + id; o.conf[id] = { steps: A1M[id].steps.map(() => true), meds: (R.med[k] || []).map(x => ({ enc: x.enc || '', dei: x.dei || '' })) }; });
-    o.dreal = R.dreal || ''; o.inicio = R.inicio || o.inicio || ''; o.termino = R.termino || ''; o.exec = 'Equipe própria (CTF/MFM)'; o.execn = (R.execn || '') + ' · equipe de terra';
+    o.conf = {}; o.passosFicha = true; o.items.forEach(id => { const k = o.pos + '|' + id; o.conf[id] = { steps: [], meds: (R.med[k] || []).map(x => ({ enc: x.enc || '', dei: x.dei || '' })) }; });   // passos: conforme o formulário assinado (foto), nunca marcados automaticamente
+    o.dreal = R.dreal || ''; o.inicio = R.inicio || o.inicio || ''; o.termino = R.termino || ''; rgExecAplicar(o, R);
     o.hreal = o.pos === 'UN' ? (R.hr[mpos(o.vessel)] || Object.values(R.hr)[0] || '') : (R.hr[o.pos] || '');
     if (o.pos === 'UN' && !o.hreal) { const hr = horAtual(o.vessel, mpos(o.vessel)); o.hreal = hr ? hr.h : ''; }
     o.indispH = n === 0 ? (R.indispH || '0') : '0'; o.resid = R.resid || ''; o.residT = R.resid === 'Sim' ? (o.residT || ['Óleo usado']) : []; o.fr016 = R.fr016 || ''; o.pt = R.pt || ''; o.justif = R.justif || '';
-    o.reg = Object.assign({}, o.reg || {}, R.regs); o.teste = 'Itens da ficha verificados pela equipe de terra' + (o.naoExec.length ? '; não executados: ' + o.naoExec.map(x => x.id + ' (' + x.r.toUpperCase() + (x.motivo ? ': ' + x.motivo : '') + ')').join(', ') : '');
+    o.reg = Object.assign({}, o.reg || {}, R.regs); o.teste = 'Itens conferidos conforme o formulário de execução assinado pelo executor e por quem recebeu a bordo (foto anexa à OM)' + (o.naoExec.length ? '; não executados: ' + o.naoExec.map(x => x.id + ' (' + x.r.toUpperCase() + (x.motivo ? ': ' + x.motivo : '') + ')').join(', ') : '');
     o.criterio = 'Especificação do Anexo I (NP 055)'; o.resultado = 'Conforme'; o.anomalia = o.anomalia && o.anomalia !== 'Não' ? o.anomalia : 'Não'; o.omCorr = o.omCorr || 'N/A';
     o.condEnc = o.condEnc || 'Conforme ficha de execução da OM ' + o.num + '.'; o.origem = o.origem || 'Plano (ClickUp)';
     o.liberacao = o.liberacao || (R.termino || (R.dreal ? R.dreal + 'T17:00' : '')); });
@@ -5972,9 +5972,10 @@ AFTER.omg = function () {
   const m = $('#main'), P = omGrupo(ARG); if (!P.length) return; const R = rgDados(P);
   const cnt = () => { let t = 0, a = 0, b = 0, c = 0; m.querySelectorAll('.rg-it').forEach(el => { t++; if (el.classList.contains('ok')) a++; if (el.classList.contains('nok')) b++; if (el.classList.contains('na')) c++; }); const x = $('#rgCnt'); if (x) x.textContent = `${a} OK · ${b} NOK · ${c} NA · ${t - a - b - c} sem marcação`; };
   m.oninput = m.onchange = async e => { const t = e.target; if (!can.edit()) return;
-    if (t.dataset.rg) R[t.dataset.rg] = t.value; else if (t.dataset.rgh) R.hr[t.dataset.rgh] = t.value.replace(/\D/g, ''); else if (t.dataset.rgo) R.obs[t.dataset.rgo] = t.value; else if (t.dataset.rgr) R.regs[t.dataset.rgr] = t.value;
+    if (t.dataset.rg) { R[t.dataset.rg] = t.value; if (e.type === 'change' && ['execTipo', 'relTerc'].includes(t.dataset.rg)) { await saveRec(P[0]); render(); return; } } else if (t.dataset.rgh) R.hr[t.dataset.rgh] = t.value.replace(/\D/g, ''); else if (t.dataset.rgo) R.obs[t.dataset.rgo] = t.value; else if (t.dataset.rgr) R.regs[t.dataset.rgr] = t.value;
     else if (t.dataset.rgm) { const [p, id, i, f] = t.dataset.rgm.split('|'), k = p + '|' + id; R.med[k] = R.med[k] || []; R.med[k][i] = R.med[k][i] || {}; R.med[k][i][f] = t.value; if (f === 'dei') t.classList.toggle('out', medFora(A1M[id].meds[i], t.value)); }
     else if (t.dataset.rgf) { const [i, f] = t.dataset.rgf.split('|'); P[0].fotos[i][f] = t.value; }
+    else if (t.dataset.rgprova && e.type === 'change') { const tipo = t.dataset.rgprova; for (const f of t.files) { const src = await comprimir(f); P[0].fotos = (P[0].fotos || []).filter(x => x.tipo !== tipo); P[0].fotos.push({ src, tipo, leg: tipo === 'FORMULÁRIO ASSINADO' ? 'Formulário de execução assinado pelo executor e por quem recebeu a bordo' : 'Relatório técnico do fornecedor (NP 5.8)', at: Date.now() }); } await saveRec(P[0]); render(); return; }
     else if (t.id === 'rgFoto' && e.type === 'change') { for (const f of t.files) { const src = await comprimir(f); P[0].fotos = P[0].fotos || []; P[0].fotos.push({ src, tipo: P[0].fotos.some(x => x.tipo === 'ANTES') ? 'DEPOIS' : 'ANTES', leg: '', at: Date.now() }); } await saveRec(P[0]); render(); return; }
     else return;
     rgSalvar(P); };
@@ -7983,6 +7984,64 @@ function saidaTag(v) { const r = saidas(v.id).pop(); if (!r || !situDe(v) || v.s
   return ` <button class="fs-p ${cls} sai-tag" data-saiver="${r.id}" title="Ver o registro de saída">saiu ${['liberada', 'com restrição', 'bloqueada', 'interditada'][r.sit] || ''}${n ? ' · ' + n + ' pend.' : ''}</button>`; }
 { const st = document.createElement('style'); st.textContent = `.sai-l{list-style:none;padding:0;margin:4px 0;display:flex;flex-direction:column;gap:5px;font-size:13.5px;max-height:240px;overflow:auto}
  .sai-tag{border:0;cursor:pointer;font:inherit;font-size:11.5px;font-weight:600;margin-left:6px}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Lançamento rápido honesto (OM preventiva de janela, vOmg) =====
+   Executa a equipe de manutenção ou um terceiro (CTF/MFM nunca: eles fazem só rotina e troca de óleo). Recebe a bordo o Comandante ou o Coordenador de Operações.
+   Prova: foto do formulário de execução assinado (obrigatória). Terceiro: prestador do cadastro + relatório do fornecedor anexado ou, sem ele, o Supervisor registra (NP 5.8).
+   Os passos do Anexo I não são mais marcados automaticamente: ficam "conforme o formulário assinado" (o.passosFicha). */
+'use strict';
+const RG_PROVA = ['FORMULÁRIO ASSINADO', 'RELATÓRIO DO FORNECEDOR'];
+const RG_REL = ['Relatório do fornecedor anexo', 'Fornecedor não emitiu — Supervisor preenche'];
+const rgSel = (k, lab, cls, ops, val) => `<label class="f ${cls}">${lab}<select data-rg="${k}"><option value="">Escolha…</option>${ops.map(([v, l]) => `<option value="${esc(v)}"${val === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+const rgIn = (k, lab, cls, R, ph = '') => `<label class="f ${cls}">${lab}<input data-rg="${k}" value="${esc(R[k] || '')}"${ph ? ` placeholder="${esc(ph)}"` : ''}></label>`;
+function rgExecHTML(R) {
+  const terc = R.execTipo === 'terceiro', T = recs('terc').filter(x => !x.excluido).sort((a, b) => (a.empresa || '').localeCompare(b.empresa || ''));
+  return rgSel('execTipo', 'Quem executou', 's2', [['equipe', 'Equipe de manutenção'], ['terceiro', 'Terceiro (prestador)']], R.execTipo)
+    + (terc ? (T.length ? rgSel('terc', 'Prestador (cadastro)', 's2', T.map(x => [x.id, x.empresa + (x.validade && x.validade < isoD(hoje()) ? ' · contrato vencido' : '')]), R.terc) : `<div class="f s2"><span>Prestador (cadastro)</span><a class="note" href="#terc">cadastrar o prestador primeiro</a></div>`)
+        + rgIn('execn', 'Responsável técnico do terceiro', 's2', R, 'Nome e função')
+        + rgSel('relTerc', 'Relatório do terceiro (NP 5.8)', 's3', RG_REL.map(x => [x, x]), R.relTerc) + (R.relTerc === RG_REL[0] ? rgIn('relNum', 'Nº do relatório', 's2', R) : '')
+      : R.execTipo === 'equipe' ? rgIn('execn', 'Equipe de manutenção (nomes e funções)', 's4', R, 'Ex.: João (mecânico), Pedro (auxiliar)') : '')
+    + rgSel('recFunc', 'Recebido a bordo por', 's2', [['Comandante', 'Comandante'], ['Coordenador de Operações', 'Coordenador de Operações']], R.recFunc) + rgIn('recNome', 'Nome de quem recebeu', 's3', R);
+}
+function rgProvaHTML(o1, R) {
+  const F = o1.fotos || [], ficha = F.find(x => x.tipo === RG_PROVA[0]), rel = F.find(x => x.tipo === RG_PROVA[1]), precisaRel = R.execTipo === 'terceiro' && R.relTerc === RG_REL[0];
+  const caixa = (tipo, x, txt) => `<label class="addph${x ? ' rg-pok' : ''}">${x && x.src ? `<img src="${x.src}" alt="${esc(tipo)}" style="max-height:90px;border-radius:6px">` : `<span style="font-size:26px;line-height:1">${x ? '✓' : '📄'}</span>`}${esc(txt)}<small>${x ? 'anexada · toque para trocar' : 'obrigatória · câmera ou galeria'}</small><input type="file" data-rgprova="${tipo}" accept="image/*"></label>`;
+  return `<div class="rg-prova"><p class="note" style="margin:8px 0 6px">Prova da execução: o formulário de execução volta assinado pelo executor e por quem recebeu a bordo. A foto dele fica na OM e no PDF; os passos do Anexo I contam como feitos <b>conforme o formulário assinado</b>, não por marcação na tela.${R.execTipo === 'terceiro' && R.relTerc === RG_REL[1] ? ' Sem relatório do fornecedor: preencha os itens e as medições abaixo a partir do que foi verificado (NP 5.8).' : ''}</p>
+   <div class="phgrid">${caixa(RG_PROVA[0], ficha, 'Foto do formulário assinado')}${precisaRel ? caixa(RG_PROVA[1], rel, 'Relatório do fornecedor') : ''}</div></div>`;
+}
+function rgExecPend(o1, R) {
+  const out = [], F = o1.fotos || [];
+  if (!R.execTipo) out.push('Quem executou (equipe de manutenção ou terceiro)');
+  else if (R.execTipo === 'terceiro') {
+    if (!R.terc) out.push('Prestador do cadastro');
+    if (!(R.execn || '').trim()) out.push('Responsável técnico do terceiro');
+    if (!R.relTerc) out.push('Relatório do terceiro (NP 5.8)');
+    else if (R.relTerc === RG_REL[0]) { if (!(R.relNum || '').trim()) out.push('Nº do relatório do fornecedor'); if (!F.some(x => x.tipo === RG_PROVA[1])) out.push('Relatório do fornecedor anexado'); }
+  } else if (!(R.execn || '').trim()) out.push('Equipe de manutenção (nomes)');
+  if (!R.recFunc || !(R.recNome || '').trim()) out.push('Recebido a bordo por (Comandante ou Coordenador de Operações)');
+  if (!F.some(x => x.tipo === RG_PROVA[0])) out.push('Foto do formulário assinado');
+  // itens que exigem Permissão de Trabalho: a conferência final cobra o nº da PT (5.11.2), então a lista de pendências também cobra
+  if (!(R.pt || '').trim() && (o1.grupo ? omGrupo(o1.grupo) : [o1]).some(o => regsDe({ items: o.itensProg || o.items }).includes('pt'))) out.push('Nº da PT do SESMT (5.11.2)');
+  return out;
+}
+function rgExecAplicar(o, R) {
+  const terc = R.execTipo === 'terceiro', T = terc ? S.recs.get(R.terc) : null;
+  o.exec = terc ? 'Terceiro' : 'Equipe de manutenção';
+  o.execn = terc ? [(T && T.empresa) || '', (R.execn || '').trim()].filter(Boolean).join(' · resp. técnico: ') : (R.execn || '').trim();
+  o.terc = terc ? R.terc || '' : ''; o.relTerc = terc ? R.relTerc || '' : ''; o.relNum = terc && R.relTerc === RG_REL[0] ? R.relNum || '' : '';
+  o.receb = { func: R.recFunc || '', nome: (R.recNome || '').trim() };
+  o.ass = Object.assign({}, o.ass || {}, { exec: terc ? (R.execn || '').trim() + (T ? ' (' + T.empresa + ')' : '') : (R.execn || '').trim(), cmd: o.receb.nome ? o.receb.nome + ' (' + o.receb.func + ')' : '' });
+}
+// conferência: no lançamento rápido a prova dos passos é a ficha assinada (não a marcação passo a passo)
+{ const g1 = gateIIB; gateIIB = function (o) { let g = g1(o); if (!o.passosFicha) return g;
+  const F = ((o.grupo && omGrupo(o.grupo)[0]) || o).fotos || [];
+  g = g.filter(x => !/ · todos os passos conferidos$/.test(x[0]));
+  g.push(['Formulário de execução assinado (foto)', F.some(x => x.tipo === RG_PROVA[0])]);
+  g.push(['Recebido a bordo (Comandante ou Coordenador de Operações)', !!(o.receb && o.receb.nome && o.receb.func)]);
+  if (o.exec === 'Terceiro' && tercAnexo(o)) g.push(['Relatório do fornecedor anexado', F.some(x => x.tipo === RG_PROVA[1])]);
+  return g; }; }
+{ const st = document.createElement('style'); st.textContent = `.rg-prova .addph{min-height:110px}.rg-prova .addph.rg-pok{border-color:var(--okt,#137333);color:var(--okt,#137333)}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
