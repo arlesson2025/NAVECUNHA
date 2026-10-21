@@ -6670,7 +6670,7 @@ AFTER.audit = function () { const m = $('#main');
 <script>
 /* ===== Previsto × Realizado no formato clássico: uma linha por serviço, P e R mês a mês ===== */
 'use strict';
-const PRV = { v: 'frota', ano: hoje().getFullYear() };
+const PRV = { v: 'frota', ano: hoje().getFullYear(), gm: (() => { try { return localStorage.getItem('smf_cf_gm') || 'acum'; } catch (e) { return 'acum'; } })() };   // gráfico abre no Acumulado (linhas) e lembra a última escolha
 const PR_MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function prServ(v, l) {   // nome do serviço, frequência e ordem
   if (l.tr === 'bordo') { const oil = l.its.find(x => !compDe(v, x.pos, x.t)) || l.its[0], iv = intervalo(oil.t, v, oil.pos);
@@ -6933,7 +6933,7 @@ async function prAprovar(vs, ano) {   // congela o previsto (linha de base) de c
 cr3Aprovar = prAprovar;
 { const a0 = AFTER.cxr; AFTER.cxr = function () { a0(); const m = $('#main'), c0 = m.onclick;
   m.onclick = e => { const o = e.target.closest('[data-prord]'); if (o) { PRV.ord = o.dataset.prord; render(); return; }
-    const gm = e.target.closest('[data-cfg]'); if (gm) { PRV.gm = gm.dataset.cfg; render(); return; }
+    const gm = e.target.closest('[data-cfg]'); if (gm) { PRV.gm = gm.dataset.cfg; try { localStorage.setItem('smf_cf_gm', PRV.gm); } catch (er) { } render(); return; }
     const sv = e.target.closest('[data-cfsv]'); if (sv) { const pop = document.getElementById('cfPop'); if (pop && !pop.hidden && pop.dataset.i === sv.dataset.cfsv) prPopFecha(); else prPopAbre(sv); return; }
     const mb = e.target.closest('[data-cfm]'); if (mb) { const k = mb.dataset.cfm, hm = hoje().getMonth();
       if (k === 'todos') PRV.ms = null; else if (k === 'ate') PRV.ms = Array.from({ length: hm + 1 }, (_, i) => i);
