@@ -6824,7 +6824,7 @@ function prGrafAcum(F, hm, sel, W = 900, H = 260) {   // curva acumulada (curva 
 function prTelaFrota(ativos, ano, nAp, anos) {
   const T = prFrotaV2(ano), sel = T.sel, todos = sel.length === 12, hm = T.hm; PRV._T = T;
   const chips = `<div class="cf-ms"><span>Meses</span><button data-cfm="todos" class="${todos ? 'on' : ''}">Ano todo</button>${hm >= 0 && hm < 12 ? `<button data-cfm="ate" class="${!todos && sel.length === hm + 1 && sel[0] === 0 ? 'on' : ''}">Até ${MESES[hm]}</button>` : ''}<i></i>${MESES.map((m, i) => `<button data-cfm="${i}" class="cf-mm${!todos && sel.includes(i) ? ' on' : ''}${i === hm ? ' hj' : ''}" title="Clique para marcar ou desmarcar · Shift+clique marca um intervalo">${m.toUpperCase()}</button>`).join('')}<small>${todos ? 'ano todo' : sel.length + (sel.length === 1 ? ' mês' : ' meses') + ' somados'}</small></div>`;
-  return `<div class="cm-v"><div class="vh"><div><h1>Cronograma da frota</h1></div><span class="sp"></span><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(T.F, hm, ano, sel)}
+  return `<div class="cm-v"><div class="vh"><div><h1>Cronograma preventivo</h1></div><span class="sp"></span><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(T.F, hm, ano, sel)}
    <div class="cf-bt"><a class="mbtn" href="#audit">Histórico e evidências</a><button class="mbtn" data-prpdf="resumo">PDF desta tela</button><button class="mbtn" data-prpdf="frota">PDF completo</button>${can.admin() ? `<button class="mbtn pri" data-prapr>${nAp ? 'Revisar aprovação' : 'Aprovar o previsto de ' + ano}</button>` : ''}</div>
    <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota" selected>Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></label>
     <label>Ano <select id="prA">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
@@ -7734,7 +7734,7 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   // Biblioteca: #bib/#pecas/#terc/#trein viram a página única #apoio (paginaUnica); sem 'apoio' na seção, secDe caía no Hoje e o link do Hoje passava a abrir a Biblioteca
   const bib = by('apoio2'); if (bib && VX.apoio) { bib.extra = [...new Set((bib.extra || []).concat(bib.views.map(x => x[0])))]; bib.views = [['apoio', 'Biblioteca']]; }
   // nomes do menu (pedido do Supervisor, 21/10/2026): Hoje → "Frota N Empurradores" com "Diário & Viagens" embaixo · Cronograma → "Plano preventivo" · OMs → "OMs (Sankhya)"
-  const h = by('hoje'), cr = by('crono'), om = by('omsv2'); if (h) h.sub = 'Diário & Viagens'; if (cr) cr.nome = 'Plano preventivo'; if (om) om.nome = 'OMs (Sankhya)';
+  const h = by('hoje'), cr = by('crono'), om = by('omsv2'); if (h) h.sub = 'Diário & Viagens'; if (cr) { cr.nome = 'Plano preventivo'; cr.views = [['cxr', 'Cronograma preventivo'], ['matriz', 'Anexo I']]; if (adm) adm.views = adm.views.filter(x => x[0] !== 'matriz'); }   /* Anexo I: aba do Plano preventivo (antes em Administração) */ if (om) om.nome = 'OMs (Sankhya)';
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
 // o número de empurradores acompanha o cadastro da frota · subtítulo (s.sub) em letra pequena dentro do item do menu
 { const n0 = renderNav; renderNav = function () { const h = SECOES.find(s => s.id === 'hoje'); if (h && S.cfg && S.cfg.frota) h.nome = 'Frota ' + S.cfg.frota.length + ' Empurradores';
