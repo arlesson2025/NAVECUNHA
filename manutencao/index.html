@@ -1419,8 +1419,9 @@ async function login(name, pw) {
     // senhas iniciais do modo local (só valem até serem trocadas em Administração neste aparelho); guardadas como SHA-256, não em texto
     const ad = (await kvGet('ad_hash')) || '9fd0ab8c31f6972a212bf99923621c75026cfcbba4606460d8ab48d5316609e9';
     const op = (await kvGet('op_hash')) || '51c53cb14ca8246f38f0384d5966435b1fb8c88738bf3b86bd9676599b93db8b';
-    if (!name.trim() || (h !== ad && h !== op)) return 'Nome ou senha incorretos.';
-    S.session = { name: name.trim(), role: h === ad ? 'admin' : 'op', token: null };
+    const opr = await kvGet('opr_hash');   // perfil Operador: só existe depois de o Supervisor definir a senha em Administração
+    if (!name.trim() || (h !== ad && h !== op && h !== opr)) return 'Nome ou senha incorretos.';
+    S.session = { name: name.trim(), role: h === ad ? 'admin' : h === opr ? 'opr' : 'op', token: null };
   }
   await kvSet('session', S.session);
   scheduleSync(100);
@@ -2947,7 +2948,7 @@ function vAdmin() {
    <div class="card"><h2>Nuvem (Google Apps Script)</h2><p class="note">Cole o endereço da implantação do Code.gs (termina em /exec). Sem endereço, o SMF funciona só neste aparelho. Este endereço fica salvo apenas neste aparelho.</p>
     <div class="row"><input id="adUrl" value="${esc(S.url)}" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:240px"><button class="mbtn" data-act="testar">Testar</button><button class="mbtn pri" data-act="salvarUrl">Salvar</button><button class="mbtn" data-act="sync">↻ Sincronizar agora</button></div><div class="note" id="adUrlMsg">${esc(S.syncMsg)}</div></div>
    <div class="card"><h2>Senhas</h2><p class="note">${S.url ? 'Trocadas no servidor: valem para todos.' : 'Modo local: valem só neste aparelho.'} Mínimo de 6 caracteres. Deixe em branco o que não quer trocar.</p>
-    <div class="g"><label class="f s3">Nova senha do Analista (operador)<input id="pwOp" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label><label class="f s3">Nova senha do Supervisor (administrador)<input id="pwAd" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label></div><div class="row"><button class="mbtn" data-act="senhas" ${a ? '' : 'disabled'}>Trocar senhas</button></div></div>
+    <div class="g"><label class="f s3">Nova senha do Analista (operador)<input id="pwOp" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label><label class="f s3">Nova senha do Supervisor (administrador)<input id="pwAd" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label><label class="f s3">Nova senha do Operador (FR 027_L de chegada e saída)<input id="pwOpr" type="password" autocomplete="new-password" ${a ? '' : 'disabled'}></label></div><div class="row"><button class="mbtn" data-act="senhas" ${a ? '' : 'disabled'}>Trocar senhas</button></div></div>
    <div class="card"><div class="row"><h2>Frota</h2><span class="sp"></span><label class="f" style="width:260px">Viagem padrão (h) · só para empurrador sem a próxima viagem informada<input type="number" id="adViag" value="${S.cfg.viagemH}" ${a ? '' : 'disabled'}></label></div>
     <p class="note">Cadastro conforme a <b>Matriz técnica de equipamentos e lubrificação</b>. Monomotor tem um MCP central; bimotor, BB e BE. O reversor decide o bloco do Anexo I (1.5 Hitachi, 1.6 Masson, 1.7 REINTJES) e o modelo do MCA decide o bloco 3.1 (MWM) ou 3.2 (Yanmar). Desmarque os equipamentos que a embarcação não tem.</p>
     <div class="row"><button class="mbtn" data-act="matriz" ${a ? '' : 'disabled'}>↺ Recarregar o cadastro da matriz técnica</button><span class="note">Substitui propulsão, reversores e MCAs dos 12 empurradores pelos dados da matriz. Depois clique em Salvar frota.</span></div>
@@ -2985,8 +2986,8 @@ AFTER.admin = () => { const m = $('#main');
       if (a === 'testar') { try { const r = await fetch(u + '?t=' + Date.now()); const j = await r.json(); $('#adUrlMsg').textContent = j.app === 'ctle_man' ? '✓ Servidor do SMF respondeu (versão ' + j.versao + ').' : 'Respondeu, mas não é o servidor do SMF (' + (j.app || '?') + ').'; } catch (er) { $('#adUrlMsg').textContent = 'Não respondeu. Confira a implantação: App da Web, "Qualquer pessoa".'; } }
       else { S.url = u; await kvSet('url', u); S.session = null; await kvSet('session', null); toast(u ? 'Endereço salvo. Entre novamente com a senha do servidor.' : 'Nuvem desligada. Modo local.'); render(); if (u) loginModal(); } }
     if (a === 'sync') { await syncNow(); render(); }
-    if (a === 'senhas') { const op = $('#pwOp').value, ad = $('#pwAd').value; if ((op && op.length < 6) || (ad && ad.length < 6)) return toast('Senha com no mínimo 6 caracteres.'); if (!op && !ad) return;
-      if (S.url) { const j = await api('setPasswords', { op, ad }); toast(j.ok ? 'Senhas trocadas.' : 'Erro: ' + j.error); } else { if (op) await kvSet('op_hash', await sha256('ctle_man|' + op)); if (ad) await kvSet('ad_hash', await sha256('ctle_man|' + ad)); toast('Senhas trocadas neste aparelho.'); } $('#pwOp').value = $('#pwAd').value = ''; }
+    if (a === 'senhas') { const op = $('#pwOp').value, ad = $('#pwAd').value, opr = ($('#pwOpr') || {}).value || ''; if ((op && op.length < 6) || (ad && ad.length < 6) || (opr && opr.length < 6)) return toast('Senha com no mínimo 6 caracteres.'); if (!op && !ad && !opr) return;
+      if (S.url) { const j = await api('setPasswords', { op, ad, opr }); toast(j.ok ? 'Senhas trocadas.' : 'Erro: ' + j.error); } else { if (op) await kvSet('op_hash', await sha256('ctle_man|' + op)); if (ad) await kvSet('ad_hash', await sha256('ctle_man|' + ad)); if (opr) await kvSet('opr_hash', await sha256('ctle_man|' + opr)); toast('Senhas trocadas neste aparelho.'); } $('#pwOp').value = $('#pwAd').value = ''; if ($('#pwOpr')) $('#pwOpr').value = ''; }
     if (a === 'matriz') { if (!precisa(true)) return; S.cfg.frota.forEach(v => { if (FROTA_MATRIZ[v.nome]) { delete v.mcp; vesselDaMatriz(v); } }); S.cfg.revExemplo = false; toast('Cadastro da matriz aplicado. Confira e clique em Salvar frota.'); render(); }
     if (a === 'addVessel') { S.cfg.frota.push({ id: 'v' + Date.now().toString(36), nome: 'Nova embarcação', mcp: 'bi', rev: { BB: '', BE: '' }, mcpMod: {}, mca: {}, mcaMod: {}, mcaLoc: {}, off: [] }); render(); }
     if (a === 'salvarCfg') { if (!precisa(true)) return; S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg); if (S.url) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota, intervalos: S.cfg.intervalos, viagemH: S.cfg.viagemH, revExemplo: S.cfg.revExemplo } }); toast(j.ok ? 'Configuração salva para todos.' : 'Salvo neste aparelho. Nuvem: ' + j.error); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } } catch (er) { toast('Salvo neste aparelho. Sem conexão com a nuvem.'); } } else toast('Configuração salva.'); render(); }
@@ -8276,6 +8277,43 @@ function agoraHTML() { const L = agoraLista(), max = 8;
 { const r0 = VX.rotina; if (r0) VX.rotina = function () { const t = document.createElement('div'); t.innerHTML = r0.apply(this, arguments); const vh = t.querySelector(':scope > .vh'); const d = document.createElement('div'); d.innerHTML = agoraHTML(); vh ? vh.after(d.firstElementChild) : t.prepend(d.firstElementChild); return t.innerHTML; }; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-agfs]'); if (!b) return; e.preventDefault(); e.stopPropagation(); FS_SEL = b.dataset.agfs; render(); setTimeout(() => { const c = document.querySelector('#main .fs-card'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 350); }, true);
 { const st = document.createElement('style'); st.textContent = `.ag-l{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column}.ag-l li{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #F1F3F4;font-size:14px}.ag-l li:first-child{border-top:0}.ag-t{line-height:1.35}.ag-ok{color:var(--okt);margin:4px 0}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Perfil Operador (Operador de Medição / Líder): quem preenche e assina o FR 027_L de chegada e saída =====
+   Entra com a senha de Operador (definida pelo Supervisor em Administração; servidor v11, papel 'opr'). Vê só "Chegada e saída":
+   abrir o FR 027_L de cada empurrador, assinar, informar a OM dos NO. O servidor só aceita dele: fr027, hor, horp, saida e corretiva nova.
+   A situação no porto / em viagem também sai dos registros (FR 027_L e saída), porque a configuração compartilhada só o Supervisor grava. */
+'use strict';
+const ehOperador = () => !!(S.session && S.session.role === 'opr');
+can.opr = ehOperador;
+// situação no porto / em viagem a partir do registro mais novo (FR 027_L de chegada → porto; FR 027_L de saída ou registro de saída → viagem)
+function situRecalc() {
+  const ult = {}; for (const r of S.recs.values()) { if (r.excluido || !r.vessel) continue; let st = null;
+    if (r.kind === 'fr027') st = r.mov === 'saida' ? 'viagem' : 'porto'; else if (r.kind === 'saida') st = 'viagem'; if (!st) continue;
+    const ts = r.at || r.createdAt || 0; if (!ult[r.vessel] || ts > ult[r.vessel].ts) ult[r.vessel] = { st, ts, date: r.date, by: r.by || '' }; }
+  S.cfg.frota.forEach(v => { const u = ult[v.id]; if (!u) return; const atual = v.situ ? (v.situ.ts || +pD(v.situ.at)) : 0;
+    if (u.ts > atual) v.situ = { st: u.st, at: u.date || isoD(new Date(u.ts)), by: u.by, ts: u.ts }; }); }
+{ const s0 = situSalvar; situSalvar = async function (vid, st) { await s0(vid, st); const v = vessel(vid); if (v && v.situ) { v.situ.ts = Date.now(); await kvSet('cfg', S.cfg); } }; }
+// tela do operador
+function vOperador() {
+  const V = S.cfg.frota.filter(v => !foraOp(v));
+  const linha = v => { const s = situDe(v), r = fr27s(v.id).pop(), P = fr27Pend(v.id);
+    const bt = !s ? `<button class="mbtn sm" data-situ="${v.id}|porto">⚓ Está no porto</button><button class="mbtn sm" data-situ="${v.id}|viagem">⛴ Está viajando</button>`
+      : s.st === 'porto' ? `<button class="mbtn pri" data-situ="${v.id}|viagem">⛴ Saiu de viagem · FR 027_L de saída</button>` : `<button class="mbtn pri" data-situ="${v.id}|porto">⚓ Chegou em Manaus · FR 027_L de chegada</button>`;
+    return `<div class="op-c"><div class="op-h"><b>${esc(v.nome)}</b><span class="note">${!s ? 'situação não informada' : s.st === 'porto' ? '⚓ no porto' : '⛴ em viagem'}</span></div>
+      <div class="note">${r ? 'Último FR 027_L: ' + (r.mov === 'saida' ? 'saída' : 'chegada') + ' em ' + brD(r.date) + ' ' + esc(r.hora || '') : 'Nenhum FR 027_L ainda'}</div>
+      ${P.length ? `<div class="rt2-l bad"><span>⚠ ${P.length} NO sem OM${P.some(x => x.c === 'Crítica') ? ' · <b>Crítica</b>' : ''}</span><span class="sp"></span><button class="mbtn sm" data-fr27pend="${P[0].rec}">Informar OM</button></div>` : ''}
+      <div class="op-b">${bt}</div></div>`; };
+  return `<div class="vh"><div><h1>Chegada e saída · FR 027_L</h1><p>Você preenche e assina o check-list do empurrador na chegada e na saída do terminal (NP 055, itens 4.4 e 5.5.1). Todo item NO precisa de criticidade e do nº da OM aberta no Sankhya. O Supervisor de Manutenção confere depois.</p></div><span class="sp"></span><span class="note">${esc(S.session.name)} · Operador</span></div>
+    <div class="op-g">${V.map(linha).join('')}</div>`;
+}
+{ const r0 = VX.rotina; VX.rotina = function () { return ehOperador() ? vOperador() : r0.apply(this, arguments); }; }
+// o operador só vê a tela dele: o menu mostra só "Hoje" e qualquer outro endereço volta para ela
+{ const n0 = renderNav; renderNav = function () { n0(); if (!ehOperador()) return; const nav = $('#nav'); if (nav) nav.innerHTML = `<a href="#rotina" class="on">${ico('hoje')}<span>Chegada e saída</span></a>`; }; }
+{ const rd = render; render = function () { situRecalc(); document.body.classList.toggle('perfil-opr', ehOperador()); if (ehOperador() && VIEW !== 'rotina') { VIEW = 'rotina'; ARG = ''; if (location.hash !== '#rotina') history.replaceState(null, '', '#rotina'); } return rd.apply(this, arguments); }; }
+{ const st = document.createElement('style'); st.textContent = `.op-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:12px}.op-c{background:#fff;border:1px solid var(--line,#DADCE0);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+ .op-h{display:flex;align-items:center;gap:10px}.op-h b{font-size:17px}.op-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}.op-b .mbtn{font-size:15px;padding:10px 14px;white-space:normal;text-align:left;max-width:100%}
+ body.perfil-opr .abas,body.perfil-opr .banner.ex{display:none!important}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>

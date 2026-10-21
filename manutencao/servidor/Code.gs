@@ -20,7 +20,7 @@
  *    [cópia do repositório público: as senhas reais foram trocadas por marcadores — ver manutencao/servidor/README.md]
  */
 
-const VERSAO = 10;   // v10: FR 027_L de chegada/saída (fr027) com PDF no Drive · v9: registro de saída da viagem (saida) · v8: cronograma anual aprovado (crono) · v7: leitura de horímetro pendente de confirmação (horp) · v6: laudo de óleo, peças críticas e fotos das OMs no Drive · v5: biblioteca (arquivos no Drive), terceirizados e treinamentos · v4: lubrificação (FR 049_B e complementos de óleo) · v3: MCP central (monomotor) e MCA 3 · v2: teste de compressão, data-limite do CSN e medida de mitigação
+const VERSAO = 11;   // v11: perfil Operador (opr) para o FR 027_L · v10: FR 027_L de chegada/saída (fr027) com PDF no Drive · v9: registro de saída da viagem (saida) · v8: cronograma anual aprovado (crono) · v7: leitura de horímetro pendente de confirmação (horp) · v6: laudo de óleo, peças críticas e fotos das OMs no Drive · v5: biblioteca (arquivos no Drive), terceirizados e treinamentos · v4: lubrificação (FR 049_B e complementos de óleo) · v3: MCP central (monomotor) e MCA 3 · v2: teste de compressão, data-limite do CSN e medida de mitigação
 const NOME_PASTA = 'Controle de Manutenção - PDFs';
 const ABA = 'Registros';
 const CABECALHO = ['id', 'tipo', 'salvoEm', 'leituraEm', 'embarcacao', 'om', 'usuario', 'json', 'pdfFileId', 'paginasFileId', 'atualizadoEm', 'excluido'];
@@ -91,6 +91,7 @@ function login_(req, props) {
   let papel = null;
   if (h === props.getProperty('AD_HASH')) papel = 'admin';
   else if (h === props.getProperty('OP_HASH')) papel = 'op';
+  else if (props.getProperty('OPR_HASH') && h === props.getProperty('OPR_HASH')) papel = 'opr';   // Operador de Medição / Líder: só FR 027_L
   if (!nome || !papel) { Utilities.sleep(1500); return { ok: false, error: 'senha' }; }
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('t_' + token, JSON.stringify({ name: nome, role: papel }), 21600);   // 6 h
@@ -124,6 +125,10 @@ function gravar_(req, props) {
   if (!s) return { ok: false, error: 'auth' };
   const r = req.record;
   if (!r || !r.id || TIPOS.indexOf(r.kind) < 0) return { ok: false, error: 'registro_invalido' };
+  if (s.role === 'opr') {   // Operador: FR 027_L, horímetros, registro de saída e abrir corretiva nova a partir de um NO — nada mais
+    if (['fr027', 'hor', 'horp', 'saida', 'om'].indexOf(r.kind) < 0) return { ok: false, error: 'sem_permissao' };
+    if (r.kind === 'om' && (r.tipo !== 'C' || r.status !== 'aberta' || linhas_(aba_(props)).some(l => l[COL.id] === r.id))) return { ok: false, error: 'sem_permissao' };
+  }
   if (r.kind === 'om' && r.status === 'encerrada' && s.role !== 'admin') {
     // só o Supervisor encerra; o Analista não pode aprovar
     const ant = linhas_(aba_(props)).find(l => l[COL.id] === r.id);
@@ -236,6 +241,7 @@ function trocarSenhas_(req, props) {
   const salt = props.getProperty('SALT');
   if (req.op) { if (String(req.op).length < 6) return { ok: false, error: 'senha_curta' }; props.setProperty('OP_HASH', hashSenha_(salt, String(req.op))); }
   if (req.ad) { if (String(req.ad).length < 6) return { ok: false, error: 'senha_curta' }; props.setProperty('AD_HASH', hashSenha_(salt, String(req.ad))); }
+  if (req.opr) { if (String(req.opr).length < 6) return { ok: false, error: 'senha_curta' }; props.setProperty('OPR_HASH', hashSenha_(salt, String(req.opr))); }
   return { ok: true };
 }
 
