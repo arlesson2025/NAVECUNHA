@@ -9,10 +9,11 @@ Dois PWAs de arquivo único, sem build, para a frota de empurradores da Navecunh
 | Pasta | App | Situação |
 |---|---|---|
 | `manutencao/` | **SMF** · Sistema de Manutenção da Frota (NP Navecunha 055: Anexo I, OMs preventivas/corretivas, óleo, cronograma, indicadores) | **App ativo** — quase todos os commits recentes mexem só em `manutencao/index.html` |
-| raiz (`index.html`, `Code.gs`, `sw.js`) | **CTLE_LUB** · Controle de Lubrificação (legado; o módulo foi absorvido pelo SMF) | Legado |
-| `docs/` | Documentos normativos de origem (NP 055, Anexo I visual, FR 049_B, Matriz técnica) em HTML/DOCX | Referência dos dados embutidos no app |
+| raiz (`index.html`, `Code.gs`, `sw.js`) | **CTLE_LUB** · Controle de Lubrificação (o módulo foi absorvido pelo SMF) | **Fora de uso** — não otimizar nem corrigir |
+| `docs/` | Documentos normativos de origem (NP 055, Anexo I visual, FR 049_B, Matriz técnica) em HTML/DOCX | Linkados pela Biblioteca do SMF (`../docs/...`) — não mover nem renomear |
+| `manutencao/servidor/` | Cópia versionada do servidor Apps Script do SMF | Ver o README da pasta |
 
-`Code.gs` (raiz) é o servidor Google Apps Script **do CTLE_LUB** (registros `type: 'form'|'quick'`). O SMF fala com outro deployment (`NUVEM_PADRAO` no topo de `manutencao/index.html`) e usa ações/erros que não existem nesse `Code.gs` (`foto`, `conflito`, registros com `kind`). O servidor do SMF não está versionado aqui — não presuma que mudanças no `Code.gs` da raiz afetam o SMF.
+`Code.gs` (raiz) é o servidor Google Apps Script **do CTLE_LUB** (registros `type: 'form'|'quick'`), não do SMF. O SMF fala com outro deployment (`NUVEM_PADRAO` no topo de `manutencao/index.html`) e usa ações/erros que não existem nesse `Code.gs` (`foto`, `conflito`, registros com `kind`). O código do servidor do SMF fica em `manutencao/servidor/`; a fonte da verdade é o editor do Apps Script, então mudanças de contrato (ações, campos) exigem atualizar os dois lados.
 
 ## Comandos
 
