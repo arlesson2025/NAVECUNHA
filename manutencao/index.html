@@ -4549,7 +4549,7 @@ function frotaMatrizHtml() {
     if (s.pior === 'viag') return `<td class="m2-c" title="${t}"><span class="m2-t a">${s.c.viag}</span></td>`;
     if (s.pior === 'ok') return `<td class="m2-c" title="${t}"><span class="m2-ok"></span></td>`;
     return `<td class="m2-c" title="${t}"><span class="m2-sem"></span></td>`; };
-  const sit = x => x.it ? ['v', 'Interditada'] : x.bq.length ? ['v', 'Saída bloqueada'] : x.n.venc ? ['a', 'Liberada com restrição'] : ['o', 'Liberada'];
+  const sit = x => [['o', 'Liberada'], ['a', 'Liberada com restrição'], ['v', 'Saída bloqueada'], ['v', 'Interditada']][x.sit] || ['o', 'Liberada'];   // x.sit inclui NO do FR 027_L sem OM
   const donut = a => { const v = a == null ? null : a, cor = v >= 95 ? '#1E8E3E' : v >= 85 ? '#F9AB00' : '#D93025', pc = v == null ? 0 : Math.max(2, Math.min(100, (v - 80) / 20 * 100));
     return `<span class="m2-ab" title="aderência ${v == null ? '—' : nf(v, 1) + '%'} · meta 95% · escala 80–100%"><span class="m2-abt"><i style="width:${pc}%;background:${cor}"></i><em></em></span><b>${v == null ? '—' : nf(v, 0) + '%'}</b></span>`; };
   const hor = x => x.mcp.map(m => { const d = m.h ? Math.round((hoje() - pD(m.h.date)) / 864e5) : null; return `<div class="m2-h"><span class="m2-pos">${x.v.mcp === 'mono' ? 'CE' : m.pos}</span><b>${m.h ? nf(m.h.h) : '—'}</b><em class="${d > 7 ? 'old' : ''}">${d == null ? '' : d === 0 ? 'hoje' : d + ' d'}</em></div>`; }).join('');
@@ -7330,7 +7330,7 @@ let FS_SEL = 'frota';
 const FS_NOME = ['Propulsão', 'Governo', 'Geração', 'Emergência', 'Salvatagem', 'Combustível', 'Comunicação', 'Amarração', 'Casco', 'Habitabilidade', 'Navegação'];
 function fsHTML() {
   const L = frotaMatriz(), sel = FS_SEL === 'frota' ? null : L.find(x => x.v.id === FS_SEL) || null;
-  const sit = x => x.it ? ['v', 'Interditada'] : x.bq.length ? ['v', 'Saída bloqueada'] : x.n.venc ? ['a', 'Liberada com restrição'] : ['o', 'Liberada'];
+  const sit = x => [['o', 'Liberada'], ['a', 'Liberada com restrição'], ['v', 'Saída bloqueada'], ['v', 'Interditada']][x.sit] || ['o', 'Liberada'];   // x.sit inclui NO do FR 027_L sem OM
   const semH = x => !x.n.venc && !x.n.viag && !x.n.ok;
   const tot = { venc: 0, viag: 0, ok: 0 }; L.forEach(x => { tot.venc += x.n.venc; tot.viag += x.n.viag; tot.ok += x.n.ok; });
   const aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null, lib = L.filter(x => x.sit < 2).length, nRes = L.filter(x => x.sit === 1).length;
@@ -7927,11 +7927,13 @@ const SAI_SIT = [['o', 'Liberada'], ['a', 'Com restrição'], ['v', 'Saída bloq
 function saidaFoto(v) {   // situação técnica agora: mesma conta da Situação da frota
   const p = painelVessel(v).filter(x => x.s.st !== 'cond' && (x.s.st === 'venc' || x.s.st === 'viag'));
   const it = interditada(v.id), bq = p.filter(x => x.s.st === 'venc' && x.t.prio === 'Crítica' && !x.om);
-  const sit = it ? 3 : bq.length ? 2 : p.some(x => x.s.st === 'venc') ? 1 : 0;
+  let sit = it ? 3 : bq.length ? 2 : p.some(x => x.s.st === 'venc') ? 1 : 0;
+  const no = typeof fr27Pend === 'function' ? fr27Pend(v.id) : [];   // NO do FR 027_L ainda sem OM: Crítica bloqueia, Alta restringe
+  if (sit < 2 && no.some(x => x.c === 'Crítica')) sit = 2; else if (sit < 1 && no.some(x => x.c === 'Alta')) sit = 1;
   const pend = p.sort((a, b) => (a.s.st === 'venc' ? 0 : 1) - (b.s.st === 'venc' ? 0 : 1) || (b.t.prio === 'Crítica') - (a.t.prio === 'Crítica'))
     .map(x => ({ item: x.t.id, nome: x.t.chk || x.t.item, pos: x.pos, st: x.s.st, txt: x.s.txt || '', prio: x.t.prio || '', om: x.om ? x.om.num : '', bloq: bq.includes(x) }));
   const corr = oms().filter(o => o.vessel === v.id && o.tipo === 'C' && o.status !== 'encerrada').map(o => ({ num: o.num, classe: o.classe || '', desc: (o.descricao || '').slice(0, 140), interd: o.interd === 'Sim' }));
-  return { sit, pend, corr };
+  return { sit, pend, corr, no };
 }
 const saidas = vid => recs('saida').filter(r => r.vessel === vid).sort((a, b) => (a.at || 0) - (b.at || 0));
 function saidaLista(F) {
@@ -7942,7 +7944,7 @@ function saidaLista(F) {
 }
 function saidaModal(vid, fr) {
   if (!precisa(false)) return; const v = vessel(vid); if (!v) return;
-  const F = saidaFoto(v); if (fr) { F.nc = fr.nc || []; if (F.sit < 3) F.sit = Math.max(F.sit, (FR27_LIB[fr.lib] || [0, 0])[1]); }   // vale a pior: plano (SMF) ou check-list (FR 027_L)
+  const F = saidaFoto(v); F.nc = (fr ? fr.nc || [] : []).concat((F.no || []).filter(x => !fr || x.rec !== fr.id)); if (fr && F.sit < 3) F.sit = Math.max(F.sit, (FR27_LIB[fr.lib] || [0, 0])[1]);   // vale a pior: plano (SMF) ou check-list (FR 027_L)
   const [cls, nome] = SAI_SIT[F.sit], d = new Date(), hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   const hr = horAtual(v.id, mpos(v.id)), hrHoje = hr && hr.date === isoD(hoje());
   let img = null;
@@ -7976,7 +7978,7 @@ function saidaVer(id) {
   const r = S.recs.get(id); if (!r) return; const v = vessel(r.vessel), [cls] = SAI_SIT[r.sit] || SAI_SIT[0];
   modal(`<h2>Saída · ${esc(v ? v.nome : r.vessel)} · ${brD(r.date)} ${esc(r.hora || '')}</h2>
    <div class="row" style="gap:8px;align-items:center;margin:4px 0 10px"><span class="fs-p ${cls}">${esc(r.sitTxt)}</span><span class="note">registrada por ${esc(r.by || '—')}${r.autorizou ? ' · autorizada por ' + esc(r.autorizou) + ' (Coordenador de Operações)' : ''}</span></div>
-   ${r.just ? `<p><b>Justificativa:</b> ${esc(r.just)}</p>` : ''}
+   ${r.fr027 && S.recs.get(r.fr027) ? `<p>FR 027_L de saída: ${drivePdf(S.recs.get(r.fr027).pdfFileId, '📄 abrir o PDF assinado')}</p>` : ''}${r.just ? `<p><b>Justificativa:</b> ${esc(r.just)}</p>` : ''}
    <p class="note" style="margin-bottom:4px">Pendências como estavam na hora da saída:</p>${saidaLista(r)}
    ${r.hr ? `<p class="note">Horímetro na saída: ${nf(r.hr.h)} h (leitura de ${brD(r.hr.date)})</p>` : ''}
    ${r.fotoMin ? `<img src="${r.fotoMin}" style="max-width:260px;border-radius:6px">` : r.fotoId ? `<p><a href="https://drive.google.com/file/d/${encodeURIComponent(r.fotoId)}/view" target="_blank" rel="noopener">Foto do FR 027_L de saída (Drive)</a></p>` : ''}
@@ -8110,7 +8112,9 @@ async function fr27Abrir(vid, mov) {
     d.querySelectorAll('.toolbar button').forEach(bt => { if (/^(Salvar|Imprimir|Limpar)/.test(bt.textContent.trim())) bt.style.display = 'none'; });
     fr27Assinaturas(d); } catch (er) { console.warn(er); } };
   o.querySelector('[data-fo="salvar"]').onclick = () => fr27Salvar(v, mov, fr.contentWindow, o);
-  fr.srcdoc = await lubFormTxt('FR_027_L.html');
+  let txt = null; for (let i = 0; i < 3 && !txt; i++) { try { txt = await lubFormTxt('FR_027_L.html'); } catch (er) { await new Promise(r => setTimeout(r, 700)); } }   // 3 tentativas (sinal fraco no terminal)
+  if (!txt) { lubFecharOverlay('fr27FO'); alert('Não consegui abrir o FR 027_L: sem conexão e sem cópia guardada neste aparelho. Abra o SMF uma vez com sinal para ele guardar o formulário, ou use o FR 027_L em papel e registre depois.'); return; }
+  fr.srcdoc = txt;
 }
 // ---------- ler o que foi marcado ----------
 function fr27Ler(win) {
@@ -8171,6 +8175,10 @@ const fr27SemOM = r => (r.nc || []).filter(x => !/^\d{3,}$/.test(x.o || ''));
 async function fr27Salvar(v, mov, win, ov) {
   let D; try { D = fr27Ler(win); } catch (e) { alert('Não consegui ler o formulário: ' + e.message); return; }
   const F = fr27Faltas(D); if (F.length) { alert('Falta preencher no FR 027_L:\n• ' + F.join('\n• ')); return; }
+  const outra = D.nc.filter(x => /^\d{3,}$/.test(x.o)).map(x => [x, oms().find(o => o.num === x.o && o.vessel !== v.id)]).filter(y => y[1]);
+  if (outra.length) { alert('Nº de OM que já pertence a outra embarcação:\n• ' + outra.map(([x, o]) => 'OM ' + x.o + ' é do ' + vName(o.vessel) + ' (' + x.lab + ')').join('\n• ') + '\nConfira o número no Sankhya.'); return; }
+  const dup = fr27s(v.id).find(r => r.mov === (mov === 'Saida' ? 'saida' : 'chegada') && r.date === D.date);
+  if (dup && !confirm('Já existe um FR 027_L de ' + (mov === 'Saida' ? 'saída' : 'chegada') + ' do ' + v.nome + ' salvo hoje' + (dup.hora ? ' às ' + dup.hora : '') + '.\nSalvar outro mesmo assim?')) return;
   const semOM = D.nc.filter(x => !/^\d{3,}$/.test(x.o)).length;
   if (semOM && !confirm(semOM + ' item(ns) NO sem nº de OM. Salvar assim mesmo? Eles ficam pendentes no Hoje até você informar a OM do Sankhya.')) return;
   const busy = ov.querySelector('.fo-busy'), msg = t => { busy.hidden = false; busy.querySelector('.fo-msg').textContent = t; };
@@ -8182,10 +8190,12 @@ async function fr27Salvar(v, mov, win, ov) {
     const rec = { id: uid('fr27'), kind: 'fr027', vessel: v.id, mov: mov === 'Saida' ? 'saida' : 'chegada', date: D.date, hora: D.hora, local: D.local, prop: D.prop, mdl: D.mdl, hor, rpm: D.rpm, res: D.res, nc: D.nc,
       obs: D.obs, fr22: D.fr22, ompend: D.ompend, lib: D.lib, libom: D.libom, ass: D.ass.map(a => ({ func: a.func, nome: a.nome })), assAt: Date.now(), by: S.session ? S.session.name : '', at: Date.now() };
     await saveRec(rec, { pdfB64: pdf.output('datauristring').split(',')[1] });
-    let nh = 0; for (const [pos, x] of Object.entries(hor)) if (await lubHor(v.id, pos, x.total, D.date, 'FR 027_L ' + (rec.mov === 'saida' ? 'saída' : 'chegada'))) nh++;
+    let nh = 0, nr = 0; for (const [pos, x] of Object.entries(hor)) { if (await lubHor(v.id, pos, x.total, D.date, 'FR 027_L ' + (rec.mov === 'saida' ? 'saída' : 'chegada'))) { nh++; continue; }
+      if (!(x.total > 0) || recs('hor').some(r => r.vessel === v.id && r.pos === pos && r.date === D.date && r.h === x.total)) continue;   // repetida: nada a fazer
+      await saveRec({ id: uid('horp'), kind: 'horp', vessel: v.id, pos, date: D.date, h: x.total, painel: x.painel < VOLTA ? x.painel : null, by: S.session ? S.session.name : '', motivo: 'FR 027_L: leitura incoerente com o histórico (menor que uma anterior ou maior que uma posterior)', fr027: rec.id }); nr++; }
     const novas = await fr27Corretivas(rec);
     busy.hidden = true; lubFecharOverlay('fr27FO');
-    const nNO = D.nc.length, txt = `FR 027_L de ${rec.mov === 'saida' ? 'saída' : 'chegada'} salvo · ${v.nome}: ${nNO ? nNO + ' NO' + (novas.length ? ', ' + novas.length + ' corretiva(s) aberta(s)' : '') + (semOM ? ', ' + semOM + ' sem OM (pendente no Hoje)' : '') : 'nenhum NO'}${nh ? ' · ' + nh + ' horímetro(s) lançado(s)' : ''}.`;
+    const nNO = D.nc.length, txt = `FR 027_L de ${rec.mov === 'saida' ? 'saída' : 'chegada'} salvo · ${v.nome}: ${nNO ? nNO + ' NO' + (novas.length ? ', ' + novas.length + ' corretiva(s) aberta(s)' : '') + (semOM ? ', ' + semOM + ' sem OM (pendente no Hoje)' : '') : 'nenhum NO'}${nh ? ' · ' + nh + ' horímetro(s) lançado(s)' : ''}${nr ? ' · ' + nr + ' leitura(s) incoerente(s) para o Supervisor confirmar' : ''}.`;
     if (rec.mov === 'chegada') { await situSalvar(v.id, 'porto'); toast(txt, 7000); render(); }
     else { toast(txt, 7000); saidaModal(v.id, rec); }
   } catch (e) { busy.hidden = true; console.error(e); alert('Não foi possível salvar o FR 027_L: ' + (e.message || e)); }
@@ -8197,13 +8207,15 @@ function fr27PendModal(id) {
    <div class="tw"><table class="t"><thead><tr><th>Item</th><th>O que foi encontrado</th><th>Criticidade</th><th>Nº da OM</th></tr></thead><tbody>${L.map((x, i) => `<tr><td>${esc(x.lab)}</td><td>${esc(x.d)}</td><td>${esc(x.c)}</td><td><input data-fpo="${esc(x.k)}" inputmode="numeric" style="width:110px" placeholder="nº"></td></tr>`).join('')}</tbody></table></div>
    <div class="note" id="fpE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Fechar</button><button class="mbtn pri" id="fpOk">Gravar e abrir as corretivas</button></div>`, true);
   $('#fpOk').onclick = async () => { let n = 0; $$('[data-fpo]').forEach(i => { const v = i.value.replace(/\D/g, ''); if (!v) return; if (v.length < 3) return; const x = r.nc.find(y => y.k === i.dataset.fpo); if (x) { x.o = v; n++; } });
+    const conf = r.nc.filter(x => /^\d{3,}$/.test(x.o || '')).map(x => oms().find(o => o.num === x.o && o.vessel !== r.vessel)).filter(Boolean);
+    if (conf.length) { r.nc.forEach(x => { if (conf.some(o => o.num === x.o)) x.o = ''; }); $('#fpE').textContent = 'OM ' + conf.map(o => o.num + ' é do ' + vName(o.vessel)).join(', ') + '. Confira o número no Sankhya.'; return; }
     if (!n) { $('#fpE').textContent = 'Digite pelo menos um nº de OM (3 dígitos ou mais).'; return; }
     await saveRec(r); const novas = await fr27Corretivas(r); closeModal(); toast(n + ' item(ns) ligados · ' + novas.length + ' corretiva(s) aberta(s).'); render(); };
 }
 // Hoje · empurrador no porto: NO da chegada ainda sem OM
-function fr27Linha(v) { const r = fr27s(v.id).filter(x => x.mov === 'chegada').pop(); if (!r) return ''; const n = fr27SemOM(r).length;
-  return n ? `<div class="rt2-l bad"><span>⚠ <b>${n} NO do FR 027_L da chegada sem OM</b> (${brD(r.date)})</span><span class="sp"></span><button class="mbtn sm pri" data-fr27pend="${r.id}">Informar OM</button></div>`
-    : `<div class="rt2-l ok">✓ FR 027_L da chegada (${brD(r.date)}) · ${(r.nc || []).length ? (r.nc || []).length + ' NO com OM' : 'sem NO'}</div>`; }
+function fr27Linha(v) { const P = fr27Pend(v.id), r = fr27s(v.id).filter(x => x.mov === 'chegada').pop();
+  if (P.length) { const cr = P.some(x => x.c === 'Crítica'); return `<div class="rt2-l bad"><span>${cr ? '⛔' : '⚠'} <b>${P.length} NO do FR 027_L sem OM</b>${cr ? ' · <b>Crítica: saída bloqueada até abrir a OM</b>' : ''}</span><span class="sp"></span><button class="mbtn sm pri" data-fr27pend="${P[0].rec}">Informar OM</button></div>`; }
+  return r ? `<div class="rt2-l ok">✓ FR 027_L da chegada (${brD(r.date)}) · ${(r.nc || []).length ? (r.nc || []).length + ' NO com OM' : 'sem NO'} · ${drivePdf(r.pdfFileId, 'PDF')}</div>` : ''; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-fr27pend]'); if (!b) return; e.preventDefault(); e.stopPropagation(); fr27PendModal(b.dataset.fr27pend); }, true);
 // chegada e saída pelo FR 027_L (quem estava sem situação informada continua no toque simples)
 document.addEventListener('click', e => { const b = e.target.closest('[data-situ]'); if (!b) return; const [vid, st] = b.dataset.situ.split('|'), v = vessel(vid); if (!v || !situDe(v)) return;
@@ -8213,6 +8225,57 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-situ
  .fr27-pb{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fr27-pb button{font:inherit;font-size:15px;border:1px solid #DADCE0;background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}.fr27-pb button.pri{background:#1967D2;color:#fff;border-color:#1967D2}
  .fr27-pad canvas{flex:1;width:100%;border:2px dashed #9AA0A6;border-radius:10px;touch-action:none;background:#FCFCFC}.fr27-pad p{margin:0;color:#5F6368;text-align:center}
  .fo-bar .pri{background:#1967D2!important;color:#fff!important;border-color:#1967D2!important}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Melhorias de fluxo (gestor e auditor) =====
+   1 · NO do FR 027_L sem OM conta na Situação da frota (Crítica bloqueia, Alta deixa com restrição) até ganhar a OM
+   4 · links da cadeia de evidência (OM → PDF do FR 027_L de origem; saída → PDF do FR 027_L de saída)
+   5 · histórico de cada OM visível (quem emitiu, avançou, devolveu, aprovou e quando)
+   6 · Hoje: "O que precisa de você agora" no topo, em ordem de risco
+   (2 · horímetro recusado vira pendência · 3 · aviso de FR 027_L em duplicidade · 7 · nº de OM de outra embarcação: no bloco FR 027_L) */
+'use strict';
+const fr27Pend = vid => fr27s(vid).flatMap(r => fr27SemOM(r).map(x => Object.assign({ rec: r.id, date: r.date, mov: r.mov }, x)));
+const drivePdf = (id, txt) => id ? `<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${txt}</a>` : '<span class="note">PDF no Drive depois de sincronizar</span>';
+// 1 · Situação da frota enxerga os NO sem OM
+{ const f0 = frotaMatriz; frotaMatriz = function () { const L = f0();
+  L.forEach(x => { const P = fr27Pend(x.v.id); x.noPend = P; if (x.sit < 2 && P.some(p => p.c === 'Crítica')) x.sit = 2; else if (x.sit < 1 && P.some(p => p.c === 'Alta')) x.sit = 1; });
+  return L.sort((a, b) => b.sit - a.sit || b.n.venc - a.n.venc || (a.ader || 0) - (b.ader || 0)); }; }
+// 4 e 5 · OM: de onde veio (FR 027_L) e linha do tempo
+function omHistHTML(o) {
+  const H = (o.hist || []).slice(); if (!H.some(h => /Emitida|Aberta/.test(h.ev || ''))) { if (o.emitAt) H.unshift({ at: +pD(String(o.emitAt).slice(0, 10)), by: o.emitBy || '', ev: 'Emitida' }); }
+  if (o.aprovAt && !H.some(h => /provad/.test(h.ev || ''))) H.push({ at: o.aprovAt, by: o.aprovBy || '', ev: 'Aprovada e encerrada' });
+  H.sort((a, b) => (a.at || 0) - (b.at || 0)); if (!H.length) return '';
+  const dt = t => { const d = new Date(t); return isNaN(d) ? '—' : brD(isoD(d)) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  return `<div class="card"><div class="row"><h2>Histórico da OM</h2><span class="sp"></span><span class="note">trilha de auditoria: cada mudança de etapa, com quem fez e quando</span></div><div class="tw"><table class="t"><thead><tr><th>Data e hora</th><th>Quem</th><th>O que aconteceu</th></tr></thead><tbody>${H.map(h => `<tr><td class="mono">${dt(h.at)}</td><td>${esc(h.by || '—')}</td><td>${esc(h.ev || '')}${h.motivo ? ' · ' + esc(h.motivo) : ''}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function omOrigemHTML(o) { if (!o || !o.fr027) return ''; const r = S.recs.get(o.fr027); if (!r) return '';
+  return `<div class="banner info">Aberta pelo <b>FR 027_L de ${r.mov === 'saida' ? 'saída' : 'chegada'}</b> de ${brD(r.date)} ${esc(r.hora || '')} · ${esc(((r.ass || [])[0] || {}).nome || '')}${((r.ass || [])[1] || {}).nome ? ' · CTF ' + esc(r.ass[1].nome) : ''}<span class="sp"></span>${drivePdf(r.pdfFileId, '📄 Abrir o FR 027_L')}</div>`; }
+{ const v0 = vOM; vOM = function () { const h = v0.apply(this, arguments), o = S.recs.get(ARG); return o ? omOrigemHTML(o) + h + omHistHTML(o) : h; }; }
+if (VX.omg) { const g0 = VX.omg; VX.omg = function () { const h = g0.apply(this, arguments), P = omGrupo(ARG); return P.length ? h + omHistHTML(P[0]) : h; }; }
+// 6 · Hoje: o que precisa de você agora
+function agoraLista() {
+  const out = [], add = (p, txt, btn) => out.push({ p, txt, btn }), FM = frotaMatriz();
+  FM.filter(x => x.sit >= 2 && !foraOp(x.v) && situDe(x.v) && x.v.situ.st === 'porto').forEach(x => add(1, `<b>${esc(x.v.nome)}</b> · ${x.sit === 3 ? 'interditada' : 'saída bloqueada'}${x.noPend.some(p => p.c === 'Crítica') ? ' (NO Crítico do FR 027_L sem OM)' : ''}`, `<button class="mbtn sm" data-agfs="${x.v.id}">Ver situação</button>`));
+  S.cfg.frota.filter(v => !foraOp(v)).forEach(v => { const P = fr27Pend(v.id); if (!P.length) return; const g = P.some(p => p.c === 'Crítica' || p.c === 'Alta') ? 1 : 2;
+    add(g, `<b>${esc(v.nome)}</b> · ${P.length} NO do FR 027_L sem OM${P.some(p => p.c === 'Crítica') ? ' · <b>Crítica</b>' : P.some(p => p.c === 'Alta') ? ' · Alta' : ''}`, `<button class="mbtn sm pri" data-fr27pend="${P[0].rec}">Informar OM</button>`); });
+  oms().filter(o => o.tipo === 'C' && o.status !== 'encerrada' && (o.classe === 'Crítica' || o.classe === 'Alta') && !o.excluido).forEach(o => add(o.classe === 'Crítica' ? 1 : 2, `Corretiva <b>${esc(o.classe)}</b> OM ${esc(o.num)} · ${esc(vName(o.vessel))} · ${esc(ETAPAS_C.find(e => e[0] === o.status)?.[1] || o.status)}`, `<a class="mbtn sm" href="#om/${o.id}">Abrir</a>`));
+  const G = {}; oms().filter(o => o.tipo === 'P' && !o.excluido && ['executada', 'conferencia'].includes(o.status)).forEach(o => (G[o.grupo || o.id] = G[o.grupo || o.id] || []).push(o));
+  Object.entries(G).forEach(([g, L]) => { const o = L[0], st = o.grupo ? grpStatus(omGrupo(g)) : o.status, link = o.grupo ? `#omg/${encodeURIComponent(g)}` : `#om/${o.id}`; if (foraOp(vessel(o.vessel) || {})) return;
+    if (st === 'conferencia') add(2, `OM ${esc(o.num)} · ${esc(vName(o.vessel))} · lançada, falta conferir e aprovar`, `<a class="mbtn sm pri" href="${link}">Conferir</a>`);
+    else if (st === 'executada') add(2, `OM ${esc(o.num)} · ${esc(vName(o.vessel))} · executada, falta lançar o formulário que voltou`, `<a class="mbtn sm" href="${link}">Lançar</a>`); });
+  const hp = recs('horp').filter(r => !r.excluido).length; if (hp) add(2, `${hp} leitura(s) de horímetro esperando a sua confirmação`, `<a class="mbtn sm" href="#hor">Confirmar</a>`);
+  const ol = lubDados().filter(x => !foraOp(x.v) && olStatus(x) === 'venc').length; if (ol) add(1, `${ol} troca(s) de óleo vencida(s)`, `<a class="mbtn sm" href="#oleo">Ver</a>`);
+  const cp = cmpDados().filter(x => x.st === 'fora' || x.vencida).length; if (cp) add(1, `${cp} MCP com compressão abaixo do limite ou ensaio vencido`, `<a class="mbtn sm" href="#compr">Ver</a>`);
+  const am = amoDados().M.filter(x => x.s.st === 'venc' || x.extra).length; if (am) add(2, `${am} amostra(s) de óleo do MCP vencida(s) ou coleta extra`, `<a class="mbtn sm" href="#anoleo">Ver</a>`);
+  return out.sort((a, b) => a.p - b.p);
+}
+function agoraHTML() { const L = agoraLista(), max = 8;
+  return `<div class="card ag-card"><div class="row"><h2>O que precisa de você agora</h2><span class="sp"></span><span class="note">${L.length ? L.filter(x => x.p === 1).length + ' P1 · ' + L.filter(x => x.p === 2).length + ' P2' : ''}</span></div>
+   ${L.length ? `<ul class="ag-l">${L.slice(0, max).map(x => `<li><span class="pill ${x.p === 1 ? 'p-bad' : 'p-warn'}">P${x.p}</span><span class="ag-t">${x.txt}</span><span class="sp"></span>${x.btn}</li>`).join('')}</ul>${L.length > max ? `<details><summary class="note">mais ${L.length - max}</summary><ul class="ag-l">${L.slice(max).map(x => `<li><span class="pill ${x.p === 1 ? 'p-bad' : 'p-warn'}">P${x.p}</span><span class="ag-t">${x.txt}</span><span class="sp"></span>${x.btn}</li>`).join('')}</ul></details>` : ''}`
+     : '<p class="ag-ok">✓ Nada pendente para você agora.</p>'}</div>`; }
+{ const r0 = VX.rotina; if (r0) VX.rotina = function () { const t = document.createElement('div'); t.innerHTML = r0.apply(this, arguments); const vh = t.querySelector(':scope > .vh'); const d = document.createElement('div'); d.innerHTML = agoraHTML(); vh ? vh.after(d.firstElementChild) : t.prepend(d.firstElementChild); return t.innerHTML; }; }
+document.addEventListener('click', e => { const b = e.target.closest('[data-agfs]'); if (!b) return; e.preventDefault(); e.stopPropagation(); FS_SEL = b.dataset.agfs; render(); setTimeout(() => { const c = document.querySelector('#main .fs-card'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 350); }, true);
+{ const st = document.createElement('style'); st.textContent = `.ag-l{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column}.ag-l li{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #F1F3F4;font-size:14px}.ag-l li:first-child{border-top:0}.ag-t{line-height:1.35}.ag-ok{color:var(--okt);margin:4px 0}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
