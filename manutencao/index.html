@@ -7721,17 +7721,18 @@ document.addEventListener('click', e => { const a = e.target.closest('[data-fsgo
 if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   const t = document.createElement('div'); t.innerHTML = c3();
   [...t.children].forEach(n => { if (n.dataset.sec === 'venc' && !n.classList.contains('vh')) n.remove(); });
-  t.querySelectorAll('[data-csgo="venc"]').forEach(b => b.remove());
-  const h1 = t.querySelector(':scope > .vh h1'); if (h1) h1.textContent = 'Calibração, análise de óleo e docagem';
+  t.querySelectorAll('[data-sec="amo"]').forEach(n => n.remove());   // análise de óleo: aba própria (bloco "Análise de óleo do MCP")
+  t.querySelectorAll('[data-csgo="venc"],[data-csgo="amo"]').forEach(b => b.remove());
+  const h1 = t.querySelector(':scope > .vh h1'); if (h1) h1.textContent = 'Calibração e docagem';
   return t.innerHTML; }; }
 { const by = id => SECOES.find(s => s.id === id), oleo = by('oleo'), compr = by('compr'), graf = by('graf'), adm = by('adm');
-  const cond = { id: 'cond2', nome: 'Condição', views: [...(oleo ? oleo.views.filter(x => x[0] !== 'lubreg') : []), ...(compr ? compr.views : []), ['controle', 'Calibração, análise de óleo e docagem']], extra: [...(oleo && oleo.extra || []), ...(compr && compr.extra || []), 'lubreg'] };
+  const cond = { id: 'cond2', nome: 'Condição', views: [...(oleo ? oleo.views.filter(x => x[0] !== 'lubreg') : []), ['anoleo', 'Análise de óleo'], ...(compr ? compr.views : []), ['controle', 'Calibração e docagem']], extra: [...(oleo && oleo.extra || []), ...(compr && compr.extra || []), 'lubreg'] };
   if (graf) graf.views = graf.views.filter(x => x[0] !== 'controle');
   if (adm) adm.views = adm.views.filter(x => x[0] !== 'frota');
   const ord = ['hoje', 'crono', 'omsv2'].map(by).filter(Boolean).concat([cond], ['graf', 'apoio2', 'adm'].map(by).filter(Boolean));
   SECOES.splice(0, SECOES.length, ...ord);
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
-// Calibração, análise de óleo e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
+// Calibração e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
 { const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
 @media(max-width:760px){.fs-t td,.fs-t th{padding:3px 6px}.fs-t td:first-child,.fs-t th:first-child,.fs-lh{padding-left:12px}.fs-dt{padding:14px 12px}.fs-dh{padding-right:0;gap:8px}.fs-dh h1{font-size:20px}.fs-p{white-space:normal}.fs-ks{grid-template-columns:1fr 1fr;gap:8px}.fs-k{padding:10px 12px}.fs-k>b{font-size:22px}.fs-sr{grid-template-columns:30px 1fr auto;gap:8px;font-size:13px}.fs-sr .fs-bar,.fs-sr .fs-bv{display:none}}`; document.head.appendChild(st); }
@@ -7742,11 +7743,11 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
 'use strict';
 const OLF = { f: 'todas', g: '' };   // filtros da tabela: situação (chips) e sistema (anéis)
 const OL_SIS = [['mcp', 'MCP', 'Motor propulsor'], ['crp', 'Reversores', 'Caixa reversora'], ['mca', 'MCA', 'Motores auxiliares'], ['hid', 'Governo', 'Hidráulico do leme'], ['inc', 'BI', 'Bomba de incêndio']];
-// anel por sistema: verde = em dia, âmbar = até 50 h / 7 d, vermelho = vencida, cinza = sem histórico · centro = % em dia (em dia ÷ equipamentos com histórico)
+// anel por sistema: azul = em dia, âmbar = até 50 h / 7 d, vermelho = vencida, cinza = sem histórico · centro = % em dia (em dia ÷ equipamentos com histórico)
 function olAnel(L) { const n = st => L.filter(e => e.st === st).length, ok = n('green'), am = n('amber'), rd = n('red'), sm = n('sem'), tot = L.length, ch = tot - sm, R = 30, C = 2 * Math.PI * R;
   let off = 0; const seg = (q, cor) => { if (!q) return ''; const l = q / tot * C, h = `<circle r="${R}" cx="40" cy="40" fill="none" stroke="${cor}" stroke-width="9" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 40 40)"/>`; off += l; return h; };
   const pct = ch ? Math.round(ok / ch * 100) : null;
-  return { svg: `<svg viewBox="0 0 80 80" width="84" height="84"><circle r="${R}" cx="40" cy="40" fill="none" stroke="#EEF2F6" stroke-width="9"/>${seg(ok, '#1E8E3E')}${seg(am, '#E3A008')}${seg(rd, '#D93025')}${seg(sm, '#BDC1C6')}<text x="40" y="45" text-anchor="middle" font-size="16" font-weight="700" fill="#202124">${pct == null ? '—' : pct + '%'}</text></svg>`, ok, am, rd, sm, tot }; }
+  return { svg: `<svg viewBox="0 0 80 80" width="84" height="84"><circle r="${R}" cx="40" cy="40" fill="none" stroke="#EEF2F6" stroke-width="9"/>${seg(ok, '#1967D2')}${seg(am, '#E3A008')}${seg(rd, '#D93025')}${seg(sm, '#BDC1C6')}<text x="40" y="45" text-anchor="middle" font-size="16" font-weight="700" fill="#202124">${pct == null ? '—' : pct + '%'}</text></svg>`, ok, am, rd, sm, tot }; }
 function vOleoP() {
   const { F, ENG } = o3Dados(), H = id => ENG.some(e => e.vid === id && e.st === 'red');
   if (!O3.open) O3.open = new Set(O3.G('open', F.filter(b => H(b.id)).map(b => b.id)));
@@ -7755,7 +7756,7 @@ function vOleoP() {
   const EG = ENG.filter(e => !OLF.g || e.g === OLF.g), n = st => EG.filter(e => e.st === st).length;
   const chips = [['todas', 'Todos', EG.length], ['red', 'Vencidas', n('red')], ['amber', 'Até 50 h / 7 d', n('amber')], ['green', 'Em dia', n('green')], ['sem', 'Sem histórico', n('sem')]];
   const passa = e => (OLF.f === 'todas' || e.st === OLF.f) && (!OLF.g || e.g === OLF.g);
-  const cor = st => st === 'red' ? 'var(--badt)' : st === 'amber' ? 'var(--warnt)' : st === 'green' ? 'var(--okt)' : 'var(--mut)';
+  const cor = st => st === 'red' ? 'var(--badt)' : st === 'amber' ? 'var(--warnt)' : st === 'green' ? '#1967D2' : 'var(--mut)';   // em dia = azul nesta tela
   const dt = d => d ? brD(isoD(d)) : '—';
   let rows = '';
   F.forEach(b => { const es = ENG.filter(e => e.vid === b.id && passa(e)); if (!es.length) return;
@@ -7822,13 +7823,93 @@ AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.o
 .ol-br{display:grid;grid-template-columns:minmax(90px,24%) 1fr 1fr 70px;align-items:center;min-height:26px;gap:0;font-size:13px}.ol-br.click{cursor:pointer;border-radius:4px}.ol-br.click:hover{background:#F8F9FA}
 .ol-bl{line-height:1.15;padding-right:6px}.ol-bl small{display:block;color:var(--mut);font-size:11.5px}
 .ol-bL{display:flex;justify-content:flex-end;border-right:1.5px solid #9AA0A6;height:100%;align-items:center}.ol-bR{display:flex;height:100%;align-items:center}
-.ol-bL i,.ol-bR i{display:block;height:11px}.ol-bL i{background:#D93025;border-radius:3px 0 0 3px}.ol-bR i{background:#1E8E3E;border-radius:0 3px 3px 0}
+.ol-bL i,.ol-bR i{display:block;height:11px}.ol-bL i{background:#D93025;border-radius:3px 0 0 3px}.ol-bR i{background:#1967D2;border-radius:0 3px 3px 0}
 .ol-ax{min-height:0;font-size:11px;color:var(--mut)}.ol-ax>span>span{display:flex;justify-content:space-between}
 .ol-ft{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.ol-ft div{border:1px solid #E3E8EF;border-radius:8px;padding:7px 10px;font-size:12px;color:var(--mut)}.ol-ft b{display:block;font-size:13px;color:#202124;font-weight:600;margin-top:2px}
 .ol-sis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:4px}
 .ol-an{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid #E3E8EF;border-radius:10px;background:#fff;padding:8px 6px;font:inherit;cursor:pointer;text-align:center}.ol-an:hover{background:#F8F9FA}.ol-an.on{border-color:#1967D2;box-shadow:inset 0 0 0 1px #1967D2;background:#F3F7FD}
-.ol-an b{font-size:14px}.ol-an small{color:var(--mut);font-size:11.5px}.ol-an span{font-size:12px;color:var(--mut);margin-top:2px}.ol-an i{font-style:normal}.ol-an i.ok{color:var(--okt)}.ol-an i.am{color:var(--warnt)}.ol-an i.rd{color:var(--badt);font-weight:600}
+.ol-an b{font-size:14px}.ol-an small{color:var(--mut);font-size:11.5px}.ol-an span{font-size:12px;color:var(--mut);margin-top:2px}.ol-an i{font-style:normal}.ol-an i.ok{color:#1967D2}.ol-an i.am{color:var(--warnt)}.ol-an i.rd{color:var(--badt);font-weight:600}
 @media(max-width:760px){.ol-sis{grid-template-columns:repeat(2,minmax(0,1fr))}.ol-ft{grid-template-columns:1fr}.ol-br{grid-template-columns:minmax(80px,30%) 1fr 1fr 60px}}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Análise de óleo do MCP: aba própria em Condição, no padrão da Compressão =====
+   Matriz do laudo (semáforo por parâmetro) · Tendência por motor · Programa de amostragem (amoCard) · Parâmetros e limites (LAUDO_P).
+   Dados: recs('laudo') via amoDados()/laudos()/laudoSt(); registrar laudo = laudoModal (data-laudo2), ver laudos = laudoLista (data-laudov2). */
+'use strict';
+const AO = { f: 'todas', sel: '', p: '' };
+const AO_GR = [['Desgaste', ['fe', 'cr', 'al', 'cu', 'pb']], ['Contaminação', ['si', 'na', 'agua', 'comb', 'fuligem']], ['Óleo', ['tbn', 'visc']]];
+const AO_CUR = { fe: 'Fe', cr: 'Cr', al: 'Al', cu: 'Cu', pb: 'Pb', si: 'Si', na: 'Na', agua: 'Água', comb: 'Comb.', fuligem: 'Fulig.', tbn: 'TBN', visc: 'Visc.' };
+const aoP = k => LAUDO_P.find(p => p[0] === k);
+const aoNome = x => esc(x.v.nome) + (x.v.mcp === 'mono' ? '' : ' ' + x.pos);
+const aoKey = x => x.v.id + '|' + x.pos;
+// situação de um valor: 'venc' (crítico) · 'viag' (atenção) · 'ok'
+function aoSt(k, v) { const [, , , a, c, , tipo] = aoP(k); if (v == null) return '';
+  if (tipo === 'min') return v < c ? 'venc' : v < a ? 'viag' : 'ok';
+  if (tipo === 'faixa') return v < c[0] || v > c[1] ? 'venc' : v < a[0] || v > a[1] ? 'viag' : 'ok';
+  return v >= c ? 'venc' : v >= a ? 'viag' : 'ok'; }
+const aoFmt = v => v == null ? '—' : nf(v, v < 10 && v % 1 ? (v < 1 ? 2 : 1) : 0);
+const AO_PILL = { venc: ['p-bad', 'Crítico'], viag: ['p-warn', 'Atenção'], ok: ['p-ok', 'Normal'], sem: ['p-mut', 'Sem laudo'] };
+function aoMatriz(M) {
+  const cnt = s => s === 'todas' ? M.length : M.filter(x => x.ls.st === s).length;
+  const ordem = { venc: 0, viag: 1, ok: 2, sem: 3 }, L = M.filter(x => AO.f === 'todas' || x.ls.st === AO.f).sort((a, b) => ordem[a.ls.st] - ordem[b.ls.st] || (b.meses ?? -1) - (a.meses ?? -1));
+  const ks = AO_GR.flatMap(g => g[1]);
+  const cel = (x, k) => { const v = x.ul ? numBR((x.ul.vals || {})[k]) : null, s = aoSt(k, v); return `<td class="mono r ao-c ${s}" title="${esc(aoP(k)[1])}${v != null ? ': ' + aoFmt(v) + ' ' + aoP(k)[2] : ''}">${x.ul ? aoFmt(v) : ''}</td>`; };
+  const linhas = L.map(x => `<tr class="click${aoKey(x) === AO.sel ? ' cm-on' : ''}" data-aosel="${aoKey(x)}"><td><b>${aoNome(x)}</b></td>
+    <td class="mono r">${x.ul ? brD(x.ul.date) : '—'}${x.ul ? `<div class="note" style="color:${x.meses > 12 ? 'var(--warnt)' : ''}">há ${x.meses} ${x.meses === 1 ? 'mês' : 'meses'}</div>` : ''}</td><td class="mono r">${x.ul && x.ul.hOleo ? nf(+x.ul.hOleo) + ' h' : '—'}</td>
+    ${ks.map(k => cel(x, k)).join('')}<td><span class="pill ${AO_PILL[x.ls.st][0]}">${AO_PILL[x.ls.st][1]}</span></td></tr>`).join('');
+  return `<div class="card"><div class="row"><h2>Matriz do laudo</h2><span class="sp"></span><span class="note">último laudo de cada MCP · clique na linha para ver a tendência</span></div>
+   <div class="cm-chips">${[['todas', 'Todos'], ['venc', 'Crítico'], ['viag', 'Atenção'], ['ok', 'Normal'], ['sem', 'Sem laudo']].map(([k, l]) => `<button class="cm-chip${AO.f === k ? ' on' : ''}" data-aof="${k}">${l} <b>${cnt(k)}</b></button>`).join('')}</div>
+   <div class="tw"><table class="t ao-t"><thead><tr><th rowspan="2">Motor</th><th rowspan="2" class="r">Amostra</th><th rowspan="2" class="r">Horas do óleo</th>${AO_GR.map(([g, k]) => `<th colspan="${k.length}" class="ao-g">${g}</th>`).join('')}<th rowspan="2">Situação</th></tr>
+    <tr>${ks.map(k => `<th class="r" title="${esc(aoP(k)[1] + ' · ' + aoP(k)[2])}">${AO_CUR[k]}</th>`).join('')}</tr></thead><tbody>${linhas || '<tr><td colspan="16" class="note">Nenhum motor neste filtro.</td></tr>'}</tbody></table></div>
+   <p class="note">Metais e silício/sódio em ppm · água, combustível e fuligem em % · TBN em mg KOH/g · viscosidade a 100 °C em cSt · célula âmbar = atenção, vermelha = crítico (limites no bloco "Parâmetros e limites") · data em âmbar = amostra com mais de 12 meses: o óleo de hoje já não é o do laudo.</p></div>`;
+}
+function aoTend(M) {
+  const pior = { venc: 0, viag: 1, ok: 2, sem: 3 }, x = M.find(y => aoKey(y) === AO.sel) || M.slice().sort((p, q) => pior[p.ls.st] - pior[q.ls.st])[0];   // sem escolha: o motor mais grave if (!x) return '<div class="card"><div class="row"><h2>Tendência por motor</h2></div><p class="note">Sem MCPs.</p></div>';
+  AO.sel = aoKey(x);
+  const L = laudos(x.v.id, x.pos), k = AO.p || (x.ls.alertas[0] || {}).k || 'fe', P = aoP(k), [, nome, un, a, c, sig, tipo] = P;
+  const pts = L.map(r => ({ d: pD(r.date), v: numBR((r.vals || {})[k]), r })).filter(p => p.v != null);
+  const W = 720, H = 240, l = 48, rr = 16, t = 14, b = 30, lims = tipo === 'faixa' ? [...a, ...c] : [a, c];
+  const vs = pts.map(p => p.v).concat(lims), y1 = Math.max(...vs) * 1.12, ylo = tipo === 'faixa' ? Math.min(...vs) * 0.92 : 0;
+  const d0 = pts.length ? Math.min(...pts.map(p => +p.d), +hoje() - 365 * 864e5) : +hoje() - 730 * 864e5, d1 = +hoje();
+  const X = d => l + (d - d0) / Math.max(1, d1 - d0) * (W - l - rr), Y = v => t + (1 - (v - ylo) / Math.max(1e-9, y1 - ylo)) * (H - t - b);
+  const lin = (v, cor, txt) => `<line x1="${l}" x2="${W - rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${cor}" stroke-dasharray="5 4"/><text x="${W - rr}" y="${Y(v) - 4}" text-anchor="end" font-size="11" fill="${cor}">${txt} ${aoFmt(v)}</text>`;
+  const linhasLim = tipo === 'faixa' ? lin(a[0], '#B06000', 'atenção') + lin(a[1], '#B06000', 'atenção') + lin(c[0], '#C5221F', 'crítico') + lin(c[1], '#C5221F', 'crítico') : lin(a, '#B06000', 'atenção') + lin(c, '#C5221F', 'crítico');
+  const anos = []; for (let y = new Date(d0).getFullYear() + 1; y <= new Date(d1).getFullYear(); y++) anos.push(+new Date(y, 0, 1));
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:300px">${[0, .25, .5, .75, 1].map(f => { const v = ylo + f * (y1 - ylo); return `<line x1="${l}" x2="${W - rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#EEF2F6"/><text x="${l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="#5F6368">${aoFmt(v)}</text>`; }).join('')}
+    ${anos.map(d => `<line x1="${X(d)}" x2="${X(d)}" y1="${t}" y2="${H - b}" stroke="#EEF2F6"/><text x="${X(d)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#5F6368">${new Date(d).getFullYear()}</text>`).join('')}
+    <line x1="${X(d1)}" x2="${X(d1)}" y1="${t}" y2="${H - b}" stroke="#9AA0A6" stroke-dasharray="2 3"/><text x="${X(d1) - 4}" y="${t + 10}" text-anchor="end" font-size="11" fill="#5F6368">hoje</text>
+    ${linhasLim}${pts.length > 1 ? `<polyline fill="none" stroke="#1967D2" stroke-width="2" points="${pts.map(p => X(+p.d) + ',' + Y(p.v)).join(' ')}"/>` : ''}
+    ${pts.map(p => { const s = aoSt(k, p.v); return `<circle cx="${X(+p.d)}" cy="${Y(p.v)}" r="5" fill="${s === 'venc' ? '#C5221F' : s === 'viag' ? '#E3A008' : '#1E8E3E'}" stroke="#fff" stroke-width="1.5"><title>${brD(p.r.date)} · ${aoFmt(p.v)} ${un}${p.r.hOleo ? ' · óleo com ' + nf(+p.r.hOleo) + ' h' : ''}${p.r.num ? ' · laudo ' + p.r.num : ''}</title></circle>`; }).join('')}</svg>`;
+  return `<div class="card"><div class="row"><h2>Tendência por motor</h2><span class="sp"></span><select id="aoSel" class="ol-sv">${M.map(y => `<option value="${aoKey(y)}"${aoKey(y) === AO.sel ? ' selected' : ''}>${aoNome(y)}</option>`).join('')}</select><button class="mbtn sm" data-laudov2="${AO.sel}">Ver os laudos</button></div>
+   <div class="cm-chips">${LAUDO_P.map(p => { const s = x.ul ? aoSt(p[0], numBR((x.ul.vals || {})[p[0]])) : ''; return `<button class="cm-chip${p[0] === k ? ' on' : ''}" data-aop="${p[0]}" title="${esc(p[1])}"${s === 'venc' ? ' style="border-color:#C5221F;color:#C5221F"' : s === 'viag' ? ' style="border-color:#E3A008;color:#946A1E"' : ''}>${AO_CUR[p[0]]}</button>`; }).join('')}</div>
+   <p class="note"><b>${esc(nome)}</b> (${esc(un)}) · ${esc(sig)} · ${pts.length} laudo${pts.length === 1 ? '' : 's'} deste motor${pts.length < 2 ? ' · a linha de tendência aparece a partir do 2º laudo' : ''}</p>${svg}</div>`;
+}
+function aoParam() {
+  const lim = (v, tipo) => tipo === 'faixa' ? aoFmt(v[0]) + ' – ' + aoFmt(v[1]) : (tipo === 'min' ? 'abaixo de ' : 'a partir de ') + aoFmt(v);
+  return `<div class="card"><div class="row"><h2>Parâmetros e limites</h2><span class="sp"></span><span class="note">referência geral para motor diesel com óleo 15W-40</span></div>
+   <div class="tw"><table class="t"><thead><tr><th>Grupo</th><th>Parâmetro</th><th>Unidade</th><th>Atenção</th><th>Crítico</th><th>O que indica</th></tr></thead><tbody>
+   ${AO_GR.map(([g, ks]) => ks.map((k, i) => { const [, nome, un, a, c, sig, tipo] = aoP(k); return `<tr>${i === 0 ? `<td rowspan="${ks.length}"><b>${g}</b></td>` : ''}<td>${esc(nome)}</td><td>${esc(un)}</td><td class="mono" style="color:var(--warnt)">${tipo === 'faixa' ? 'fora de ' + lim(a, tipo) : lim(a, tipo)}</td><td class="mono" style="color:var(--badt)">${tipo === 'faixa' ? 'fora de ' + lim(c, tipo) : lim(c, tipo)}</td><td class="note">${esc(sig)}</td></tr>`; }).join('')).join('')}</tbody></table></div>
+   <p class="note">Limites de referência, não do fabricante do motor: confirme com o laboratório que emite o laudo e com a ficha do óleo (TBN do óleo novo). O laudo com algum valor crítico de desgaste (Fe, Cr, Al, Cu, Pb) leva o MCP para "Programar inspeção / retífica" no diagnóstico de condição. Programa de amostragem: Anexo I, item 1.1.29.</p></div>`;
+}
+function vAnOleo() {
+  const { M } = amoDados();
+  const amo = amoCard().replace('<h2>Análise de óleo do MCP · programa de amostragem</h2>', '<h2>Programa de amostragem</h2>');
+  return `<div class="cm-v"><div class="vh"><div><h1>Análise de óleo · MCP</h1><p>Laudo de laboratório por motor: metais de desgaste, contaminação e condição do óleo · NP: 1 amostra por semestre em rodízio entre os MCPs (Anexo I, item 1.1.29)</p></div><span class="sp"></span><button class="mbtn" data-aoreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn pri" data-laudo2="">＋ Registrar laudo</button></div>
+   <div class="cm-ws">${aoMatriz(M)}${aoTend(M)}${amo}${aoParam()}</div></div>`;
+}
+VX.anoleo = vAnOleo;
+AFTER.anoleo = () => { const m = $('#main');
+  m.onclick = e => { const t = e.target;
+    const f = t.closest('[data-aof]'); if (f) { AO.f = f.dataset.aof; render(); return; }
+    const p = t.closest('[data-aop]'); if (p) { AO.p = p.dataset.aop; render(); return; }
+    const s = t.closest('[data-aosel]'); if (s) { AO.sel = s.dataset.aosel; AO.p = ''; render(); const c = $('#aoSel'); if (c) c.closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
+  m.onchange = e => { if (e.target.id === 'aoSel') { AO.sel = e.target.value; AO.p = ''; render(); } };
+  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ao_lay', '[data-aoreset]'); };
+// registrar/ver laudo (data-laudo2 / data-laudov2) também nesta aba
+document.addEventListener('click', e => { if (VIEW !== 'anoleo') return; const l = e.target.closest('[data-laudo2]'); if (l) { e.stopPropagation(); laudoModal(); return; } const v = e.target.closest('[data-laudov2]'); if (v) { e.stopPropagation(); laudoLista(...v.dataset.laudov2.split('|')); } }, true);
+{ const st = document.createElement('style'); st.textContent = `
+#main .ao-t th,#main .ao-t td{white-space:nowrap}#main .ao-t th.ao-g{text-align:center;background:#F4F6F9;border-left:2px solid #fff}
+#main .ao-t td.ao-c.viag{background:#FEF3D6;color:#7A5200;font-weight:600}#main .ao-t td.ao-c.venc{background:#FCE8E6;color:#B3261E;font-weight:700}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
