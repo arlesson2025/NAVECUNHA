@@ -8564,14 +8564,15 @@ function omsDaChegada(vid) { const r = fr27s(vid).filter(x => x.mov === 'chegada
 </script>
 <script>
 /* ===== Prazos da corretiva (NP 5.5.1) e eficácia no "O que precisa de você agora" =====
-   Prazo de início conta da DETECÇÃO (deteccao, ou abertura): Crítica imediato · Alta 4 h · Média 48 h · Baixa 15 dias (CLASSES).
+   Prazo de início da OM conta da ABERTURA (NP 5.5.1; o mesmo critério do Backlog, omAtrasada): Crítica imediato · Alta 4 h · Média 48 h · Baixa 15 dias (CLASSES).
+   Falha ainda sem OM conta da detecção (critério interno: a OM não pode esconder a demora em ser aberta).
    Corretiva ainda "aberta" depois do prazo = P1. Falha sem OM (NO, NOK, avaria) além do prazo da classe = "prazo estourado".
    Verificação de eficácia (90 dias, Crítica e Alta) vencida = P2. */
 'use strict';
 const prazoDe = (classe, desde) => { const c = CLASSES[classe]; if (!c || !desde) return null; const t = typeof desde === 'number' ? desde : +new Date(String(desde).length > 10 ? desde : desde + 'T12:00'); return isNaN(t) ? null : t + c.h * 3600e3; };
 const atrasoTx = ms => { const h = ms / 3600e3; return h < 48 ? Math.round(h) + ' h' : Math.round(h / 24) + ' d'; };
 { const a0 = agoraLista; agoraLista = function () { const L = a0(), agora = Date.now(), atrasadas = new Set();
-  oms().filter(o => o.tipo === 'C' && o.status === 'aberta' && !o.excluido && !foraOp(vessel(o.vessel) || {})).forEach(o => { const p = prazoDe(o.classe, o.deteccao || o.abertura); if (!p || agora <= p) return; atrasadas.add(o.num);
+  oms().filter(o => o.tipo === 'C' && !o.excluido && omAtrasada(o) && !foraOp(vessel(o.vessel) || {})).forEach(o => { const p = +prazoCorretiva(o); if (!p) return; atrasadas.add(o.num);
     L.push({ p: 1, txt: `Corretiva <b>${esc(o.classe)}</b> OM ${esc(o.num)} · ${esc(vName(o.vessel))} · <b>prazo de início estourado</b> há ${atrasoTx(agora - p)} (${esc(CLASSES[o.classe].prazo)})`, btn: `<a class="mbtn sm pri" href="#om/${o.id}">Abrir</a>` }); });
   const sem = L.filter(x => !(/^Corretiva <b>/.test(x.txt) && !/prazo de início/.test(x.txt) && [...atrasadas].some(n => x.txt.includes('OM ' + n + ' ·'))));   // sem repetir a corretiva atrasada
   S.cfg.frota.filter(v => !foraOp(v)).forEach(v => { const P = fr27Pend(v.id).filter(x => { const p = prazoDe(x.c, x.date ? (S.recs.get(x.rec) || {}).at || x.date : null); return p && agora > p; });
