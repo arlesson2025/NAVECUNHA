@@ -4,24 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## O que é este repositório
 
-Dois PWAs de arquivo único, sem build, para a frota de empurradores da Navecunha (Grupo VDA):
+Um PWA de arquivo único, sem build, para a frota de empurradores da Navecunha (Grupo VDA):
 
-| Pasta | App | Situação |
-|---|---|---|
-| `manutencao/` | **SMF** · Sistema de Manutenção da Frota (NP Navecunha 055: Anexo I, OMs preventivas/corretivas, óleo, cronograma, indicadores) | **App ativo** — quase todos os commits recentes mexem só em `manutencao/index.html` |
-| raiz (`index.html`, `Code.gs`, `sw.js`) | **CTLE_LUB** · Controle de Lubrificação (o módulo foi absorvido pelo SMF) | **Fora de uso** — não otimizar nem corrigir |
-| `docs/` | Documentos normativos de origem (NP 055, Anexo I visual, FR 049_B, Matriz técnica) em HTML/DOCX | Linkados pela Biblioteca do SMF (`../docs/...`) — não mover nem renomear |
-| `manutencao/servidor/` | Cópia versionada do servidor Apps Script do SMF | Ver o README da pasta |
+| Pasta | Conteúdo |
+|---|---|
+| `manutencao/` | **SMF** · Sistema de Manutenção da Frota (NP Navecunha 055: Anexo I, OMs preventivas/corretivas, óleo, cronograma, indicadores). Quase todo trabalho é em `manutencao/index.html` |
+| `manutencao/servidor/` | Cópia versionada do servidor Google Apps Script do SMF (ver o README da pasta) |
+| `docs/` | Documentos normativos de origem (NP 055, Anexo I visual, FR 049_B, Matriz técnica) em HTML/DOCX. Linkados pela Biblioteca do SMF (`../docs/...`) — não mover nem renomear |
+| `index.html` (raiz) | Só redireciona para `manutencao/` |
 
-`Code.gs` (raiz) é o servidor Google Apps Script **do CTLE_LUB** (registros `type: 'form'|'quick'`), não do SMF. O SMF fala com outro deployment (`NUVEM_PADRAO` no topo de `manutencao/index.html`) e usa ações/erros que não existem nesse `Code.gs` (`foto`, `conflito`, registros com `kind`). O código do servidor do SMF fica em `manutencao/servidor/`; a fonte da verdade é o editor do Apps Script, então mudanças de contrato (ações, campos) exigem atualizar os dois lados.
+O antigo CTLE_LUB (Controle de Lubrificação, que ficava na raiz) foi um teste, está descontinuado e foi removido; seu módulo foi absorvido pelo SMF. Menções a “CTLE_LUB” no código do SMF são só históricas.
+
+O SMF fala com o deployment Apps Script em `NUVEM_PADRAO` (topo de `manutencao/index.html`). A fonte da verdade do servidor é o editor do Apps Script; mudanças de contrato (ações, campos) exigem atualizar os dois lados e a cópia em `manutencao/servidor/`.
 
 ## Comandos
 
-Não há build, lint, testes nem gerenciador de pacotes. Bibliotecas (html2canvas, jsPDF; no CTLE_LUB também Chart.js e GridStack) estão embutidas inline para funcionar offline.
+Não há build, lint, testes nem gerenciador de pacotes. Bibliotecas (html2canvas, jsPDF) estão embutidas inline para funcionar offline.
 
 - Rodar: abrir `manutencao/index.html` no navegador. Para testar o service worker/instalação, servir a pasta por HTTP (qualquer servidor estático); `file://` não registra SW.
 - Dados de exemplo: o app gera uma frota simulada (`gerarExemplo` / `carregarExemplo`); o banner “Dados de exemplo” aparece enquanto existirem.
-- `Code.gs`: colado manualmente no editor do Apps Script; rodar `configurar()` uma vez, implantar como App da Web, colar a URL `/exec` em Administração → Nuvem. `corrigirPlanilha()` refaz as colunas legíveis.
+- Servidor: o código é colado manualmente no editor do Apps Script e implantado como App da Web; a URL `/exec` vai em Administração → Nuvem.
 
 ## Como ler `manutencao/index.html` (~2,3 MB, ~8.400 linhas)
 
