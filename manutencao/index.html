@@ -8538,5 +8538,29 @@ document.addEventListener('change', async e => { if (e.target.id !== 'emRota') r
   g.insertAdjacentHTML('afterbegin', `<label class="f s6">Rota desta viagem<select id="saRota"><option value="">—</option>${rotas().map(x => `<option value="${x.id}"${r && r.id === x.id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>`);
   const b = $('#saOk'), c0 = b.onclick; b.onclick = async ev => { const rid = $('#saRota').value; const antes = new Set(recs('saida').map(x => x.id)); await c0.call(b, ev); const n = recs('saida').find(x => !antes.has(x.id) && x.vessel === vid); if (n && rid) { n.rota = rid; n.rotaNome = (rotas().find(x => x.id === rid) || {}).nome || ''; await saveRec(n); } }; }; }
 </script>
+<script>
+/* ===== Terminal: FR 027_L já preenchido com o que o SMF sabe; FR 022_B (SESMT) vencido avisa =====
+   Saída: "OMs pendentes da chegada" vem das corretivas abertas pelas NO do FR 027_L de chegada (resolvidas / em aberto com os números / não há).
+   Chegada e saída: data da última inspeção do SESMT (FR 022_B) vem do último FR 027_L do empurrador; vencida (> 30 dias) entra no Hoje. */
+'use strict';
+const FR22_DIAS = 30;
+const fr22Ult = vid => { const r = fr27s(vid).filter(x => x.fr22 && x.fr22.date).pop(); return r ? r.fr22.date : null; };
+const fr22Vencido = vid => { const d = fr22Ult(vid); return d ? Math.floor((hoje() - pD(d)) / 864e5) > FR22_DIAS : false; };
+function omsDaChegada(vid) { const r = fr27s(vid).filter(x => x.mov === 'chegada').pop(); if (!r) return null;
+  const nums = [...new Set((r.nc || []).map(x => x.o).filter(o => /^\d{3,}$/.test(o || '')))], abertas = nums.filter(n => { const o = oms().find(x => x.num === n); return o && o.status !== 'encerrada'; });
+  return { r, nums, abertas }; }
+{ const a0 = fr27Abrir; fr27Abrir = async function (vid, mov) { await a0(vid, mov); const fr = document.querySelector('#fr27FO iframe'); if (!fr) return;
+  const preenche = () => { try { const d = fr.contentDocument, ch = el => el && el.dispatchEvent(new Event('change', { bubbles: true }));
+    const u = fr22Ult(vid), f = d.getElementById('fr22'); if (u && f && !f.value) { f.value = u; ch(f); }
+    if (mov === 'Saida') { const O = omsDaChegada(vid); if (O) { const st = !O.nums.length ? 'nao' : O.abertas.length ? 'aberto' : 'res', r = d.querySelector(`input[name=ompend][value="${st}"]`); if (r) { r.checked = true; ch(r); }
+      const t = d.querySelector('#sec-c13 .cl1 input.mini'); if (t && O.nums.length) t.value = (O.abertas.length ? O.abertas : O.nums).join(', '); } } } catch (e) { console.warn(e); } };
+  if (fr.contentDocument && fr.contentDocument.getElementById('fr22')) preenche(); else fr.addEventListener('load', () => setTimeout(preenche, 50), { once: true }); }; }
+// Hoje e "O que precisa de você agora": FR 022_B vencido
+{ const f0 = fr27Linha; fr27Linha = function (v) { const d = fr22Ult(v.id), dias = d ? Math.floor((hoje() - pD(d)) / 864e5) : null;
+  return f0(v) + (d && dias > FR22_DIAS ? `<div class="rt2-l bad"><span>🦺 <b>FR 022_B (SESMT) vencido</b>: última inspeção em ${brD(d)}, há ${dias} dias · comunicar o SESMT antes da saída</span></div>` : ''); }; }
+{ const a0 = agoraLista; agoraLista = function () { const L = a0();
+  S.cfg.frota.filter(v => !foraOp(v) && situDe(v) && v.situ.st === 'porto' && fr22Vencido(v.id)).forEach(v => L.push({ p: 2, txt: `<b>${esc(v.nome)}</b> · FR 022_B (SESMT) vencido desde ${brD(isoD(new Date(+pD(fr22Ult(v.id)) + FR22_DIAS * 864e5)))} · comunicar o SESMT antes da saída`, btn: '' }));
+  return L.sort((a, b) => a.p - b.p); }; }
+</script>
 </body>
 </html>
