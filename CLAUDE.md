@@ -25,13 +25,14 @@ Não há build, lint, testes nem gerenciador de pacotes. Publicação: GitHub Pa
 - Dados de exemplo: o app gera uma frota simulada (`gerarExemplo` / `carregarExemplo`); o banner “Dados de exemplo” aparece enquanto existirem.
 - Servidor: o código é colado manualmente no editor do Apps Script e implantado como App da Web; a URL `/exec` vai em Administração → Nuvem.
 
-## Como ler `manutencao/index.html` (~1,7 MB, ~7.950 linhas)
+## Como ler `manutencao/index.html` (~1,5 MB, ~7.950 linhas)
 
 **Nunca leia o arquivo inteiro nem as linhas gigantes.** Use Grep e Read com `offset`/`limit`. Os números de linha abaixo são aproximados e mudam a cada edição — localize pelos marcadores citados.
 
 - Topo (~linha 22): `NUVEM_PADRAO` e `carregarLibsPdf()`. As bibliotecas de PDF (html2canvas, jsPDF) ficam em `manutencao/lib/` e só carregam quando `gerarPDF`, `lubMakePdf` ou `apPdf` são chamadas; não edite os `.min.js`.
 - Linhas ~32–1217: CSS principal.
-- `const LOGOS=` e `const A1=` (~1234–1235) têm centenas de KB cada (logos base64 e o Anexo I inteiro em JSON). Para consultar itens do Anexo I, use Grep com `-o` e um padrão específico (ex.: `"id":"1\.1\.1"[^}]*`). Outras linhas gigantes: `FR049_B64`/`FR016_B64` (formulários em base64), `AP_FOTO`, `MOTOR_IMG`.
+- `const LOGOS=` e `const A1=` (~1234–1235) têm centenas de KB cada (logos base64 e o Anexo I inteiro em JSON). Para consultar itens do Anexo I, use Grep com `-o` e um padrão específico (ex.: `"id":"1\.1\.1"[^}]*`). Outras linhas gigantes: `AP_FOTO`, `MOTOR_IMG` (imagens base64).
+- Formulários oficiais FR 049_B e FR 016_E ficam em `manutencao/forms/`, carregados por `lubFormTxt()` e postos no iframe via `srcdoc`. O FR 049_B recebe trocas de texto exatas em `lubAbrirForm` — se editar o formulário, mantenha esses trechos idênticos. `.gitattributes` (`-text`) guarda esses arquivos byte a byte (LF); não reformate nem converta quebras de linha.
 - No PowerShell, leia com `-Encoding UTF8`; sem isso os acentos saem corrompidos.
 
 ### Núcleo (bloco `<script>` que começa em `const LOGOS=`, até antes de “LUBRIFICAÇÃO · módulo”)
@@ -62,3 +63,7 @@ Consequência prática: para saber o que realmente aparece numa tela, procure a 
 - Motobomba de incêndio (`MBINC`, itens 4.1.x) está fora do plano, do cronograma, das OMs e das listas de óleo por pedido do Supervisor; registros antigos ainda se resolvem por `A1M`.
 - Referências normativas aparecem no código e na UI (NP 055 itens, Anexo I/II-A/II-B, FR 049_B, FR 016_E, ISO 9001/14001/45001/14224). Mantenha-as ao mexer em formulários.
 - Service worker é *network-first* (com sinal sempre pega a versão nova). Ao mudar a lista de arquivos pré-cacheados ou ícones, incremente `CACHE` em `manutencao/sw.js` (`ctle-man-vN`) e o `?v=` dos ícones/manifest.
+
+## Pendências
+
+- **`sw.js`: `cache.addAll(ARQ)` é atômico** — se um único arquivo falhar, a instalação inteira falha e o aparelho fica sem a versão nova offline até a próxima abertura com sinal. Nos testes locais dos itens 1 e 2 (out/2026) ele falhou justamente na primeira leva de downloads, depois passou sempre (atribuído ao servidor local, não confirmado). Com sinal fraco a bordo, avaliar: retry com espera no `install`, ou separar essenciais (`index.html`, manifest, ícones) dos opcionais (`lib/`, `forms/`), que seriam guardados um a um sem bloquear a instalação.
