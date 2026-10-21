@@ -19,7 +19,7 @@ O app usa a **versão implantada**, que pode ser mais antiga que o código abert
 | 21/10/2026 | `VERSAO = 10` · implantada e confirmada pelo ping do SMF | tipo `fr027` (FR 027_L de chegada/saída) em `TIPOS`, nome do PDF no Drive e colunas legíveis |
 | 21/10/2026 | `VERSAO = 11` · não implantada sozinha: está incluída na 12 | perfil Operador (`opr`, senha `OPR_HASH` definida pelo Supervisor): grava só FR 027_L, horímetro, saída e corretiva nova |
 | 21/10/2026 | `VERSAO = 12` · implantada e confirmada pelo ping do SMF | tipo `situ` (foi para a boia / voltou ao cais), também permitido ao Operador; colunas legíveis |
-| 21/10/2026 | `VERSAO = 13` (colar e implantar nova versão) | tipo `avaria` (avaria em viagem até virar corretiva), também permitido ao Operador; colunas legíveis |
+| 21/10/2026 | `VERSAO = 13` · implantada e confirmada pelo ping do SMF | tipo `avaria` (avaria em viagem até virar corretiva), também permitido ao Operador; colunas legíveis |
 
 ## Como atualizar esta cópia
 
