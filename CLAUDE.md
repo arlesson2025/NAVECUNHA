@@ -69,3 +69,17 @@ Consequência prática: para saber o que realmente aparece numa tela, procure a 
 - Referências normativas aparecem no código e na UI (NP 055 itens, Anexo I/II-A/II-B, FR 049_B, FR 016_E, ISO 9001/14001/45001/14224). Mantenha-as ao mexer em formulários.
 - Service worker é *network-first* (com sinal sempre pega a versão nova). Ao mudar arquivos pré-cacheados ou ícones, incremente `CACHE` em `manutencao/sw.js` (`ctle-man-vN`) e o `?v=` dos ícones/manifest.
 - O `sw.js` separa **`ESSENCIAIS`** (sem eles o SMF não abre ou o FR 049_B de óleo não abre/salva: `index.html`, `dados/anexo1.js`, `forms/FR_049_B.html`, `lib/*` — salvar o FR 049_B gera o PDF) de **`OPCIONAIS`** (manifest, ícones, FR 016_E). Cada arquivo tem 3 tentativas; essencial que falha cancela a instalação (o aparelho segue com a versão anterior inteira); opcional que falha usa a cópia da versão anterior. Arquivo novo que o app precisa para abrir ou para o formulário de óleo vai em `ESSENCIAIS`; o resto em `OPCIONAIS`.
+
+## Situação e pendências
+
+O SMF está **em construção**: o Supervisor ainda define telas e funcionalidades e **não há dados reais** (só dados de exemplo). Não trate riscos de produção como urgentes enquanto isso.
+
+**Durante a construção** (custo de agora):
+- Ao criar uma tela ou fazer mudança grande numa existente, consolidar aquela tela num bloco só, eliminando os patches antigos dela (hoje são ~2 versões por tela, 33 funções reembrulhadas e 10 injeções de HTML por `indexOf`).
+- Levar para o repositório um teste das telas (comparar o HTML de cada tela com a versão da `main`) e rodá-lo antes de cada push.
+
+**Pendências para produção** (só depois que as definições pararem, antes do primeiro dado real):
+1. Usuário por pessoa (cadastro feito pelo Supervisor, senha e papel próprios), no lugar das duas senhas compartilhadas e do nome digitado — rastreabilidade exigida pela NP 055/ISO. Hoje o autor é gravado via `S.session.name`.
+2. Servidor preparado para volume: não ler a planilha inteira a cada `push`/`list` (`linhas_()`), índice por id, e controle do tamanho do registro (o JSON vai numa célula; limite do Google Sheets: 50.000 caracteres). Configuração compartilhada nas Propriedades do script tem limite (~9 KB; o código recusa acima de 8.800).
+3. Conflito entre aparelhos decidido pelo horário do servidor, não pelo `updatedAt` do celular.
+4. Entrada em produção: limpar os dados de exemplo (e desligar os geradores de exemplo), cadastrar a frota real e definir o marco zero.
