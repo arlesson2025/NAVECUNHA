@@ -20,14 +20,14 @@
  *    [cópia do repositório público: as senhas reais foram trocadas por marcadores — ver manutencao/servidor/README.md]
  */
 
-const VERSAO = 8;   // v8: cronograma anual aprovado (crono) · v7: leitura de horímetro pendente de confirmação (horp) · v6: laudo de óleo, peças críticas e fotos das OMs no Drive · v5: biblioteca (arquivos no Drive), terceirizados e treinamentos · v4: lubrificação (FR 049_B e complementos de óleo) · v3: MCP central (monomotor) e MCA 3 · v2: teste de compressão, data-limite do CSN e medida de mitigação
+const VERSAO = 9;   // v9: registro de saída da viagem (saida) · v8: cronograma anual aprovado (crono) · v7: leitura de horímetro pendente de confirmação (horp) · v6: laudo de óleo, peças críticas e fotos das OMs no Drive · v5: biblioteca (arquivos no Drive), terceirizados e treinamentos · v4: lubrificação (FR 049_B e complementos de óleo) · v3: MCP central (monomotor) e MCA 3 · v2: teste de compressão, data-limite do CSN e medida de mitigação
 const NOME_PASTA = 'Controle de Manutenção - PDFs';
 const ABA = 'Registros';
 const CABECALHO = ['id', 'tipo', 'salvoEm', 'leituraEm', 'embarcacao', 'om', 'usuario', 'json', 'pdfFileId', 'paginasFileId', 'atualizadoEm', 'excluido'];
 const COL = {}; CABECALHO.forEach((c, i) => COL[c] = i);
 /* Colunas LEGÍVEIS (a partir da M): o que você lê na planilha. As colunas A–L são técnicas (o app usa) e ficam ocultas. */
 const LEGIVEL = ['Atualizado em', 'Registro', 'Nº da OM', 'Tipo', 'Embarcação', 'Posição', 'Itens do Anexo I / falha', 'Classe', 'Situação', 'Horímetro (h)', 'Data', 'RNC', 'Aprovado por', 'PDF (Anexo II ou FR 049_B)', 'Medida de mitigação', 'Responsável', 'Prazo', 'Situação da medida'];
-const TIPOS = ['om', 'hor', 'horp', 'base', 'snap', 'comp', 'doclim', 'lub', 'doc', 'terc', 'trein', 'laudo', 'peca', 'crono'];   // crono = cronograma anual aprovado pelo Supervisor (linha de base)   // laudo = análise de óleo do MCP · peca = peças críticas (Anexo III)   // doc = biblioteca · terc = terceirizados · trein = treinamentos   // lub = troca de óleo (FR 049_B) ou complemento de óleo   // comp = teste de compressão · doclim = data-limite da vistoria em seco (CSN)
+const TIPOS = ['om', 'hor', 'horp', 'base', 'snap', 'comp', 'doclim', 'lub', 'doc', 'terc', 'trein', 'laudo', 'peca', 'crono', 'saida'];   // saida = registro de saída da viagem (situação técnica congelada, justificativa e quem autorizou)   // crono = cronograma anual aprovado pelo Supervisor (linha de base)   // laudo = análise de óleo do MCP · peca = peças críticas (Anexo III)   // doc = biblioteca · terc = terceirizados · trein = treinamentos   // lub = troca de óleo (FR 049_B) ou complemento de óleo   // comp = teste de compressão · doclim = data-limite da vistoria em seco (CSN)
 const COL_LEG = CABECALHO.length + 1;
 const LIMITE_B64 = 14 * 1024 * 1024;
 const POSN = { BB: 'Bombordo', BE: 'Boreste', CE: 'Central', MCA1: 'MCA 1', MCA2: 'MCA 2', MCA3: 'MCA 3', UN: 'Embarcação', POPA: 'Motor de popa', MB5: 'Motobomba 5 HP', MBINC: 'Motobomba de incêndio' };
