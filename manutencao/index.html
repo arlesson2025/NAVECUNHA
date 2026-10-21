@@ -2672,7 +2672,7 @@ function gateIIB(o) {
 function fotosGate(o, g) { const f = o.fotos || []; g.push(['Pelo menos uma foto ANTES', f.some(x => x.tipo === 'ANTES')]); g.push(['Pelo menos uma foto DEPOIS', f.some(x => x.tipo === 'DEPOIS')]); g.push(['Todas as fotos com legenda', f.length > 0 && f.every(x => (x.leg || '').trim())]); }
 function aprovacaoHtml(o) {
   if (o.status === 'encerrada') return `<div class="banner info">Aprovada por <b>${esc(o.aprovBy || '')}</b> em ${new Date(o.fechadoAt).toLocaleString('pt-BR')}. ${o.pdfFileId ? 'PDF guardado no Drive.' : S.url ? (S.pdfPend[o.id] ? 'PDF aguardando envio para o Drive.' : '') : 'Modo local: o PDF foi baixado neste aparelho.'}</div>`;
-  return `<div class="sec-h" style="margin-top:4px">Conferência do Supervisor</div><div class="gate" id="gate"></div>
+  return `<div class="sec-h" style="margin-top:4px">Conferência do Supervisor</div><div class="gate" id="omGate"></div>
    <div class="row"><button class="mbtn ok" data-act="aprovar" id="btnAprovar">✓ Aprovar, gerar PDF e salvar</button><button class="mbtn" data-act="salvar">💾 Salvar rascunho</button>
    ${o.tipo === 'P' ? '<input id="motivo" placeholder="Motivo da devolução" style="flex:1;min-width:160px"><button class="mbtn bad" data-act="devolver">↩ Devolver ao bordo</button>' : ''}</div>
    <div class="note">Somente o Supervisor aprova. A aprovação encerra a OM, grava a linha na planilha, guarda o PDF no Drive e recalcula o próximo vencimento.</div>`;
@@ -2730,7 +2730,7 @@ function gateIIA(o) {
 /* ---------- ligação do formulário ---------- */
 AFTER.om = () => {
   const o = S.recs.get(ARG); if (!o) return; const m = $('#main');
-  const refresh = () => { const g = o.tipo === 'C' ? gateIIA(o) : gateIIB(o), ok = g.every(x => x[1]), el = $('#gate');
+  const refresh = () => { const g = o.tipo === 'C' ? gateIIA(o) : gateIIB(o), ok = g.every(x => x[1]), el = $('#omGate');
     if (el) el.innerHTML = g.map(([l, y]) => `<div><span class="ck ${y ? 'y' : 'n'}">${y ? '✓' : '✕'}</span>${esc(l)}</div>`).join('') + (ok ? '<div class="note" style="color:var(--okt)">Tudo pronto para aprovar.</div>' : `<div class="note">Faltam ${g.filter(x => !x[1]).length} itens para liberar a aprovação.</div>`);
     const b = $('#btnAprovar'); if (b) b.disabled = !ok || !can.admin();
     const pz = $('#prazoB2'); if (pz) pz.innerHTML = o.hreal ? (o.alvoH ? (+o.hreal <= o.alvoH ? '<span class="pill p-ok">Dentro do prazo</span>' : '<span class="pill p-warn">Fora do prazo · justifique abaixo</span>') : '') : '';
