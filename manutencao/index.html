@@ -2645,7 +2645,7 @@ function extrasHtml(o) {
 function fotosHtml(o) {
   const f = o.fotos || [];
   return `<div class="note">Quantas fotos precisar. Obrigatório pelo menos uma ANTES e uma DEPOIS, todas com legenda. As fotos ficam neste aparelho até a aprovação e seguem dentro do PDF para o Drive.</div>
-   <div class="phgrid">${f.map((x, i) => `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span></div>
+   <div class="phgrid">${f.map((x, i) => `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span>${x.fid ? '<span class="ph-nv ok" title="Cópia guardada no Google Drive">☁ no Drive</span>' : x.src ? '<span class="ph-nv" title="Sobe ao Drive quando houver sinal">só neste aparelho</span>' : ''}</div>
      <div class="meta"><select data-k="fotos|${i}|tipo">${['ANTES', 'DURANTE', 'DEPOIS'].map(t => `<option${t === x.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select><input data-k="fotos|${i}|leg" placeholder="Legenda (o que mostra)" value="${esc(x.leg || '')}"><button class="xbtn" data-delrow="fotos|${i}" aria-label="Remover foto">✕</button></div></div>`).join('')}
     <label class="addph cam"><span style="font-size:28px;line-height:1">📷</span>Tirar foto<small>abre a câmera · vai direto para o formulário</small><input type="file" id="addFoto" accept="image/*" capture="environment"></label><label class="addph"><span style="font-size:28px;line-height:1">🖼</span>Da galeria<small>escolher uma ou várias fotos já tiradas</small><input type="file" id="addFoto" accept="image/*" multiple></label></div>`;
 }
@@ -4482,6 +4482,7 @@ VX.pecas = vPecas;
 { const b0 = badge; badge = k => { if (k === 'pecas') { const n = recs('peca').filter(p => numv(p.estoque) < numv(p.minimo || 1)).length; return n ? `<span class="n">${n}</span>` : ''; } return b0(k); }; }
 
 /* ---------- 5 · fotos pelo Google Drive ---------- */
+{ const st = document.createElement('style'); st.textContent = `.phc .img{position:relative}.ph-nv{position:absolute;right:6px;bottom:6px;font-size:11px;font-weight:600;background:#FEF7E0;color:#7A5200;border-radius:10px;padding:2px 8px}.ph-nv.ok{background:#E8F0FE;color:#1967D2}`; document.head.appendChild(st); }
 { const s0 = stripForCloud; stripForCloud = function (r) { const c = s0(r); if (r.fotos && c.fotos) c.fotos = r.fotos.map(f => ({ tipo: f.tipo, leg: f.leg, at: f.at, fid: f.fid || '' })); if (r.fotosFid) c.fotosFid = r.fotosFid; return c; }; }
 { const m0 = mergeRemote; mergeRemote = async function (list) { list.forEach(r => { const cur = S.recs.get(r.id); if (cur && cur.fotosLocais && !r.fotosLocais) r.fotosLocais = cur.fotosLocais; if (cur && cur.pages && !r.pages) r.pages = cur.pages; }); return m0(list); }; }
 let fotoSync = false;
@@ -4490,13 +4491,18 @@ async function fotosEnviar() {   // envia ao Drive as fotos deste aparelho que a
   try {
     for (const o of [...S.recs.values()]) {
       if (o.seed || o.excluido) continue; let mud = false;
-      if (o.kind === 'om' && o.status === 'encerrada') for (const [i, f] of (o.fotos || []).entries()) { if (f.src && !f.fid) { const j = await api('foto', { recId: o.id, nome: vName(o.vessel) + '_OM' + o.num + '_' + f.tipo + '_' + (i + 1), vessel: o.vessel, b64: f.src.split(',')[1] }); if (j.ok) { f.fid = j.fileId; mud = true; } else break; } }
+      // OM em qualquer etapa: a foto não pode ficar só no celular até o encerramento
+      if (o.kind === 'om') for (const [i, f] of (o.fotos || []).entries()) { if (f.src && !f.fid) { const j = await api('foto', { recId: o.id, nome: vName(o.vessel) + '_OM' + o.num + '_' + f.tipo + '_' + (i + 1), vessel: o.vessel, b64: f.src.split(',')[1] }); if (j.ok) { f.fid = j.fileId; mud = true; } else break; } }
       if (o.kind === 'lub' && o.fotosLocais) { o.fotosFid = o.fotosFid || { a: [], d: [] }; for (const g of ['a', 'd']) for (const [i, src] of (o.fotosLocais[g] || []).entries()) { if (!o.fotosFid[g][i]) { const j = await api('foto', { recId: o.id, nome: vName(o.vessel) + '_FR049B_OM' + o.om + '_' + (g === 'a' ? 'ANTES' : 'DEPOIS') + '_' + (i + 1), vessel: o.vessel, b64: src.split(',')[1] }); if (j.ok) { o.fotosFid[g][i] = j.fileId; mud = true; } } } }
       if (mud) await saveRec(o);
     }
   } catch (e) { } finally { fotoSync = false; }
 }
 setInterval(() => fotosEnviar(), 3 * 60e3); setTimeout(() => fotosEnviar(), 20e3);
+window.addEventListener('online', () => setTimeout(fotosEnviar, 3000));   // voltou o sinal: sobe o que ficou na fila
+// foto nova numa OM: sobe ao Drive poucos segundos depois de gravada (não espera o encerramento)
+let FOTO_T = 0;
+{ const s0 = saveRec; saveRec = async function (r, opts) { const x = await s0(r, opts); if (r && r.kind === 'om' && !r.seed && (r.fotos || []).some(f => f.src && !f.fid)) { clearTimeout(FOTO_T); FOTO_T = setTimeout(fotosEnviar, 4000); } return x; }; }
 
 /* ---------- exemplo: modo/causa, HH e custo nas corretivas e laudos (só dados de exemplo) ---------- */
 async function tecExemplo() {
@@ -5941,7 +5947,7 @@ function vOmg() {
    <div class="card"><div class="row"><h2>2 · Itens da ficha</h2><span class="sp"></span><span class="note" id="rgCnt">${ok} OK · ${nok} NOK · ${na} NA · ${tot - ok - nok - na} sem marcação</span><button class="mbtn" data-rgall="ok">Marcar todos sem marcação como OK</button></div>
     <p class="note">Copie da ficha: OK = feito e conforme. NOK = não conforme ou não feito (escreva o motivo; se for falha, abra uma corretiva). NA = não se aplica. Item NOK ou NA não conta como feito: continua vencido e volta na próxima programação.</p>${partes}</div>
    ${regs.length ? `<div class="card"><h2>3 · Registros exigidos por estes itens</h2><div class="g">${regs.map(r => `<label class="f s3">${REGN[r]}<input data-rgr="${r}" value="${esc(R.regs[r] || '')}"></label>`).join('')}</div></div>` : ''}
-   <div class="card"><h2>${regs.length ? 4 : 3} · Fotos (antes e depois)</h2><div class="phgrid">${f.map((x, i) => RG_PROVA.includes(x.tipo) ? '' : `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span></div>
+   <div class="card"><h2>${regs.length ? 4 : 3} · Fotos (antes e depois)</h2><div class="phgrid">${f.map((x, i) => RG_PROVA.includes(x.tipo) ? '' : `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span>${x.fid ? '<span class="ph-nv ok" title="Cópia guardada no Google Drive">☁ no Drive</span>' : x.src ? '<span class="ph-nv" title="Sobe ao Drive quando houver sinal">só neste aparelho</span>' : ''}</div>
      <div class="meta"><select data-rgf="${i}|tipo">${['ANTES', 'DURANTE', 'DEPOIS'].map(t => `<option${t === x.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select><input data-rgf="${i}|leg" placeholder="Legenda (o que mostra)" value="${esc(x.leg || '')}"><button class="xbtn" data-rgfdel="${i}" aria-label="Remover foto">✕</button></div></div>`).join('')}
     <label class="addph cam"><span style="font-size:28px;line-height:1">📷</span>Tirar foto<small>abre a câmera · vai direto para o formulário</small><input type="file" id="rgFoto" accept="image/*" capture="environment"></label><label class="addph"><span style="font-size:28px;line-height:1">🖼</span>Da galeria<small>escolher uma ou várias fotos já tiradas</small><input type="file" id="rgFoto" accept="image/*" multiple></label></div></div>
    </div>
