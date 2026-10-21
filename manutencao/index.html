@@ -5075,7 +5075,7 @@ if (typeof LAY_VIEWS !== 'undefined' && !LAY_VIEWS.includes('mcp')) LAY_VIEWS.pu
   const s = SECOES.find(x => x.id === 'cond');
   if (s) { s.extra = [...new Set((s.extra || []).concat(s.views.map(x => x[0]), ['lub', 'calib', 'over', 'mcp', 'frota', 'doca', 'hor']))]; s.views = [['controle', 'Controle da condição']]; }
   if (typeof LAY_VIEWS !== 'undefined' && !LAY_VIEWS.includes('controle')) LAY_VIEWS.push('controle');
-  const MAPA = { frota: 'venc', lub: 'lub', calib: 'mcp', over: 'mbc', mcp: 'mcp', doca: 'doca', hor: 'hor' };
+  const MAPA = { frota: 'venc', lub: 'lub', calib: 'mcp', over: 'mbc', mcp: 'mcp', doca: 'doca' };   // sem 'hor': Horímetros é aba da Administração (a parte de horímetros saiu desta tela)
   const redir2 = () => { const h = location.hash.slice(1); if (MAPA[h]) { ALVO = MAPA[h] === 'venc' ? '' : { k: MAPA[h], t: Date.now() }; location.replace('#controle'); } };
   window.addEventListener('hashchange', redir2, true); redir2();
 }
