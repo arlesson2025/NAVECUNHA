@@ -7050,7 +7050,7 @@ AFTER.oleo = function () { const m = $('#main');
 
 </script>
 <script>
-/* ===== Óleo da frota v3: réplica fiel do modelo "Óleo da Frota" (janelas flutuantes tabela + gráfico) + coluna Cárter da matriz de lubrificação ===== */
+/* ===== Óleo da frota v3: dados da tela (o3Dados) + coluna Cárter da matriz de lubrificação · a tela fica no bloco "Óleo da frota no padrão do painel" ===== */
 'use strict';
 // capDe passa a levar também o texto do cárter da matriz (ex.: "140 L", "≈ 65 L") e a observação
 { const _capDe = capDe; capDe = function (r) { const o = _capDe(r); o.carterTxt = r ? (r.carter || '') : ''; o.carterSub = r ? (r.carterSub || '') : ''; return o; }; }
@@ -7087,225 +7087,6 @@ function o3Dados() {
   });
   return { F: F.filter(b => ENG.some(e => e.vid === b.id)), ENG };
 }
-vOleo = function () {
-  if (!document.getElementById('o3font')) { const l = document.createElement('link'); l.id = 'o3font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400&family=IBM+Plex+Sans+Condensed:wght@400&display=swap'; document.head.appendChild(l); }
-  return '<div id="ol3"></div>';
-};
-const O3HTML = `<div class="bar">
-  <h1>Óleo da frota</h1>
-  <div class="k"><span class="s-red" id="kR">0</span>vencidas</div>
-  <div class="k"><span class="s-amber" id="kA">0</span>até 50 h</div>
-  <div class="k"><span class="s-green" id="kG">0</span>em dia</div>
-  <span style="width:14px"></span>
-  <button class="b" id="o3openAll">Abrir todas</button>
-  <button class="b" id="o3closeAll">Fechar todas</button>
-  <button class="b" id="o3reset" title="Volta as janelas para a posição original">Reorganizar janelas</button>
-  <button class="b pri" id="o3launch">+ Lançar troca</button>
-</div>
-<div class="ws" id="o3ws">
-  <section class="win" id="wTab" aria-label="Tabela de equipamentos">
-    <div class="wh"><span class="grip">⋮⋮</span><span class="t">Equipamentos</span><span class="sp"></span><button class="ib" data-max title="Abrir em tela cheia (apresentação)">⛶</button><button class="ib" data-min title="Minimizar">–</button></div>
-    <div class="wb"><table id="o3t"></table></div>
-    <div class="rz"></div>
-  </section>
-  <section class="win" id="wCh" aria-label="Gráfico vencido e saldo">
-    <div class="wh"><span class="grip">⋮⋮</span><span class="t">Gráfico</span><span class="sp"></span><button class="ib" data-max title="Abrir em tela cheia (apresentação)">⛶</button><button class="ib" data-min title="Minimizar">–</button></div>
-    <div class="wb cb" id="o3chart"></div>
-    <div class="rz"></div>
-  </section>
-</div>`;
-VX.oleo = vOleo;
-AFTER.oleo = function () {
-  const host = document.getElementById('ol3'); if (!host) return;
-  const root = host.shadowRoot || host.attachShadow({ mode: 'open' }); root.innerHTML = '<style>' + O3CSS + '</style><div class="o3">' + O3HTML + '</div>';
-  const q = s => root.querySelector(s), ws = q('#o3ws'), t = q('#o3t'), chart = q('#o3chart');
-  const { F, ENG } = o3Dados();
-  const hasBad = id => ENG.some(e => e.vid === id && e.st === 'red');
-  if (!O3.open) O3.open = new Set(O3.G('open', F.filter(b => hasBad(b.id)).map(b => b.id)));
-  if (!O3.mode) O3.mode = O3.G('mode', 'frota');
-  if (!O3.ves || !F.some(b => b.id === O3.ves)) { const s = O3.G('ves', ''); O3.ves = F.some(b => b.id === s) ? s : (F[0] || {}).id; }
-  const save = () => { O3.S('open', [...O3.open]); O3.S('mode', O3.mode); O3.S('ves', O3.ves); };
-  q('#kR').textContent = ENG.filter(e => e.st === 'red').length;
-  q('#kA').textContent = ENG.filter(e => e.st === 'amber').length;
-  q('#kG').textContent = ENG.filter(e => e.st === 'green').length;
-  const dot = e => e.proxH != null ? o3nf(e.proxH) : '—';
-  function renderTable() {
-    let h = `<thead><tr><th rowspan="2" style="text-align:left">Embarcação</th><th rowspan="2" style="text-align:left">Equipamento</th><th rowspan="2" class="n">Cárter</th><th rowspan="2" class="n">Hor. atual</th><th class="g" colspan="2">Última troca</th><th class="g p" colspan="2">Próx. troca</th><th rowspan="2" class="n">Saldo</th></tr>
-  <tr><th class="n">Horímetro</th><th style="text-align:left">Data</th><th class="n p">Horímetro</th><th class="p" style="text-align:left">Data</th></tr></thead>`;
-    F.forEach(b => { const es = ENG.filter(e => e.vid === b.id), bad = es.filter(e => e.st === 'red').length, sel = O3.mode !== 'frota' && O3.ves === b.id;
-      if (!O3.open.has(b.id)) { const c = [...es].sort((a, z) => a.daysLeft - z.daysLeft)[0];
-        h += `<tbody class="${sel ? 'sel' : ''}"><tr class="col" tabindex="0" data-v="${b.id}"><td class="v"><span class="car">▸</span><span class="nm">${esc(b.n)}</span></td>
-      <td colspan="7"><span class="pill ${bad ? 'r' : 'g'}">${bad ? bad + ' vencidas' : es.length + ' em dia'}</span><span class="sm" style="margin-left:8px">próxima: <span style="color:var(--fg)">${esc(c.name)}</span> em ${o3dt(c.proxD)}${c.proxH != null ? ' · ' + o3nf(c.proxH) + ' h' : ''}</span></td>
-      <td class="n s-${c.st}">${c.restTxt}</td></tr></tbody>`; return; }
-      h += `<tbody class="${sel ? 'sel' : ''}">`;
-      es.forEach((e, i) => { const ov = e.st === 'red';
-        h += `<tr class="eq" data-frv="${b.id}" title="Clique para lançar a troca (FR 049_B)">${i == 0 ? `<td class="v" rowspan="${es.length}" tabindex="0" data-v="${b.id}"><span class="car">▾</span><span class="nm">${esc(b.n)}</span><div style="padding-left:12px"><span class="pill ${bad ? 'r' : 'g'}">${bad ? bad + ' vencidas' : 'em dia'}</span></div></td>` : ''}
-      <td>${esc(e.name)}</td><td class="n" title="${esc(e.carS)}">${esc(e.car)}</td><td class="n">${e.atual != null ? o3nf(e.atual) : '—'}</td><td class="n u">${e.ultH != null ? o3nf(e.ultH) : '—'}</td><td class="u">${o3dt(e.ultD)}</td>
-      <td class="n pp ${ov ? 'rc' : ''}">${dot(e)}</td><td class="pp ${ov ? 'rc' : ''}">${o3dt(e.proxD)}</td><td class="n s-${e.st}">${e.restTxt}</td></tr>`; });
-      h += '</tbody>'; });
-    t.innerHTML = h;
-    t.querySelectorAll('[data-v]').forEach(el => { const go = ev => { ev.stopPropagation(); const n = el.dataset.v; O3.open.has(n) ? O3.open.delete(n) : O3.open.add(n); O3.ves = n; if (O3.mode !== 'frota') O3.mode = '1'; save(); renderAll(); };
-      el.addEventListener('click', go); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(e); } }); });
-    t.querySelectorAll('tr.eq').forEach(tr => tr.addEventListener('click', () => { if (!precisa(false)) return; lubAbrirForm(tr.dataset.frv); }));
-  }
-  function bars(rows) { const mx = Math.max(1, ...rows.filter(r => r.v < 0).map(r => -r.v));
-    return rows.map(r => `<div class="cr ${r.go ? 'click' : ''}" ${r.go ? `data-go="${r.go}"` : ''}><span class="l">${r.l}</span><span class="L">${r.v < 0 ? `<i style="width:${Math.max(2, -r.v / mx * 100)}%"></i>` : ''}</span><span class="R">${r.v >= 0 ? `<i style="width:${r.p * 100}%"></i>` : ''}</span><span class="val s-${r.st}">${r.t}</span></div>`).join('') +
-      `<div class="ax"><span></span><span><span><span>${o3nf(mx)} h</span><span>0</span></span></span><span><span><span>&nbsp;0%</span><span>100%</span></span></span><span></span></div>`; }
-  const comHist = id => ENG.filter(e => e.vid === id && !e.sem);
-  const crit = id => comHist(id).sort((a, z) => (a.v < 0 || z.v < 0) ? a.v - z.v : a.pct - z.pct)[0];
-  function renderChart() {
-    const seg = `<div class="seg"><button id="mF" class="${O3.mode === 'frota' ? 'on' : ''}">Frota inteira</button><button id="m1" class="${O3.mode !== 'frota' ? 'on' : ''}">1 empurrador <select id="sv" aria-label="Escolher empurrador">${F.map(b => `<option value="${b.id}" ${b.id === O3.ves ? 'selected' : ''}>${esc(b.n)}</option>`).join('')}</select></button></div>`;
-    let body;
-    if (O3.mode === 'frota') {
-      const rows = F.map(b => { const c = crit(b.id); return c ? { l: `${esc(b.n)}<small>${esc(c.name)}</small>`, v: c.v, p: c.pct, st: c.st, t: c.restTxt, go: b.id } : null; }).filter(Boolean);
-      const ok = ENG.filter(e => !e.sem), nb = F.filter(b => hasBad(b.id)).length, worst = ok.filter(e => e.v < 0).sort((a, z) => a.v - z.v)[0], nxt = ok.filter(e => e.v >= 0).sort((a, z) => a.daysLeft - z.daysLeft)[0];
-      body = `<div class="ch"><h2>Frota inteira</h2><span class="pill ${nb ? 'r' : 'g'}">${nb ? nb + ' com vencidas' : 'tudo em dia'}</span></div>
-    <div class="cap">equipamento mais crítico de cada empurrador · esquerda = horas de atraso · direita = % do intervalo restante · clique numa barra para abrir o empurrador</div>${bars(rows)}
-    <div class="foot"><div>Mais atrasado<span class="s-red">${worst ? esc(worst.b + ' · ' + worst.name + ' · ' + worst.restTxt.replace('−', '')) : '<span class="s-green">nenhum</span>'}</span></div><div>Próxima a vencer<span>${nxt ? esc(nxt.b + ' · ' + nxt.name + ' · ' + o3dt(nxt.proxD)) : '—'}</span></div></div>`;
-    } else {
-      const b = F.find(x => x.id === O3.ves) || F[0]; if (!b) { chart.innerHTML = seg; return; }
-      const es = ENG.filter(e => e.vid === b.id), bad = es.filter(e => e.st === 'red').length;
-      body = `<div class="ch"><h2>${esc(b.n)}</h2><span class="pill ${bad ? 'r' : 'g'}">${bad ? bad + ' vencidas' : 'em dia'}</span></div>
-    <div class="cap">${b.st == 'porto' ? 'no porto · equipe de manutenção + CTF/MFM' : b.st == 'viagem' ? 'em viagem · troca pelo MFM' : 'situação não informada'} · esquerda = atraso · direita = % restante</div>${bars(es.filter(e => !e.sem).map(e => ({ l: esc(e.name), v: e.v, p: e.pct, st: e.st, t: e.restTxt })))}`;
-    }
-    chart.innerHTML = seg + body + `<div class="note">Saldo = quanto falta para a troca (negativo = atrasado) · cárter = volume da matriz de lubrificação</div>`;
-    const mF = chart.querySelector('#mF'), m1 = chart.querySelector('#m1'), sv = chart.querySelector('#sv');
-    mF.onclick = () => { O3.mode = 'frota'; save(); renderAll(); };
-    m1.onclick = e => { if (e.target.tagName === 'SELECT') return; O3.mode = '1'; save(); renderAll(); };
-    sv.onclick = e => e.stopPropagation();
-    sv.onchange = () => { O3.ves = sv.value; O3.mode = '1'; save(); renderAll(); };
-    chart.querySelectorAll('[data-go]').forEach(el => el.onclick = () => { O3.ves = el.dataset.go; O3.mode = '1'; O3.open.add(O3.ves); save(); renderAll(); });
-  }
-  function renderAll() { renderTable(); renderChart(); }
-  q('#o3openAll').onclick = () => { O3.open = new Set(F.map(b => b.id)); save(); renderTable(); };
-  q('#o3closeAll').onclick = () => { O3.open = new Set(); save(); renderTable(); };
-  q('#o3launch').onclick = () => { if (!precisa(false)) return; lubAbrirForm(O3.mode !== 'frota' ? O3.ves : undefined); };
-  renderAll();
-  /* janelas flutuantes: arrastar, redimensionar, minimizar */
-  const fit = () => { if (innerWidth <= 760) { ws.style.height = ''; return; } ws.style.height = Math.max(520, innerHeight - ws.getBoundingClientRect().top - window.scrollY * 0 - 16) + 'px'; };
-  fit();
-  const wins = [q('#wTab'), q('#wCh')];
-  function defaults() { const W = ws.clientWidth, cw = Math.min(430, Math.max(300, W * .34));
-    return { wTab: { x: 0, y: 0, w: Math.max(320, W - cw - 12), h: Math.max(420, ws.clientHeight), m: false }, wCh: { x: W - cw, y: 0, w: cw, h: Math.min(680, Math.max(420, ws.clientHeight)), m: false } }; }
-  if (!O3.L) O3.L = O3.G('layout', null);
-  if (!O3.L || !O3.L.wTab || !O3.L.wCh || O3.L.wCh.x > ws.clientWidth - 60) O3.L = defaults();
-  const L = () => O3.L;
-  function apply() { wins.forEach(w => { const s = L()[w.id]; w.style.left = s.x + 'px'; w.style.top = s.y + 'px'; w.style.width = s.w + 'px'; w.style.height = s.h + 'px'; w.classList.toggle('min', !!s.m); w.querySelector('[data-min]').textContent = s.m ? '+' : '–'; });
-    if (innerWidth > 760) { const base = Math.max(520, innerHeight - ws.getBoundingClientRect().top - 16), fundo = Math.max(...wins.map(w => { const s = L()[w.id]; return s.y + (s.m ? 40 : s.h); })) + 6; ws.style.height = Math.max(base, fundo) + 'px'; } }
-  wins.forEach(w => {
-    const s = () => L()[w.id];
-    w.addEventListener('pointerdown', () => { w.style.zIndex = ++O3.z; });
-    const hd = w.querySelector('.wh');
-    hd.addEventListener('pointerdown', e => { if (e.target.closest('button,select') || innerWidth <= 760) return;
-      const sx = e.clientX, sy = e.clientY, ox = s().x, oy = s().y; hd.setPointerCapture(e.pointerId);
-      const mv = ev => { s().x = Math.min(ws.clientWidth - 120, Math.max(0, ox + ev.clientX - sx)); s().y = Math.max(0, oy + ev.clientY - sy); apply(); };
-      const up = () => { hd.removeEventListener('pointermove', mv); hd.removeEventListener('pointerup', up); O3.S('layout', L()); };
-      hd.addEventListener('pointermove', mv); hd.addEventListener('pointerup', up); });
-    const rz = w.querySelector('.rz');
-    rz.addEventListener('pointerdown', e => { e.stopPropagation(); const sx = e.clientX, sy = e.clientY, ow = s().w, oh = s().h; rz.setPointerCapture(e.pointerId);
-      const mv = ev => { s().w = Math.max(260, ow + ev.clientX - sx); s().h = Math.max(120, oh + ev.clientY - sy); apply(); };
-      const up = () => { rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); O3.S('layout', L()); };
-      rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up); });
-    w.querySelector('[data-min]').onclick = () => { s().m = !s().m; apply(); O3.S('layout', L()); };
-    w.querySelector('[data-max]').onclick = () => { const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-      if (fsEl || w.classList.contains('full')) { if (fsEl) (document.exitFullscreen || document.webkitExitFullscreen).call(document); w.classList.remove('full'); return; }
-      const rq = w.requestFullscreen || w.webkitRequestFullscreen; if (rq) rq.call(w).catch(() => w.classList.add('full')); else w.classList.add('full'); };
-  });
-  q('#o3reset').onclick = () => { fit(); O3.L = defaults(); apply(); O3.S('layout', O3.L); };
-  apply();
-};
-const O3CSS = `
-:host{display:block;--bg:#eef1f4;--panel:#ffffff;--head:#f5f7f9;--line:#e1e6eb;--line2:#eef1f4;--fg:#16212c;--mute:#66727f;--faint:#9aa5b0;--accent:#1d5fa8;--accentbg:#e8f0f9;
- --red:#c9302c;--redbg:#fbeceb;--green:#1f8a52;--greenbg:#e7f4ec;--amber:#b86e00;--bar-g:#2fa66a;--bar-r:#d8423d;--track:#edf0f3;--shadow:0 8px 28px rgba(22,33,44,.14),0 1px 3px rgba(22,33,44,.08);
- --sans:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;--cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
- background:var(--bg);color:var(--fg);font:12.5px/1.35 var(--sans);display:flex;flex-direction:column;padding-block:12px}
-*{box-sizing:border-box;font-weight:400!important}
-button,select{font:inherit;color:inherit}
-.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-.bar h1{font-size:19px;margin:0 6px 0 0;letter-spacing:-.01em;font-family:var(--sans);color:var(--fg)}
-.k{display:flex;gap:5px;align-items:baseline;padding:3px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12px;color:var(--mute)}
-.k span{font-size:15px}
-.sp{flex:1}
-.b{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;min-height:0;box-shadow:none}
-.b:hover{border-color:var(--faint)}
-.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
-.b:focus-visible,.seg button:focus-visible,select:focus-visible,tr[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.ws{position:relative;flex:1;min-height:520px;overflow:hidden}
-.win{position:absolute;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;min-width:260px;min-height:90px}
-.win.min{height:auto!important;min-height:0}
-.win.min .wb,.win.min .rz{display:none}
-.wh{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;background:var(--head);border-bottom:1px solid var(--line);cursor:grab;user-select:none;touch-action:none;flex-wrap:wrap}
-.wh:active{cursor:grabbing}
-.wh .t{font-size:12px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase}
-.wh .grip{color:var(--faint);letter-spacing:-2px;font-size:11px}
-.ib{border:0;background:transparent;width:24px;height:22px;border-radius:5px;cursor:pointer;color:var(--mute);font-size:14px;line-height:1;padding:0;min-height:0}
-.ib:hover{background:var(--line)}
-.wb{flex:1;overflow:auto;min-height:0}
-.win:fullscreen,.win.full{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;border-radius:0;z-index:9999;font-size:15px}
-.win:fullscreen td,.win.full td{font-size:15px;height:24px}.win:fullscreen .rz,.win.full .rz{display:none}.win:fullscreen .cr .l,.win:fullscreen .cr .val{font-size:15px}.win:fullscreen .ch h2{font-size:22px}
-.win:-webkit-full-screen{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important}
-.rz{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;touch-action:none;
- background:linear-gradient(135deg,transparent 50%,var(--faint) 50%,var(--faint) 56%,transparent 56%,transparent 68%,var(--faint) 68%,var(--faint) 74%,transparent 74%)}
-table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:12.5px;background:none;border:0;margin:0}
-thead th{position:sticky;top:0;z-index:2;background:var(--head);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);padding:3px 8px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
-thead tr:nth-child(2) th{top:21px}
-th.g{text-align:center;color:var(--fg)}th.p{color:var(--accent)}
-td{padding:1px 8px;height:19px;white-space:nowrap;border-bottom:1px solid var(--line2);text-align:left;vertical-align:middle;background:none;color:var(--fg)}
-.n{text-align:right}
-td.v{border-right:1px solid var(--line);vertical-align:top;padding-top:3px;cursor:pointer;width:96px}
-td.v .nm{font-size:13px}
-.car{display:inline-block;width:12px;color:var(--faint);font-size:9px}
-tbody{border-bottom:1px solid var(--line)}
-tbody.sel td.v{box-shadow:inset 3px 0 0 var(--accent);background:var(--accentbg)}
-tr.eq{cursor:pointer}tr.eq:hover td:not(.v){background:var(--head)}
-.u{background:color-mix(in srgb,var(--head) 55%,transparent)}
-.pp{background:color-mix(in srgb,var(--accentbg) 45%,transparent)}
-.rc{color:var(--red)}
-.pill{display:inline-block;font-size:10px;padding:0 6px;border-radius:999px;margin-top:2px}
-.pill.r{background:var(--redbg);color:var(--red)}.pill.g{background:var(--greenbg);color:var(--green)}
-tr.col{cursor:pointer}tr.col:hover td{background:var(--head)}
-tr.col td{height:22px}
-.sm{color:var(--mute);font-size:11px}
-.s-red{color:var(--red)}.s-green{color:var(--green)}.s-amber{color:var(--amber)}.s-sem{color:var(--faint)}
-.cb{padding:10px 12px 14px}
-.seg{display:flex;background:var(--track);border-radius:7px;padding:2px;gap:2px;margin-bottom:10px}
-.seg button{flex:1;border:0;background:transparent;padding:5px 8px;border-radius:5px;cursor:pointer;color:var(--mute);white-space:nowrap;min-height:0;box-shadow:none}
-.seg button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.seg select{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:1px 4px;margin-left:4px;width:auto;height:auto;min-height:0;font-size:12.5px}
-.ch{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
-.ch h2{font-size:16px;margin:0;font-family:var(--sans);color:var(--fg)}
-.cap{color:var(--mute);font-size:10.5px;margin:2px 0 8px}
-.cr{display:grid;grid-template-columns:minmax(70px,22%) 1fr 1fr 62px;align-items:center;min-height:24px}
-.cr.click{cursor:pointer;border-radius:4px}.cr.click:hover{background:var(--head)}
-.cr .l{font-size:11.5px;line-height:1.1;padding-right:4px}
-.cr .l small{display:block;color:var(--mute);font-size:9.5px}
-.cr .L{display:flex;justify-content:flex-end;border-right:1.5px solid var(--faint);height:100%;align-items:center}
-.cr .R{display:flex;height:100%;align-items:center}
-.cr .L i,.cr .R i{display:block;height:11px}
-.cr .L i{background:var(--bar-r);border-radius:3px 0 0 3px}
-.cr .R i{background:var(--bar-g);border-radius:0 3px 3px 0}
-.cr .val{text-align:right;font-variant-numeric:tabular-nums;font-size:11.5px}
-.ax{display:grid;grid-template-columns:minmax(70px,22%) 1fr 1fr 62px;font-size:9.5px;color:var(--mute);margin-top:3px}
-.ax span span{display:flex;justify-content:space-between}
-.foot{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
-.foot div{border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:10.5px;color:var(--mute)}
-.foot div>span{display:block;font-size:12.5px;color:var(--fg);margin-top:1px}
-.foot div>span.s-red{color:var(--red)}
-.note{color:var(--faint);font-size:10.5px;margin-top:8px}
-/* mesmo padrão de letra da tabela em toda a tela de óleo */
-*{font-family:var(--sans)}
-td,td .sm,td .nm,td.v .nm{font-size:12.5px}
-.pill{font-size:11.5px;padding:0 7px}
-.cr .l{font-size:12.5px;line-height:1.15}.cr .l small{font-size:11px}.cr .val{font-size:12.5px}
-.cap{font-size:12px}.ax{font-size:11px}.foot div{font-size:12px}.foot div>span{font-size:12.5px}.note{font-size:11.5px}
-.seg button,.seg select{font-size:12.5px}.k{font-size:12.5px}.b{font-size:12.5px}
-@media (max-width:760px){
- .ws{min-height:0;display:flex;flex-direction:column;gap:12px}
- .win{position:static;width:auto!important;height:auto!important;max-height:none}
- .win .wb{max-height:70vh}.rz,.wh .grip{display:none}.wh{cursor:default}
-}`;
-{ const st = document.createElement('style'); st.textContent = `body:has(#ol3),body:has(#ol3) .app,body:has(#ol3) .main,body:has(#ol3) #main{background:#eef1f4!important}
-body:has(#ol3) #main{max-width:none!important}`; document.head.appendChild(st); }
 
 </script>
 <script>
@@ -7929,19 +7710,8 @@ function olCardHoje() {
   const L = p1.map(d => it(d, 'P1')).concat(p2.map(d => it(d, 'P2'))), max = 8;
   return `<div class="card cm-hoje"><div class="row"><h2>Troca de óleo</h2><span class="sp"></span><a class="mbtn sm" href="#oleo">Ver a frota</a></div><ul>${L.slice(0, max).join('')}${L.length > max ? `<li class="note"><a href="#oleo">+ ${L.length - max} na tela Óleo da frota</a></li>` : ''}</ul></div>`;
 }
-// Óleo da frota + Trocas lançadas numa tela só: o status em cima, o registro (FR 049_B e complementos) embaixo
+// #lubreg (antiga tela de registros) abre o Óleo da frota no bloco Trocas lançadas
 let OL_IR = 0;   // veio de #lubreg: rolar até o bloco das trocas
-function olRegHTML() { const t = document.createElement('div'); t.innerHTML = vLubReg();
-  const vh = t.querySelector(':scope > .vh'); if (vh) vh.outerHTML = `<div class="ab4-sec" id="ol-trocas"><h2>Trocas lançadas <small class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e complementos de óleo</small></h2></div>`;
-  return t.innerHTML; }
-{ const o0 = VX.oleo; VX.oleo = function () { return o0.apply(this, arguments) + olRegHTML(); }; }
-{ const a0 = AFTER.oleo; AFTER.oleo = function () { a0 && a0(); const m = $('#main'), c0 = m.onclick, h0 = m.onchange;
-    m.onchange = e => { if (e.target.id === 'lrB') { LR.barco = e.target.value; render(); return; } if (e.target.id === 'lrM') { LR.mes = e.target.value; render(); return; } return h0 && h0.call(m, e); };
-    m.onclick = e => { const x = e.target.closest('[data-lubexc]'); if (x) { lubExcluir(x.dataset.lubexc); return; } const b = e.target.closest('[data-lubver]'); if (b) { lubVerModal(b.dataset.lubver); return; } return c0 && c0.call(m, e); };
-    // "Complemento de óleo" ao lado de "+ Lançar troca", no topo da tela
-    const r = ($('#ol3') || {}).shadowRoot, l = r && r.querySelector('#o3launch');
-    if (l && !r.querySelector('#o3comp')) { const c = document.createElement('button'); c.className = 'b'; c.id = 'o3comp'; c.textContent = '+ Complemento de óleo'; c.onclick = () => { if (!precisa(false)) return; lubCompModal(); }; l.before(c); }
-    if (Date.now() - OL_IR < 3000) { OL_IR = 0; setTimeout(() => { const s = document.getElementById('ol-trocas'); if (s) s.scrollIntoView({ block: 'start' }); }, 300); } }; }
 VX.lubreg = () => { OL_IR = Date.now(); location.replace('#oleo'); return ''; };
 // links cruzados: situação → cronograma do empurrador · cronograma → situação de hoje
 document.addEventListener('click', e => { const a = e.target.closest('[data-fscr]'); if (!a) return; PRV.v = a.dataset.fscr; }, true);
@@ -7960,8 +7730,92 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   const ord = ['hoje', 'crono', 'omsv2'].map(by).filter(Boolean).concat([cond], ['graf', 'apoio2', 'adm'].map(by).filter(Boolean));
   SECOES.splice(0, SECOES.length, ...ord);
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
+// Calibração, análise de óleo e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
+{ const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
 @media(max-width:760px){.fs-t td,.fs-t th{padding:3px 6px}.fs-t td:first-child,.fs-t th:first-child,.fs-lh{padding-left:12px}.fs-dt{padding:14px 12px}.fs-dh{padding-right:0;gap:8px}.fs-dh h1{font-size:20px}.fs-p{white-space:normal}.fs-ks{grid-template-columns:1fr 1fr;gap:8px}.fs-k{padding:10px 12px}.fs-k>b{font-size:22px}.fs-sr{grid-template-columns:30px 1fr auto;gap:8px;font-size:13px}.fs-sr .fs-bar,.fs-sr .fs-bv{display:none}}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Óleo da frota no padrão do painel (como a Compressão do MCP): título + blocos-janela Equipamentos · Saldo para a troca · Trocas lançadas =====
+   Dados: o3Dados() (bloco "Óleo da frota v3"); estado aberto/fechado e modo do gráfico em O3 (localStorage 'oleo_*'); blocos com janelasLivres('smf_ol_lay'). */
+'use strict';
+const OLF = { f: 'todas' };   // filtro dos chips da tabela
+function vOleoP() {
+  const { F, ENG } = o3Dados(), H = id => ENG.some(e => e.vid === id && e.st === 'red');
+  if (!O3.open) O3.open = new Set(O3.G('open', F.filter(b => H(b.id)).map(b => b.id)));
+  if (!O3.mode) O3.mode = O3.G('mode', 'frota');
+  if (!O3.ves || !F.some(b => b.id === O3.ves)) { const s = O3.G('ves', ''); O3.ves = F.some(b => b.id === s) ? s : (F[0] || {}).id; }
+  const n = st => ENG.filter(e => e.st === st).length;
+  const chips = [['todas', 'Todos', ENG.length], ['red', 'Vencidas', n('red')], ['amber', 'Até 50 h / 7 d', n('amber')], ['green', 'Em dia', n('green')], ['sem', 'Sem histórico', n('sem')]];
+  const passa = e => OLF.f === 'todas' || e.st === OLF.f;
+  const cor = st => st === 'red' ? 'var(--badt)' : st === 'amber' ? 'var(--warnt)' : st === 'green' ? 'var(--okt)' : 'var(--mut)';
+  const dt = d => d ? brD(isoD(d)) : '—';
+  let rows = '';
+  F.forEach(b => { const es = ENG.filter(e => e.vid === b.id && passa(e)); if (!es.length) return;
+    const bad = es.filter(e => e.st === 'red').length, ab = O3.open.has(b.id) || OLF.f !== 'todas';
+    const res = `<span class="pill ${bad ? 'p-bad' : 'p-ok'}">${bad ? bad + ' vencida' + (bad > 1 ? 's' : '') : es.length + ' em dia'}</span>`;
+    if (!ab) { const c = [...es].sort((a, z) => a.daysLeft - z.daysLeft)[0];
+      rows += `<tr class="click ol-gr" data-olv="${b.id}"><td><span class="ol-car">▸</span><b>${esc(b.n)}</b></td><td colspan="7">${res} <span class="note">próxima: <b>${esc(c.name)}</b> em ${dt(c.proxD)}${c.proxH != null ? ' · ' + nf(c.proxH) + ' h' : ''}</span></td><td class="mono r" style="color:${cor(c.st)}">${c.restTxt}</td></tr>`; return; }
+    es.forEach((e, i) => { rows += `<tr class="click" data-frv="${b.id}" title="Clique para lançar a troca (FR 049_B)">${i === 0 ? `<td rowspan="${es.length}" class="ol-v" data-olv="${b.id}"><span class="ol-car">▾</span><b>${esc(b.n)}</b><div>${res}</div></td>` : ''}
+      <td>${esc(e.name)}</td><td class="mono r" title="${esc(e.carS)}">${esc(e.car)}</td><td class="mono r">${e.atual != null ? nf(e.atual) : '—'}</td><td class="mono r">${e.ultH != null ? nf(e.ultH) : '—'}</td><td class="mono r">${dt(e.ultD)}</td>
+      <td class="mono r">${e.proxH != null ? nf(e.proxH) : '—'}</td><td class="mono r">${dt(e.proxD)}</td><td class="mono r" style="color:${cor(e.st)}"><b>${e.restTxt}</b></td></tr>`; }); });
+  const tab = `<div class="card"><div class="row"><h2>Equipamentos</h2><span class="sp"></span><button class="mbtn sm" data-olall="1">Abrir todas</button><button class="mbtn sm" data-olall="0">Fechar todas</button></div>
+   <div class="cm-chips">${chips.map(([k, l, c]) => `<button class="cm-chip${OLF.f === k ? ' on' : ''}" data-olf="${k}">${l} <b>${c}</b></button>`).join('')}</div>
+   <div class="tw"><table class="t ol-t"><thead><tr><th rowspan="2">Embarcação</th><th rowspan="2">Equipamento</th><th rowspan="2" class="r">Cárter</th><th rowspan="2" class="r">Hor. atual</th><th colspan="2" class="ol-gu">Última troca</th><th colspan="2" class="ol-gp">Próxima troca</th><th rowspan="2" class="r">Saldo</th></tr>
+    <tr><th class="r ol-gu">Horímetro</th><th class="r ol-gu">Data</th><th class="r ol-gp">Horímetro</th><th class="r ol-gp">Data</th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="note">Nenhum equipamento neste filtro.</td></tr>'}</tbody></table></div>
+   <p class="note">Clique no empurrador para abrir ou fechar · clique num equipamento para lançar a troca (FR 049_B) · saldo negativo = atrasado · cárter = volume da matriz de lubrificação</p></div>`;
+  // saldo para a troca: esquerda = atraso (h ou d), direita = % do intervalo que ainda resta
+  const crit = id => ENG.filter(e => e.vid === id && !e.sem).sort((a, z) => (a.v < 0 || z.v < 0) ? a.v - z.v : a.pct - z.pct)[0];
+  const barras = L => { const mx = Math.max(1, ...L.filter(r => r.v < 0).map(r => -r.v));
+    return `<div class="ol-bs">${L.map(r => `<div class="ol-br${r.go ? ' click' : ''}"${r.go ? ` data-olgo="${r.go}"` : ''}><span class="ol-bl">${r.l}</span><span class="ol-bL">${r.v < 0 ? `<i style="width:${Math.max(2, -r.v / mx * 100)}%"></i>` : ''}</span><span class="ol-bR">${r.v >= 0 ? `<i style="width:${r.p * 100}%"></i>` : ''}</span><span class="mono r" style="color:${cor(r.st)}">${r.t}</span></div>`).join('')}
+      <div class="ol-br ol-ax"><span></span><span><span>${nf(mx)}</span><span>0</span></span><span><span>0%</span><span>100%</span></span><span></span></div></div>`; };
+  let corpo;
+  if (O3.mode === 'frota') {
+    const L = F.map(b => { const c = crit(b.id); return c ? { l: `<b>${esc(b.n)}</b><small>${esc(c.name)}</small>`, v: c.v, p: c.pct, st: c.st, t: c.restTxt, go: b.id } : null; }).filter(Boolean);
+    const ok = ENG.filter(e => !e.sem), pior = ok.filter(e => e.v < 0).sort((a, z) => a.v - z.v)[0], prox = ok.filter(e => e.v >= 0).sort((a, z) => a.daysLeft - z.daysLeft)[0];
+    corpo = `<p class="note">o equipamento mais crítico de cada empurrador · clique numa barra para abrir o empurrador</p>${barras(L)}
+     <div class="ol-ft"><div><span>Mais atrasado</span><b style="color:${pior ? 'var(--badt)' : 'var(--okt)'}">${pior ? esc(pior.b + ' · ' + pior.name + ' · ' + pior.restTxt.replace('−', '')) : 'nenhum'}</b></div><div><span>Próxima a vencer</span><b>${prox ? esc(prox.b + ' · ' + prox.name + ' · ' + dt(prox.proxD)) : '—'}</b></div></div>`;
+  } else { const b = F.find(x => x.id === O3.ves) || F[0];
+    corpo = !b ? '<p class="note">Sem equipamentos.</p>' : `<p class="note">${b.st === 'porto' ? 'no porto · equipe de manutenção + CTF/MFM' : b.st === 'viagem' ? 'em viagem · troca pelo MFM' : 'situação não informada'}</p>${barras(ENG.filter(e => e.vid === b.id && !e.sem).map(e => ({ l: esc(e.name), v: e.v, p: e.pct, st: e.st, t: e.restTxt })))}`; }
+  const graf = `<div class="card"><div class="row"><h2>Saldo para a troca</h2><span class="sp"></span><span class="ol-seg"><button data-olm="frota" class="${O3.mode === 'frota' ? 'on' : ''}">Frota inteira</button><button data-olm="1" class="${O3.mode !== 'frota' ? 'on' : ''}">1 empurrador</button></span><select id="olSv" class="ol-sv">${F.map(b => `<option value="${b.id}"${b.id === O3.ves ? ' selected' : ''}>${esc(b.n)}</option>`).join('')}</select></div>
+   ${corpo}<p class="note">Esquerda = atraso · direita = % do intervalo que ainda resta · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d</p></div>`;
+  const t = document.createElement('div'); t.innerHTML = vLubReg(); const card = t.querySelector(':scope > .card');   // filtros e tabela da antiga tela Registros de lubrificação
+  const reg = card ? `<div class="card" id="ol-trocas"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><span class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e complementos de óleo</span></div>${card.innerHTML}</div>` : '';
+  return `<div class="cm-v"><div class="vh"><div><h1>Óleo da frota</h1><p>Troca de óleo por horímetro ou prazo (Anexo I · matriz de lubrificação) · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d · registro pelo FR 049_B</p></div><span class="sp"></span><button class="mbtn" data-olreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn pri" data-ollanca>＋ Lançar troca</button></div>
+   <div class="cm-ws">${tab}${graf}${reg}</div></div>`;
+}
+VX.oleo = vOleoP;
+AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.open]); O3.S('mode', O3.mode); O3.S('ves', O3.ves); };
+  m.onclick = e => { const t = e.target;
+    const v = t.closest('[data-olv]'); if (v) { const id = v.dataset.olv; O3.open.has(id) ? O3.open.delete(id) : O3.open.add(id); O3.ves = id; salva(); render(); return; }
+    const f = t.closest('[data-olf]'); if (f) { OLF.f = f.dataset.olf; render(); return; }
+    const a = t.closest('[data-olall]'); if (a) { O3.open = new Set(a.dataset.olall === '1' ? o3Dados().F.map(b => b.id) : []); salva(); render(); return; }
+    const md = t.closest('[data-olm]'); if (md) { O3.mode = md.dataset.olm; salva(); render(); return; }
+    const g = t.closest('[data-olgo]'); if (g) { O3.ves = g.dataset.olgo; O3.mode = '1'; O3.open.add(O3.ves); salva(); render(); return; }
+    if (t.closest('[data-ollanca]')) { if (!precisa(false)) return; lubAbrirForm(O3.mode !== 'frota' ? O3.ves : undefined); return; }
+    const fr = t.closest('[data-frv]'); if (fr) { if (!precisa(false)) return; lubAbrirForm(fr.dataset.frv); return; }
+    const x = t.closest('[data-lubexc]'); if (x) { lubExcluir(x.dataset.lubexc); return; }
+    const lv = t.closest('[data-lubver]'); if (lv) lubVerModal(lv.dataset.lubver); };
+  m.onchange = e => { const id = e.target.id;
+    if (id === 'olSv') { O3.ves = e.target.value; O3.mode = '1'; salva(); render(); }
+    if (id === 'lrB') { LR.barco = e.target.value; render(); } if (id === 'lrM') { LR.mes = e.target.value; render(); } };
+  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ol_lay', '[data-olreset]');
+  if (Date.now() - OL_IR < 3000) { OL_IR = 0; setTimeout(() => { const s = document.getElementById('ol-trocas'); if (s) s.scrollIntoView({ block: 'start' }); }, 300); } };
+{ const st = document.createElement('style'); st.textContent = `
+#main .ol-t th{white-space:nowrap}#main .ol-t th.ol-gu{background:#F4F6F9;text-align:center}#main .ol-t th.ol-gp{background:#E8F0FE;color:#1967D2;text-align:center}
+#main .ol-t td{vertical-align:middle}#main .ol-v{vertical-align:top!important;cursor:pointer;white-space:nowrap}#main .ol-v div{margin:4px 0 0 16px}#main .ol-car{display:inline-block;width:16px;color:var(--mut)}
+#main .ol-gr td{background:#FAFBFC}
+.ol-seg{display:inline-flex;border:1px solid #DADCE0;border-radius:16px;overflow:hidden}.ol-seg button{border:0;background:#fff;font:inherit;font-size:12.5px;padding:3px 11px;cursor:pointer}.ol-seg button.on{background:#E8F0FE;color:#1967D2;font-weight:600}
+#main .ol-sv{width:auto!important;min-width:0;flex:none;font:inherit;font-size:12.5px;padding:2px 6px;border:1px solid #DADCE0;border-radius:6px;margin-left:6px}
+#main #ol-trocas .tw{max-height:min(560px,70vh);overflow:auto}#main #ol-trocas.cm-full .tw,#main #ol-trocas:fullscreen .tw{max-height:none}#main #ol-trocas .tw thead th{position:sticky;top:0;background:#fff;z-index:1}
+.ol-bs{display:flex;flex-direction:column;gap:2px;margin:6px 0}
+.ol-br{display:grid;grid-template-columns:minmax(90px,24%) 1fr 1fr 70px;align-items:center;min-height:26px;gap:0;font-size:13px}.ol-br.click{cursor:pointer;border-radius:4px}.ol-br.click:hover{background:#F8F9FA}
+.ol-bl{line-height:1.15;padding-right:6px}.ol-bl small{display:block;color:var(--mut);font-size:11.5px}
+.ol-bL{display:flex;justify-content:flex-end;border-right:1.5px solid #9AA0A6;height:100%;align-items:center}.ol-bR{display:flex;height:100%;align-items:center}
+.ol-bL i,.ol-bR i{display:block;height:11px}.ol-bL i{background:#D93025;border-radius:3px 0 0 3px}.ol-bR i{background:#1E8E3E;border-radius:0 3px 3px 0}
+.ol-ax{min-height:0;font-size:11px;color:var(--mut)}.ol-ax>span>span{display:flex;justify-content:space-between}
+.ol-ft{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.ol-ft div{border:1px solid #E3E8EF;border-radius:8px;padding:7px 10px;font-size:12px;color:var(--mut)}.ol-ft b{display:block;font-size:13px;color:#202124;font-weight:600;margin-top:2px}
+@media(max-width:760px){.ol-ft{grid-template-columns:1fr}.ol-br{grid-template-columns:minmax(80px,30%) 1fr 1fr 60px}}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
