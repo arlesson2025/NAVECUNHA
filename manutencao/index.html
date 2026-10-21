@@ -1541,7 +1541,7 @@ function kpiMTTR(y, m) { const ini = mesIni(y, m), fim = mesIni(y, m + 1); const
 function kpiBacklog() { const ab = oms().filter(o => o.status !== 'encerrada'); if (!ab.length) return { v: 0, n: 0, t: 0 }; const n = ab.filter(omAtrasada).length; return { v: n / ab.length * 100, n, t: ab.length }; }
 function kpiFotos(ini, fim) { const l = oms().filter(o => o.status === 'encerrada' && o.fechadoAt && o.fechadoAt >= ini.getTime() && o.fechadoAt < fim.getTime()); if (!l.length) return null; return l.filter(o => (o.fotos || []).some(f => f.tipo === 'ANTES') && (o.fotos || []).some(f => f.tipo === 'DEPOIS')).length / l.length * 100; }
 function trimestre(d) { return { y: d.getFullYear(), q: Math.floor(d.getMonth() / 3) }; }
-// Plano preditivo(NP 055 revisada): tendência trimestral de cada MCP + programa de amostragem de óleo (1 por semestre, e todo MCP sem laudo há 24 meses)
+// Plano preditivo (NP 055 revisada): tendência trimestral de cada MCP + amostra de óleo de cada MCP a cada 1.000 h (≈ 1 por trimestre)
 // + ensaio de compressão registrado em cada OM de bicos (1.1.12) encerrada no trimestre
 function kpiPreditivo(y, q) {
   const ini = new Date(y, q * 3, 1), fim = new Date(y, q * 3 + 3, 1), d = { tend: [0, 0], oleo: [0, 0], comp: [0, 0] };
@@ -1549,12 +1549,9 @@ function kpiPreditivo(y, q) {
   S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => {
     if (!aplica(v, pos, A1M['1.1.30'])) return;
     d.tend[0]++; if (enc.some(o => o.vessel === v.id && o.pos === pos && (o.items || []).includes('1.1.30'))) d.tend[1]++;
-    // cobertura: MCP sem laudo há 24 meses no início do trimestre entra como programado
-    const ult = ultimoServico(v.id, pos, '1.1.29'); const feitoQ = enc.some(o => o.vessel === v.id && o.pos === pos && (o.items || []).includes('1.1.29'));
-    if (!ult || addM(pD(ult.date), 24) < fim) { if (!(ult && pD(ult.date) >= ini && !feitoQ)) { d.oleo[0]++; if (feitoQ) d.oleo[1]++; } }
+    // amostra de óleo (1.1.29): a cada 1.000 h ≈ 1 por trimestre no uso médio da frota (~11 h/dia) · feita = laudo registrado ou OM com 1.1.29 encerrada no trimestre
+    d.oleo[0]++; if (enc.some(o => o.vessel === v.id && o.pos === pos && (o.items || []).includes('1.1.29')) || recs('laudo').some(r => r.vessel === v.id && r.pos === pos && r.date && pD(r.date) >= ini && pD(r.date) < fim)) d.oleo[1]++;
   }));
-  // programa de amostragem: 1 amostra por semestre, cobrada no 2º trimestre de cada semestre
-  if (q % 2 === 1) { const sIni = new Date(y, q * 3 - 3, 1); const feitoS = oms().some(o => o.tipo === 'P' && o.status === 'encerrada' && o.dreal && pD(o.dreal) >= sIni && pD(o.dreal) < fim && (o.items || []).includes('1.1.29')); d.oleo[0]++; if (feitoS) d.oleo[1]++; }
   enc.filter(o => (o.items || []).includes('1.1.12')).forEach(o => { d.comp[0]++; const md = ((o.conf || {})['1.1.12'] || {}).meds || []; if ([1, 2, 3, 4, 5, 6].every(i => numBR((md[i] || {}).dei ?? (md[i] || {}).enc) != null)) d.comp[1]++; });
   recs('comp').forEach(r => { if (r.date && pD(r.date) >= ini && pD(r.date) < fim && !r.seed) { d.comp[0]++; d.comp[1]++; } });
   const prog = d.tend[0] + d.oleo[0] + d.comp[0], feito = d.tend[1] + d.oleo[1] + d.comp[1];
@@ -4360,11 +4357,13 @@ function tecFalhasCard() {
 
 /* ---------- 2 · laudo de óleo e saúde do MCP ---------- */
 // limites de referência para motor diesel com óleo 15W-40 (ajuste com os limites do laboratório)
+// TBN do óleo novo (15W-40 API CF ou superior): valor típico, confirme na ficha técnica do óleo em uso e ajuste aqui
+const TBN_NOVO = 10;
 const LAUDO_P = [
   ['fe', 'Ferro (Fe)', 'ppm', 50, 100, 'desgaste de camisas, engrenagens, eixo'], ['cr', 'Cromo (Cr)', 'ppm', 10, 20, 'desgaste de anéis'], ['al', 'Alumínio (Al)', 'ppm', 15, 30, 'desgaste de pistões, mancais'],
   ['cu', 'Cobre (Cu)', 'ppm', 25, 50, 'buchas, mancais, arrefecedor de óleo'], ['pb', 'Chumbo (Pb)', 'ppm', 25, 50, 'bronzinas'], ['si', 'Silício (Si)', 'ppm', 20, 40, 'poeira: filtro de ar / admissão'],
   ['na', 'Sódio (Na)', 'ppm', 50, 100, 'líquido de arrefecimento ou água'], ['agua', 'Água', '%', 0.1, 0.2, 'contaminação por água'], ['comb', 'Diluição por combustível', '%', 2, 4, 'bicos, bomba injetora'],
-  ['fuligem', 'Fuligem', '%', 2, 3, 'combustão ruim, injeção, ar'], ['tbn', 'TBN', 'mg KOH/g', 5, 3, 'reserva alcalina baixa', 'min'], ['visc', 'Viscosidade a 100 °C', 'cSt', [12.5, 16.3], [11.5, 17.5], 'fora da faixa do 15W-40', 'faixa'],
+  ['fuligem', 'Fuligem', '%', 2, 3, 'combustão ruim, injeção, ar'], ['tbn', 'TBN', 'mg KOH/g', TBN_NOVO * 0.6, TBN_NOVO * 0.5, 'reserva alcalina baixa (atenção: 60% e crítico: 50% do TBN do óleo novo)', 'min'], ['visc', 'Viscosidade a 100 °C', 'cSt', [12.5, 16.3], [11.5, 17.5], 'fora da faixa do 15W-40', 'faixa'],
 ];
 function laudoSt(r) {
   const out = []; let st = 'ok';
@@ -4402,7 +4401,7 @@ function saudeCard() {
     <td><span class="sdot" style="background:${cor(d.c.st)}"></span>${d.c.taxa != null ? nf(d.c.taxa, 2) + ' L/100 h' : '<span class="mut">sem complementos</span>'}</td>
     <td><span class="sdot" style="background:${cor(d.ls.st)}"></span>${d.ul ? brD(d.ul.date) + (d.ls.alertas.length ? ' · <span style="color:' + cor(d.ls.alertas[0].s) + '">' + d.ls.alertas.slice(0, 2).map(a => a.nome.split(' (')[0] + ' ' + nf(a.v, a.v < 10 ? 1 : 0)).join(', ') + '</span>' : ' · normal') : '<span class="mut">sem laudo</span>'}</td>
     <td><span class="pill ${{ venc: 'p-bad', viag: 'p-warn', ok: 'p-ok', sem: 'p-mut' }[d.rst]}">${d.rec}</span></td></tr>`).join('')}</tbody></table></div>
-   <p class="note">Limites do laudo: referência geral para diesel com 15W-40 (Fe 50/100, Cr 10/20, Al 15/30, Cu 25/50, Pb 25/50, Si 20/40 ppm; água 0,1/0,2%; diluição 2/4%; fuligem 2/3%; TBN mín. 5/3; viscosidade 100 °C 12,5–16,3 cSt). Ajuste com os limites do seu laboratório.</p></div>`;
+   <p class="note">Limites do laudo: referência geral para diesel com 15W-40 (Fe 50/100, Cr 10/20, Al 15/30, Cu 25/50, Pb 25/50, Si 20/40 ppm; água 0,1/0,2%; diluição 2/4%; fuligem 2/3%; TBN mín. ${nf(TBN_NOVO * 0.6, 1)}/${nf(TBN_NOVO * 0.5, 1)} (60%/50% do óleo novo); viscosidade 100 °C 12,5–16,3 cSt). Ajuste com os limites do seu laboratório.</p></div>`;
 }
 { const v0 = vOver; vOver = function () { const h = v0(), i = h.indexOf('<div class="card"><div class="row"><h2>B · Programa de amostragem'); return i > 0 ? h.slice(0, i) + saudeCard() + h.slice(i) : h + saudeCard(); }; }
 { const a0 = AFTER.over; AFTER.over = () => { a0(); const m = $('#main'), c0 = m.onclick; m.onclick = e => { const l = e.target.closest('[data-laudo]'); if (l) { laudoModal(); return; } const v = e.target.closest('[data-laudov]'); if (v) { laudoLista(...v.dataset.laudov.split('|')); return; } return c0 && c0(e); }; }; }
@@ -7284,45 +7283,38 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-rmm]
 
 </script>
 <script>
-/* ===== Análise de óleo do MCP · programa de amostragem (NP: 1 MCP por semestre, em rodízio, indicado pelo Supervisor) ===== */
+/* ===== Análise de óleo do MCP · programa de amostragem: cada MCP a cada 1.000 h ou 12 meses (Anexo I 1.1.29), na troca de óleo mais próxima, junto com os bicos e a compressão (1.1.12) ===== */
 function amoDados() {
-  const d = hoje(), s0 = new Date(d.getFullYear(), d.getMonth() < 6 ? 0 : 6, 1), s1 = new Date(d.getFullYear(), d.getMonth() < 6 ? 6 : 12, 1);
-  const semTxt = (d.getMonth() < 6 ? '1º' : '2º') + ' semestre/' + d.getFullYear();
-  const CM = typeof lubConsumoMCP === 'function' ? lubConsumoMCP(120) : { out: [] };
-  const M = [];
-  S.cfg.frota.filter(v => !foraOp(v)).forEach(v => mcpPos(v).forEach(pos => { if ((v.off || []).includes('MCP')) return;
-    const L = laudos(v.id, pos), ul = L[L.length - 1], us = ultimoServico(v.id, pos, '1.1.29');
-    const dt = ul ? ul.date : us ? us.date : null, meses = dt ? Math.floor((d - pD(dt)) / (864e5 * 30.4)) : null;
-    const ls = ul ? laudoSt(ul) : { st: 'sem', alertas: [] }, c = CM.out.find(y => y.v === v && y.p === pos) || { st: 'sem', taxa: null };
-    const noSem = L.some(r => pD(r.date) >= s0 && pD(r.date) < s1);
-    M.push({ v, pos, ul, dt, meses, ls, c, noSem, om: omAberta(v.id, pos, '1.1.29') }); }));
-  // fila do rodízio: laudo com alerta (coleta extra) → nunca analisado → há mais tempo sem amostra → maior consumo de óleo
-  const pri = x => x.ls.st === 'venc' ? 0 : x.ls.st === 'viag' ? 1 : !x.dt ? 2 : 3;
-  const fila = M.slice().sort((a, b) => pri(a) - pri(b) || (b.meses ?? 1e3) - (a.meses ?? 1e3) || (b.c.taxa || 0) - (a.c.taxa || 0));
-  const feito = M.filter(x => x.noSem);
-  return { M, fila, feito, semTxt };
+  const d = hoje(), CM = typeof lubConsumoMCP === 'function' ? lubConsumoMCP(120) : { out: [] }, t = A1M['1.1.29'], M = [];
+  S.cfg.frota.filter(v => !foraOp(v)).forEach(v => mcpPos(v).forEach(pos => { if ((v.off || []).includes('MCP') || !aplica(v, pos, t)) return;
+    const L = laudos(v.id, pos), ul = L[L.length - 1], s = situacao(v, pos, t), dt = ul ? ul.date : s.L ? s.L.date : null;
+    const meses = dt ? Math.floor((d - pD(dt)) / (864e5 * 30.4)) : null, ls = ul ? laudoSt(ul) : { st: 'sem', alertas: [] }, c = CM.out.find(y => y.v === v && y.p === pos) || { st: 'sem', taxa: null };
+    const extra = ls.st === 'venc' || ls.st === 'viag';   // laudo anterior com alerta: nova amostra na próxima troca
+    M.push({ v, pos, ul, dt, meses, ls, c, s, extra, om: omAberta(v.id, pos, '1.1.29') }); }));
+  const pri = x => x.extra ? 0 : x.s.st === 'venc' ? 1 : x.s.st === 'viag' ? 2 : x.s.st === 'sem' ? 3 : 4;
+  return { M, fila: M.slice().sort((a, b) => pri(a) - pri(b) || (b.meses ?? 1e3) - (a.meses ?? 1e3)) };
 }
+// próxima amostra pelo critério que vence primeiro (1.000 h ou 12 meses): horas restantes com a data estimada pelo uso do motor, ou a data
+function amoProx(x) { const s = x.s, H = hoje();
+  if (s.rest != null) { if (s.rest < 0) return `<span style="color:var(--badt)">vencida há ${nf(-s.rest)} h</span>`; const r = horasDiaPos(x.v.id, x.pos), d = r ? new Date(H.getTime() + s.rest / r * 864e5) : null; return `em ${nf(s.rest)} h${d ? ' <span class="note">≈ ' + brD(isoD(d)) + '</span>' : ''}`; }
+  if (s.alvoD) { const d = new Date(s.alvoD); return d < H ? `<span style="color:var(--badt)">vencida desde ${brD(isoD(d))}</span>` : 'até ' + brD(isoD(d)); }
+  return '<span class="mut">sem histórico</span>'; }
 function amoCard() {
-  const { fila, feito, semTxt } = amoDados(), vez = fila.find(x => !x.noSem);
-  const motivo = x => x.ls.st === 'venc' || x.ls.st === 'viag' ? 'último laudo com alerta: coleta extra' : !x.dt ? 'nunca analisado' : 'sem amostra há ' + x.meses + ' meses' + (x.c.taxa != null ? ' · consumo ' + nf(x.c.taxa, 2) + ' L/100 h' : '');
+  const { fila } = amoDados(), n = f => fila.filter(f).length, nv = n(x => x.s.st === 'venc'), np = n(x => x.s.st === 'viag'), ne = n(x => x.extra);
   const nm = x => esc(x.v.nome) + (x.v.mcp === 'mono' ? '' : ' ' + x.pos);
-  const st = feito.length
-    ? `<div class="banner ok"><b>Amostra do ${semTxt} feita:</b>&nbsp;${feito.map(nm).join(', ')} · meta da NP cumprida (1 por semestre).<span class="sp"></span><button class="mbtn sm" data-laudo2="">＋ Registrar laudo</button></div>`
-    : vez ? `<div class="banner info"><b>Amostra do ${semTxt}: ${nm(vez)}</b>&nbsp;· ${esc(motivo(vez))}${vez.om ? ' · OM ' + esc(vez.om.num) + ' já aberta' : ''}. Coletar na próxima troca de óleo desse motor.<span class="sp"></span>${vez.om ? '' : `<a class="mbtn sm pri" href="#emitir/${vez.v.id}">Emitir OM</a>`}<button class="mbtn sm" data-laudo2="">＋ Registrar laudo</button></div>` : '';
-  return `<div class="card amo"><div class="row"><h2>Análise de óleo do MCP · programa de amostragem</h2><span class="sp"></span><span class="note">NP: 1 amostra por semestre, em rodízio entre os MCPs (Anexo I, item 1.1.29)</span></div>${st}
-   <div class="tw"><table class="t"><thead><tr><th>Ordem</th><th>Motor</th><th>Última amostra</th><th>Resultado do laudo</th><th>Consumo de óleo</th><th>Situação no rodízio</th></tr></thead><tbody>
-   ${fila.map((x, i) => `<tr class="click" data-laudov2="${x.v.id}|${x.pos}"><td>${i + 1}º</td><td><b>${nm(x)}</b></td>
-    <td>${x.dt ? brD(x.dt) + ' <span class="note">· há ' + x.meses + ' meses</span>' : '<span class="mut">nunca</span>'}</td>
+  const sit = x => x.extra ? '<span class="pill p-warn">coleta extra (laudo com alerta)</span>' : x.s.st === 'venc' ? '<span class="pill p-bad">amostra vencida</span>' : x.s.st === 'viag' ? '<span class="pill p-inf">na próxima troca</span>' : x.s.st === 'sem' ? '<span class="pill p-mut">sem histórico</span>' : '<span class="pill p-ok">em dia</span>';
+  const ban = nv || np || ne ? `<div class="banner ${nv ? 'warn' : 'info'}"><b>${[[nv, 'vencida', 'vencidas'], [ne, 'coleta extra', 'coletas extras'], [np, 'na próxima troca', 'na próxima troca']].filter(a => a[0]).map(a => a[0] + ' ' + (a[0] === 1 ? a[1] : a[2])).join(' · ')}</b>&nbsp;· colher na troca de óleo, antes de drenar, e anotar o horímetro e as horas do óleo.<span class="sp"></span><button class="mbtn sm" data-laudo2="">＋ Registrar laudo</button></div>`
+    : `<div class="banner ok"><b>Todas as amostras em dia.</b><span class="sp"></span><button class="mbtn sm" data-laudo2="">＋ Registrar laudo</button></div>`;
+  return `<div class="card amo"><div class="row"><h2>Programa de amostragem</h2><span class="sp"></span><span class="note">cada MCP a cada 1.000 h ou 12 meses (Anexo I, item 1.1.29)</span></div>${ban}
+   <div class="tw"><table class="t"><thead><tr><th>Motor</th><th>Último laudo</th><th>Próxima amostra</th><th>Resultado do último laudo</th><th>Consumo de óleo</th><th>Situação</th></tr></thead><tbody>
+   ${fila.map(x => `<tr class="click" data-laudov2="${x.v.id}|${x.pos}"><td><b>${nm(x)}</b></td>
+    <td>${x.dt ? brD(x.dt) + ' <span class="note">· há ' + x.meses + ' ' + (x.meses === 1 ? 'mês' : 'meses') + '</span>' : '<span class="mut">nunca</span>'}</td>
+    <td>${amoProx(x)}${x.om ? ' <span class="note">· OM ' + esc(x.om.num) + '</span>' : ''}</td>
     <td>${x.ul ? (x.ls.alertas.length ? '<span style="color:' + (x.ls.st === 'venc' ? '#C5221F' : '#B06000') + '">' + x.ls.alertas.slice(0, 2).map(a => a.nome.split(' (')[0] + ' ' + nf(a.v, a.v < 10 ? 1 : 0)).join(', ') + '</span>' : '<span style="color:#188038">normal</span>') : '<span class="mut">sem laudo</span>'}</td>
-    <td>${x.c.taxa != null ? nf(x.c.taxa, 2) + ' L/100 h' : '<span class="mut">sem complementos</span>'}</td>
-    <td>${x.noSem ? '<span class="pill p-ok">amostrado neste semestre</span>' : x === vez ? '<span class="pill p-inf">amostra da vez</span>' : x.ls.st === 'venc' || x.ls.st === 'viag' ? '<span class="pill p-warn">coleta extra (suspeita)</span>' : '<span class="pill p-mut">aguarda o rodízio</span>'}</td></tr>`).join('')}
+    <td>${x.c.taxa != null ? nf(x.c.taxa, 2) + ' L/100 h' : '<span class="mut">sem complementos</span>'}</td><td>${sit(x)}</td></tr>`).join('')}
    </tbody></table></div>
-   <p class="note">Ordem do rodízio: laudo anterior com alerta, depois nunca analisado, depois quem está há mais tempo sem amostra e, no empate, o maior consumo de óleo. O Supervisor confirma o motor do semestre. Clique num motor para ver os laudos.</p></div>`;
+   <p class="note">Regra: amostra de cada MCP a cada 1.000 h ou 12 meses, colhida na troca de óleo mais próxima (a cada ~3 trocas de 350 h), junto com a revisão dos bicos e o ensaio de compressão (item 1.1.12) — o mesmo pacote de condição. Coleta extra na próxima troca quando o laudo anterior tem alerta ou há suspeita (consumo de óleo, fumaça, água ou combustível no óleo). O fabricante recomenda analisar a cada troca (O&M 6-2). Clique num motor para ver os laudos.</p></div>`;
 }
-if (VX.controle) { const c1 = VX.controle; VX.controle = function () { const h = c1(), i = h.indexOf('id="cs-doca"'); const bloco = `<div class="ab4-sec" id="cs-amo" data-sec="amo"><h2>Análise de óleo do MCP</h2><span class="note">programa de amostragem da NP</span></div>${amoCard().replace('<div class="card amo"', '<div class="card amo" data-sec="amo"')}`;
-  if (i < 0) return h + bloco; const j = h.lastIndexOf('<', i); let r = h.slice(0, j) + bloco + h.slice(j);
-  return r.replace('<button data-csgo="doca">', '<button data-csgo="amo">Análise de óleo</button><button data-csgo="doca">'); }; }
-document.addEventListener('click', e => { if (VIEW !== 'controle') return; const l = e.target.closest('[data-laudo2]'); if (l) { e.stopPropagation(); laudoModal(); return; } const v = e.target.closest('[data-laudov2]'); if (v) { e.stopPropagation(); laudoLista(...v.dataset.laudov2.split('|')); } }, true);
 
 </script>
 <script>
@@ -7889,12 +7881,12 @@ function aoParam() {
   return `<div class="card"><div class="row"><h2>Parâmetros e limites</h2><span class="sp"></span><span class="note">referência geral para motor diesel com óleo 15W-40</span></div>
    <div class="tw"><table class="t"><thead><tr><th>Grupo</th><th>Parâmetro</th><th>Unidade</th><th>Atenção</th><th>Crítico</th><th>O que indica</th></tr></thead><tbody>
    ${AO_GR.map(([g, ks]) => ks.map((k, i) => { const [, nome, un, a, c, sig, tipo] = aoP(k); return `<tr>${i === 0 ? `<td rowspan="${ks.length}"><b>${g}</b></td>` : ''}<td>${esc(nome)}</td><td>${esc(un)}</td><td class="mono" style="color:var(--warnt)">${tipo === 'faixa' ? 'fora de ' + lim(a, tipo) : lim(a, tipo)}</td><td class="mono" style="color:var(--badt)">${tipo === 'faixa' ? 'fora de ' + lim(c, tipo) : lim(c, tipo)}</td><td class="note">${esc(sig)}</td></tr>`; }).join('')).join('')}</tbody></table></div>
-   <p class="note">Limites de referência, não do fabricante do motor: confirme com o laboratório que emite o laudo e com a ficha do óleo (TBN do óleo novo). O laudo com algum valor crítico de desgaste (Fe, Cr, Al, Cu, Pb) leva o MCP para "Programar inspeção / retífica" no diagnóstico de condição. Programa de amostragem: Anexo I, item 1.1.29.</p></div>`;
+   <p class="note">Limites de referência, não do fabricante do motor: confirme com o laboratório que emite o laudo e com a ficha do óleo — TBN do óleo novo considerado: ${nf(TBN_NOVO, 1)} mg KOH/g (atenção 60%, crítico 50%). O laudo com algum valor crítico de desgaste (Fe, Cr, Al, Cu, Pb) leva o MCP para "Programar inspeção / retífica" no diagnóstico de condição. Programa de amostragem: Anexo I, item 1.1.29.</p></div>`;
 }
 function vAnOleo() {
   const { M } = amoDados();
-  const amo = amoCard().replace('<h2>Análise de óleo do MCP · programa de amostragem</h2>', '<h2>Programa de amostragem</h2>');
-  return `<div class="cm-v"><div class="vh"><div><h1>Análise de óleo · MCP</h1><p>Laudo de laboratório por motor: metais de desgaste, contaminação e condição do óleo · NP: 1 amostra por semestre em rodízio entre os MCPs (Anexo I, item 1.1.29)</p></div><span class="sp"></span><button class="mbtn" data-aoreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn pri" data-laudo2="">＋ Registrar laudo</button></div>
+  const amo = amoCard();
+  return `<div class="cm-v"><div class="vh"><div><h1>Análise de óleo · MCP</h1><p>Laudo de laboratório por motor: metais de desgaste, contaminação e condição do óleo · amostra de cada MCP a cada 1.000 h ou 12 meses, junto com os bicos e a compressão (Anexo I, item 1.1.29)</p></div><span class="sp"></span><button class="mbtn" data-aoreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn pri" data-laudo2="">＋ Registrar laudo</button></div>
    <div class="cm-ws">${aoMatriz(M)}${aoTend(M)}${amo}${aoParam()}</div></div>`;
 }
 VX.anoleo = vAnOleo;
