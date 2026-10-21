@@ -1,0 +1,2 @@
+# formularios oficiais do SMF: guardados byte a byte como o original (o app troca trechos exatos do texto)
+manutencao/forms/*.html -text
