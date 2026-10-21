@@ -1820,7 +1820,6 @@ function vFrota() {
    AJUSTE E CALIBRAÇÃO MCP (itens em amarelo do Anexo I + caixa de mar)
    ===================================================================== */
 const CALIB = [['1.1.11', 'Folga de válvulas'], ['1.1.12', 'Bicos injetores'], ['1.1.13', 'Ponto de injeção'], ['1.1.15', 'Rótulas do controle de combustível'], ['1.1.17', 'Trocador de calor'], ['1.4.1', 'Caixa de mar']];
-const CALN = Object.fromEntries(CALIB);
 const CAL_VIAGEM = ['1.4.1']; // pode ser feito com o empurrador em viagem; os demais são serviço técnico, só no porto
 const calPorto = id => !CAL_VIAGEM.includes(id);
 // fração da vida que ainda resta (1 = recém-feito, 0 = vence agora, < 0 = vencido); null = sem dado
@@ -2778,7 +2777,6 @@ async function aprovarOM(o) {
 /* =====================================================================
    DOCUMENTOS A4 · paginação, prévia e PDF
    ===================================================================== */
-const HDR_REL = () => `<div class="hdr"><div><img class="ln" src="${LOGOS.nav}" alt=""></div><div class="c"><b>RELATÓRIO MENSAL DE MANUTENÇÃO</b><span>Empurradores Fluviais</span><span class="np">NP Navecunha 055 · Item 9 · Indicadores e metas</span></div><div><img class="lv" src="${LOGOS.vda}" alt=""></div></div>`;
 const HDR = () => `<div class="hdr"><div><img class="ln" src="${LOGOS.nav}" alt=""></div><div class="c"><b>ANEXO II – REGISTRO DE MANUTENÇÃO</b><span>Empurradores Fluviais</span><span class="np">NP Navecunha 055 · Anexo II · Rev. 00</span></div><div><img class="lv" src="${LOGOS.vda}" alt=""></div></div>`;
 const FOOT = n => `<div class="sf"><span>Documento controlado pelo SGI · gerado pelo SMF ${VERSAO_APP}</span><span>Página <b>${n}</b> de <b>@N</b></span></div>`;
 const dv = (lab, v, span) => `<div${span ? ` style="grid-column:span ${span}"` : ''}><span class="fl">${lab}</span><div class="v">${esc(v == null ? '' : v) || '&nbsp;'}</div></div>`;
@@ -2909,7 +2907,6 @@ async function baixarPDF(pages, nome) { toast('Gerando PDF…', 1800); try { con
    SMF · indicadores, relatório mensal, administração, inicialização
    ===================================================================== */
 function falhasPorSistema(ini, fim) { const c = {}; oms().filter(o => ehFalha(o) && pD(o.abertura) >= ini && pD(o.abertura) < fim).forEach(o => { const s = (o.sistema || '?').replace(/^\d+\.0 /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração').replace('Alimentação de Combustível', 'Combustível').replace('Salvaguarda e Flutuabilidade', 'Salvaguarda').replace('Sinalização e Comunicação', 'Comunicação').replace('Resposta a Emergências', 'Emergências'); c[s] = (c[s] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1]); }
-function dispPorVessel(y, m) { const ini = mesIni(y, m), f0 = mesIni(y, m + 1), fim = f0 > hoje() ? hoje() : f0, tot = (fim - ini) / 3600e3; return S.cfg.frota.map(v => { let h = 0; oms().forEach(o => { if (o.vessel !== v.id) return; if (o.tipo === 'C' && o.interd === 'Sim' && o.interdDT) { const a = pD(o.interdDT), b = o.liberacao ? pD(o.liberacao) : hoje(); const x = Math.max(a, ini), yy = Math.min(b, fim); if (yy > x) h += (yy - x) / 3600e3; } if (o.tipo === 'P' && o.status === 'encerrada' && +o.indispH > 0) { const d = pD(o.dreal); if (d && d >= ini && d < fim) h += +o.indispH; } }); return [v.nome, Math.max(0, (tot - h) / tot * 100)]; }); }
 function emDiaPorSistema() { const c = {}; S.cfg.frota.forEach(v => painelVessel(v).forEach(x => { if (x.s.st === 'cond' || x.s.st === 'sem') return; const s = x.t.sis.replace(/^\d+\. /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração').replace('Alimentação de Combustível', 'Combustível').replace('Salvaguarda e Flutuabilidade', 'Salvaguarda').replace('Sinalização e Comunicação', 'Comunicação').replace('Resposta a Emergências', 'Emergências').replace('Fainas de Amarra e Carga', 'Amarra').replace('Auxílio à Navegação', 'Aux. navegação'); c[s] = c[s] || [0, 0]; c[s][0]++; if (x.s.st !== 'venc' || x.om) c[s][1]++; })); return Object.entries(c).map(([k, [t, ok]]) => [k, ok / t * 100]).sort((a, b) => a[1] - b[1]); }
 function vKpi() {
   const K = kpis(), d = hoje(), m12 = new Date(d); m12.setFullYear(m12.getFullYear() - 1);
@@ -3561,36 +3558,6 @@ function lubAcoesRel() {
   if (t.length) a.push(`Óleo para as trocas dos próximos 30 dias: ${t.map(([o, l]) => (o === 'Outros' ? 'SAE 90' : o) + ' ' + nf(l) + ' L').join(' · ')}.`);
   return a;
 }
-function lubBlocosRel(ini, fim) {
-  const RED = '#C5221F', AMB = '#B06000', cor = (t, c) => ({ h: `<b style="color:${c}">${esc(String(t))}</b>` }), H = s => ({ h: s });
-  const B = [], D = lubDados(), V = D.filter(x => x.s.st === 'venc' && !x.om), P = D.filter(x => x.s.st === 'viag' && !x.om);
-  const pend = V.concat(P).sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0)).slice(0, 14).map(x => [x.v.nome, x.e.nome + (x.e.mod ? ' · ' + x.e.mod : ''), x.e.oleo === 'Outros' ? 'SAE 90' : x.e.oleo, x.e.cap ? (x.e.est ? '≈ ' : '') + nf1(x.e.cap) + ' L' : '—', x.s.txt || '', x.s.st === 'venc' ? cor('Vencida', RED) : cor('Na viagem', AMB)]);
-  B.push(blk('4E', 'Situação da frota · Lubrificação (trocas de óleo e fluidos)', `${V.length} vencida(s) · ${P.length} na próxima viagem · ${D.filter(x => x.s.st === 'ok').length} em dia · ${D.filter(x => x.s.st === 'sem').length} sem histórico`, pend.length ? tbl(['Embarcação', 'Equipamento', 'Óleo', 'Volume', 'Situação', ''], pend, ['13%', '30%', '13%', '9%', '23%', '12%']) + (V.length + P.length > 14 ? `<p class="fl" style="text-transform:none;letter-spacing:0">+ ${V.length + P.length - 14} no sistema (Lubrificação › Trocas de óleo).</p>` : '') : '<div class="v">Nenhuma troca de óleo vencida ou vencendo na próxima viagem.</div>'));
-  const i0 = isoD(ini), f0 = isoD(fim), F = fr049s().filter(r => lubEmp(r) && r.date >= i0 && r.date < f0), LE = lubLanc().filter(x => lubEmp(x.r)), LA = LE.filter(x => x.date >= i0 && x.date < f0);
-  const a12 = isoD(new Date(fim.getFullYear() - 1, fim.getMonth(), 1)), L12 = LE.filter(x => x.date >= a12 && x.date < f0);
-  const semOM = F.filter(r => r.vessel && !omDoFr(r)).length;
-  const queim = F.reduce((a, r) => a + litros((r.residuos || {}).oleo), 0), f016 = [...new Set(F.map(r => (r.residuos || {}).fr016).filter(Boolean))], sem016 = F.filter(r => litros((r.residuos || {}).oleo) > 0 && !(r.residuos || {}).fr016).length;
-  const nT = F.reduce((a, r) => a + (r.eq || []).filter(q => q.status === 'T').length, 0), f4 = F.filter(r => (r.fotos || {}).antes >= 2 && (r.fotos || {}).depois >= 2).length;
-  const tipos = OLEOS.map(o => o[0]).filter(t => L12.some(x => x.oleo === t));
-  const soma = (L, f) => L.filter(f).reduce((a, x) => a + x.L, 0);
-  const CM = lubConsumoMCP(120), cmA = CM.out.filter(x => x.st === 'venc' || x.st === 'viag');
-  B.push(blk('4F', 'Lubrificação no mês · consumo de óleo e resíduos', `${F.length} FR 049_B · ${nT} equipamento(s) trocados`, `<div class="row" style="grid-template-columns:repeat(3,1fr)">${dv('FR 049_B lançados', F.length + (F.length ? ' (' + f4 + ' com as 4 fotos)' : ''))}${dv('Óleo nas trocas', nf(soma(LA, x => x.tipo === 'troca')) + ' L')}${dv('Complementos de nível', nf(soma(LA, x => x.tipo === 'comp')) + ' L')}${dv('OLUC gerado', nf(queim) + ' L')}${dv('FR 016_E do mês', f016.length > 4 ? f016.length + ' nºs (' + f016.slice(0, 3).join(', ') + '…)' : f016.join(', ') || '—')}${dv('FR 049_B sem nº do FR 016_E', sem016 || '0')}${dv('FR 049_B sem OM II-B (NP 7.4)', semOM || '0')}</div>`
-    + (tipos.length ? tbl(['Tipo de óleo', 'No mês', 'Últimos 12 meses'], tipos.map(t => [H(`<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${OLEO_COR[t]};margin-right:5px"></i>${t === 'Outros' ? 'Outros (SAE 90)' : t}`), nf(soma(LA, x => x.oleo === t)) + ' L', nf(soma(L12, x => x.oleo === t)) + ' L']), ['50%', '25%', '25%']) : '')
-    + `<p class="fl" style="text-transform:none;letter-spacing:0;margin-top:6px">Consumo de óleo do MCP (complementos, 120 dias): ${cmA.length ? cmA.map(x => esc(x.v.nome + (x.v.mcp === 'mono' ? '' : ' ' + x.p)) + ' ' + nf(x.taxa, 2) + ' L/100 h' + (x.st === 'venc' ? ' (investigar)' : ' (atenção)')).join(' · ') + ' · mediana da frota ' + nf(CM.med, 2) + ' L/100 h' : CM.med !== null ? 'todos os motores dentro do normal (mediana ' + nf(CM.med, 2) + ' L/100 h).' : 'sem complementos suficientes lançados.'} Balsas tanque seguem a NP 024 e não entram neste relatório.</p>`));
-  return B;
-}
-function lubEvidRel(ini, fim) {
-  const i0 = isoD(ini), f0 = isoD(fim), F = fr049s().filter(r => lubEmp(r) && r.date >= i0 && r.date < f0).sort((a, b) => a.date < b.date ? -1 : 1), B = [];
-  if (!F.length) return B;
-  const fig = (r, g, rot) => { const u = ((r.fotosLocais || {})[g] || [])[0], n = (r.fotos || {})[g === 'a' ? 'antes' : 'depois'] || 0;
-    return `<figure style="margin:0;display:flex;flex-direction:column;gap:3px"><div style="height:150px;border:1px solid #D5DEE9;border-radius:6px;background:#F3F6FA;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;font-size:10px;color:#6B7A8D;padding:${u ? 0 : 8}px">${u ? `<img src="${u}" style="width:100%;height:100%;object-fit:cover" alt="">` : n ? 'Foto guardada no PDF do FR 049_B (Drive)' : '<b style="color:#C5221F">Sem foto ' + rot + '</b>'}</div><figcaption style="font-size:9.5px;color:#41536A"><b>${rot}</b>${n > 1 ? ' · +' + (n - 1) + ' no formulário' : ''}</figcaption></figure>`; };
-  const card = r => { const nome = r.vessel ? vName(r.vessel) : nomeCurto(r.vNome), T = (r.eq || []).filter(q => q.status === 'T');
-    return `<div style="display:grid;grid-template-columns:30% 1fr 1fr;gap:10px;padding:8px 0;border-top:1px solid #E3E8F0;break-inside:avoid"><div style="font-size:10.5px;line-height:1.45"><b style="font-size:12px">FR 049_B · OM ${esc(r.om || '—')}</b><br>${esc(nome)} · ${brD(r.date)}<br>${esc(T.map(q => q.name).join(', ') || '—')}<br>${nf1(T.reduce((a, q) => a + litros(q.qtd), 0))} L · ${esc(r.local || '')}<br><span style="color:#6B7A8D">Executante: ${esc((r.nomes || {}).exe || '—')} · PDF: ${r.pdfFileId ? 'Drive › ' + esc(nome) : 'não enviado ao Drive'}</span></div>${fig(r, 'a', 'ANTES')}${fig(r, 'd', 'DEPOIS')}</div>`; };
-  const sem = F.filter(r => !((r.fotos || {}).antes >= 1 && (r.fotos || {}).depois >= 1)).length;
-  for (let i = 0; i < F.length; i += 4) B.push(blk('9B', 'Evidências fotográficas · FR 049_B (trocas de óleo)' + (i ? ' (continuação)' : ''), i ? '' : `${F.length} formulário(s) · ${sem ? sem + ' sem ANTES/DEPOIS' : 'todos com ANTES e DEPOIS'}`, F.slice(i, i + 4).map(card).join('')));
-  return B;
-}
-
 /* =====================================================================
    DADOS DE EXEMPLO (marcados seed:true; somem em "Limpar dados de exemplo")
    ===================================================================== */
@@ -3768,7 +3735,6 @@ const BIB_CAT = [
   ['norma', 'NRs, NORMAM e normas', '<path d="M5 21V4h14v17l-7-4z"/>'],
   ['outros', 'Outros', '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'],
 ];
-const BIB_CATN = Object.fromEntries(BIB_CAT.map(c => [c[0], c[1]]));
 const bicon = (p, s) => `<svg viewBox="0 0 24 24" width="${s || 18}" height="${s || 18}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 // documentos que já fazem parte do sistema (não precisam de cadastro)
 const BIB_FIXOS = [
@@ -4247,11 +4213,6 @@ document.addEventListener('click', async e => {
 
 
 /* ---------- tamanho livre (alça no canto) e mover livre (pegador), com salvamento automático ---------- */
-async function laySalvarAuto() {
-  const L = [...$$('#main .lay > .lb')], ant = LAY[VIEW] || {};
-  LAY[VIEW] = { order: L.map(w => w.dataset.k), span: Object.fromEntries(L.map(w => [w.dataset.k, +w.dataset.span])), hide: L.filter(w => w.classList.contains('oc')).map(w => w.dataset.k), min: ant.min || [], h: Object.fromEntries(L.filter(w => w.dataset.h).map(w => [w.dataset.k, +w.dataset.h])), v2: true };
-  try { await kvSet('layout', LAY); } catch (e) { }
-}
 function layAltura(w) { const c = w.querySelector(':scope > .card'); if (!c) return; if (w.dataset.h) { c.style.height = w.dataset.h + 'px'; c.style.overflow = 'auto'; } else { c.style.height = ''; c.style.overflow = ''; } }
 { const c0 = layCtl; layCtl = function () {
   c0(); if (LAYED || !LAY_VIEWS.includes(VIEW)) return;
@@ -4533,17 +4494,6 @@ async function fotosEnviar() {   // envia ao Drive as fotos deste aparelho que a
     }
   } catch (e) { } finally { fotoSync = false; }
 }
-async function fotosBuscar(ini, fim) {   // traz do Drive as fotos que faltam neste aparelho (relatório e apresentação)
-  if (!S.url || !S.session) return 0; let n = 0;
-  const get = async fid => { try { const j = await api('getFile', { fileId: fid }); return j.ok ? 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data : null; } catch (e) { return null; } };
-  for (const o of [...S.recs.values()]) {
-    if (o.excluido) continue; const d = o.kind === 'om' ? new Date(o.fechadoAt || 0) : o.kind === 'lub' ? pD(o.date) : null; if (!d || d < ini || d >= fim) continue; let mud = false;
-    if (o.kind === 'om') for (const f of (o.fotos || [])) if (f.fid && !f.src) { const s = await get(f.fid); if (s) { f.src = s; mud = true; n++; } }
-    if (o.kind === 'lub' && o.fotosFid && !o.fotosLocais) { const fl = { a: [], d: [] }; for (const g of ['a', 'd']) for (const fid of (o.fotosFid[g] || [])) { const s = fid && await get(fid); if (s) { fl[g].push(s); n++; } } if (fl.a.length || fl.d.length) { o.fotosLocais = fl; mud = true; } }
-    if (mud && !MEM) await DB.put(o);
-  }
-  return n;
-}
 setInterval(() => fotosEnviar(), 3 * 60e3); setTimeout(() => fotosEnviar(), 20e3);
 
 /* ---------- exemplo: modo/causa, HH e custo nas corretivas e laudos (só dados de exemplo) ---------- */
@@ -4629,33 +4579,12 @@ function cronoEventos(meses) {
 }
 const cronoMes = (d, ini) => (d.getFullYear() - ini.getFullYear()) * 12 + d.getMonth() - ini.getMonth();
 function cronoFiltra(E) { return E.filter(e => (!CR.v || e.v.id === CR.v) && (!CR.prio || (CR.prio === 'CA' ? ['Crítica', 'Alta'].includes(e.t.prio) : e.t.prio === CR.prio)) && (!CR.sis || parseInt(e.t.id) === +CR.sis)); }
-function vCrono() {
-  const C = cronoEventos(12), E = cronoFiltra(C.ev), M = [...Array(12)].map((_, i) => { const d = new Date(C.ini.getFullYear(), C.ini.getMonth() + i, 1); return { i, lab: MESES[d.getMonth()] + '/' + String(d.getFullYear()).slice(2), d }; });
-  const PR = [['Crítica', '#C5221F'], ['Alta', '#1A73E8'], ['Média', '#669DF6'], ['Baixa', '#AECBFA']];
-  const serie = PR.map(([p, cor]) => ({ nome: p, cor, vals: M.map(m => E.filter(e => cronoMes(e.d, C.ini) === m.i && (e.t.prio === p || (p === 'Baixa' && !['Crítica', 'Alta', 'Média'].includes(e.t.prio)))).length) }));
-  const nOM = new Set(E.map(e => e.v.id + '|' + e.pos + '|' + cronoMes(e.d, C.ini))).size, venc = E.filter(e => e.venc).length, m0 = E.filter(e => cronoMes(e.d, C.ini) === 0).length, m3 = E.filter(e => cronoMes(e.d, C.ini) < 3).length;
-  const frota = S.cfg.frota.filter(v => !CR.v || v.id === CR.v), cel = (v, i) => E.filter(e => e.v === v && cronoMes(e.d, C.ini) === i);
-  const mx = Math.max(1, ...frota.flatMap(v => M.map(m => cel(v, m.i).length)));
-  const sel = (id, ops, val) => `<select data-cr="${id}">${ops.map(([k, l]) => `<option value="${k}"${k === val ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  const prox = E.filter(e => !e.prox).sort((a, b) => a.d - b.d || (a.venc ? -1 : 1)).slice(0, 30);
-  return `<div class="vh"><div><h1>Cronograma de manutenção · 12 meses</h1><p>Projeção das tarefas do Plano de Manutenção (Anexo I) para cada embarcação: último serviço + intervalo (horas OU meses, o que ocorrer primeiro), convertido em data pela taxa média de operação de cada embarcação (h/dia, últimos 90 dias de horímetro). Atualiza sozinho a cada leitura de horímetro e OM encerrada. O método de execução de cada item é consultado no Anexo I, pela OM.</p></div><span class="sp"></span><button class="mbtn pri" onclick="location.hash='emitir'">Programar a janela de manutenção</button></div>
-   <div class="card"><div class="g"><label class="f s2">Embarcação${sel('v', [['', 'Frota toda']].concat(S.cfg.frota.map(v => [v.id, v.nome])), CR.v)}</label><label class="f s2">Prioridade${sel('prio', [['', 'Todas'], ['CA', 'Crítica e Alta'], ['Crítica', 'Crítica'], ['Alta', 'Alta'], ['Média', 'Média']], CR.prio)}</label><label class="f s2">Sistema${sel('sis', [['', 'Todos']].concat(SISTEMAS.map((s, i) => [String(i + 1), s])), CR.sis)}</label></div></div>
-   <div class="kgrid six"><div class="card mini ${venc ? 'bad' : 'ok'}"><b>${venc}</b><span>tarefas vencidas (backlog)</span></div><div class="card mini"><b>${m0}</b><span>tarefas no mês atual (inclui vencidas)</span></div><div class="card mini"><b>${m3}</b><span>tarefas nos próximos 3 meses</span></div><div class="card mini"><b>${E.length}</b><span>tarefas do plano em 12 meses</span></div><div class="card mini"><b>${nf(nOM / 12, 0)}</b><span>OMs preventivas por mês (estimativa: 1 OM por posição no mês)</span></div><div class="card mini ${C.sem.length ? 'bad' : ''}"><b>${C.sem.length}</b><span>itens sem último serviço (fora da projeção)</span></div></div>
-   <div class="card"><div class="row"><h2>A · Carga de trabalho prevista por mês e prioridade</h2><span class="sp"></span><span class="note">nº de tarefas do Anexo I · passe o mouse para o detalhe</span></div>${stackChart(M.map(m => m.lab), serie, '')}<div class="row" style="gap:14px;font-size:12.5px;margin-top:6px">${PR.map(([p, c]) => `<span><i class="fm-lg" style="background:${c}"></i>${p}</span>`).join('')}</div></div>
-   <div class="card"><div class="row"><h2>B · Cronograma por embarcação</h2><span class="sp"></span><span class="note">nº de tarefas no mês · borda vermelha = contém vencida · clique na célula para ver os itens</span></div>
-   <div class="tw"><table class="t cr"><thead><tr><th>Embarcação</th><th class="c">h/dia</th>${M.map(m => `<th class="c">${m.lab}</th>`).join('')}<th class="c">Total</th></tr></thead><tbody>
-   ${frota.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td class="c mono">${nf(horasDia(v.id), 1)}</td>${M.map(m => { const L = cel(v, m.i), n = L.length, vc = L.some(e => e.venc), crit = L.filter(e => e.t.prio === 'Crítica').length; return `<td class="c cr-c${n ? '' : ' z'}${vc ? ' vc' : ''}" ${n ? `data-crcel="${v.id}|${m.i}" style="background:${tomRank(n, mx)};color:#173252"` : ''} title="${n} tarefa(s) · ${new Set(L.map(e => e.pos)).size} OM(s)${crit ? ' · ' + crit + ' Crítica' : ''}${vc ? ' · contém vencidas' : ''}">${n || '·'}</td>`; }).join('')}<td class="c mono"><b>${M.reduce((a, m) => a + cel(v, m.i).length, 0)}</b></td></tr>`).join('')}</tbody></table></div></div>
-   <div class="card"><div class="row"><h2>C · Próximas tarefas</h2><span class="sp"></span><span class="note">as 30 mais próximas · ordem de data</span></div>
-   <div class="tw"><table class="t"><thead><tr><th>Data prevista</th><th>Embarcação</th><th>Pos.</th><th>Item</th><th>Serviço (Anexo I)</th><th>Intervalo</th><th>Prioridade</th><th>Situação</th></tr></thead><tbody>
-   ${prox.map(e => `<tr><td class="mono">${e.venc ? '<b style="color:var(--badt)">vencido</b>' : brD(isoD(e.d))}<div class="note">por ${e.base === 'h' ? 'horas' : 'data'}</div></td><td>${esc(e.v.nome)}</td><td>${posTag(e.pos)}</td><td class="mono">${e.t.id}</td><td>${esc(e.t.chk || e.t.item)}<div class="note">${esc(e.t.eq || '')}</div></td><td>${ivTxt(e.t)}</td><td>${esc(e.t.prio)}</td><td>${e.om ? '<span class="pill p-inf">OM aberta</span>' : e.venc ? '<span class="pill p-bad">programar</span>' : '<span class="pill p-mut">previsto</span>'}</td></tr>`).join('')}</tbody></table></div>
-   <p class="note">Itens "por condição" e "só motor novo" ficam fora.</p></div>`;
-}
 AFTER.crono = () => {
   $$('[data-cr]').forEach(s => s.onchange = () => { CR[s.dataset.cr] = s.value; render(); });
   $('#main').onclick = e => { const c = e.target.closest('[data-crcel]'); if (!c) return; const [vid, i] = c.dataset.crcel.split('|'); const C = cronoEventos(12), L = cronoFiltra(C.ev).filter(x => x.v.id === vid && cronoMes(x.d, C.ini) === +i).sort((a, b) => a.d - b.d), d = new Date(C.ini.getFullYear(), C.ini.getMonth() + +i, 1);
     modal(`<div class="row"><h2>${esc(vName(vid))} · ${MESESL[d.getMonth()]} de ${d.getFullYear()}</h2><span class="sp"></span><button class="mbtn" data-close>Fechar</button></div><div class="tw" style="max-height:62vh"><table class="t"><thead><tr><th>Data</th><th>Pos.</th><th>Item</th><th>Serviço (Anexo I)</th><th>Intervalo</th><th>Prioridade</th></tr></thead><tbody>${L.map(e => `<tr><td class="mono">${e.venc ? '<b style="color:var(--badt)">vencido</b>' : brD(isoD(e.d))}</td><td>${posTag(e.pos)}</td><td class="mono">${e.t.id}</td><td>${esc(e.t.chk || e.t.item)}<div class="note">${esc(e.t.eqn || e.t.eq || '')}</div></td><td>${ivTxt(e.t)}</td><td>${esc(e.t.prio)}${e.om ? ' <span class="pill p-inf">OM aberta</span>' : ''}</td></tr>`).join('')}</tbody></table></div><div class="row end"><button class="mbtn pri" onclick="location.hash='emitir'">Programar janela de manutenção</button></div>`, true); };
 };
-VX.crono = vCrono;
+
 
 /* ---------- 9 · menu na ordem do ciclo de gestão (PDCA) ---------- */
 {
@@ -5534,32 +5463,6 @@ function resumoMesCards() {
 }
 
 /* ---------- 4 · praça de máquinas ---------- */
-function svgBarrasPN(labels, series, o = {}) {   // barras agrupadas com valores negativos (vencido) abaixo do zero
-  const W = o.w || 900, H = o.h || 240, L = 44, B = 26, T = 22, R = 8, n = labels.length, gw = (W - L - R) / Math.max(1, n), bw = Math.min(16, (gw - 10) / series.length);
-  const PC = !!o.pct, U = PC ? '%' : ' h', LIM = PC ? 15 : 50, all = series.flatMap(s => s.vals).filter(v => v != null), mx = Math.max(PC ? 100 : 50, ...all), mn = Math.min(0, ...all), span = mx - mn, top = mx + span * .12, bot = mn < 0 ? mn - span * .12 : 0;
-  const Y = v => T + (H - T - B) * (top - v) / (top - bot);
-  let g = `<line x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}" stroke="#9AA0A6"/>`;
-  [top * .5, mx].forEach(t => g += `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="#F1F3F4"/><text x="${L - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${nf(t)}${PC ? '%' : ''}</text>`);
-  g += `<text x="${L - 6}" y="${Y(0) + 3}" text-anchor="end" font-size="9" fill="#5F6368">0</text>`;
-  labels.forEach((l, i) => { const x0 = L + i * gw + (gw - bw * series.length) / 2;
-    series.forEach((s, j) => { const v = s.vals[i]; if (v == null) return; const x = x0 + j * bw, y1 = Y(Math.max(0, v)), y2 = Y(Math.min(0, v)), c = v < 0 ? '#D93025' : v <= LIM ? '#F9AB00' : s.cor;
-      g += `<rect x="${x}" y="${y1}" width="${bw - 1.5}" height="${Math.max(1, y2 - y1)}" fill="${c}" rx="2"><title>${esc(l)} · ${esc(s.nome)}: ${v < 0 ? 'vencida · ' + nf(-v) + U + ' além do intervalo' : 'faltam ' + nf(v) + U + (PC ? ' do intervalo' : '')}</title></rect>`; });
-    g += `<text x="${L + i * gw + gw / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="#3C4043">${esc(l)}</text>`; });
-  const leg = series.map((s, j) => `<rect x="${L + j * 150}" y="2" width="10" height="10" rx="2" fill="${s.cor}"/><text x="${L + 14 + j * 150}" y="11" font-size="10.5" fill="#3C4043">${esc(s.nome)}</text>`).join('') + `<rect x="${L + series.length * 150}" y="2" width="10" height="10" rx="2" fill="#F9AB00"/><text x="${L + 14 + series.length * 150}" y="11" font-size="10.5" fill="#3C4043">${PC ? 'até 15% do intervalo' : 'até 50 h'}</text><rect x="${L + series.length * 150 + 160}" y="2" width="10" height="10" rx="2" fill="#D93025"/><text x="${L + 174 + series.length * 150}" y="11" font-size="10.5" fill="#3C4043">vencida (abaixo do zero)</text>`;
-  return `<svg viewBox="0 0 ${W} ${H + 16}" width="100%" style="display:block">${leg}<g transform="translate(0,16)">${g}</g></svg>`;
-}
-function oleoSistemas() {
-  const LD = lubDados(), V = S.cfg.frota.filter(v => !foraOp(v)), SIS = [['mcp', 'MCP', '#1A73E8'], ['crp', 'Reversor', '#5E97F6'], ['mca', 'MCA', '#9C27B0'], ['inc', 'Bomba de incêndio', '#00897B']];
-  const val = (v, g) => { const L = LD.filter(x => x.v === v && x.e.g === g && x.horas != null).map(x => { const iv = intervalo(x.t, v, x.e.pos); const ivh = iv.h || (iv.m ? iv.m * 30.4 * horasDiaPos(v.id, lubHp(v, x.e)) : null); return ivh ? x.horas / ivh * 100 : null; }).filter(x => x != null); return L.length ? Math.round(Math.min(...L)) : null; };
-  const series = SIS.map(([g, nome, cor]) => ({ nome, cor, vals: V.map(v => val(v, g)) })).filter(s => s.vals.some(x => x != null));
-  return svgBarrasPN(V.map(v => v.nome.replace('CJA ', '')), series, { h: 230, pct: true });
-}
-function calibMatriz() {
-  const CA = calibDados(), V = S.cfg.frota.filter(v => !foraOp(v)), c = { venc: '#D93025', viag: '#F9AB00', ok: '#188038', sem: '#DADCE0' };
-  const cel = (v, id) => { const L = CA.filter(x => x.v === v && x.t.id === id); if (!L.length) return '<td class="note">—</td>'; return `<td>${L.map(x => `<i class="cm-d" style="background:${c[x.s.st] || '#DADCE0'}" title="${esc(v.nome + ' ' + x.pos + ' · ' + x.nm + ': ' + (x.s.txt || ''))}"></i>`).join('')}</td>`; };
-  return `<div class="tw"><table class="t cm"><thead><tr><th>Embarcação</th>${CALIB.map(([id, nm]) => `<th title="${id}">${esc(nm.replace(' do controle de combustível', ''))}</th>`).join('')}</tr></thead><tbody>${V.map(v => `<tr class="click" data-vessel="${v.id}"><td><b>${esc(v.nome)}</b></td>${CALIB.map(([id]) => cel(v, id)).join('')}</tr>`).join('')}</tbody></table></div>
-   <p class="note"><i class="cm-d" style="background:#188038"></i> em dia <i class="cm-d" style="background:#F9AB00"></i> vence na próxima viagem <i class="cm-d" style="background:#D93025"></i> vencido <i class="cm-d" style="background:#DADCE0"></i> sem histórico · uma bolinha por motor (BB/BE)</p>`;
-}
 function compTabela() {
   const OV = overDados().filter(x => !foraOp(x.v)), ord = { venc: 0, viag: 1, ok: 2, sem: 3 };
   const L = OV.slice().sort((a, b) => ord[a.st] - ord[b.st] || ((a.u ? a.u.min : 9) - (b.u ? b.u.min : 9)));
@@ -5619,34 +5522,6 @@ kvGet('layout').then(v => { if (v && !v._pn5) { delete v.geral; v._pn5 = 1; LAY 
 
 /* ===== Relatório mensal na mesma sequência do Painel: 1 Indicadores · 2 Riscos · 3 Resumo do mês · 4 Praça de máquinas · 5 Docagem · 6 Plano de ação · 7 Evidências · anexos ===== */
 'use strict';
-function relReordenar(B, c) {
-  const code = h => { const m = h.match(/<code>([^<]*)<\/code>/); return m ? m[1] : ''; };
-  const recod = (h, novo, pre) => h.replace(/<code>[^<]*<\/code>/, `<code>${novo}</code>${pre || ''}`);
-  const MAP = { '0': ['0'], '1': ['1A'], '2': ['1B'], '0B': ['3A'], '7B': ['3C'], '4A': ['4A'], '4B': ['4B'], '4E': ['4C'], '4F': ['4D'], '4G': ['4E'], '4H': ['4F'], '4D': ['4G'], '4C': ['5'], '9': ['7'], '9B': ['7B'], '5': ['A', 'Anexo A · '], '6': ['B', 'Anexo B · '], '7A': ['C', 'Anexo C · '], '7C': ['D', 'Anexo D · '], '8': ['E', 'Anexo E · '], 'A': ['F', 'Anexo F · '] };
-  const ORDEM = ['0', '1A', '1B', '2', '3A', '3B', '3C', '4A', '4B', '4C', '4D', '4E', '4F', '4G', '5', '6', '7', '7B', 'A', 'B', 'C', 'D', 'E', 'F'];
-  const out = [];
-  B = B.map(h => h.replace('Situação da frota · ', ''));
-  B.forEach((h, i) => { const k = code(h); if (k === '3') return; const m = MAP[k]; if (!m) { out.push({ k: '4Z', h, i }); return; } let hh = recod(h, m[0]); if (m[1]) hh = hh.replace(/Anexo [A-Z] · /, '').replace(`<code>${m[0]}</code>`, `<code>${m[0]}</code>${m[1]}`); out.push({ k: m[0], h: hh, i }); });
-  // 2 · riscos e alertas
-  const R = riscoFrota(), A = alertasFrota(), cor = { Alto: '#C5221F', 'Médio': '#B06000', Baixo: '#137333' };
-  const rows = R.map(r => [r.v.nome, r.h ? nf(r.h.h) + ' h' : 'sem leitura', r.oleo && r.oleo.horas != null ? (r.oleo.horas < 0 ? 'vencida ' + nf(-r.oleo.horas) + ' h' : nf(r.oleo.horas) + ' h') : '—', r.cv ? r.cv + ' vencida(s)' : r.cp ? r.cp + ' na viagem' : 'em dia', r.ov ? ({ venc: 'avaliar overhaul', viag: 'atenção', sem: 'sem medição', ok: 'normal' })[r.ov.st] : '—', r.d.due ? (r.d.dias < 0 ? 'vencida ' + (-r.d.dias) + ' d' : r.d.dias <= 365 ? 'em ' + r.d.dias + ' d' : r.d.due.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '')) : 'sem registro', { h: `<b style="color:${cor[r.risco]}">${r.risco}</b>` }]);
-  const p1 = A.filter(a => a.p === 1), nA = R.filter(r => r.risco === 'Alto').length;
-  out.push({ k: '2', i: 999, h: blk('2', 'Riscos & alertas críticos', `${nA} de ${R.length} embarcações em risco alto · ${p1.length} alerta(s) P1 · ${A.length - p1.length} P2`,
-    tbl(['Embarcação', 'Horímetro MCP', 'Até a troca de óleo', 'Calibração', 'Compressão', 'Docagem', 'Risco'], rows, ['14%', '14%', '16%', '14%', '14%', '16%', '12%'])
-    + `<span class="fl" style="margin-top:8px;display:block;color:#C5221F">Alertas P1 · ação imediata</span><div class="v">${p1.length ? p1.map((a, i) => (i + 1) + '. ' + esc((a.v ? a.v.nome + ' · ' : '') + a.txt)).join('<br>') : 'Nenhum alerta P1.'}</div>`) });
-  // 3B · previsto × realizado
-  const pr = prevReal(c.y, c.m), ad = pr.P ? pr.R / pr.P * 100 : null;
-  out.push({ k: '3B', i: 999, h: blk('3B', 'Previsto × realizado por embarcação · OMs preventivas', ad == null ? 'sem programação no mês' : `aderência ${nf(ad, 0)}% (${pr.R} de ${pr.P})`, pr.P ? svgColunas(pr.V.map(v => v.nome.replace('CJA ', '')), [{ nome: 'Previsto (programadas)', vals: pr.prev, cor: '#AECBFA' }, { nome: 'Realizado (encerradas no mês)', vals: pr.real, cor: '#1A73E8' }], { h: 170 }) : '<div class="v">Nenhuma OM preventiva programada no mês.</div>') });
-  // 6 · plano de ação do próximo mês
-  const prazo = new Date(c.y, c.m + 2, 0), linhas = [];
-  A.forEach(a => linhas.push([a.p === 1 ? { h: '<b style="color:#C5221F">P1</b>' } : { h: '<b style="color:#B06000">P2</b>' }, (a.v ? a.v.nome + ' · ' : '') + a.txt, 'Supervisor de Manutenção', a.p === 1 ? 'imediato' : brD(isoD(prazo))]));
-  (c.acoes || []).forEach(t => { const tx = String(t).replace(/<[^>]+>/g, ''); if (!linhas.some(l => String(l[1]).slice(0, 25) === tx.slice(0, 25))) linhas.push([{ h: '<b style="color:#1967D2">Plano</b>' }, tx, 'Supervisor de Manutenção', brD(isoD(prazo))]); });
-  const L = linhas.slice(0, 18).map((l, i) => [String(i + 1)].concat(l));
-  out.push({ k: '6', i: 999, h: blk('6', 'Plano de ação para o próximo mês', L.length + ' ação(ões)', L.length ? tbl(['Nº', 'Prior.', 'Ação', 'Responsável', 'Prazo'], L, ['6%', '8%', '56%', '18%', '12%']) + '<p class="fl" style="text-transform:none;letter-spacing:0;margin-top:6px">P1 = ação imediata · P2 = programar no mês · Plano = ações de rotina do programa de manutenção.</p>' : '<div class="v">Nenhuma ação pendente.</div>') });
-  out.sort((a, b) => { const ia = ORDEM.indexOf(a.k), ib = ORDEM.indexOf(b.k); return (ia < 0 ? ORDEM.indexOf('4G') + .5 : ia) - (ib < 0 ? ORDEM.indexOf('4G') + .5 : ib) || a.i - b.i; });
-  return out.map(x => x.h);
-}
-
 /* =====================================================================
    Gráficos novos: troca de óleo em barras horizontais por embarcação, calibração do MCP
    em quadro (em dia / atenção / vencidos + detalhe do motor + mapa da frota) e gráficos
@@ -5714,20 +5589,6 @@ function calibPainel() {
 document.addEventListener('click', e => { const b = e.target.closest('[data-csel]'); if (!b) return; e.stopPropagation(); CSEL = b.dataset.csel; render(); }, true);
 
 /* ---------- gráficos do relatório: mais limpos ---------- */
-function relLinha(vals, labels, meta, unit, dec, menor) {
-  const W = 240, H = 140, L = 8, R = 8, T = 22, B = 22, n = labels.length, X = i => L + 10 + i * (W - L - R - 20) / Math.max(1, n - 1);
-  const v = vals.filter(x => x != null && !isNaN(x)); if (!v.length) return '<div class="v">sem dados</div>';
-  const lo = Math.min(...v, meta), hi = Math.max(...v, meta), pad = (hi - lo) * .25 || Math.abs(hi) * .1 || 1, a = lo - pad, b = hi + pad, Y = x => T + (H - T - B) * (1 - (x - a) / (b - a));
-  const ok = x => menor ? x <= meta : x >= meta, f = x => nf(x, dec) + unit;
-  let g = `<line x1="${L}" x2="${W - R}" y1="${Y(meta)}" y2="${Y(meta)}" stroke="${GG.vm}" stroke-dasharray="4 3" stroke-width="1"/><text x="${L}" y="${Y(meta) + (Y(meta) > H - B - 14 ? -4 : 11)}" text-anchor="start" font-size="9" fill="${GG.vm}">meta ${f(meta)}</text>`;
-  const pts = vals.map((x, i) => x == null || isNaN(x) ? null : [X(i), Y(x), x]);
-  const seg = pts.filter(Boolean);
-  g += `<polyline points="${seg.map(p => p[0] + ',' + p[1]).join(' ')}" fill="none" stroke="${GG.az}" stroke-width="2"/>`;
-  seg.forEach((p, k) => { const last = k === seg.length - 1; g += `<circle cx="${p[0]}" cy="${p[1]}" r="${last ? 4.5 : 3}" fill="${ok(p[2]) ? GG.az : GG.vm}" stroke="#fff" stroke-width="1.2"/>`;
-    if (last || k === 0) g += `<text x="${p[0] + (last ? -2 : 2)}" y="${p[1] - 8}" text-anchor="${last ? 'end' : 'start'}" font-size="${last ? 12 : 9.5}" font-weight="${last ? 600 : 400}" fill="${ok(p[2]) ? GG.tx : GG.vm}">${f(p[2])}</text>`; });
-  labels.forEach((l, i) => g += `<text x="${X(i)}" y="${H - 6}" text-anchor="middle" font-size="9.5" fill="${GG.tx2}">${esc(l)}</text>`);
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;font-family:${GG.fonte}">${g}</svg>`;
-}
 svgColunas = function (labels, series, o = {}) {
   const W = o.w || 680, H = o.h || 200, L = 26, B = 24, T = 26, R = 6, n = labels.length, gw = (W - L - R) / Math.max(1, n), bw = Math.min(18, (gw - 10) / series.length);
   const mx = Math.max(1, ...series.flatMap(s => s.vals)), top = Math.max(2, Math.ceil(mx * 1.2)), Y = v => T + (H - T - B) * (1 - v / top);
@@ -5814,7 +5675,6 @@ function cxConta(L, mes) {
   const ok = M.filter(m => m.k === 'ok').length, late = M.filter(m => m.k === 'late').length, miss = M.filter(m => m.k === 'miss').length, plan = M.filter(m => m.k === 'plan').length;
   const den = ok + late + miss; return { ok, late, miss, plan, den, ad: den ? ok / den * 100 : null };
 }
-const CXC = { ok: '#188038', late: '#E37400', miss: '#D93025', plan: '#9AA0A6', pl: '#E37400' };
 function cxCel(ms) {
   if (!ms.length) return '<td></td>';
   const tip = ms.map(m => m.k === 'ok' ? `Realizado ${brD(isoD(m.d))} · ${m.ev.src}${m.due ? ' · vencia ' + brD(isoD(m.due)) : ''}` : m.k === 'late' ? `Realizado com ${m.atr} d de atraso em ${brD(isoD(m.d))} · ${m.ev.src} · vencia ${brD(isoD(m.due))}` : m.k === 'miss' ? `Programado ${brD(isoD(m.d))} · NÃO realizado` : m.k === 'pl' ? `Programado ${brD(isoD(m.d))} · feito depois (${m.ev.src})` : `Programado ${brD(isoD(m.d))}`).join('\n');
@@ -5824,9 +5684,6 @@ function cxCel(ms) {
   const om = ms.find(m => m.ev && m.ev.num && (m.k === 'ok' || m.k === 'late'));
   return `<td><span class="cx-c ${k}" title="${esc(tip)}">${lab}${om ? `<small>${esc(String(om.ev.num))}</small>` : ''}</span></td>`;
 }
-function cxPorSis(L) { return SISTEMAS.map((s, i) => ({ s, c: cxConta(L.filter(r => parseInt(r.t.id) === i + 1)), n: L.filter(r => parseInt(r.t.id) === i + 1).length })); }
-function cxSisTab(L, pdf) { const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#D93025';
-  return `<table class="${pdf ? '' : 't'}"><thead><tr><th style="text-align:left">Sistema (Anexo I · 7.1)</th><th>Itens no plano</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${cxPorSis(L).map(x => `<tr${pdf ? '' : ` class="click" data-cxs="${SISTEMAS.indexOf(x.s) + 1}"`}><td style="text-align:left"><b>${esc(x.s)}</b></td><td>${x.n || '—'}</td><td>${x.c.ok || '—'}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan || '—'}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table>`; }
 function cxCarga(L) {   // OMs por mês: o SMF abre uma OM por posição (BB, BE, MCA, embarcação) em cada janela de manutenção
   const M = Array.from({ length: 12 }, () => ({ it: 0, pos: new Set(), ves: new Set() }));
   L.forEach(r => r.marks.forEach(k => { if (k.k === 'pl') return; const m = M[k.d.getMonth()]; m.it++; m.pos.add(r.v.id + '|' + r.pos); m.ves.add(r.v.id); }));
@@ -6433,18 +6290,6 @@ function cr3Tabela(L, ano, pdf) {
   return `<table class="k3"><thead><tr><th>Equipamento</th><th>Criticidade</th><th>Serviços</th>${MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>R / P</th></tr></thead><tbody>${rows || '<tr><td colspan="16" class="note">Nada neste filtro.</td></tr>'}</tbody></table>`;
 }
 function cr3Conta(L, hm) { const c = { ok: 0, late: 0, miss: 0, plan: 0 }; L.forEach(e => e.M.forEach(m => { c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.plan += m.plan; })); c.den = c.ok + c.late + c.miss; c.ad = c.den ? c.ok / c.den * 100 : null; return c; }
-function vCrono3() {
-  const ano = +CR3.ano, ativos = S.cfg.frota.filter(v => !foraOp(v)), L0 = cronoFrota(ano, CR3.v), L = CR3.crit ? L0.filter(e => CR3.crit === 'CA' ? ['Crítica', 'Alta'].includes(e.crit) : e.crit === CR3.crit) : L0, T = cr3Conta(L);
-  const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#D93025';
-  const sel = (k, ops, val) => `<select data-k3="${k}">${ops.map(([a, b]) => `<option value="${a}"${String(a) === String(val) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
-  const c = ciclo(), hv = hViagem(), nB = ativos.filter(v => cronoBase(ano, v.id)).length;
-  return `<div class="vh"><div><h1>Cronograma de manutenção · planejado × realizado · ${ano}</h1><p>Uma linha por equipamento de cada embarcação: criticidade, serviços (tirados do Anexo I, que fica para consulta) e, mês a mês, o que está <b>P</b>lanejado e o que foi <b>R</b>ealizado.</p></div><span class="sp"></span><button class="mbtn pri" data-k3pdf>⬇ PDF para auditoria</button></div>
-   <div class="card"><div class="g"><label class="f s2">Ano${sel('ano', [hoje().getFullYear(), hoje().getFullYear() + 1].map(y => [y, y]), ano)}</label><label class="f s2">Embarcação${sel('v', [['', 'Frota toda']].concat(ativos.map(v => [v.id, v.nome])), CR3.v)}</label><label class="f s2">Criticidade${sel('crit', [['', 'Todas'], ['CA', 'Crítica e Alta'], ['Crítica', 'Só Crítica'], ['Alta', 'Só Alta'], ['Média', 'Só Média'], ['Baixa', 'Só Baixa']], CR3.crit)}</label>
-    <div class="s6 c2-ciclo">Ciclo: ida <input data-cic="ida" value="${c.ida}"> d · descargas <input data-cic="desc" value="${c.desc}"> d · volta <input data-cic="volta" value="${c.volta}"> d · porto <input data-cic="porto" value="${c.porto}"> d <span class="note">≈ ${nf(hv)} h de MCP por viagem</span></div></div></div>
-   <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao cronograma</span><small>${T.ok} de ${T.den} serviços vencidos feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>realizados no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>realizados com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>venceram e não foram feitos</span></div><div><b>${nB}/${ativos.length}</b><span>cronogramas aprovados</span>${can.admin() ? `<small><a href="#" data-k3apr="${CR3.v || 'frota'}">${CR3.v ? 'aprovar este empurrador' : 'aprovar a frota toda'} (${ano})</a></small>` : ''}</div></div>
-   <div class="card"><div class="k3-leg"><span><i class="k3 plan">P</i> planejado</span><span><i class="k3 ok">R</i> realizado no prazo</span><span><i class="k3 late">R</i> realizado com atraso</span><span><i class="k3 miss">P</i> venceu e não foi feito</span><span class="note">Serviços: troca de óleo (+ itens de 250 h, FR 049_B) · revisões por hora na janela em Manaus · trimestral / semestral / anual · docagem. Passe o mouse no mês para ver o serviço.</span></div>
-    <div class="tw k3-w">${cr3Tabela(L, ano)}</div></div>`;
-}
 function cr3PDF() {
   const ano = +CR3.ano, L0 = cronoFrota(ano, CR3.v), L = CR3.crit ? L0.filter(e => CR3.crit === 'CA' ? ['Crítica', 'Alta'].includes(e.crit) : e.crit === CR3.crit) : L0, T = cr3Conta(L);
   const css = `@page{size:A4 landscape;margin:8mm}body{font-family:Arial,sans-serif;font-size:9px;color:#202124;margin:0}.hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:6px}.hd img{height:34px}.hd h1{font-size:14px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368}
@@ -6469,7 +6314,7 @@ async function cr3Aprovar(vs, ano) {
     L.forEach(e => { linhasEq[e.k] = e.M.map(m => m.plan + m.miss + m.ok + m.late); nomes[e.k] = e.nome.n + ' · ' + e.servs.join(', ') + ' · ' + e.crit; });
     await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasEq, nomes }); }
 }
-VX.crono = vCrono3; VX.cxr = vCrono3;
+
 const after3 = function () { const m = $('#main');
   m.onchange = async e => { const t = e.target; if (t.dataset.k3) { CR3[t.dataset.k3] = t.value; render(); } if (t.dataset.cic) { S.cfg.ciclo = Object.assign({}, S.cfg.ciclo || {}, { [t.dataset.cic]: Math.max(0, +t.value || 0) }); await kvSet('cfg', S.cfg); render(); } };
   m.onclick = async e => { const t = e.target.closest('button,a'); if (!t) return;
@@ -6697,7 +6542,7 @@ VX.crono = vCronoV2;
 AFTER.crono = function () { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'cvV') { CRV.v = e.target.value; render(); } if (e.target.id === 'cvSo') { CRV.so = e.target.checked; render(); } };
   m.onclick = e => { const t = e.target.closest('button'); if (t && 'cvprint' in t.dataset) window.print(); }; };
-VX.audit = vCrono3; AFTER.audit = AFTER.cxr;   // planejado × realizado (auditoria) continua disponível
+AFTER.audit = AFTER.cxr;   // planejado × realizado (auditoria) continua disponível
 
 /* ---------- OMs: abertas e encerradas, numa lista ---------- */
 function vOMs() {
@@ -6813,7 +6658,7 @@ AFTER.audit = function () { const m = $('#main');
     if (b.dataset.aumes != null && 'aumes' in b.dataset) { AUD.mes = b.dataset.aumes; render(); return; }
     if ('auapr' in b.dataset) { if (!precisa(true)) return; await cr3Aprovar(S.cfg.frota.filter(v => !foraOp(v)), +AUD.ano); toast('Cronograma ' + AUD.ano + ' aprovado para a frota.'); render(); } }; };
 { const s = SECOES.find(x => x.id === 'crono'); if (s) { s.views = [['crono', 'Cronograma do empurrador'], ['audit', 'Auditoria'], ['cxr', 'Planejado × realizado (detalhe)'], ['rel', 'Relatório do mês']]; s.extra = []; }
-  VX.cxr = vCrono3; AFTER.cxr = after3; }
+  AFTER.cxr = after3; }
 { const st = document.createElement('style'); st.textContent = `.au-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 14px}.au-k>div{background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:2px}.au-k span{font-size:12px;font-weight:700;color:#5F6368;text-transform:uppercase;letter-spacing:.03em}.au-k b{font-size:28px}.au-k small{color:#5F6368}
  .au-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;padding:6px 0}.au-b{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border-radius:8px;padding:4px 0}.au-b.sel{background:#E8F0FE}.au-b:hover{background:#F1F3F4}
  .au-bb{height:124px;display:flex;align-items:flex-end;gap:3px}.au-bb i,.au-lg i{display:inline-block;width:14px;border-radius:3px 3px 0 0}.au-bb i.p,.au-lg i.p{background:#C6D4EA}.au-bb i.r,.au-lg i.r{background:#188038}.au-bb i.r.l,.au-lg i.r.l{background:#E37400}.au-lg{font-size:12.5px;color:#3C4043}.au-lg i{height:10px;margin:0 4px 0 10px;border-radius:2px}.au-rs{display:flex;flex-direction:column-reverse;width:14px;border-radius:3px 3px 0 0;overflow:hidden}.au-rs .au-o{flex:1;background:#188038;width:14px}.au-rs .au-l{background:#E37400;width:14px;display:block}.au-b b{font-size:12px}.au-b small{font-size:11px;color:#5F6368}`; document.head.appendChild(st); }
