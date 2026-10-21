@@ -1,7 +1,7 @@
 /* SMF · service worker: deixa o painel abrir sem internet. Os dados vão ao Google quando houver sinal. */
-const CACHE='ctle-man-v7';
+const CACHE='ctle-man-v8';
 // essenciais: sem eles o SMF não abre ou o FR 049_B (óleo) não abre/salva — se algum falhar, a instalação é cancelada e o aparelho segue com a versão anterior inteira
-const ESSENCIAIS=['./','./index.html','./dados/anexo1.js','./forms/FR_049_B.html','./lib/html2canvas.min.js','./lib/jspdf.umd.min.js'];
+const ESSENCIAIS=['./','./index.html','./dados/anexo1.js','./forms/FR_049_B.html','./forms/FR_027_L.html','./lib/html2canvas.min.js','./lib/jspdf.umd.min.js'];
 // opcionais: se falharem (sinal fraco a bordo), usa a cópia da versão anterior ou fica para a próxima abertura com sinal
 const OPCIONAIS=['./manifest.json','./icon-192.png','./icon-512.png','./apple-touch-icon.png','./icon-maskable-512.png','./forms/FR_016_E.html'];
 const espera=ms=>new Promise(r=>setTimeout(r,ms));
