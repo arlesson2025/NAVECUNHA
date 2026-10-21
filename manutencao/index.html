@@ -5946,7 +5946,7 @@ function vOmg() {
     <label class="f s2">Gerou resíduo?<select data-rg="resid"><option value="">Escolha…</option>${['Não', 'Sim'].map(x => `<option${R.resid === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>${inp('fr016', 'Nº FR 016_E', 's2')}${inp('pt', 'Nº da PT do SESMT (se houver)', 's2')}
     ${inp('justif', 'Justificativa (se passou da hora-alvo)', 's6')}</div>${rgProvaHTML(P[0], R)}</div>
    <div class="card"><div class="row"><h2>2 · Itens da ficha</h2><span class="sp"></span><span class="note" id="rgCnt">${ok} OK · ${nok} NOK · ${na} NA · ${tot - ok - nok - na} sem marcação</span><button class="mbtn" data-rgall="ok">Marcar todos sem marcação como OK</button></div>
-    <p class="note">Copie da ficha: OK = feito e conforme. NOK = não conforme ou não feito (escreva o motivo). Todo NOK fica como "falha sem OM" no Hoje até ganhar uma corretiva ou ser marcado "não é falha" (só não foi feito). NA = não se aplica. Item NOK ou NA não conta como feito: continua vencido e volta na próxima programação.</p>${partes}</div>
+    <p class="note">Copie da ficha: OK = feito e conforme. NOK = não conforme ou não feito (escreva o motivo). Todo NOK fica como "falha sem OM" na Frota até ganhar uma corretiva ou ser marcado "não é falha" (só não foi feito). NA = não se aplica. Item NOK ou NA não conta como feito: continua vencido e volta na próxima programação.</p>${partes}</div>
    ${regs.length ? `<div class="card"><h2>3 · Registros exigidos por estes itens</h2><div class="g">${regs.map(r => `<label class="f s3">${REGN[r]}<input data-rgr="${r}" value="${esc(R.regs[r] || '')}"></label>`).join('')}</div></div>` : ''}
    <div class="card"><h2>${regs.length ? 4 : 3} · Fotos (antes e depois)</h2><div class="phgrid">${f.map((x, i) => RG_PROVA.includes(x.tipo) ? '' : `<div class="phc"><div class="img">${x.src ? `<img src="${x.src}" alt="Foto ${i + 1}">` : '<div class="note" style="padding:20px">Foto no PDF do Drive</div>'}<span class="no">Foto ${i + 1}</span>${x.fid ? '<span class="ph-nv ok" title="Cópia guardada no Google Drive">☁ no Drive</span>' : x.src ? '<span class="ph-nv" title="Sobe ao Drive quando houver sinal">só neste aparelho</span>' : ''}</div>
      <div class="meta"><select data-rgf="${i}|tipo">${['ANTES', 'DURANTE', 'DEPOIS'].map(t => `<option${t === x.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select><input data-rgf="${i}|leg" placeholder="Legenda (o que mostra)" value="${esc(x.leg || '')}"><button class="xbtn" data-rgfdel="${i}" aria-label="Remover foto">✕</button></div></div>`).join('')}
@@ -7733,7 +7733,14 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   SECOES.splice(0, SECOES.length, ...ord);
   // Biblioteca: #bib/#pecas/#terc/#trein viram a página única #apoio (paginaUnica); sem 'apoio' na seção, secDe caía no Hoje e o link do Hoje passava a abrir a Biblioteca
   const bib = by('apoio2'); if (bib && VX.apoio) { bib.extra = [...new Set((bib.extra || []).concat(bib.views.map(x => x[0])))]; bib.views = [['apoio', 'Biblioteca']]; }
+  // nomes do menu (pedido do Supervisor, 21/10/2026): Hoje → "Frota N Empurradores" com "Diário & Viagens" embaixo · Cronograma → "Plano preventivo" · OMs → "OM's (Sankhya)"
+  const h = by('hoje'), cr = by('crono'), om = by('omsv2'); if (h) h.sub = 'Diário & Viagens'; if (cr) cr.nome = 'Plano preventivo'; if (om) om.nome = "OM's (Sankhya)";
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
+// o número de empurradores acompanha o cadastro da frota · subtítulo (s.sub) em letra pequena dentro do item do menu
+{ const n0 = renderNav; renderNav = function () { const h = SECOES.find(s => s.id === 'hoje'); if (h && S.cfg && S.cfg.frota) h.nome = 'Frota ' + S.cfg.frota.length + ' Empurradores';
+  const x = n0.apply(this, arguments), A = [...document.querySelectorAll('#nav > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
+  L.forEach((s, i) => { const sp = A[i] && A[i].querySelector('span'); if (s.sub && sp && !sp.querySelector('.nav-sub')) sp.insertAdjacentHTML('beforeend', `<small class="nav-sub">${esc(s.sub)}</small>`); }); return x; }; }
+{ const st = document.createElement('style'); st.textContent = `#nav .nav-sub{display:block;font-size:10.5px;font-weight:400;line-height:1.15;opacity:.75;margin-top:1px}`; document.head.appendChild(st); }
 // Calibração e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
 { const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
@@ -8183,7 +8190,7 @@ async function fr27Salvar(v, mov, win, ov) {
   const dup = fr27s(v.id).find(r => r.mov === (mov === 'Saida' ? 'saida' : 'chegada') && r.date === D.date);
   if (dup && !confirm('Já existe um FR 027_L de ' + (mov === 'Saida' ? 'saída' : 'chegada') + ' do ' + v.nome + ' salvo hoje' + (dup.hora ? ' às ' + dup.hora : '') + '.\nSalvar outro mesmo assim?')) return;
   const semOM = D.nc.filter(x => !/^\d{3,}$/.test(x.o)).length;
-  if (semOM && !confirm(semOM + ' item(ns) NO sem nº de OM. Salvar assim mesmo? Eles ficam pendentes no Hoje até você informar a OM do Sankhya.')) return;
+  if (semOM && !confirm(semOM + ' item(ns) NO sem nº de OM. Salvar assim mesmo? Eles ficam pendentes na Frota até você informar a OM do Sankhya.')) return;
   const busy = ov.querySelector('.fo-busy'), msg = t => { busy.hidden = false; busy.querySelector('.fo-msg').textContent = t; };
   try {
     msg('Gerando o PDF do FR 027_L…'); const pdf = await fr27Pdf(win);
@@ -8198,7 +8205,7 @@ async function fr27Salvar(v, mov, win, ov) {
       await saveRec({ id: uid('horp'), kind: 'horp', vessel: v.id, pos, date: D.date, h: x.total, painel: x.painel < VOLTA ? x.painel : null, by: S.session ? S.session.name : '', motivo: 'FR 027_L: leitura incoerente com o histórico (menor que uma anterior ou maior que uma posterior)', fr027: rec.id }); nr++; }
     const novas = await fr27Corretivas(rec);
     busy.hidden = true; lubFecharOverlay('fr27FO');
-    const nNO = D.nc.length, txt = `FR 027_L de ${rec.mov === 'saida' ? 'saída' : 'chegada'} salvo · ${v.nome}: ${nNO ? nNO + ' NO' + (novas.length ? ', ' + novas.length + ' corretiva(s) aberta(s)' : '') + (semOM ? ', ' + semOM + ' sem OM (pendente no Hoje)' : '') : 'nenhum NO'}${nh ? ' · ' + nh + ' horímetro(s) lançado(s)' : ''}${nr ? ' · ' + nr + ' leitura(s) incoerente(s) para o Supervisor confirmar' : ''}.`;
+    const nNO = D.nc.length, txt = `FR 027_L de ${rec.mov === 'saida' ? 'saída' : 'chegada'} salvo · ${v.nome}: ${nNO ? nNO + ' NO' + (novas.length ? ', ' + novas.length + ' corretiva(s) aberta(s)' : '') + (semOM ? ', ' + semOM + ' sem OM (pendente na Frota)' : '') : 'nenhum NO'}${nh ? ' · ' + nh + ' horímetro(s) lançado(s)' : ''}${nr ? ' · ' + nr + ' leitura(s) incoerente(s) para o Supervisor confirmar' : ''}.`;
     if (rec.mov === 'chegada') { await situSalvar(v.id, 'porto'); toast(txt, 7000); render(); }
     else { toast(txt, 7000); saidaModal(v.id, rec); }
   } catch (e) { busy.hidden = true; console.error(e); alert('Não foi possível salvar o FR 027_L: ' + (e.message || e)); }
@@ -8463,7 +8470,7 @@ function falhaPendModal(r) {
 // registrar avaria em viagem
 function avariaModal(vid) {
   if (!precisa(false)) return; const v = vessel(vid), d = new Date(), hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-  modal(`<h2>Avaria em viagem · ${esc(v.nome)}</h2><p class="note">O MFM avisou por rádio, Autotrac ou telefone. Registre agora: com o nº da OM do Sankhya vira corretiva; sem o número fica pendente no Hoje até ganhar a OM. Crítica e Alta já contam na situação do empurrador.</p>
+  modal(`<h2>Avaria em viagem · ${esc(v.nome)}</h2><p class="note">O MFM avisou por rádio, Autotrac ou telefone. Registre agora: com o nº da OM do Sankhya vira corretiva; sem o número fica pendente na Frota até ganhar a OM. Crítica e Alta já contam na situação do empurrador.</p>
    <div class="g"><label class="f s2">Data<input id="avD" type="date" value="${isoD(hoje())}"></label><label class="f s1">Hora<input id="avH" type="time" value="${hh}"></label>
     <label class="f s2">Quem avisou<input id="avQ" placeholder="Nome e função (ex.: João, MFM)"></label><label class="f s1">Como<select id="avM"><option>Rádio</option><option>Autotrac</option><option>Telefone / WhatsApp</option><option>Outro</option></select></label>
     <label class="f s3">Sistema (lista 7.1)<select id="avS"><option value="">Escolha…</option>${SISTEMAS.map(s => `<option>${esc(s)}</option>`).join('')}</select></label><label class="f s2">Posição<select id="avP">${optsPos(vid)}</select></label>
@@ -8480,7 +8487,7 @@ function avariaModal(vid) {
     const r = { id: uid('av'), kind: 'avaria', vessel: vid, date: $('#avD').value, hora: $('#avH').value, at, quem, meio: $('#avM').value, sis, pos: $('#avP').value, c, desc: desc + ' (avisado por ' + quem + ', ' + $('#avM').value.toLowerCase() + ')', om: '', by: S.session.name };
     await saveRec(r);
     if (num) { await corrDeFalhas(v, num, [{ lab: 'Avaria em viagem · ' + sis, d: r.desc, c, pos: r.pos, sis }], 'Em viagem (Autotrac)', { avaria: r.id, deteccao: isoDT(new Date(at)) }); r.om = num; await saveRec(r); }
-    closeModal(); toast('Avaria registrada' + (num ? ' · corretiva ' + num + ' aberta' : ' · pendente de OM no Hoje') + '.', 6000); render(); };
+    closeModal(); toast('Avaria registrada' + (num ? ' · corretiva ' + num + ' aberta' : ' · pendente de OM na Frota') + '.', 6000); render(); };
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-avaria]'); if (!b) return; e.preventDefault(); e.stopPropagation(); avariaModal(b.dataset.avaria); }, true);
 // Hoje · em viagem: botão de avaria e falhas pendentes
