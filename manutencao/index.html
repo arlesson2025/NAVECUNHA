@@ -6749,7 +6749,7 @@ function prFrotaV2(ano) {
   const D = V.map(v => prResumo(v, ano, hm, sel));
   if (PRV.ord === 'nome') D.sort((a, b) => a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
   else D.sort((a, b) => b.venc - a.venc || b.mesFalta - a.mesFalta || (a.ad == null ? 101 : a.ad) - (b.ad == null ? 101 : b.ad) || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
-  const F = { v: { nome: 'Frota toda' }, P: Array(12).fill(0), R: Array(12).fill(0), Ok: Array(12).fill(0), Lt: Array(12).fill(0), Ms: Array(12).fill(0), venc: 0, mesFalta: 0, ok: 0, den: 0, tP: 0, tR: 0 };
+  const F = { v: { nome: 'Consolidado da frota' }, P: Array(12).fill(0), R: Array(12).fill(0), Ok: Array(12).fill(0), Lt: Array(12).fill(0), Ms: Array(12).fill(0), venc: 0, mesFalta: 0, ok: 0, den: 0, tP: 0, tR: 0 };
   D.forEach(d => { for (let i = 0; i < 12; i++) ['P', 'R', 'Ok', 'Lt', 'Ms'].forEach(k => F[k][i] += d[k][i]); ['venc', 'mesFalta', 'ok', 'den', 'tP', 'tR'].forEach(k => F[k] += d[k]); });
   F.ad = F.den ? Math.round(F.ok / F.den * 100) : null;
   const mxF = Math.max(1, ...D.flatMap(d => sel.filter(i => i > hm).map(i => d.P[i])));
@@ -6767,7 +6767,7 @@ function prFrotaV2(ano) {
     return `<td class="cf-c" title="${p} previstos"><span class="cf-cg" style="background:rgba(25,103,210,${(0.08 + a * 0.32).toFixed(2)})">${p}</span></td>`;
   };
   const sit = d => (d.venc ? `<span class="cf-p ms" title="ocorrências do cronograma vencidas nos meses marcados">${d.venc} vencida${d.venc > 1 ? 's' : ''}</span>` : '<span class="cf-p ok">em dia</span>') + (d.mesFalta ? `<small>${d.mesFalta} a vencer em ${MESES[hm]}</small>` : '');
-  const linha = (d, tot) => `<tr class="${tot ? 'cf-tot' : ''}"><td class="cf-n">${tot ? 'Frota toda' : `<a href="#cxr" data-prv="${d.v.id}">${esc(d.v.nome)}</a>`}</td>${sel.map(i => cel(d, i, tot)).join('')}
+  const linha = (d, tot) => `<tr class="${tot ? 'cf-tot' : ''}"><td class="cf-n">${tot ? `<b>Consolidado da frota</b><small class="fs-sm">${D.length} empurradores</small>` : `<a href="#cxr" data-prv="${d.v.id}">${esc(d.v.nome)}</a>`}</td>${sel.map(i => cel(d, i, tot)).join('')}
      <td class="cf-c cf-tt"><span class="cf-fr"><i class="cf-d" style="background:${d.venc ? '#C5221F' : '#188038'}"></i><b>${d.tR}</b> / ${d.tP}</span></td><td class="cf-s">${sit(d)}</td><td class="cf-a" style="color:${corAd(d.ad)}">${d.ad == null ? '—' : d.ad + '%'}</td></tr>`;
   const head = `<tr><th class="cf-n" data-ck="n">Embarcação</th>${sel.map(i => `<th class="${i === hm ? 'cf-hj' : ''}" data-ck="m${i}">${MESES[i].toUpperCase()}${i === hm ? ' · ATUAL' : ''}</th>`).join('')}<th data-ck="t">Total</th><th data-ck="s">Situação</th><th data-ck="a">Aderência</th></tr>`;
   return { html: `<table class="cf-t"><thead>${head}</thead><tbody>${D.map(d => linha(d)).join('')}${linha(F, true)}</tbody></table>`, F, hm, sel };
@@ -6819,7 +6819,7 @@ function prTelaFrota(ativos, ano, nAp, anos) {
   const chips = `<div class="cf-ms"><span>Meses</span><button data-cfm="todos" class="${todos ? 'on' : ''}">Ano todo</button>${hm >= 0 && hm < 12 ? `<button data-cfm="ate" class="${!todos && sel.length === hm + 1 && sel[0] === 0 ? 'on' : ''}">Até ${MESES[hm]}</button>` : ''}<i></i>${MESES.map((m, i) => `<button data-cfm="${i}" class="cf-mm${!todos && sel.includes(i) ? ' on' : ''}${i === hm ? ' hj' : ''}" title="Clique para marcar ou desmarcar · Shift+clique marca um intervalo">${m.toUpperCase()}</button>`).join('')}<small>${todos ? 'ano todo' : sel.length + (sel.length === 1 ? ' mês' : ' meses') + ' somados'}</small></div>`;
   return `<div class="cm-v"><div class="vh"><div><h1>Cronograma da frota</h1></div><span class="sp"></span><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(T.F, hm, ano, sel)}
    <div class="cf-bt"><a class="mbtn" href="#audit">Histórico e evidências</a><button class="mbtn" data-prpdf="resumo">PDF desta tela</button><button class="mbtn" data-prpdf="frota">PDF completo</button>${can.admin() ? `<button class="mbtn pri" data-prapr>${nAp ? 'Revisar aprovação' : 'Aprovar o previsto de ' + ano}</button>` : ''}</div>
-   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota" selected>Frota toda</option>${ativos.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></label>
+   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota" selected>Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></label>
     <label>Ano <select id="prA">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
     <span class="cf-seg"><button data-prord="crit" class="${PRV.ord !== 'nome' ? 'on' : ''}">Criticidade</button><button data-prord="nome" class="${PRV.ord === 'nome' ? 'on' : ''}">Nome</button></span><span class="cf-p ${nAp === ativos.length ? 'ok' : 'lt'}">${nAp}/${ativos.length} aprovados</span></div>${chips}
    <div class="cm-ws">
@@ -6883,9 +6883,9 @@ function prTelaEmp(v, ativos, ano, B, anos) {
   const hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1, sel = prMesesSel(), F = prResumo(v, ano, hm, sel), todos = sel.length === 12;
   PRV._T = { F, hm, sel };
   const chips = `<div class="cf-ms"><span>Meses</span><button data-cfm="todos" class="${todos ? 'on' : ''}">Ano todo</button>${hm >= 0 && hm < 12 ? `<button data-cfm="ate" class="${!todos && sel.length === hm + 1 && sel[0] === 0 ? 'on' : ''}">Até ${MESES[hm]}</button>` : ''}<i></i>${MESES.map((m, i) => `<button data-cfm="${i}" class="cf-mm${!todos && sel.includes(i) ? ' on' : ''}${i === hm ? ' hj' : ''}" title="Clique para marcar ou desmarcar · Shift+clique marca um intervalo">${m.toUpperCase()}</button>`).join('')}<small>${todos ? 'ano todo' : sel.length + (sel.length === 1 ? ' mês' : ' meses') + ' somados'}</small></div>`;
-  return `<div class="cm-v"><div class="vh"><div><h1>Cronograma · ${esc(v.nome)}</h1></div><span class="sp"></span><a class="mbtn" href="#cxr" data-prv="frota">← Frota toda</a><a class="mbtn" href="#rotina" data-fsgo="${v.id}">Situação de hoje</a><a class="mbtn" href="#crono" data-prit="${v.id}">Item por item (Anexo I)</a><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(F, hm, ano, sel)}
+  return `<div class="cm-v"><div class="vh"><div><h1>Cronograma · ${esc(v.nome)}</h1></div><span class="sp"></span><a class="mbtn" href="#cxr" data-prv="frota">← Consolidado da frota</a><a class="mbtn" href="#rotina" data-fsgo="${v.id}">Situação de hoje</a><a class="mbtn" href="#crono" data-prit="${v.id}">Item por item (Anexo I)</a><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(F, hm, ano, sel)}
    <div class="cf-bt"><a class="mbtn" href="#audit">Histórico e evidências</a><button class="mbtn" data-prpdf="um">PDF desta tela</button><button class="mbtn" data-prpdf="frota">PDF completo</button>${can.admin() ? `<button class="mbtn pri" data-prapr>${B ? 'Revisar aprovação da frota' : 'Aprovar o previsto de ' + ano + ' (frota)'}</button>` : ''}</div>
-   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota">Frota toda</option>${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select></label>
+   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota">Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select></label>
     <label>Ano <select id="prA">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
     ${B ? `<span class="cf-p ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : '<span class="cf-p lt">Previsto ainda não aprovado</span>'}</div>${chips}
    <div class="cm-ws">
@@ -6901,11 +6901,11 @@ function vPR() {
   if (!v) return prTelaFrota(ativos, ano, nAp, anos);   // frota toda: layout de uma linha por empurrador
   return prTelaEmp(v, ativos, ano, B, anos);            // um empurrador: uma linha por serviço (o PDF continua no formato P/R)
   return `<div class="vh"><div><h1>Cronograma · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span>${v ? `<a class="mbtn" href="#crono" data-prit="${v.id}">📋 Item por item (Anexo I)</a>` : ''}<a class="mbtn" href="#audit">📁 Histórico e evidências</a><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada empurrador)</button></div>
-   <div class="card row" style="gap:12px;flex-wrap:wrap"><select id="prV" style="font-size:18px;font-weight:600;width:auto;min-width:150px"><option value="frota"${PRV.v === 'frota' ? ' selected' : ''}>Frota toda</option>${ativos.map(a => `<option value="${a.id}"${a.id === PRV.v ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>
+   <div class="card row" style="gap:12px;flex-wrap:wrap"><select id="prV" style="font-size:18px;font-weight:600;width:auto;min-width:150px"><option value="frota"${PRV.v === 'frota' ? ' selected' : ''}>Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}"${a.id === PRV.v ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>
     <select id="prA" style="width:auto">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select>
     ${v ? (B ? `<span class="pill p-ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : `<span class="pill p-warn">Previsto ainda não aprovado</span>`) : `<span class="pill ${nAp === ativos.length ? 'p-ok' : 'p-warn'}">${nAp}/${ativos.length} empurradores com o previsto aprovado</span>`}<span class="sp"></span>
     ${can.admin() ? `<button class="mbtn ${(v ? B : nAp === ativos.length) ? '' : 'pri'}" data-prapr>${(v ? B : nAp) ? 'Revisar aprovação da frota' : '✓ Aprovar o previsto de ' + ano + ' (frota)'}</button>` : ''}</div>
-   <div class="card pr-card"><div class="pr-hd"><b>Cronograma de manutenção preventiva · previsto × realizado</b><span>${esc(v ? v.nome : 'Frota toda')} · ${ano}</span></div>${v ? '' : '<p class="note" style="margin:-2px 0 8px">Número = quantidade de serviços no mês. Clique no empurrador para ver serviço por serviço.</p>'}<div class="tw">${v ? prTabela(v, ano) : prFrota(ano)}</div>
+   <div class="card pr-card"><div class="pr-hd"><b>Cronograma de manutenção preventiva · previsto × realizado</b><span>${esc(v ? v.nome : 'Consolidado da frota')} · ${ano}</span></div>${v ? '' : '<p class="note" style="margin:-2px 0 8px">Número = quantidade de serviços no mês. Clique no empurrador para ver serviço por serviço.</p>'}<div class="tw">${v ? prTabela(v, ano) : prFrota(ano)}</div>
     <div class="pr-ass"><div>Supervisor de Manutenção</div><div>Data</div></div></div>`;
 }
 VX.cxr = vPR;
@@ -7559,7 +7559,7 @@ function fsHTML() {
   const corA = a => a == null ? '#5F6368' : a >= 95 ? '#188038' : a >= 85 ? '#B06000' : '#C5221F';
   const lista = `<div class="fs-l"><div class="fs-lh"><h2>Situação da frota</h2><div class="note">agora · ordenada por criticidade</div></div>
    <table class="fs-t"><thead><tr><th>Embarcação</th><th title="itens vencidos agora">Venc.</th><th title="vencem na próxima viagem">Viag.</th><th title="itens em dia ÷ itens com histórico">Em dia</th></tr></thead><tbody>
-   <tr class="fs-r fs-all${!sel ? ' on' : ''}" data-fsel="frota"><td><b>Frota toda</b> <span class="note">${L.length} empurradores</span></td><td class="${tot.venc ? 'v' : 'z'}">${tot.venc}</td><td class="${tot.viag ? 'a' : 'z'}">${tot.viag}</td><td style="color:${corA(aderF)}">${aderF == null ? '—' : nf(aderF, 0) + '%'}</td></tr>
+   <tr class="fs-r fs-all${!sel ? ' on' : ''}" data-fsel="frota"><td><b>Consolidado da frota</b><small class="fs-sm">${L.length} empurradores</small></td><td class="${tot.venc ? 'v' : 'z'}">${tot.venc}</td><td class="${tot.viag ? 'a' : 'z'}">${tot.viag}</td><td style="color:${corA(aderF)}">${aderF == null ? '—' : nf(aderF, 0) + '%'}</td></tr>
    ${L.map(x => { const s = sit(x), sh = semH(x); return `<tr class="fs-r${sel === x ? ' on' : ''}" data-fsel="${x.v.id}"><td><i class="fs-d ${sh ? 'g' : s[0]}"></i>${esc(x.v.nome)}</td><td class="${sh ? 'z' : x.n.venc ? 'v' : 'z'}">${sh ? '—' : x.n.venc}</td><td class="${sh ? 'z' : x.n.viag ? 'a' : 'z'}">${sh ? '—' : x.n.viag}</td><td style="color:${corA(x.ader)}">${x.ader == null ? '—' : nf(x.ader, 0) + '%'}</td></tr>`; }).join('')}
    </tbody></table></div>`;
   const ader = (a, sub) => `<div class="fs-k" title="itens do Anexo I em dia agora ÷ itens com histórico (não é a aderência ao cronograma)"><span>Itens em dia</span><b style="color:${corA(a)}">${a == null ? '—' : nf(a, 0) + '%'}</b><div class="fs-ab"><i style="width:${a == null ? 0 : Math.max(2, a)}%;background:${corA(a)}"></i><em style="left:95%"></em></div><small>${a == null ? 'sem histórico' : a >= 95 ? 'meta de 95% atingida' : 'faltam ' + nf(95 - a, 0) + ' p.p. para a meta de 95%'}${sub ? ' · ' + sub : ''}</small></div>`;
@@ -7567,7 +7567,7 @@ function fsHTML() {
   if (!sel) {
     const sis = FS_NOME.map((n, i) => { let v = 0, a = 0, ok = 0, ap = 0; const bv = []; L.forEach(x => { const s = x.sis[i]; if (!s) return; ap++; v += s.c.venc; a += s.c.viag; ok += s.c.ok; if (s.c.venc) bv.push([x.v.nome, s.c.venc]); }); return { n, i, v, a, ok, ap, bv: bv.sort((p, q) => q[1] - p[1]) }; }).sort((p, q) => q.v - p.v || q.a - p.a || p.i - q.i);
     const mx = Math.max(1, ...sis.map(s => s.v));
-    det = `<div class="fs-dh"><h1>Frota toda</h1><span class="fs-p ${lib - nRes === L.length ? 'o' : lib === L.length ? 'a' : 'v'}" title="bloqueio = item Crítico vencido sem OM">${titLib}</span><span class="sp"></span><a class="mbtn" href="#cxr" data-fscr="frota">Cronograma</a><a class="mbtn pri" href="#emitir">Gerar OMs</a></div>
+    det = `<div class="fs-dh"><h1>Consolidado da frota</h1><span class="fs-p ${lib - nRes === L.length ? 'o' : lib === L.length ? 'a' : 'v'}" title="bloqueio = item Crítico vencido sem OM">${titLib}</span><span class="sp"></span><a class="mbtn" href="#cxr" data-fscr="frota">Cronograma</a><a class="mbtn pri" href="#emitir">Gerar OMs</a></div>
      <p class="fs-sub">${tot.venc} itens vencidos em ${sis.filter(s => s.v).length} sistema${sis.filter(s => s.v).length === 1 ? '' : 's'} · ${tot.viag} vence${tot.viag === 1 ? '' : 'm'} na próxima viagem · ${L.filter(x => x.n.venc).length} embarcação(ões) com pendência</p>
      <div class="fs-ks">${ader(aderF)}<div class="fs-k"><span>Embarcações liberadas</span><b>${lib} de ${L.length}</b><small>${nRes ? nRes + ' com restrição (item vencido não crítico ou já em OM)' : 'nenhuma com restrição'}${L.length - lib ? ' · ' + (L.length - lib) + ' bloqueada(s)' : ''}</small></div><div class="fs-k"><span>Vencidos agora · na viagem</span><b><span style="color:${tot.venc ? '#C5221F' : '#188038'}">${tot.venc}</span> · <span style="color:${tot.viag ? '#B06000' : '#188038'}">${tot.viag}</span></b><small>backlog preventivo da frota</small></div></div>
      <div class="fs-sb">${sis.filter(s => s.v || s.a).map(s => `<div class="fs-sr"><span class="fs-n">${s.i + 1}.0</span><span class="fs-sn${s.v ? ' b' : ''}">${FS_NOME[s.i]}</span><span class="fs-bar">${s.v ? `<i style="width:${Math.max(4, s.v / mx * 100)}%;background:#B3261E"></i>` : s.a ? `<i style="width:100%;background:#FCEFC7"></i>` : `<i style="width:100%;background:#D6E9DA"></i>`}</span><span class="fs-sv ${s.v ? 'v' : s.a ? 'a' : 'o'}">${s.v ? s.v + ' vencido' + (s.v > 1 ? 's' : '') : s.a ? s.a + ' na viagem' : 'em dia'}</span><span class="fs-bv">${s.bv.slice(0, 3).map(b => esc(b[0]) + ' ' + b[1]).join(' · ')}</span></div>`).join('')}${demais(sis.filter(s => !s.v && !s.a).length, 'em dia')}</div>`;
@@ -7912,14 +7912,37 @@ function cmpCardHoje() {
 { const st = document.createElement('style'); st.textContent = `a[href="#rel"],a[href="#apres"],button[onclick*="go('rel')"],button[onclick*="go('apres')"]{display:none!important}`; document.head.appendChild(st); }
 </script>
 <script>
-/* ===== Menu por decisão: Hoje (rotina + situação da frota + alertas) · OMs · Cronograma · Condição · Indicadores · Biblioteca · Administração =====
+/* ===== Menu por decisão: Hoje (rotina + situação da frota + alertas) · Cronograma · OMs · Condição · Indicadores · Biblioteca · Administração =====
    Nomes que não se repetem: "Itens em dia" e "Vencidos agora" = foto de agora (Situação da frota);
    "Aderência ao cronograma" e "Ocorrências vencidas" = execução do previsto nos meses marcados (Cronograma). */
 // Hoje: rotina (porto e viagem) · situação da frota · alertas de compressão
 { const r0 = VX.rotina; if (r0) VX.rotina = function () { const t = document.createElement('div'); t.innerHTML = r0.apply(this, arguments);
   const cm = t.querySelector(':scope > .cm-hoje'), ref = t.querySelector(':scope > p.note'), d = document.createElement('div'); d.innerHTML = fsHTML();
-  [d.firstElementChild, cm].filter(Boolean).forEach(n => ref ? ref.before(n) : t.appendChild(n));   // depois da rotina (porto e viagem), antes das notas do rodapé
+  const ol = document.createElement('div'); ol.innerHTML = olCardHoje();
+  [d.firstElementChild, cm, ol.firstElementChild].filter(Boolean).forEach(n => ref ? ref.before(n) : t.appendChild(n));   // depois da rotina (porto e viagem), antes das notas do rodapé
   return t.innerHTML; }; }
+// Hoje: troca de óleo vencida (P1) · vence em até OL_ALERTA_H horas ou OL_ALERTA_D dias (P2) — mesmo critério da tela Óleo da frota
+function olCardHoje() {
+  const D = lubDados().filter(x => x.e.key !== 'inc' && !(typeof foraOp === 'function' && foraOp(x.v))).map(x => ({ x, st: olStatus(x) }));
+  const p1 = D.filter(d => d.st === 'venc'), p2 = D.filter(d => d.st === 'aten'); if (!p1.length && !p2.length) return '';
+  const it = (d, p) => `<li><span class="pill ${p === 'P1' ? 'p-bad' : 'p-warn'}">${p}</span> <a href="#oleo"><b>${esc(d.x.v.nome)} · ${esc(eqNomeC(d.x.v, d.x.e))}</b></a> · ${esc(olValor(d.x))}${d.x.om ? ' · OM aberta' : ' · sem OM'}</li>`;
+  const L = p1.map(d => it(d, 'P1')).concat(p2.map(d => it(d, 'P2'))), max = 8;
+  return `<div class="card cm-hoje"><div class="row"><h2>Troca de óleo</h2><span class="sp"></span><a class="mbtn sm" href="#oleo">Ver a frota</a></div><ul>${L.slice(0, max).join('')}${L.length > max ? `<li class="note"><a href="#oleo">+ ${L.length - max} na tela Óleo da frota</a></li>` : ''}</ul></div>`;
+}
+// Óleo da frota + Trocas lançadas numa tela só: o status em cima, o registro (FR 049_B e complementos) embaixo
+let OL_IR = 0;   // veio de #lubreg: rolar até o bloco das trocas
+function olRegHTML() { const t = document.createElement('div'); t.innerHTML = vLubReg();
+  const vh = t.querySelector(':scope > .vh'); if (vh) vh.outerHTML = `<div class="ab4-sec" id="ol-trocas"><h2>Trocas lançadas <small class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e complementos de óleo</small></h2></div>`;
+  return t.innerHTML; }
+{ const o0 = VX.oleo; VX.oleo = function () { return o0.apply(this, arguments) + olRegHTML(); }; }
+{ const a0 = AFTER.oleo; AFTER.oleo = function () { a0 && a0(); const m = $('#main'), c0 = m.onclick, h0 = m.onchange;
+    m.onchange = e => { if (e.target.id === 'lrB') { LR.barco = e.target.value; render(); return; } if (e.target.id === 'lrM') { LR.mes = e.target.value; render(); return; } return h0 && h0.call(m, e); };
+    m.onclick = e => { const x = e.target.closest('[data-lubexc]'); if (x) { lubExcluir(x.dataset.lubexc); return; } const b = e.target.closest('[data-lubver]'); if (b) { lubVerModal(b.dataset.lubver); return; } return c0 && c0.call(m, e); };
+    // "Complemento de óleo" ao lado de "+ Lançar troca", no topo da tela
+    const r = ($('#ol3') || {}).shadowRoot, l = r && r.querySelector('#o3launch');
+    if (l && !r.querySelector('#o3comp')) { const c = document.createElement('button'); c.className = 'b'; c.id = 'o3comp'; c.textContent = '+ Complemento de óleo'; c.onclick = () => { if (!precisa(false)) return; lubCompModal(); }; l.before(c); }
+    if (Date.now() - OL_IR < 3000) { OL_IR = 0; setTimeout(() => { const s = document.getElementById('ol-trocas'); if (s) s.scrollIntoView({ block: 'start' }); }, 300); } }; }
+VX.lubreg = () => { OL_IR = Date.now(); location.replace('#oleo'); return ''; };
 // links cruzados: situação → cronograma do empurrador · cronograma → situação de hoje
 document.addEventListener('click', e => { const a = e.target.closest('[data-fscr]'); if (!a) return; PRV.v = a.dataset.fscr; }, true);
 document.addEventListener('click', e => { const a = e.target.closest('[data-fsgo]'); if (!a) return; FS_SEL = a.dataset.fsgo; setTimeout(() => { const c = document.querySelector('#main .fs-card'); if (c) c.scrollIntoView({ block: 'start' }); }, 350); }, true);
@@ -7931,13 +7954,13 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   const h1 = t.querySelector(':scope > .vh h1'); if (h1) h1.textContent = 'Calibração, análise de óleo e docagem';
   return t.innerHTML; }; }
 { const by = id => SECOES.find(s => s.id === id), oleo = by('oleo'), compr = by('compr'), graf = by('graf'), adm = by('adm');
-  const cond = { id: 'cond2', nome: 'Condição', views: [...(oleo ? oleo.views : []), ...(compr ? compr.views : []), ['controle', 'Calibração, análise de óleo e docagem']], extra: [...(oleo && oleo.extra || []), ...(compr && compr.extra || [])] };
+  const cond = { id: 'cond2', nome: 'Condição', views: [...(oleo ? oleo.views.filter(x => x[0] !== 'lubreg') : []), ...(compr ? compr.views : []), ['controle', 'Calibração, análise de óleo e docagem']], extra: [...(oleo && oleo.extra || []), ...(compr && compr.extra || []), 'lubreg'] };
   if (graf) graf.views = graf.views.filter(x => x[0] !== 'controle');
   if (adm) adm.views = adm.views.filter(x => x[0] !== 'frota');
-  const ord = ['hoje', 'omsv2', 'crono'].map(by).filter(Boolean).concat([cond], ['graf', 'apoio2', 'adm'].map(by).filter(Boolean));
+  const ord = ['hoje', 'crono', 'omsv2'].map(by).filter(Boolean).concat([cond], ['graf', 'apoio2', 'adm'].map(by).filter(Boolean));
   SECOES.splice(0, SECOES.length, ...ord);
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
-{ const st = document.createElement('style'); st.textContent = `.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
+{ const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
 @media(max-width:760px){.fs-t td,.fs-t th{padding:3px 6px}.fs-t td:first-child,.fs-t th:first-child,.fs-lh{padding-left:12px}.fs-dt{padding:14px 12px}.fs-dh{padding-right:0;gap:8px}.fs-dh h1{font-size:20px}.fs-p{white-space:normal}.fs-ks{grid-template-columns:1fr 1fr;gap:8px}.fs-k{padding:10px 12px}.fs-k>b{font-size:22px}.fs-sr{grid-template-columns:30px 1fr auto;gap:8px;font-size:13px}.fs-sr .fs-bar,.fs-sr .fs-bv{display:none}}`; document.head.appendChild(st); }
 </script>
 </body>
