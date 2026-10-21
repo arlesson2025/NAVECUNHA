@@ -5117,7 +5117,7 @@ function paginaUnica(view, secId, titulo, partes) {
   { const a0 = AFTER[view]; AFTER[view] = () => { a0(); if (ALVO && Date.now() - ALVO.t < 3000) { const k = ALVO.k; setTimeout(() => ir(k), 450); } }; }
   document.addEventListener('click', e => { const b = e.target.closest('[data-pggo]'); if (!b) return; e.preventDefault(); e.stopPropagation(); ir(b.dataset.pggo); }, true);
 }
-paginaUnica('apoio', 'apoio', 'Apoio técnico', [['bib', 'Biblioteca técnica'], ['pecas', 'Sobressalentes críticos'], ['terc', 'Prestadores de serviço'], ['trein', 'Treinamentos']]);
+paginaUnica('apoio', 'apoio', 'Biblioteca', [['bib', 'Biblioteca técnica'], ['pecas', 'Sobressalentes críticos'], ['terc', 'Prestadores de serviço'], ['trein', 'Treinamentos']]);
 // layout livre e rolagem: valem também para as páginas únicas
 { const f0 = freeLivre; freeLivre = function (arr, it) { if (!PAG1.has(VIEW) || VIEW === 'controle') return f0(arr, it); const y0 = arr.length ? arr[arr.length - 1].y : 0;
   for (let y = y0; y < 9000; y++) for (let x = 0; x <= 24 - it.w; x++) { it.x = x; it.y = y; if (!arr.some(o => sobrep(it, o))) return; } }; }
