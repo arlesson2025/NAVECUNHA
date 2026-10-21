@@ -63,8 +63,5 @@ Consequência prática: para saber o que realmente aparece numa tela, procure a 
 - Terminologia: “empurrador” (não “barco”); nome do sistema “SMF” (antes SGMF — chaves antigas como `localStorage 'sgmf_nome'` continuam).
 - Motobomba de incêndio (`MBINC`, itens 4.1.x) está fora do plano, do cronograma, das OMs e das listas de óleo por pedido do Supervisor; registros antigos ainda se resolvem por `A1M`.
 - Referências normativas aparecem no código e na UI (NP 055 itens, Anexo I/II-A/II-B, FR 049_B, FR 016_E, ISO 9001/14001/45001/14224). Mantenha-as ao mexer em formulários.
-- Service worker é *network-first* (com sinal sempre pega a versão nova). Ao mudar a lista de arquivos pré-cacheados ou ícones, incremente `CACHE` em `manutencao/sw.js` (`ctle-man-vN`) e o `?v=` dos ícones/manifest.
-
-## Pendências
-
-- **`sw.js`: `cache.addAll(ARQ)` é atômico** — se um único arquivo falhar, a instalação inteira falha e o aparelho fica sem a versão nova offline até a próxima abertura com sinal. Nos testes locais dos itens 1 e 2 (out/2026) ele falhou justamente na primeira leva de downloads, depois passou sempre (atribuído ao servidor local, não confirmado). Com sinal fraco a bordo, avaliar: retry com espera no `install`, ou separar essenciais (`index.html`, manifest, ícones) dos opcionais (`lib/`, `forms/`), que seriam guardados um a um sem bloquear a instalação.
+- Service worker é *network-first* (com sinal sempre pega a versão nova). Ao mudar arquivos pré-cacheados ou ícones, incremente `CACHE` em `manutencao/sw.js` (`ctle-man-vN`) e o `?v=` dos ícones/manifest.
+- O `sw.js` separa **`ESSENCIAIS`** (sem eles o SMF não abre ou o FR 049_B de óleo não abre/salva: `index.html`, `dados/anexo1.js`, `forms/FR_049_B.html`, `lib/*` — salvar o FR 049_B gera o PDF) de **`OPCIONAIS`** (manifest, ícones, FR 016_E). Cada arquivo tem 3 tentativas; essencial que falha cancela a instalação (o aparelho segue com a versão anterior inteira); opcional que falha usa a cópia da versão anterior. Arquivo novo que o app precisa para abrir ou para o formulário de óleo vai em `ESSENCIAIS`; o resto em `OPCIONAIS`.
