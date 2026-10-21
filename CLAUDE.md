@@ -55,6 +55,9 @@ O app cresceu empilhando ~50 blocos, cada um com um cabeçalho `/* ===== … ===
 - Menu: o último `SECOES.splice(0, SECOES.length, …)` (bloco “SMF v2”) define as seções: Hoje · OMs (Sankhya) · Óleo · Cronograma · Indicadores · Biblioteca · Administração; o bloco “Compressão do MCP” (fim do arquivo) insere **Compressão MCP** depois de Óleo. **Mas as abas de uma seção ainda podem ser redefinidas depois** por `SECOES.find(x => x.id === '<seção>')` — ex.: as abas do Cronograma vêm da linha ~7245, não do splice. Antes de mexer em abas, procure a última ocorrência de `SECOES.find(x => x.id === '<seção>')` e confira no navegador (`nav.abas`).
 - CSS adicional injetado via `<style>` criado em JS ou no fim do arquivo.
 
+- **Nomes globais**: `const`/`let` de topo de todos os blocos dividem o mesmo escopo global. Redeclarar um nome que já existe em outro bloco (ex.: `LAY`, usado pelos painéis organizáveis) derruba o bloco inteiro com SyntaxError — e compilar o bloco isolado não acusa. Antes de criar um nome de topo, faça Grep por `(const|let|function)\s+NOME\b` no arquivo todo.
+- **Janelas livres** (arrastar, redimensionar, minimizar, tela cheia): `janelasLivres(ws, chaveLocalStorage, seletorDoBotaoReorganizar)` no bloco "Compressão do MCP"; usada pela Compressão (`.cm-ws`) e pelo Cronograma da frota. Para usar numa tela nova: envolver os cartões em `<div class="cm-v"><div class="cm-ws">…</div></div>` e chamar a função no `AFTER` da tela.
+
 Consequência prática: para saber o que realmente aparece numa tela, procure a **última** atribuição (`VX\.crono\s*=`, `AFTER\.crono\s*=`) — a primeira definição pode estar morta. Ao alterar, prefira editar o bloco que hoje vence; se acrescentar um novo bloco de patch, siga o mesmo formato de cabeçalho e coloque-o no fim.
 
 ## Convenções do projeto

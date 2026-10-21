@@ -6732,10 +6732,174 @@ function prFrota(ano, pdf) {
   return `<table class="pr-t"><colgroup><col style="width:120px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:46px"><col style="width:150px"><col style="width:80px"></colgroup>
    <thead><tr><th>Embarcação</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Falta fazer</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`;
 }
+// ---- frota toda no layout "uma linha por empurrador": realizado / previsto por mês, mês atual com barra, carga prevista nos meses seguintes ----
+// filtro de meses cumulativo (PRV.ms: lista de meses marcados; vazio = ano todo) · blocos como janelas · colunas com largura ajustável
+const PR_MESL = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const prMesesSel = () => PRV.ms && PRV.ms.length ? PRV.ms.slice().sort((a, b) => a - b) : Array.from({ length: 12 }, (_, i) => i);
+function prResumo(v, ano, hm, sel) {   // mesmos números da tabela clássica (prFrota), somados só nos meses marcados
+  const L = prLinhas(v, ano), P = Array(12).fill(0), R = Array(12).fill(0), Ok = Array(12).fill(0), Lt = Array(12).fill(0), Ms = Array(12).fill(0);
+  L.forEach(g => g.M.forEach((m, i) => { P[i] += g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late; R[i] += m.ok + m.late; Ok[i] += m.ok; Lt[i] += m.late; Ms[i] += m.miss; }));
+  const s = (A, f) => sel.filter(f || (() => true)).reduce((a, i) => a + A[i], 0), passou = i => i <= hm;
+  const ok = s(Ok, passou), den = ok + s(Lt, passou) + s(Ms, passou);
+  // realizado do previsto: em cada mês conta no máximo o que estava previsto (o que foi feito fora do previsto aparece só na célula do mês)
+  return { v, P, R, Ok, Lt, Ms, venc: s(Ms), mesFalta: sel.includes(hm) ? Math.max(0, P[hm] - R[hm] - Ms[hm]) : 0, ok, den, ad: den ? Math.round(ok / den * 100) : null, tP: s(P), tR: sel.reduce((a, i) => a + Math.min(P[i], R[i]), 0) };
+}
+function prFrotaV2(ano) {
+  const V = S.cfg.frota.filter(v => !foraOp(v)), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1, sel = prMesesSel();
+  const D = V.map(v => prResumo(v, ano, hm, sel));
+  if (PRV.ord === 'nome') D.sort((a, b) => a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
+  else D.sort((a, b) => b.venc - a.venc || b.mesFalta - a.mesFalta || (a.ad == null ? 101 : a.ad) - (b.ad == null ? 101 : b.ad) || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
+  const F = { v: { nome: 'Frota toda' }, P: Array(12).fill(0), R: Array(12).fill(0), Ok: Array(12).fill(0), Lt: Array(12).fill(0), Ms: Array(12).fill(0), venc: 0, mesFalta: 0, ok: 0, den: 0, tP: 0, tR: 0 };
+  D.forEach(d => { for (let i = 0; i < 12; i++) ['P', 'R', 'Ok', 'Lt', 'Ms'].forEach(k => F[k][i] += d[k][i]); ['venc', 'mesFalta', 'ok', 'den', 'tP', 'tR'].forEach(k => F[k] += d[k]); });
+  F.ad = F.den ? Math.round(F.ok / F.den * 100) : null;
+  const mxF = Math.max(1, ...D.flatMap(d => sel.filter(i => i > hm).map(i => d.P[i])));
+  const corAd = a => a == null ? '#5F6368' : a >= 90 ? '#188038' : a >= 75 ? '#B06000' : '#C5221F';
+  const cel = (d, i, tot) => {
+    const p = d.P[i], r = d.R[i], ms = d.Ms[i], lt = d.Lt[i];
+    if (i === hm) { const pend = Math.max(0, p - r - ms), w = x => p ? Math.min(100, Math.round(x / p * 100)) : 0;
+      return `<td class="cf-c cf-hj" title="${r} realizados · ${ms} vencidos · ${pend} ainda neste mês">${p ? `<span class="cf-fr"><b>${r}</b> / ${p}</span><span class="cf-bar"><i class="ok" style="width:${w(Math.min(r, p))}%"></i><i class="ms" style="width:${w(ms)}%"></i></span>` : '<span class="cf-z">—</span>'}</td>`; }
+    if (i < hm) { if (!p && !r) return '<td class="cf-c"><span class="cf-z">—</span></td>';
+      if (!p) return `<td class="cf-c" title="${r} realizados sem previsto aprovado no mês"><span class="cf-fr"><b>${r}</b> / —</span></td>`;
+      const st = ms ? 'ms' : lt ? 'lt' : r >= p ? 'ok' : 'ms';
+      return `<td class="cf-c" title="${r} realizados de ${p} · ${lt} com atraso · ${ms} não feitos"><span class="cf-fr ${st}"><b>${r}</b> / ${p}</span></td>`; }
+    if (!p) return '<td class="cf-c"><span class="cf-z">—</span></td>';
+    const a = tot ? 1 : Math.min(1, p / mxF);
+    return `<td class="cf-c" title="${p} previstos"><span class="cf-cg" style="background:rgba(25,103,210,${(0.08 + a * 0.32).toFixed(2)})">${p}</span></td>`;
+  };
+  const sit = d => (d.venc ? `<span class="cf-p ms">${d.venc} vencido${d.venc > 1 ? 's' : ''}</span>` : '<span class="cf-p ok">em dia</span>') + (d.mesFalta ? `<small>${d.mesFalta} a vencer em ${MESES[hm]}</small>` : '');
+  const linha = (d, tot) => `<tr class="${tot ? 'cf-tot' : ''}"><td class="cf-n">${tot ? 'Frota toda' : `<a href="#cxr" data-prv="${d.v.id}">${esc(d.v.nome)}</a>`}</td>${sel.map(i => cel(d, i, tot)).join('')}
+     <td class="cf-c cf-tt"><span class="cf-fr"><i class="cf-d" style="background:${d.venc ? '#C5221F' : '#188038'}"></i><b>${d.tR}</b> / ${d.tP}</span></td><td class="cf-s">${sit(d)}</td><td class="cf-a" style="color:${corAd(d.ad)}">${d.ad == null ? '—' : d.ad + '%'}</td></tr>`;
+  const head = `<tr><th class="cf-n" data-ck="n">Embarcação</th>${sel.map(i => `<th class="${i === hm ? 'cf-hj' : ''}" data-ck="m${i}">${MESES[i].toUpperCase()}${i === hm ? ' · ATUAL' : ''}</th>`).join('')}<th data-ck="t">Total</th><th data-ck="s">Situação</th><th data-ck="a">Aderência</th></tr>`;
+  return { html: `<table class="cf-t"><thead>${head}</thead><tbody>${D.map(d => linha(d)).join('')}${linha(F, true)}</tbody></table>`, F, hm, sel };
+}
+function prKpis(F, hm, ano, sel) {
+  const todos = sel.length === 12, ult = sel[sel.length - 1], fimPer = new Date(ano, ult + 1, 0), dias = Math.ceil((fimPer - hoje()) / 864e5) + 1;
+  const resta = Math.max(0, F.tP - F.tR), porDia = hm >= 0 && hm < 12 && ult >= hm && dias > 0 ? resta / dias : null;
+  const mx = sel.reduce((a, i) => F.P[i] > F.P[a] ? i : a, sel[0]), pct = F.tP ? Math.round(F.P[mx] / F.tP * 100) : 0;
+  const k = (v, t, c, tip) => `<span class="cf-k"${tip ? ` title="${esc(tip)}"` : ''}><b style="color:${c || 'inherit'}">${v}</b> ${t}</span>`;
+  return `<div class="cf-ks">${k(F.venc, 'vencidos', F.venc ? '#C5221F' : '#188038')}${sel.includes(hm) ? k(F.mesFalta, 'a vencer em ' + MESES[hm], F.mesFalta ? '#B06000' : '#188038') : ''}${k(F.tR, 'de ' + F.tP + ' realizados', '', 'realizado dentro do previsto')}${k(F.ad == null ? '—' : F.ad + '%', 'aderência', F.ad == null ? '#5F6368' : F.ad >= 90 ? '#188038' : F.ad >= 75 ? '#B06000' : '#C5221F', 'feito no prazo ÷ o que já venceu')}${porDia != null ? k(nf(porDia, 1), 'serviços/dia necessários', porDia > 3 ? '#B06000' : '#188038', resta + ' serviços ainda por fazer até ' + brD(isoD(fimPer)) + ' em ' + dias + ' dias') : ''}${F.tP && sel.length > 1 ? k(pct + '%', (todos ? 'do ano' : 'do período') + ' em ' + PR_MESL[mx], pct >= 40 ? '#1967D2' : 'inherit', 'mês de maior carga prevista') : ''}</div>`;
+}
+function prGrafico(F, hm, sel, W = 900, H = 260) {   // carga e execução por mês: previsto (azul claro), realizado do previsto (verde), vencidos (vermelho) · desenhado na largura real do bloco
+  const L = 34, R = 10, T = 16, B = 34, n = sel.length, bw = (W - L - R) / n, mx = Math.max(1, ...sel.map(i => Math.max(F.P[i], F.R[i]))), Y = v => T + (1 - v / mx) * (H - T - B);
+  let s = '';
+  for (let k = 0; k <= 4; k++) { const v = Math.round(mx * k / 4), y = Y(v); s += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#EEF1F4"/><text x="${L - 6}" y="${y + 3}" font-size="10" text-anchor="end" fill="#5F6368">${v}</text>`; }
+  if (PRV.gm === 'acum') return prGrafAcum(F, hm, sel, W, H);
+  sel.forEach((i, k) => { const x0 = L + k * bw, w = Math.min(11, bw * 0.16), cx = x0 + bw / 2, p = F.P[i], r = Math.min(F.P[i], F.R[i]), ms = F.Ms[i];   // barras finas
+    if (i === hm) s += `<rect x="${x0 + 2}" y="${T - 8}" width="${bw - 4}" height="${H - T - B + 10}" fill="#EEF3FD" rx="6"/>`;
+    s += `<rect x="${cx - w - 1}" y="${Y(p)}" width="${w}" height="${H - B - Y(p)}" fill="#AECBFA" rx="3"><title>${PR_MESL[i]}: ${p} previstos</title></rect>`;
+    s += `<rect x="${cx + 1}" y="${Y(r)}" width="${w}" height="${H - B - Y(r)}" fill="${i > hm ? '#CEEAD6' : '#188038'}" rx="3"><title>${PR_MESL[i]}: ${r} realizados do previsto${F.R[i] > r ? ' (+' + (F.R[i] - r) + ' fora do previsto)' : ''}</title></rect>`;
+    if (p) s += `<text x="${cx - w / 2 - 1}" y="${Y(p) - 4}" font-size="10" text-anchor="middle" fill="#1967D2">${p}</text>`;
+    if (r && i <= hm) s += `<text x="${cx + w / 2 + 1}" y="${Y(r) - 4}" font-size="10" text-anchor="middle" fill="#188038">${r}</text>`;
+    if (ms) s += `<text x="${cx}" y="${H - B + 26}" font-size="10" text-anchor="middle" fill="#C5221F"><title>${ms} vencidos e não feitos</title>✗${ms}</text>`;
+    s += `<text x="${cx}" y="${H - B + 14}" font-size="10.5" text-anchor="middle" fill="${i === hm ? '#1967D2' : '#5F6368'}" font-weight="${i === hm ? 700 : 400}">${MESES[i].toUpperCase()}</text>`; });
+  return `<div class="cm-gw"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Carga e execução por mês">${s}</svg></div><p class="cf-lg"><i class="cg"></i>previsto · <i class="ok"></i>realizado do previsto · <span style="color:#C5221F">✗n</span> vencidos · passe o mouse nas barras para ver os valores</p>`;
+}
+function prGrafAcum(F, hm, sel, W = 900, H = 260) {   // curva acumulada (curva S): previsto acumulado × realizado acumulado; a distância entre as linhas é o atraso
+  const L = 40, R = 18, T = 18, B = 30, n = sel.length;
+  let ap = 0, ar = 0; const pts = sel.map(i => { ap += F.P[i]; if (i <= hm) ar += Math.min(F.P[i], F.R[i]); return { i, p: ap, r: i <= hm ? ar : null }; });
+  const mx = Math.max(1, ap), X = k => n === 1 ? (L + W - R) / 2 : L + k * (W - L - R) / (n - 1), Y = v => T + (1 - v / mx) * (H - T - B);
+  let s = '';
+  for (let k = 0; k <= 4; k++) { const v = Math.round(mx * k / 4), y = Y(v); s += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#EEF1F4"/><text x="${L - 6}" y="${y + 3}" font-size="10" text-anchor="end" fill="#5F6368">${v}</text>`; }
+  pts.forEach((q, k) => { s += `<text x="${X(k)}" y="${H - 10}" font-size="10.5" text-anchor="middle" fill="${q.i === hm ? '#1967D2' : '#5F6368'}" font-weight="${q.i === hm ? 700 : 400}">${MESES[q.i].toUpperCase()}</text>`; });
+  const kh = pts.findIndex(q => q.i === hm); if (kh >= 0) s += `<line x1="${X(kh)}" x2="${X(kh)}" y1="${T - 6}" y2="${H - B}" stroke="#1967D2" stroke-dasharray="3 3" opacity=".5"/><text x="${X(kh) + 4}" y="${T - 4}" font-size="10" fill="#1967D2">hoje</text>`;
+  s += `<polyline fill="none" stroke="#8AB4F8" stroke-width="2" stroke-dasharray="6 4" points="${pts.map((q, k) => X(k) + ',' + Y(q.p)).join(' ')}"/>`;
+  s += pts.map((q, k) => `<circle cx="${X(k)}" cy="${Y(q.p)}" r="3" fill="#fff" stroke="#8AB4F8" stroke-width="1.6"><title>${PR_MESL[q.i]}: ${q.p} previstos no acumulado</title></circle>`).join('');
+  const R2 = pts.map((q, k) => ({ q, k })).filter(o => o.q.r != null);
+  if (R2.length) {
+    const linha = R2.map(o => X(o.k) + ',' + Y(o.q.r)).join(' ');
+    s += `<path d="M${X(R2[0].k)},${H - B} L${linha.replace(/ /g, ' L')} L${X(R2[R2.length - 1].k)},${H - B} Z" fill="rgba(24,128,56,.10)"/><polyline fill="none" stroke="#188038" stroke-width="2.4" points="${linha}"/>`;
+    s += R2.map(o => `<circle cx="${X(o.k)}" cy="${Y(o.q.r)}" r="3.6" fill="#188038"><title>${PR_MESL[o.q.i]}: ${o.q.r} realizados no acumulado · atraso ${o.q.p - o.q.r}</title></circle>`).join('');
+    const u = R2[R2.length - 1], gap = u.q.p - u.q.r;
+    if (gap > 0) s += `<line x1="${X(u.k)}" x2="${X(u.k)}" y1="${Y(u.q.p)}" y2="${Y(u.q.r)}" stroke="#C5221F" stroke-width="1.5"/><text x="${X(u.k) + (u.k === n - 1 ? -6 : 6)}" y="${(Y(u.q.p) + Y(u.q.r)) / 2 + 3}" font-size="11" font-weight="600" text-anchor="${u.k === n - 1 ? 'end' : 'start'}" fill="#C5221F">atraso acumulado: ${gap}</text>`;
+  }
+  return `<div class="cm-gw"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Previsto acumulado × realizado acumulado">${s}</svg></div><p class="cf-lg"><span style="color:#5F8FE0">- - -</span> previsto acumulado · <span style="color:#188038">——</span> realizado acumulado (dentro do previsto) · <span style="color:#C5221F">vermelho</span> = atraso acumulado · passe o mouse nos pontos para ver os valores</p>`;
+}
+function prTelaFrota(ativos, ano, nAp, anos) {
+  const T = prFrotaV2(ano), sel = T.sel, todos = sel.length === 12, hm = T.hm; PRV._T = T;
+  const chips = `<div class="cf-ms"><span>Meses</span><button data-cfm="todos" class="${todos ? 'on' : ''}">Ano todo</button>${hm >= 0 && hm < 12 ? `<button data-cfm="ate" class="${!todos && sel.length === hm + 1 && sel[0] === 0 ? 'on' : ''}">Até ${MESES[hm]}</button>` : ''}<i></i>${MESES.map((m, i) => `<button data-cfm="${i}" class="cf-mm${!todos && sel.includes(i) ? ' on' : ''}${i === hm ? ' hj' : ''}" title="Clique para marcar ou desmarcar · Shift+clique marca um intervalo">${m.toUpperCase()}</button>`).join('')}<small>${todos ? 'ano todo' : sel.length + (sel.length === 1 ? ' mês' : ' meses') + ' somados'}</small></div>`;
+  return `<div class="cm-v"><div class="vh"><div><h1>Cronograma da frota</h1></div><span class="sp"></span><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(T.F, hm, ano, sel)}
+   <div class="cf-bt"><a class="mbtn" href="#audit">Histórico e evidências</a><button class="mbtn" data-prpdf="resumo">PDF desta tela</button><button class="mbtn" data-prpdf="frota">PDF completo</button>${can.admin() ? `<button class="mbtn pri" data-prapr>${nAp ? 'Revisar aprovação' : 'Aprovar o previsto de ' + ano}</button>` : ''}</div>
+   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota" selected>Frota toda</option>${ativos.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></label>
+    <label>Ano <select id="prA">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
+    <span class="cf-seg"><button data-prord="crit" class="${PRV.ord !== 'nome' ? 'on' : ''}">Criticidade</button><button data-prord="nome" class="${PRV.ord === 'nome' ? 'on' : ''}">Nome</button></span><span class="cf-p ${nAp === ativos.length ? 'ok' : 'lt'}">${nAp}/${ativos.length} aprovados</span></div>${chips}
+   <div class="cm-ws">
+    <div class="card cf-card"><div class="cf-hd"><b>Cronograma preventivo · previsto × realizado</b></div><div class="tw">${T.html}</div>
+     <p class="cf-lg"><b>0 / 24</b> = realizado / previsto · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <i class="cg"></i>carga prevista · aderência "—" = nada venceu ainda · clique no nome para ver serviço por serviço · arraste a borda do cabeçalho para ajustar a largura da coluna</p></div>
+    <div class="card cf-card"><div class="cf-hd"><b>Carga e execução por mês</b><span class="cf-seg"><button data-cfg="mensal" class="${PRV.gm !== 'acum' ? 'on' : ''}">Mensal</button><button data-cfg="acum" class="${PRV.gm === 'acum' ? 'on' : ''}">Acumulado</button></span></div><div id="cfGraf" style="padding:0 12px 4px;display:flex;flex-direction:column;flex:1;min-height:0">${prGrafico(T.F, hm, sel)}</div></div>
+   </div></div>`;
+}
+function prPopAbre(td) {   // cartão com os itens do Anexo I do serviço, ao lado do nome
+  let pop = document.getElementById('cfPop'); if (!pop) { pop = document.createElement('div'); pop.id = 'cfPop'; pop.className = 'cf-pop'; document.body.appendChild(pop); }
+  pop.innerHTML = (PRV._sv || [])[+td.dataset.cfsv] || ''; pop.dataset.i = td.dataset.cfsv; pop.hidden = false;
+  const r = td.getBoundingClientRect(), w = Math.min(460, innerWidth - 16); pop.style.width = w + 'px';
+  let x = r.right + 8; if (x + w > innerWidth - 8) x = Math.max(8, r.left); let y = r.top; pop.style.left = x + 'px'; pop.style.top = '0px';
+  const h = pop.offsetHeight; if (x === Math.max(8, r.left) && r.right + 8 + w > innerWidth - 8) y = r.bottom + 6; if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - h - 8); pop.style.top = y + 'px';
+}
+function prPopFecha() { const p = document.getElementById('cfPop'); if (p) p.hidden = true; }
+addEventListener('hashchange', () => prPopFecha()); addEventListener('scroll', () => prPopFecha(), { passive: true, capture: true });
+function prColunas(chave) {   // largura das colunas da tabela ajustável à mão, salva neste aparelho
+  const t = document.querySelector('#main table.cf-t'); if (!t) return;
+  const LS = JLAY(chave), W = LS.G(), ths = [...t.tHead.rows[0].cells], nat = ths.map(th => Math.round(th.getBoundingClientRect().width));
+  const fixa = cur => { t.style.tableLayout = 'fixed'; ths.forEach((th, j) => th.style.width = cur[j] + 'px'); t.style.width = cur.reduce((a, x) => a + x, 0) + 'px'; };
+  if (Object.keys(W).length) fixa(ths.map((th, j) => W[th.dataset.ck] || nat[j]));
+  ths.forEach((th, i) => { const h = document.createElement('span'); h.className = 'cf-cr'; h.title = 'Arraste para ajustar a largura · duplo clique volta ao automático'; th.appendChild(h);
+    h.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); const cur = ths.map(x => Math.round(x.getBoundingClientRect().width)); fixa(cur);
+      const sx = e.clientX, ow = cur[i]; h.setPointerCapture(e.pointerId);
+      const mv = ev => { cur[i] = Math.max(34, ow + ev.clientX - sx); fixa(cur); };
+      const up = () => { h.removeEventListener('pointermove', mv); h.removeEventListener('pointerup', up); ths.forEach((x, j) => W[x.dataset.ck] = cur[j]); LS.S(W); };
+      h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up); });
+    h.addEventListener('dblclick', e => { e.stopPropagation(); delete W[th.dataset.ck]; LS.S(W); render(); }); });
+}
+// ---- detalhe do empurrador no mesmo padrão da frota: uma linha por serviço, agrupada por sistema › equipamento ----
+const PR_CRIT = { 'Crítica': 'ms', 'Alta': 'lt', 'Média': 'md', 'Baixa': 'bx' };
+function prEmpTabela(v, ano, hm, sel) {
+  const G = prLinhas(v, ano), mxF = Math.max(1, ...G.flatMap(g => sel.filter(i => i > hm).map(i => g.base ? (g.base[i] || 0) : g.M[i].plan + g.M[i].miss + g.M[i].ok + g.M[i].late)));
+  const ncol = sel.length + 3; let sisA = '', eqA = '', rows = ''; PRV._sv = [];
+  G.forEach(g => {
+    // conteúdo do serviço (itens do Anexo I do pacote), mostrado ao passar o mouse / tocar no nome
+    const its = {}; g.its.forEach(x => { const o = its[x.t.id] = its[x.t.id] || { t: x.t, pos: new Set() }; if (x.pos && x.pos !== 'UN') o.pos.add(x.pos); });
+    const nSv = PRV._sv.push(`<div class="cf-pop-h"><b>${esc(g.sv.nome)}</b><span>${esc(g.eq.n)} · ${esc(g.sv.freq)} · <span class="cf-cr2 ${PR_CRIT[g.crit] || 'bx'}">${esc(g.crit)}</span></span></div><ul>${Object.values(its).sort((a, b) => a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true })).map(o => `<li><b>${esc(o.t.id)}</b> ${esc(o.t.item || '')}${o.t.chk ? ` — <span>${esc(o.t.chk)}</span>` : ''}${o.pos.size ? ` <em>(${[...o.pos].map(p => isMcp(p) ? (p === 'CE' ? 'central' : p) : posNome(v, p)).join(', ')})</em>` : ''}</li>`).join('')}</ul><small>${Object.keys(its).length} ${Object.keys(its).length === 1 ? 'item' : 'itens'} do Anexo I nesta parada</small>`) - 1;
+    const s = SISTEMAS[g.sis - 1] || '', ke = s + '|' + g.eqKey;
+    if (s !== sisA) { sisA = s; eqA = ''; rows += `<tr class="cf-gs"><td colspan="${ncol + 1}"><span class="cf-gl">${esc(s)}</span></td></tr>`; }
+    if (ke !== eqA) { eqA = ke; rows += `<tr class="cf-ge"><td colspan="${ncol + 1}"><span class="cf-gl">${esc(g.eq.n)}${g.eq.m ? ` <small>${esc(g.eq.m)}</small>` : ''}</span></td></tr>`; }
+    const P = g.M.map((m, i) => g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late), R = g.M.map(m => m.ok + m.late), Ms = g.M.map(m => m.miss), Lt = g.M.map(m => m.late);
+    const tip = i => esc(g.M[i].tx.join('\n'));
+    const cel = i => { const p = P[i], r = R[i], ms = Ms[i], lt = Lt[i];
+      if (i === hm) { const w = x => p ? Math.min(100, Math.round(x / p * 100)) : 0;
+        return `<td class="cf-c cf-hj" title="${tip(i) || (r + ' realizados · ' + ms + ' vencidos')}">${p || r ? `<span class="cf-fr ${ms ? 'ms' : r >= p && p ? 'ok' : ''}"><b>${r}</b> / ${p || '—'}</span>${p ? `<span class="cf-bar"><i class="ok" style="width:${w(Math.min(r, p))}%"></i><i class="ms" style="width:${w(ms)}%"></i></span>` : ''}` : '<span class="cf-z">—</span>'}</td>`; }
+      if (i < hm) { if (!p && !r) return '<td class="cf-c"><span class="cf-z">—</span></td>';
+        const st = ms ? 'ms' : lt ? 'lt' : r >= p ? 'ok' : 'ms';
+        return `<td class="cf-c" title="${tip(i)}"><span class="cf-fr ${p ? st : ''}"><b>${r}</b> / ${p || '—'}</span></td>`; }
+      if (!p) return '<td class="cf-c"><span class="cf-z">—</span></td>';
+      return `<td class="cf-c" title="${p} previsto(s)"><span class="cf-cg" style="background:rgba(25,103,210,${(0.08 + Math.min(1, p / mxF) * 0.32).toFixed(2)})">${p}</span></td>`; };
+    const tP = sel.reduce((a, i) => a + P[i], 0), tR = sel.reduce((a, i) => a + Math.min(P[i], R[i]), 0), venc = sel.reduce((a, i) => a + Ms[i], 0), falta = sel.includes(hm) ? Math.max(0, P[hm] - R[hm] - Ms[hm]) : 0;
+    const sit = venc ? `<span class="cf-p ms">${venc} vencido${venc > 1 ? 's' : ''}</span>` : tP ? '<span class="cf-p ok">em dia</span>' : '<span class="cf-z">—</span>';
+    rows += `<tr><td class="cf-n cf-sv" data-cfsv="${nSv}"><b>${esc(g.sv.nome)}</b><small>${esc(g.sv.freq)} · <span class="cf-cr2 ${PR_CRIT[g.crit] || 'bx'}">${esc(g.crit)}</span></small></td>${sel.map(cel).join('')}
+      <td class="cf-c cf-tt"><span class="cf-fr">${tP ? `<i class="cf-d" style="background:${venc ? '#C5221F' : '#188038'}"></i>` : ''}<b>${tR}</b> / ${tP}</span></td><td class="cf-s">${sit}${falta ? `<small>${falta} a vencer em ${MESES[hm]}</small>` : ''}</td></tr>`; });
+  const head = `<tr><th class="cf-n" data-ck="n">Serviço</th>${sel.map(i => `<th class="${i === hm ? 'cf-hj' : ''}" data-ck="m${i}">${MESES[i].toUpperCase()}${i === hm ? ' · ATUAL' : ''}</th>`).join('')}<th data-ck="t">Total</th><th data-ck="s">Situação</th></tr>`;
+  return `<table class="cf-t cf-emp"><thead>${head}</thead><tbody>${rows || `<tr><td colspan="${ncol + 1}">Sem serviços no plano.</td></tr>`}</tbody></table>`;
+}
+function prTelaEmp(v, ativos, ano, B, anos) {
+  const hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1, sel = prMesesSel(), F = prResumo(v, ano, hm, sel), todos = sel.length === 12;
+  PRV._T = { F, hm, sel };
+  const chips = `<div class="cf-ms"><span>Meses</span><button data-cfm="todos" class="${todos ? 'on' : ''}">Ano todo</button>${hm >= 0 && hm < 12 ? `<button data-cfm="ate" class="${!todos && sel.length === hm + 1 && sel[0] === 0 ? 'on' : ''}">Até ${MESES[hm]}</button>` : ''}<i></i>${MESES.map((m, i) => `<button data-cfm="${i}" class="cf-mm${!todos && sel.includes(i) ? ' on' : ''}${i === hm ? ' hj' : ''}" title="Clique para marcar ou desmarcar · Shift+clique marca um intervalo">${m.toUpperCase()}</button>`).join('')}<small>${todos ? 'ano todo' : sel.length + (sel.length === 1 ? ' mês' : ' meses') + ' somados'}</small></div>`;
+  return `<div class="cm-v"><div class="vh"><div><h1>Cronograma · ${esc(v.nome)}</h1></div><span class="sp"></span><a class="mbtn" href="#cxr" data-prv="frota">← Frota toda</a><a class="mbtn" href="#crono" data-prit="${v.id}">Item por item (Anexo I)</a><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(F, hm, ano, sel)}
+   <div class="cf-bt"><a class="mbtn" href="#audit">Histórico e evidências</a><button class="mbtn" data-prpdf="um">PDF desta tela</button><button class="mbtn" data-prpdf="frota">PDF completo</button>${can.admin() ? `<button class="mbtn pri" data-prapr>${B ? 'Revisar aprovação da frota' : 'Aprovar o previsto de ' + ano + ' (frota)'}</button>` : ''}</div>
+   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota">Frota toda</option>${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select></label>
+    <label>Ano <select id="prA">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
+    ${B ? `<span class="cf-p ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : '<span class="cf-p lt">Previsto ainda não aprovado</span>'}</div>${chips}
+   <div class="cm-ws">
+    <div class="card cf-card"><div class="cf-hd"><b>Cronograma preventivo · previsto × realizado · ${esc(v.nome)}</b></div><div class="tw">${prEmpTabela(v, ano, hm, sel)}</div>
+     <p class="cf-lg"><b>0 / 2</b> = realizado / previsto no mês · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <i class="cg"></i>carga prevista · passe o mouse na célula para ver a OM ou o FR 049_B · o PDF sai no formato oficial (P e R)</p></div>
+    <div class="card cf-card"><div class="cf-hd"><b>Carga e execução por mês · ${esc(v.nome)}</b><span class="cf-seg"><button data-cfg="mensal" class="${PRV.gm !== 'acum' ? 'on' : ''}">Mensal</button><button data-cfg="acum" class="${PRV.gm === 'acum' ? 'on' : ''}">Acumulado</button></span></div><div id="cfGraf" style="padding:0 12px 4px;display:flex;flex-direction:column;flex:1;min-height:0">${prGrafico(F, hm, sel)}</div></div>
+   </div></div>`;
+}
 function vPR() {
   const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (PRV.v !== 'frota' && !ativos.some(v => v.id === PRV.v)) PRV.v = 'frota';
   const v = PRV.v === 'frota' ? null : vessel(PRV.v), ano = +PRV.ano, B = v && cronoBase(ano, v.id), nAp = ativos.filter(a => cronoBase(ano, a.id)).length;
   const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
+  if (!v) return prTelaFrota(ativos, ano, nAp, anos);   // frota toda: layout de uma linha por empurrador
+  return prTelaEmp(v, ativos, ano, B, anos);            // um empurrador: uma linha por serviço (o PDF continua no formato P/R)
   return `<div class="vh"><div><h1>Cronograma · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span>${v ? `<a class="mbtn" href="#crono" data-prit="${v.id}">📋 Item por item (Anexo I)</a>` : ''}<a class="mbtn" href="#audit">📁 Histórico e evidências</a><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada empurrador)</button></div>
    <div class="card row" style="gap:12px;flex-wrap:wrap"><select id="prV" style="font-size:18px;font-weight:600;width:auto;min-width:150px"><option value="frota"${PRV.v === 'frota' ? ' selected' : ''}>Frota toda</option>${ativos.map(a => `<option value="${a.id}"${a.id === PRV.v ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>
     <select id="prA" style="width:auto">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select>
@@ -6767,6 +6931,44 @@ async function prAprovar(vs, ano) {   // congela o previsto (linha de base) de c
     await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasPR, linhasEq }); }
 }
 cr3Aprovar = prAprovar;
+{ const a0 = AFTER.cxr; AFTER.cxr = function () { a0(); const m = $('#main'), c0 = m.onclick;
+  m.onclick = e => { const o = e.target.closest('[data-prord]'); if (o) { PRV.ord = o.dataset.prord; render(); return; }
+    const gm = e.target.closest('[data-cfg]'); if (gm) { PRV.gm = gm.dataset.cfg; render(); return; }
+    const sv = e.target.closest('[data-cfsv]'); if (sv) { const pop = document.getElementById('cfPop'); if (pop && !pop.hidden && pop.dataset.i === sv.dataset.cfsv) prPopFecha(); else prPopAbre(sv); return; }
+    const mb = e.target.closest('[data-cfm]'); if (mb) { const k = mb.dataset.cfm, hm = hoje().getMonth();
+      if (k === 'todos') PRV.ms = null; else if (k === 'ate') PRV.ms = Array.from({ length: hm + 1 }, (_, i) => i);
+      else { const i = +k, cur = new Set(PRV.ms || []);
+        if (e.shiftKey && PRV.ultMes != null) { const a = Math.min(PRV.ultMes, i), b = Math.max(PRV.ultMes, i); for (let j = a; j <= b; j++) cur.add(j); }
+        else cur.has(i) ? cur.delete(i) : cur.add(i);
+        PRV.ultMes = i; PRV.ms = cur.size && cur.size < 12 ? [...cur] : null; }
+      render(); return; }
+    return c0 && c0(e); };
+  if (!document.querySelector('#main .cm-ws')) return;
+  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_cf_lay', '[data-cfreset]');
+  const rb = document.querySelector('[data-cfreset]'); if (rb) { const r0 = rb.onclick; rb.onclick = e => { JLAY('smf_cf_cols').S({}); JLAY('smf_cfd_cols').S({}); r0(e); }; }
+  prColunas(PRV.v === 'frota' ? 'smf_cf_cols' : 'smf_cfd_cols');
+  prPopFecha(); if (matchMedia('(hover: hover)').matches) { m.onmouseover = e => { const sv = e.target.closest('[data-cfsv]'); if (sv) prPopAbre(sv); }; m.onmouseout = e => { const sv = e.target.closest('[data-cfsv]'); if (sv && !sv.contains(e.relatedTarget)) prPopFecha(); }; }
+  // gráfico na largura real do bloco (texto sempre do mesmo tamanho); redesenha quando o bloco muda de tamanho
+  const gb = document.getElementById('cfGraf'); if (gb && PRV._T) { const T = PRV._T, card = gb.closest('.card');
+    const draw = () => { const w = Math.max(320, gb.clientWidth - 24), h = card.style.height ? Math.max(180, card.clientHeight - 110) : 260; gb.innerHTML = prGrafico(T.F, T.hm, T.sel, w, h); };
+    draw(); let t0; new ResizeObserver(() => { clearTimeout(t0); t0 = setTimeout(() => { if (gb.isConnected) draw(); }, 150); }).observe(card); } }; }
+{ const st = document.createElement('style'); st.textContent = `.cf-ks{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}.cf-k{border:1px solid #DADCE0;background:#fff;border-radius:999px;padding:3px 11px;font-size:12.5px;color:#5F6368}.cf-k b{font-size:14px;font-weight:600}
+ .cf-bt{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}.cf-fl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 6px;font-size:12.5px;color:#5F6368}.cf-fl select{width:auto;min-width:0;font-size:12.5px;padding:3px 6px;margin-left:4px}
+ .cf-seg{display:inline-flex;background:#F1F3F4;border-radius:7px;padding:2px}.cf-seg button{border:0;background:transparent;padding:3px 10px;border-radius:5px;cursor:pointer;font:inherit;color:#5F6368}.cf-seg button.on{background:#fff;color:#202124;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+ .cf-ms{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0 0 10px;font-size:12.5px;color:#5F6368}.cf-ms>span{margin-right:4px}.cf-ms i{width:1px;height:18px;background:#DADCE0;margin:0 4px}.cf-ms button{border:1px solid #DADCE0;background:#fff;border-radius:14px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer;color:#3C4043}.cf-ms button.on{background:#E8F0FE;border-color:#1967D2;color:#1967D2;font-weight:600}.cf-ms button.hj{box-shadow:inset 0 -2px 0 #1967D2}.cf-ms small{margin-left:6px;color:#9AA0A6}
+ #main .card.cf-card{padding:0!important;overflow:auto;display:flex;flex-direction:column}#main .card.cf-card>.cm-rz{margin:-16px 0 0 auto}#main .card.cf-card .tw{overflow-x:auto}.cf-hd{display:flex;align-items:center;gap:10px;padding:9px 96px 6px 14px;cursor:grab}.cf-hd b{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#3C4043}
+ .cf-t{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;font-variant-numeric:tabular-nums}.cf-t th{position:relative;font-size:10.5px;letter-spacing:.06em;color:#5F6368;font-weight:600;text-align:center;padding:6px 4px;border-top:1px solid #E3E8EF;border-bottom:1px solid #E3E8EF;background:#F8F9FA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cf-t th.cf-n{text-align:left;padding-left:14px}
+ .cf-t th.cf-hj{color:#1967D2;box-shadow:inset 0 3px 0 #1967D2;background:#EEF3FD}.cf-t td{border-bottom:1px solid #EEF1F4;padding:5px 4px;text-align:center;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .cf-t .cf-n{position:sticky;left:0;z-index:2;background:#fff;box-shadow:inset -1px 0 0 #EEF1F4}.cf-t th.cf-n{background:#F8F9FA;z-index:3}.cf-t td.cf-n{text-align:left;padding-left:14px;font-weight:500}.cf-t td.cf-n a{color:inherit;text-decoration:none}.cf-t td.cf-n a:hover{text-decoration:underline;color:#1967D2}
+ .cf-t td.cf-hj{background:#F5F8FE;min-width:84px}.cf-fr{font-size:12px;color:#5F6368}.cf-fr b{color:#202124;font-weight:600}.cf-fr.ok b{color:#188038}.cf-fr.lt b{color:#B06000}.cf-fr.ms b{color:#C5221F}.cf-z{color:#C4C9D0}
+ .cf-bar{display:flex;height:4px;background:#E3E8EF;border-radius:2px;margin:3px auto 0;width:64px;max-width:100%;overflow:hidden}.cf-bar i{display:block;height:100%}.cf-bar i.ok{background:#188038}.cf-bar i.ms{background:#D93025}
+ .cf-cg{display:inline-block;min-width:24px;padding:1px 6px;border-radius:5px;font-size:12px;color:#174EA6;font-weight:600}.cf-d{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+ .cf-s{text-align:left!important;padding-left:10px!important}.cf-s small{display:block;color:#5F6368;font-size:11px;margin-top:1px}.cf-p{display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 9px}.cf-p.ms{background:#FCE8E6;color:#C5221F}.cf-p.ok{background:#E6F4EA;color:#188038}.cf-p.lt{background:#FEF3E0;color:#B06000}.cf-a{font-weight:600}
+ .cf-t tr.cf-tot td{background:#F8F9FA;border-top:1px solid #DADCE0;border-bottom:0}.cf-t tr.cf-tot td.cf-n{background:#F8F9FA;font-weight:600}
+ .cf-gs td{background:#EEF3FD;color:#174EA6;font-weight:700;font-size:12px;text-align:left!important;padding:5px 14px!important;border-top:1px solid #D2E3FC}.cf-ge td{background:#F8F9FA;font-weight:600;font-size:12px;text-align:left!important;padding:4px 14px!important;color:#202124}.cf-ge small{font-weight:400;color:#5F6368;margin-left:6px}.cf-gl{position:sticky;left:14px} .cf-pop{position:fixed;z-index:10000;background:#fff;border:1px solid #DADCE0;border-radius:10px;box-shadow:0 10px 30px rgba(32,33,36,.18);padding:10px 14px;font-size:12.5px;color:#202124;max-height:70vh;overflow:auto;pointer-events:none}.cf-pop[hidden]{display:none}.cf-pop-h{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}.cf-pop-h b{font-size:14px}.cf-pop-h>span{color:#5F6368;font-size:12px}.cf-pop ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px}.cf-pop li span{color:#3C4043}.cf-pop li em{color:#5F6368;font-style:normal}.cf-pop small{display:block;margin-top:6px;color:#9AA0A6}.cf-emp td.cf-sv{cursor:help}
+ .cf-emp td.cf-sv{white-space:normal;min-width:190px;max-width:280px;text-align:left;padding-left:14px}.cf-sv b{font-weight:600;font-size:12.5px}.cf-sv small{display:block;color:#5F6368;font-size:11px;margin-top:1px}.cf-cr2{font-weight:600}.cf-cr2.ms{color:#C5221F}.cf-cr2.lt{color:#B06000}.cf-cr2.md{color:#1967D2}.cf-cr2.bx{color:#5F6368}
+ .cf-cr{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;touch-action:none;z-index:4}.cf-cr:hover,.cf-cr:active{background:rgba(25,103,210,.35)}
+ .cf-lg{font-size:11.5px;color:#5F6368;padding:6px 14px 8px;margin:0}.cf-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 8px;vertical-align:-1px}.cf-lg i.ok{background:#188038}.cf-lg i.lt{background:#E37400}.cf-lg i.ms{background:#D93025}.cf-lg i.cg{background:rgba(25,103,210,.3)}`; document.head.appendChild(st); }
 { const s = SECOES.find(x => x.id === 'crono'); if (s) { s.views = [['cxr', 'Previsto × realizado']]; s.extra = ['crono', 'audit']; } }
 ['cxr'].forEach(k => { const i = LAY_VIEWS.indexOf(k); if (i >= 0) LAY_VIEWS.splice(i, 1); });
 { const st = document.createElement('style'); st.textContent = `.pr-hd{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px;font-size:15px}.pr-hd span{color:#3C4043}
@@ -7629,15 +7831,16 @@ AFTER.compr = () => { const m = $('#main');
     const s = t.closest('[data-cmsel]'); if (s && !t.closest('a')) { CF.sel = s.dataset.cmsel; render(); const d = $('#cmSel'); if (d) d.closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
   m.onchange = e => { if (e.target.id === 'cmSel') { CF.sel = e.target.value; render(); } if (e.target.id === 'cmHv') { CF.hv = e.target.value; render(); } }; };
 // blocos como janelas (igual ao Óleo): alça para qualquer tamanho, minimizar e tela cheia para apresentação; tamanhos salvos neste aparelho
-const CMP_LAY = { G() { try { return JSON.parse(localStorage.getItem('smf_cmp_lay') || '{}'); } catch (e) { return {}; } }, S(v) { try { localStorage.setItem('smf_cmp_lay', JSON.stringify(v)); } catch (e) { } } };
-function cmpJanelas() {
-  const ws = document.querySelector('#main .cm-ws'); if (!ws) return;
-  const rb = document.querySelector('[data-cmreset]'); if (rb) rb.onclick = e => { e.stopPropagation(); CMP_LAY.S({}); render(); };
+// usado pela Compressão e pelo Cronograma: cada tela guarda o seu arranjo numa chave própria
+const JLAY = k => ({ G() { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { return {}; } }, S(v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } });
+function janelasLivres(ws, chave, resetSel) {
+  if (!ws) return; const LS = JLAY(chave);
+  const rb = document.querySelector(resetSel); if (rb) rb.onclick = e => { e.stopPropagation(); LS.S({}); render(); };
   const livre = innerWidth > 760; if (livre) ws.classList.add('cm-wide');   // libera a largura total da tela antes de medir
-  const cards = [...ws.children].filter(c => c.classList.contains('card')), L = CMP_LAY.G(), W = ws.clientWidth;
+  const cards = [...ws.children].filter(c => c.classList.contains('card')), L = LS.G(), W = ws.clientWidth;
   const nat = cards.map(c => ({ x: 0, y: c.offsetTop, w: W, h: c.offsetHeight }));   // padrão: empilhados na ordem da tela
   const pos = k => L[k] || (L[k] = Object.assign({}, nat[+k.slice(1)]));
-  const salva = () => CMP_LAY.S(L);
+  const salva = () => LS.S(L);
   const fundo = () => { if (livre) ws.style.height = Math.max(...cards.map(c => { const p = pos(c.dataset.k); return p.y + (p.m ? c.offsetHeight : p.h); })) + 12 + 'px'; };
   const aplica = c => { const p = pos(c.dataset.k); c.classList.toggle('cm-min', !!p.m); if (!livre) return;
     c.style.left = p.x + 'px'; c.style.top = p.y + 'px'; c.style.width = p.w + 'px'; c.style.height = p.m ? '' : p.h + 'px'; };
@@ -7671,6 +7874,7 @@ function cmpJanelas() {
       rz.addEventListener('pointermove', mv); rz.addEventListener('pointerup', up); });
   });
 }
+function cmpJanelas() { janelasLivres(document.querySelector('#main .cm-ws'), 'smf_cmp_lay', '[data-cmreset]'); }
 { const a0 = AFTER.compr; AFTER.compr = () => { a0(); cmpJanelas(); }; }
 // menu: logo depois de Óleo
 { const i = SECOES.findIndex(s => s.id === 'oleo'); SECOES.splice(i < 0 ? 1 : i + 1, 0, { id: 'compr', nome: 'Compressão MCP', views: [['compr', 'Compressão do MCP']] });
