@@ -19,22 +19,22 @@ O SMF fala com o deployment Apps Script em `NUVEM_PADRAO` (topo de `manutencao/i
 
 ## Comandos
 
-Não há build, lint, testes nem gerenciador de pacotes. Bibliotecas (html2canvas, jsPDF) estão embutidas inline para funcionar offline.
+Não há build, lint, testes nem gerenciador de pacotes. Publicação: GitHub Pages da `main` (https://arlesson2025.github.io/NAVECUNHA/manutencao/).
 
-- Rodar: abrir `manutencao/index.html` no navegador. Para testar o service worker/instalação, servir a pasta por HTTP (qualquer servidor estático); `file://` não registra SW.
+- Rodar: servir a raiz do repositório por HTTP (ex.: `python -m http.server 8765 --bind 127.0.0.1`) e abrir `/manutencao/`. O app só registra o service worker em `https:`; o comportamento offline real se testa no celular, pelo GitHub Pages. Ao mudar arquivos pré-cacheados, confira que todos baixam (`caches.open(...).addAll(ARQ)` no console).
 - Dados de exemplo: o app gera uma frota simulada (`gerarExemplo` / `carregarExemplo`); o banner “Dados de exemplo” aparece enquanto existirem.
 - Servidor: o código é colado manualmente no editor do Apps Script e implantado como App da Web; a URL `/exec` vai em Administração → Nuvem.
 
-## Como ler `manutencao/index.html` (~2,3 MB, ~8.400 linhas)
+## Como ler `manutencao/index.html` (~1,7 MB, ~7.950 linhas)
 
-**Nunca leia o arquivo inteiro nem as linhas gigantes.** Use Grep e Read com `offset`/`limit`.
+**Nunca leia o arquivo inteiro nem as linhas gigantes.** Use Grep e Read com `offset`/`limit`. Os números de linha abaixo são aproximados e mudam a cada edição — localize pelos marcadores citados.
 
-- Linhas ~22–444: bibliotecas minificadas (html2canvas, jsPDF). Ignorar.
-- Linhas ~445–1630: CSS principal.
-- Linha ~1646 (`const LOGOS=`) e ~1648 (`const A1=`) têm centenas de KB cada (logos base64 e o Anexo I inteiro em JSON). Para consultar itens do Anexo I, use Grep com `-o` e um padrão específico (ex.: `"id":"1\.1\.1"[^}]*`).
+- Topo (~linha 22): `NUVEM_PADRAO` e `carregarLibsPdf()`. As bibliotecas de PDF (html2canvas, jsPDF) ficam em `manutencao/lib/` e só carregam quando `gerarPDF`, `lubMakePdf` ou `apPdf` são chamadas; não edite os `.min.js`.
+- Linhas ~32–1217: CSS principal.
+- `const LOGOS=` e `const A1=` (~1234–1235) têm centenas de KB cada (logos base64 e o Anexo I inteiro em JSON). Para consultar itens do Anexo I, use Grep com `-o` e um padrão específico (ex.: `"id":"1\.1\.1"[^}]*`). Outras linhas gigantes: `FR049_B64`/`FR016_B64` (formulários em base64), `AP_FOTO`, `MOTOR_IMG`.
 - No PowerShell, leia com `-Encoding UTF8`; sem isso os acentos saem corrompidos.
 
-### Núcleo (bloco `<script>` ~1646–3580)
+### Núcleo (bloco `<script>` que começa em `const LOGOS=`, até antes de “LUBRIFICAÇÃO · módulo”)
 
 - **Dados de domínio**: `A1` (itens do plano — Anexo I; `A1M` indexado por id), `EQN` (equipamentos), `FROTA_MATRIZ`/`FROTA_PADRAO` (cadastro dos empurradores CJA…), `CLASSES` (criticidade corretiva), `ETAPAS_P`/`ETAPAS_C` (fluxo das OMs).
 - **Utilidades**: `$`, `$$`, `esc` (sempre escapar ao montar HTML), `nf`, `pD`/`isoD`/`brD` (datas locais ao meio-dia), `uid`, `toast`, `modal`.
@@ -43,14 +43,14 @@ Não há build, lint, testes nem gerenciador de pacotes. Bibliotecas (html2canva
 - **Perfis**: `can.edit()` (logado) e `can.admin()` (`role === 'admin'` = Supervisor; `op` = Analista).
 - **Roteamento**: hash `#view/arg` → `route()` → `render()`. `render()` escolhe a função da view no mapa base **mesclado com `VX`**, escreve `#main.innerHTML`, e chama `AFTER[view]()` para ligar eventos. Eventos são delegados em `#main.onclick/onchange` via atributos `data-*`.
 
-### Camadas de patch (blocos `<script>` ~3581 até o fim)
+### Camadas de patch (blocos `<script>` de “LUBRIFICAÇÃO · módulo”, ~linha 3170, até o fim)
 
 O app cresceu empilhando ~50 blocos, cada um com um cabeçalho `/* ===== … ===== */` descrevendo a mudança. **Blocos posteriores sobrescrevem os anteriores**, por estes padrões:
 
 - `VX.<view> = novaFuncao` — troca a tela.
 - Envolver handlers: `{ const a0 = AFTER.x; AFTER.x = () => { a0(); const m = $('#main'), c0 = m.onclick; m.onclick = e => { …; return c0 && c0(e); }; }; }`
 - Envolver views: `{ const v0 = vHor; vHor = function () { const h = v0(); … }; }`, inclusive injetando HTML via `indexOf` no HTML de outra view.
-- Menu: `SECOES.splice(...)`; o menu final está no bloco “SMF v2” (~linha 7453): Hoje · OMs (Sankhya) · Óleo · Cronograma · Indicadores · Biblioteca · Administração.
+- Menu: o último `SECOES.splice(0, SECOES.length, …)` (bloco “SMF v2”, ~linha 7045) define as seções: Hoje · OMs (Sankhya) · Óleo · Cronograma · Indicadores · Biblioteca · Administração. **Mas as abas de uma seção ainda podem ser redefinidas depois** por `SECOES.find(x => x.id === '<seção>')` — ex.: as abas do Cronograma vêm da linha ~7245, não do splice. Antes de mexer em abas, procure a última ocorrência de `SECOES.find(x => x.id === '<seção>')` e confira no navegador (`nav.abas`).
 - CSS adicional injetado via `<style>` criado em JS ou no fim do arquivo.
 
 Consequência prática: para saber o que realmente aparece numa tela, procure a **última** atribuição (`VX\.crono\s*=`, `AFTER\.crono\s*=`) — a primeira definição pode estar morta. Ao alterar, prefira editar o bloco que hoje vence; se acrescentar um novo bloco de patch, siga o mesmo formato de cabeçalho e coloque-o no fim.
