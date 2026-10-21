@@ -15,7 +15,7 @@ O app usa a **versão implantada**, que pode ser mais antiga que o código abert
 | Data da cópia | Versão implantada | Observação |
 |---|---|---|
 | 20/10/2026 | não informada (código com `VERSAO = 8`) | primeira cópia, colada do editor; senhas iniciais trocadas por marcadores |
-| 21/10/2026 | `VERSAO = 9` (colar e implantar nova versão) | tipo `saida` (registro de saída da viagem) em `TIPOS`; arquivo inteiro colado no editor |
+| 21/10/2026 | `VERSAO = 9` · implantação 9 do Google, confirmada pelo ping do SMF | tipo `saida` (registro de saída da viagem) em `TIPOS` e nas colunas legíveis; arquivo inteiro colado no editor |
 
 ## Como atualizar esta cópia
 
