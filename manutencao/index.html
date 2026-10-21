@@ -1416,8 +1416,9 @@ async function login(name, pw) {
     S.session = { name, role: j.role, token: j.token };
   } else {
     const h = await sha256('ctle_man|' + pw);
-    const ad = (await kvGet('ad_hash')) || await sha256('ctle_man|super2026');
-    const op = (await kvGet('op_hash')) || await sha256('ctle_man|manut2026');
+    // senhas iniciais do modo local (só valem até serem trocadas em Administração neste aparelho); guardadas como SHA-256, não em texto
+    const ad = (await kvGet('ad_hash')) || '9fd0ab8c31f6972a212bf99923621c75026cfcbba4606460d8ab48d5316609e9';
+    const op = (await kvGet('op_hash')) || '51c53cb14ca8246f38f0384d5966435b1fb8c88738bf3b86bd9676599b93db8b';
     if (!name.trim() || (h !== ad && h !== op)) return 'Nome ou senha incorretos.';
     S.session = { name: name.trim(), role: h === ad ? 'admin' : 'op', token: null };
   }
@@ -1708,7 +1709,7 @@ function loginModal(msg) {
   const m = modal(`<h2>Entrar no SMF</h2><p class="note">${msg || 'Analista: lança horímetros, preenche o Anexo II e o FR 049_B. Supervisor: emite, confere, aprova e configura.'}</p>
    <label class="f">Seu nome<input id="lgN" autocomplete="name"></label><label class="f">Senha<input id="lgP" type="password" autocomplete="current-password"></label>
    <div class="note" id="lgE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="lgB">Entrar</button></div>
-   ${S.url ? '' : '<p class="note">Modo local (sem nuvem). Senhas iniciais: analista <b>manut2026</b> · supervisor <b>super2026</b>. Troque em Administração.</p>'}`);
+   ${S.url ? '' : '<p class="note">Modo local (sem nuvem). Use as senhas iniciais informadas pelo Supervisor e troque em Administração.</p>'}`);
   const go1 = async () => {
     $('#lgB').disabled = true; $('#lgB').textContent = 'Entrando…'; $('#lgE').textContent = '';
     let e; try { e = await login($('#lgN').value, $('#lgP').value); }
