@@ -7731,6 +7731,8 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   if (adm) adm.views = adm.views.filter(x => x[0] !== 'frota');
   const ord = ['hoje', 'crono', 'omsv2'].map(by).filter(Boolean).concat([cond], ['graf', 'apoio2', 'adm'].map(by).filter(Boolean));
   SECOES.splice(0, SECOES.length, ...ord);
+  // Biblioteca: #bib/#pecas/#terc/#trein viram a página única #apoio (paginaUnica); sem 'apoio' na seção, secDe caía no Hoje e o link do Hoje passava a abrir a Biblioteca
+  const bib = by('apoio2'); if (bib && VX.apoio) { bib.extra = [...new Set((bib.extra || []).concat(bib.views.map(x => x[0])))]; bib.views = [['apoio', 'Biblioteca']]; }
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
 // Calibração e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
 { const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
