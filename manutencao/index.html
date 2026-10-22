@@ -9197,13 +9197,12 @@ function vOMs3() {
   const tCr = tab(['Tipo', 'OM', 'Empurrador', 'Falha', 'Classe', 'Etapa', ''], cr.map(x => `<tr><td>${tag(true)}</td><td class="mono"><b>OM ${esc(x.o.num || '—')}</b></td><td><b>${esc(vName(x.o.vessel))}</b></td><td>${esc(x.o.descricao || '')}</td><td>${x.o.classe ? `<span class="pill ${/Crít/.test(x.o.classe) ? 'p-bad' : /Alta/.test(x.o.classe) ? 'p-warn' : 'p-mut'}">${esc(x.o.classe)}</span>` : '<span class="note">—</span>'}</td><td class="note">${etapa(x)}</td><td class="rt-b">${passo(x)}</td></tr>`).join(''), 'Nenhuma corretiva em aberto.');
   const enc = [], vis2 = new Set();
   oms().filter(o => !o.excluido && o.status === 'encerrada').sort((a, b) => (b.fechadoAt || 0) - (a.fechadoAt || 0)).forEach(o => { const g = o.grupo || o.id; if (vis2.has(g)) return; vis2.add(g); enc.push(o); });
-  const encF = enc.filter(o => OMSF === 'todas' || (OMSF === 'cr') === (o.tipo === 'C'));
+  const encF = enc.filter(o => o.tipo !== 'C');   /* corretivas: aba Corretivas e falhas */
   const chip = (k, l, n) => `<button class="cm-chip${OMSF === k ? ' on' : ''}" data-omsf="${k}">${l} <b>${n}</b></button>`;
   const tEnc = tab(['Encerrada em', 'Tipo', 'OM', 'Empurrador', 'Descrição', ''], encF.slice(0, 60).map(o => `<tr><td class="mono">${brD(o.dreal || isoD(new Date(o.fechadoAt || 0)))}</td><td>${tag(o.tipo === 'C')}</td><td class="mono">OM ${esc(o.num || '—')}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${o.tipo === 'C' ? esc(o.descricao || '') : itx(o.grupo ? grpItens(omGrupo(o.grupo)) : (o.items || []).length)}</td><td class="rt-b"><a class="mbtn sm" href="${o.grupo ? '#omg/' + encodeURIComponent(o.grupo) : '#om/' + o.id}">Ver</a></td></tr>`).join(''), 'Nenhuma ainda.');
   return `<div class="vh"><div><h1>Executar e lançar</h1><p>OMs abertas no Sankhya</p></div><span class="sp"></span><button class="mbtn pri" data-act="novaCorr">⚠ Registrar falha</button></div>
    <div class="card"><h2>Preventivas em aberto · ${pv.length}</h2>${tPv}</div>
-   <div class="card"><h2>Corretivas em aberto · ${cr.length}</h2>${tCr}</div>
-   <div class="card"><h2>Encerradas</h2><div class="cm-chips" style="margin-bottom:8px">${chip('todas', 'Todas', enc.length)}${chip('pv', 'Preventivas', enc.filter(o => o.tipo !== 'C').length)}${chip('cr', 'Corretivas', enc.filter(o => o.tipo === 'C').length)}</div><div style="max-height:420px;overflow:auto">${tEnc}</div></div>`;
+      <div class="card"><h2>Preventivas encerradas</h2><div style="max-height:420px;overflow:auto">${tEnc}</div></div>`;
 }
 VX.oms = vOMs3;
 document.addEventListener('click', e => { const b = e.target.closest('[data-omsf]'); if (!b || VIEW !== 'oms') return; e.preventDefault(); e.stopPropagation(); OMSF = b.dataset.omsf; render(); }, true);
@@ -9252,8 +9251,8 @@ function padTela(view, cfg) {
   const a0 = AFTER[view]; AFTER[view] = function () { a0 && a0.apply(this, arguments); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_' + view + '_lay', '[data-padreset="' + view + '"]'); };
 }
 const padGrupos = f => { const G = new Set(); return oms().filter(o => !o.excluido && f(o)).filter(o => { const g = o.grupo || o.id; if (G.has(g)) return false; G.add(g); return true; }).length; };
-padTela('oms', { titulo: 'Executar e lançar', desc: 'OMs abertas no Sankhya: lançar o formulário da preventiva e acompanhar a corretiva até a conferência',
-  resumo: () => [['Em aberto', padGrupos(o => o.status !== 'encerrada')], ['Preventivas para lançar', padGrupos(o => o.tipo !== 'C' && ['emitida', 'abordo', 'executada'].includes(o.status))], ['Corretivas em andamento', padGrupos(o => o.tipo === 'C' && ['aberta', 'execucao'].includes(o.status)), 'var(--badt)'], ['Em conferência', padGrupos(o => o.status === 'conferencia')]] });
+padTela('oms', { titulo: 'Executar e lançar · Preventivas', desc: 'OMs preventivas abertas no Sankhya: lançar o formulário que voltou assinado',
+  resumo: () => [['Em aberto', padGrupos(o => o.tipo !== 'C' && o.status !== 'encerrada')], ['Para lançar', padGrupos(o => o.tipo !== 'C' && ['emitida', 'abordo', 'executada'].includes(o.status))], ['Em conferência', padGrupos(o => o.tipo !== 'C' && o.status === 'conferencia')]] });
 padTela('omconf', { titulo: 'Conferir e encerrar', desc: 'Conferir e aprovar no SMF · depois anexar o PDF e encerrar a OM no Sankhya',
   resumo: () => [['Esperando conferência', padGrupos(o => o.status === 'conferencia')], ['Falta anexar no Sankhya', typeof skPend === 'function' ? skPend().length : 0, 'var(--warnt)']] });
 padTela('apoio', { titulo: 'Biblioteca', desc: 'Documentos, sobressalentes críticos, prestadores de serviço e treinamentos',
@@ -9300,7 +9299,7 @@ function vBarco2() {   /* ficha compacta (22/10/2026): situação no cabeçalho,
     ${hist.slice(0, 12).map(h => `<tr><td>${tag(h)}</td><td class="mono">${brD(h.d)}</td><td colspan="3">${h.t}</td></tr>`).join('') || '<tr><td colspan="5" class="note">Nada registrado ainda.</td></tr>'}</tbody></table></div>`;
   const sel = `<select id="brV" style="font-size:15px;font-weight:600;width:auto">${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>`;
   const situ = s ? (s.st === 'porto' ? '⚓ No porto' : '⛴ Em viagem') + ' desde ' + brD(s.at) : 'Situação não informada';
-  return `<div class="cm-v fb-v"><div class="vh"><div><h1>${esc(v.nome)}</h1><p>${situ} · ficha do empurrador</p></div><span class="sp"></span>${sel}<a class="mbtn" href="#hor">⏱ Lançar horímetro</a><a class="mbtn pri" href="#emitir/${v.id}">Programar preventiva</a>
+  return `<div class="cm-v fb-v"><div class="vh"><div><h1>${esc(v.nome)}</h1><p>${situ} · ficha do empurrador</p></div><span class="sp"></span><a class="mbtn" href="#rotina">← Frota</a>${sel}<a class="mbtn" href="#hor">⏱ Lançar horímetro</a><a class="mbtn pri" href="#emitir/${v.id}">Programar preventiva</a>
     <details class="pt-mais"><summary class="mbtn" title="Mais opções">⋯</summary><div><button class="mbtn" data-frv="${v.id}">🛢 Lançar troca de óleo</button><br><button class="mbtn" data-situ="${v.id}|${s && s.st === 'porto' ? 'viagem' : 'porto'}">${s && s.st === 'porto' ? '⛴ Saiu de viagem' : '⚓ Chegou em Manaus'}</button><br><a class="mbtn" href="#crono" data-prit="${v.id}">Item por item (Anexo I)</a></div></details>
     <button class="mbtn" data-brreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
    <div class="cm-ws">${resumo}${eq}${omsH}</div></div>`;
@@ -9447,6 +9446,67 @@ document.addEventListener('click', e => { if (VIEW !== 'rotina') return;
 .pf-l{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F1F3F4;font-size:13.5px}.pf-lt{flex:1}.pf-lb{white-space:nowrap}
 .pf-d{width:9px;height:9px;border-radius:50%;flex:none}.pf-d.u{background:#D93025}.pf-d.w{background:#E3A008}
 .pf-ok{color:#188038!important;font-size:14px}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Navegação do Supervisor (aprovada em 22/10/2026): Operação (o dia, 1 → 4) · Acompanhamento (plano, motores, indicadores) · Apoio (consulta) =====
+   · número no menu = trabalho pendente (Frota: urgentes; 2: empurradores com itens para programar; 3: OMs abertas + falhas sem OM; 4: a conferir + a anexar no Sankhya); item da operação sem nada fica apagado
+   · 3 · Executar e lançar com duas abas: Preventivas (oms) e Corretivas e falhas (falhas2) · Calibração e docagem vai para o Plano preventivo · "Condição dos motores"
+   · cada tela da operação termina com "→ Próximo" para a etapa seguinte; a ficha do empurrador tem "← Frota". */
+'use strict';
+const NAV_C = { v: -1, d: '', r: null };
+function navCont() { const k = (S.recs.__v || 0) + '|' + S.recs.size + '|' + isoD(hoje()); if (NAV_C.r && NAV_C.v === k) return NAV_C.r;
+  const op = S.cfg.frota.filter(v => !foraOp(v)), G = new Map();
+  oms().filter(o => !o.excluido && o.status !== 'encerrada').forEach(o => { const g = o.grupo || o.id; if (!G.has(g)) G.set(g, { o, st: o.grupo ? grpStatus(omGrupo(o.grupo)) : o.status }); });
+  const L = [...G.values()], falhas = op.reduce((a, v) => a + fr27Pend(v.id).length, 0);
+  const prog = op.filter(v => situDe(v) && v.situ.st === 'porto' && painelVessel(v, viagemDe(v)).some(y => y.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, y)) && !y.om)).length;
+  let urg = 0; try { urg = agoraLista().filter(a => a.p === 1).length; } catch (e) { }
+  const r = { rotina: urg, emitir: prog, oms: L.filter(x => x.o.tipo !== 'C' && x.st !== 'conferencia').length, falhas2: L.filter(x => x.o.tipo === 'C' && x.st !== 'conferencia').length + falhas, falhasSem: falhas,
+    omconf: L.filter(x => x.st === 'conferencia').length + (typeof skPend === 'function' ? skPend().length : 0) };
+  NAV_C.v = k; NAV_C.r = r; return r; }
+{ const b0 = badge; badge = k => { if (!['rotina', 'emitir', 'oms', 'falhas2', 'omconf'].includes(k) || (typeof ehOperador === 'function' && ehOperador())) return b0(k);
+    let C; try { C = navCont(); } catch (e) { return ''; } const n = C[k] || 0; if (!n) return '';
+    const red = k === 'rotina' || (k === 'falhas2' && C.falhasSem); return `<span class="n${red ? '' : ' blue'}">${n}</span>`; }; }
+{ const by = id => SECOES.find(s => s.id === id), cr = by('crono'), cd = by('cond2'), om = by('omsv2'), h = by('hoje');
+  if (cd) { cd.views = cd.views.filter(x => x[0] !== 'controle'); cd.nome = 'Condição dos motores'; cd.sub = 'horímetros, óleo, compressão'; }
+  if (cr) { if (!cr.views.some(x => x[0] === 'controle')) cr.views.push(['controle', 'Calibração e docagem']); cr.sub = 'cronograma, Anexo I, calibração'; }
+  if (om) { om.views = [['oms', 'Preventivas'], ['falhas2', 'Corretivas e falhas']]; om.sub = 'preventivas e corretivas'; }
+  if (h) h.sub = 'comece por aqui'; }
+{ const n0 = renderNav; renderNav = function () { const x = n0.apply(this, arguments), nav = document.getElementById('nav'); if (!nav || (typeof ehOperador === 'function' && ehOperador())) return x;
+  nav.querySelectorAll('.nav-ct').forEach(e => e.remove());
+  const A = [...nav.querySelectorAll(':scope > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
+  L.forEach((s, i) => { const a = A[i]; if (!a) return; if (['prev2', 'omsv2', 'conf2'].includes(s.id)) a.classList.toggle('nav-zero', !a.querySelector('.n') && !a.classList.contains('on')); });
+  const g = nav.querySelector('.grp-t:not(.grp-trab)'); if (g) g.textContent = 'Acompanhamento';
+  const ia = L.findIndex(s => s.id === 'apoio2'); if (ia >= 0 && A[ia] && !nav.querySelector('.grp-apoio')) A[ia].insertAdjacentHTML('beforebegin', '<div class="grp-t grp-apoio">Apoio</div>');
+  return x; }; }
+/* 3 · Executar e lançar · aba Corretivas e falhas */
+function vFalhas2() {
+  const op = S.cfg.frota.filter(v => !foraOp(v)), F = [];
+  op.forEach(v => fr27Pend(v.id).forEach(x => F.push(Object.assign({ v }, x))));
+  const gr = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 }; F.sort((a, b) => (gr[a.c] ?? 9) - (gr[b.c] ?? 9) || String(a.date || '').localeCompare(String(b.date || '')));
+  const pc = c => `<span class="pill ${/Crít/.test(c) ? 'p-bad' : /Alta/.test(c) ? 'p-warn' : 'p-mut'}">${esc(c || '—')}</span>`;
+  const G = new Map(); oms().filter(o => !o.excluido && o.tipo === 'C').forEach(o => { if (!G.has(o.id)) G.set(o.id, o); });
+  const ab = [...G.values()].filter(o => o.status !== 'encerrada').sort((a, b) => (gr[a.classe] ?? 9) - (gr[b.classe] ?? 9)), enc = [...G.values()].filter(o => o.status === 'encerrada').sort((a, b) => (b.fechadoAt || 0) - (a.fechadoAt || 0));
+  const tab = (cab, L, vazio) => `<div class="tw"><table class="t"><thead><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${L || `<tr><td colspan="${cab.length}" class="note">${vazio}</td></tr>`}</tbody></table></div>`;
+  const tF = tab(['Empurrador', 'Origem', 'O que foi encontrado', 'Criticidade', 'Detectada', ''], F.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td class="note">${esc(x.orig || 'FR 027_L')}</td><td>${esc(x.lab || '')}${x.d ? `<div class="note">${esc(x.d)}</div>` : ''}</td><td>${pc(x.c)}</td><td class="mono">${x.date ? brD(String(x.date).slice(0, 10)) : '—'}</td><td class="rt-b"><button class="mbtn sm pri" data-fr27pend="${x.rec}">Informar OM</button></td></tr>`).join(''), 'Nenhuma falha esperando OM.');
+  const tA = tab(['Tipo', 'OM', 'Empurrador', 'Falha', 'Classe', 'Etapa', ''], ab.map(o => `<tr><td><span class="tp-cr">CORRETIVA</span></td><td class="mono"><b>OM ${esc(o.num || '—')}</b></td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc((o.descricao || '').split('\n')[0].replace(/^•\s*/, ''))}</td><td>${pc(o.classe)}</td><td class="note">${esc(omStatusTxt(o))}</td><td class="rt-b"><a class="mbtn sm pri" href="#om/${o.id}">Abrir</a></td></tr>`).join(''), 'Nenhuma corretiva em andamento.');
+  const tE = tab(['Encerrada em', 'OM', 'Empurrador', 'Falha', 'Classe', ''], enc.slice(0, 40).map(o => `<tr><td class="mono">${brD(o.dreal || isoD(new Date(o.fechadoAt || 0)))}</td><td class="mono">OM ${esc(o.num || '—')}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc((o.descricao || '').split('\n')[0].replace(/^•\s*/, ''))}</td><td>${pc(o.classe)}</td><td class="rt-b"><a class="mbtn sm" href="#om/${o.id}">Ver</a></td></tr>`).join(''), 'Nenhuma ainda.');
+  return `<div class="vh"><div><h1>Corretivas e falhas</h1><p>x</p></div><span class="sp"></span><button class="mbtn pri" data-act="novaCorr">⚠ Registrar falha</button></div>
+   <div class="card"><h2>Falhas sem OM · ${F.length}</h2><p class="note" style="margin:-4px 0 8px">Classifique e abra a OM no Sankhya; depois informe o nº aqui. Crítica bloqueia a saída, Alta restringe.</p>${tF}</div>
+   <div class="card"><h2>Corretivas em andamento · ${ab.length}</h2>${tA}</div>
+   <div class="card"><h2>Corretivas encerradas</h2><div style="max-height:380px;overflow:auto">${tE}</div></div>`;
+}
+VX.falhas2 = vFalhas2;
+padTela('falhas2', { titulo: 'Executar e lançar · Corretivas e falhas', desc: 'Da falha detectada à corretiva aberta no Sankhya e executada (Anexo II-A)',
+  resumo: () => { const C = navCont(); return [['Falhas sem OM', C.falhasSem, C.falhasSem ? 'var(--badt)' : 'var(--okt)'], ['Corretivas em andamento', C.falhas2 - C.falhasSem], ['Prazo estourado', agoraLista().filter(a => /prazo estourado/.test(a.txt)).length, 'var(--badt)']]; } });
+/* → Próximo no fim de cada tela da operação */
+{ const nx = (view, f) => { const v0 = VX[view]; if (!v0) return; VX[view] = function () { const h = v0.apply(this, arguments); if (typeof ehOperador === 'function' && ehOperador()) return h; let r = ''; try { r = f(); } catch (e) { } return h + r; }; };
+  const bar = (txt, href, bt) => `<div class="nx-bar"><span>${txt}</span><span class="sp"></span><a class="mbtn pri" href="${href}">${bt} →</a></div>`;
+  nx('emitir', () => { const n = navCont().oms; return bar(`Depois de emitir a OM e entregar o formulário: <b>3 · Executar e lançar</b>${n ? ` · ${n} preventiva${n > 1 ? 's' : ''} aberta${n > 1 ? 's' : ''}` : ''}`, '#oms', 'Próximo: Executar e lançar'); });
+  nx('oms', () => { const n = navCont().omconf; return bar(`Formulário lançado vai para <b>4 · Conferir e encerrar</b>${n ? ` · ${n} esperando` : ''}`, '#omconf', 'Próximo: Conferir e encerrar'); });
+  nx('falhas2', () => { const n = navCont().omconf; return bar(`Corretiva executada vai para <b>4 · Conferir e encerrar</b>${n ? ` · ${n} esperando` : ''}`, '#omconf', 'Próximo: Conferir e encerrar'); });
+  nx('omconf', () => bar('Encerrado no SMF e anexado no Sankhya: volte ao painel para o próximo passo de cada empurrador', '#rotina', 'Voltar à 1 · Frota')); }
+{ const st = document.createElement('style'); st.textContent = `#nav .n.blue{background:#1967D2!important;color:#fff}#nav a.nav-zero{opacity:.55}#nav a.nav-zero:hover{opacity:1}
+.nx-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0 4px;padding:12px 16px;background:#E8F0FE;border:1px solid #C6DAFC;border-radius:10px;font-size:13.5px;color:#174EA6}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
