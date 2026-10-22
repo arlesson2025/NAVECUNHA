@@ -9577,5 +9577,26 @@ const NP_TAG = { rotina: '5.3 a 5.5', barco: '5.3 a 5.5', emitir: '7.3', oms: '7
 { const r0 = render; render = function () { const x = r0.apply(this, arguments); try { if (!(typeof ehOperador === 'function' && ehOperador())) { const t = NP_TAG[VIEW], h = document.querySelector('#main .vh h1'); if (t && h && !h.querySelector('.np-tag')) h.insertAdjacentHTML('beforeend', `<span class="np-tag">NP 055 · ${t}</span>`); } } catch (e) { } return x; }; }
 { const st = document.createElement('style'); st.textContent = `.np-tag{display:inline-block;margin-left:10px;padding:2px 8px;border:1px solid #C6DAFC;background:#F3F7FE;color:#1967D2;border-radius:5px;font-size:11.5px;font-weight:600;letter-spacing:.2px;vertical-align:middle}`; document.head.appendChild(st); }
 </script>
+<script>
+/* ===== Inspeção antes da saída · NP 5.3 (lacuna 1 do fluxo NP 055 × SMF, 22/10/2026) =====
+   A NP 5.3 diz que a inspeção do CTF/MFM antes de ligar os motores é requisito obrigatório para liberar a saída. O registro de saída passa a pedir os 9 itens
+   (feitos e registrados no Diário de Máquinas) e quem fez. Item não feito ou irregularidade: escrever o que houve (fica no registro de saída, insp53) e a situação passa a "com restrição" no aviso. */
+'use strict';
+const INSP53 = ['Drenar o filtro separador de diesel dos MCPs e MCAs', 'Drenar o tanque de serviço', 'Nível de óleo dos MCPs, MCAs e reversores', 'Nível do líquido de arrefecimento dos MCPs e MCAs', 'Ajuste das correias dos motores',
+  'Caixa de bateria, manta de isolamento, cabos e bornes (limpos, apertados, com vaselina)', 'Abrir a válvula de resfriamento do bucim', 'Testar o alarme de nível do porão', 'Testar a parada de emergência em marcha lenta'];
+{ const m0 = saidaModal; saidaModal = function (vid, fr) { m0(vid, fr); const g = document.querySelector('#modal .g'), b = $('#saOk'); if (!g || !b) return;
+  g.insertAdjacentHTML('beforeend', `<div class="f s6 i53"><div class="row" style="align-items:center"><b>Inspeção antes da saída · NP 5.3</b><span class="note" style="margin-left:6px">CTF/MFM, antes de ligar os motores · registrada no Diário de Máquinas</span><span class="sp"></span><button type="button" class="mbtn sm" id="i53All">Marcar todos</button></div>
+    <div class="i53-l">${INSP53.map((t, i) => `<label><input type="checkbox" data-i53="${i}"> ${esc(t)}</label>`).join('')}</div>
+    <div class="g" style="margin-top:6px"><label class="f s3">Feita por (CTF ou MFM)<input id="i53Q" placeholder="Nome de quem fez"></label><label class="f s3">Irregularidade ou item não feito<input id="i53O" placeholder="Obrigatório se algum item ficar sem marcar"></label></div>
+    <p class="note" style="margin:4px 0 0">A NP trata esta inspeção como requisito para liberar a saída. Irregularidade encontrada segue a NP 5.4.1 (comunicar e abrir a OM).</p></div>`);
+  $('#i53All').onclick = () => document.querySelectorAll('#modal [data-i53]').forEach(c => c.checked = true);
+  const c0 = b.onclick; b.onclick = async ev => { const C = [...document.querySelectorAll('#modal [data-i53]')], ok = C.filter(c => c.checked).map(c => +c.dataset.i53), q = $('#i53Q').value.trim(), o = $('#i53O').value.trim(), E = $('#saE');
+    if (!q) { E.textContent = 'Informe quem fez a inspeção antes da saída (CTF ou MFM) · NP 5.3.'; return; }
+    if (ok.length < INSP53.length && !o) { E.textContent = 'Algum item da inspeção 5.3 ficou sem marcar: escreva a irregularidade ou o que não foi feito.'; return; }
+    const antes = new Set(recs('saida').map(x => x.id)); await c0.call(b, ev);
+    const n = recs('saida').find(x => !antes.has(x.id) && x.vessel === vid); if (n) { n.insp53 = { ok, falta: INSP53.map((t, i) => i).filter(i => !ok.includes(i)), quem: q, obs: o, completa: ok.length === INSP53.length }; await saveRec(n);
+      if (!n.insp53.completa) toast('Saída registrada com a inspeção 5.3 incompleta: ' + o); } }; }; }
+{ const st = document.createElement('style'); st.textContent = `.i53{border:1px solid #C6DAFC;background:#F8FAFF;border-radius:8px;padding:10px 12px}.i53-l{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 14px;margin-top:8px;font-size:13px}.i53-l label{display:flex;gap:6px;align-items:flex-start;font-weight:400}`; document.head.appendChild(st); }
+</script>
 </body>
 </html>
