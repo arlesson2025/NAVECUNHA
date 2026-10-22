@@ -9333,27 +9333,27 @@ function vHorFrota() {
   return `<div class="cm-v"><div class="vh"><div><h1>Horímetros da frota</h1><p>Último horímetro de cada motor, por empurrador · leitura pelo FR 027_L ou lançada à mão</p></div><span class="sp"></span><a class="mbtn pri" href="#hor">⏱ Lançar horímetro</a><button class="mbtn" data-hfreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
    <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="f2-ks">${k('Empurradores', V.length)}${k('Leituras em dia', emDia, 'var(--okt)')}${k('Leituras com mais de ' + MCA_SEM_LEITURA_D + ' dias', velha, velha ? 'var(--warnt)' : '')}${k('Estimadas ou sem leitura', est)}</div></div>
     <div class="card"><h2>Horímetros por empurrador</h2>${tab}</div>
-    <div class="card"><h2>Pareto · horas rodadas por MCP nos últimos 12 meses</h2>${hfPareto()}</div></div></div>`;
+    <div class="card"><h2>Pareto · horímetro atual dos MCPs</h2>${hfPareto()}</div></div></div>`;
 }
 /* Pareto das horas rodadas por MCP nos últimos 12 meses (pedido do Supervisor, 22/10/2026): barras em ordem decrescente + % acumulada e linha de 80%; horas = soma dos meses com leitura (horasMes). */
 function hfPareto() {
   const LD = lubDados(), D = [];
-  S.cfg.frota.filter(v => !foraOp(v)).forEach(v => LD.filter(d => d.v === v && !d.saida && d.e.g === 'mcp').forEach(d => { const pos = lubHp(v, d.e), M = horasMes(v.id, pos, 12), ok = M.filter(x => x != null);
-    D.push({ l: v.nome + (/BB|BE/.test(eqNomeC(v, d.e)) ? ' ' + eqNomeC(v, d.e).replace(/^MCP\s*/, '') : ''), h: Math.round(ok.reduce((a, x) => a + x, 0)), m: ok.length }); }));
+  S.cfg.frota.filter(v => !foraOp(v)).forEach(v => LD.filter(d => d.v === v && !d.saida && d.e.g === 'mcp').forEach(d => { const pos = lubHp(v, d.e), hA = horAtual(v.id, pos);
+    D.push({ l: v.nome + (/BB|BE/.test(eqNomeC(v, d.e)) ? ' ' + eqNomeC(v, d.e).replace(/^MCP\s*/, '') : ''), h: hA ? Math.round(hA.h) : 0, m: hA ? (hA.est ? 'estimado' : 'lido em ' + brD(hA.date)) : '' }); }));
   const L = D.filter(x => x.h > 0).sort((a, b) => b.h - a.h), tot = L.reduce((a, x) => a + x.h, 0);
-  if (!L.length) return '<p class="note">Sem leituras de horímetro do MCP nos últimos 12 meses.</p>';
+  if (!L.length) return '<p class="note">Sem leitura de horímetro de MCP.</p>';
   const W = 960, H = 300, ml = 52, mr = 46, mt = 18, mb = 62, bw = (W - ml - mr) / L.length, mx = L[0].h, Y = h => mt + (1 - h / mx) * (H - mt - mb), P = p => mt + (1 - p) * (H - mt - mb);
   let ac = 0, s = '', pts = [];
   [0, .25, .5, .75, 1].forEach(f => { s += `<line x1="${ml}" x2="${W - mr}" y1="${Y(mx * f)}" y2="${Y(mx * f)}" stroke="#EEF2F6"/><text x="${ml - 6}" y="${Y(mx * f) + 4}" font-size="10.5" text-anchor="end" fill="#5F6368">${nf(Math.round(mx * f))}</text><text x="${W - mr + 6}" y="${P(f) + 4}" font-size="10.5" fill="#5F6368">${f * 100}%</text>`; });
   s += `<line x1="${ml}" x2="${W - mr}" y1="${P(.8)}" y2="${P(.8)}" stroke="#E3A008" stroke-dasharray="4 3"/><text x="${W - mr - 4}" y="${P(.8) - 4}" font-size="10.5" text-anchor="end" fill="#B06000">80%</text>`;
   L.forEach((x, i) => { ac += x.h; const p = ac / tot, cx = ml + bw * i + bw / 2, h0 = Y(x.h); pts.push([cx, P(p), p]);
-    s += `<rect x="${ml + bw * i + bw * .15}" y="${h0}" width="${bw * .7}" height="${H - mb - h0}" rx="3" fill="${p <= .8 || i === 0 ? '#1967D2' : '#A8C7FA'}"><title>${esc(x.l)}: ${nf(x.h)} h em 12 meses (${x.m} meses com leitura) · ${Math.round(x.h / tot * 100)}% do total</title></rect>
+    s += `<rect x="${ml + bw * i + bw * .15}" y="${h0}" width="${bw * .7}" height="${H - mb - h0}" rx="3" fill="${p <= .8 || i === 0 ? '#1967D2' : '#A8C7FA'}"><title>${esc(x.l)}: ${nf(x.h)} h (${x.m}) · ${Math.round(x.h / tot * 100)}% do total</title></rect>
       <text x="${cx}" y="${h0 - 4}" font-size="10.5" text-anchor="middle" fill="#202124">${nf(x.h)}</text><text x="${cx}" y="${H - mb + 14}" font-size="10.5" text-anchor="end" transform="rotate(-35 ${cx} ${H - mb + 14})" fill="#3C4043">${esc(x.l)}</text>`; });
   s += `<polyline fill="none" stroke="#C5221F" stroke-width="2" points="${pts.map(q => q[0] + ',' + q[1]).join(' ')}"/>` + pts.map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="3.5" fill="#C5221F"><title>${Math.round(q[2] * 100)}% acumulado</title></circle>`).join('');
   const n80 = pts.findIndex(q => q[2] >= .8) + 1;
-  return `<p class="note" style="margin:0 0 6px">${nf(tot)} h de MCP na frota em 12 meses · <b>${n80} de ${L.length} motores</b> fazem 80% das horas · barra = horas do motor · linha vermelha = % acumulado</p>
-    <div class="cm-gw"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pareto das horas rodadas por MCP" style="width:100%;height:auto">${s}</svg></div>
-    <p class="note">Horas = diferença entre leituras do horímetro, mês a mês; mês sem leitura não entra (passe o mouse na barra para ver quantos meses têm leitura).</p>`;
+  return `<p class="note" style="margin:0 0 6px">${L.length} MCPs da tabela · ${nf(tot)} h somadas · <b>${n80} de ${L.length} motores</b> somam 80% das horas${D.length > L.length ? ' · ' + (D.length - L.length) + ' sem leitura (fora do gráfico)' : ''} · barra = horímetro atual · linha vermelha = % acumulado</p>
+    <div class="cm-gw"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pareto do horímetro atual dos MCPs" style="width:100%;height:auto">${s}</svg></div>
+    <p class="note">Horímetro atual de cada MCP, o mesmo da tabela acima (passe o mouse na barra para ver a data da leitura). Horímetro trocado começa do zero do novo.</p>`;
 }
 VX.horfrota = vHorFrota;
 AFTER.horfrota = function () { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_horfrota_lay', '[data-hfreset]'); };
