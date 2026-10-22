@@ -2,7 +2,7 @@
 
 Esta pasta guarda o código do back-end do SMF: o projeto Apps Script ligado à planilha **CTLE_MAN**, cuja implantação `/exec` está em `NUVEM_PADRAO`, no topo de `manutencao/index.html`.
 
-O arquivo é `Code.gs` (versão `VERSAO = 14`). O antigo `Code.gs` da raiz era do CTLE_LUB, já removido.
+O arquivo é `Code.gs` (versão `VERSAO = 15`). O antigo `Code.gs` da raiz era do CTLE_LUB, já removido.
 
 **Senhas iniciais:** nesta cópia, as senhas iniciais de `configurar()` e do cabeçalho foram trocadas pelos marcadores `<<SENHA_INICIAL_ANALISTA>>` e `<<SENHA_INICIAL_SUPERVISOR>>`. O resto do código é idêntico ao do editor. Ao colar este arquivo num projeto novo, troque os marcadores antes de rodar `configurar()`; num projeto já configurado eles não têm efeito, porque as senhas valem pelo que está nas Propriedades do script.
 
@@ -20,7 +20,8 @@ O app usa a **versão implantada**, que pode ser mais antiga que o código abert
 | 21/10/2026 | `VERSAO = 11` · não implantada sozinha: está incluída na 12 | perfil Operador (`opr`, senha `OPR_HASH` definida pelo Supervisor): grava só FR 027_L, horímetro, saída e corretiva nova |
 | 21/10/2026 | `VERSAO = 12` · implantada e confirmada pelo ping do SMF | tipo `situ` (foi para a boia / voltou ao cais), também permitido ao Operador; colunas legíveis |
 | 21/10/2026 | `VERSAO = 13` · implantada e confirmada pelo ping do SMF | tipo `avaria` (avaria em viagem até virar corretiva), também permitido ao Operador; colunas legíveis |
-| 21/10/2026 | `VERSAO = 14` · **a implantar** | tipo `param` (leituras do painel do MCP informadas pelo MFM em viagem, Anexo I 1.1.30), só Supervisor/Analista (o Operador não grava); colunas legíveis |
+| 21/10/2026 | `VERSAO = 14` · implantada (o Supervisor viu “versão 14” no SMF) | tipo `param` (leituras do painel do MCP informadas pelo MFM em viagem, Anexo I 1.1.30), só Supervisor/Analista (o Operador não grava); colunas legíveis |
+| 21/10/2026 | `VERSAO = 15` · **a implantar** | OM encerrada não pode voltar a outra etapa por gravação de quem não é Supervisor (antes só o encerrar era barrado) |
 
 ## Como atualizar esta cópia
 

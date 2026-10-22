@@ -20,7 +20,7 @@
  *    [cópia do repositório público: as senhas reais foram trocadas por marcadores — ver manutencao/servidor/README.md]
  */
 
-const VERSAO = 14;   // v14: leituras do MCP em viagem (param) · v13: avaria em viagem (avaria) · v12: estado no cais / na boia (situ) · v11: perfil Operador (opr) para o FR 027_L · v10: FR 027_L de chegada/saída (fr027) com PDF no Drive · v9: registro de saída da viagem (saida) · v8: cronograma anual aprovado (crono) · v7: leitura de horímetro pendente de confirmação (horp) · v6: laudo de óleo, peças críticas e fotos das OMs no Drive · v5: biblioteca (arquivos no Drive), terceirizados e treinamentos · v4: lubrificação (FR 049_B e complementos de óleo) · v3: MCP central (monomotor) e MCA 3 · v2: teste de compressão, data-limite do CSN e medida de mitigação
+const VERSAO = 15;   // v15: OM encerrada só volta a outra etapa pelo Supervisor · v14: leituras do MCP em viagem (param) · v13: avaria em viagem (avaria) · v12: estado no cais / na boia (situ) · v11: perfil Operador (opr) para o FR 027_L · v10: FR 027_L de chegada/saída (fr027) com PDF no Drive · v9: registro de saída da viagem (saida) · v8: cronograma anual aprovado (crono) · v7: leitura de horímetro pendente de confirmação (horp) · v6: laudo de óleo, peças críticas e fotos das OMs no Drive · v5: biblioteca (arquivos no Drive), terceirizados e treinamentos · v4: lubrificação (FR 049_B e complementos de óleo) · v3: MCP central (monomotor) e MCA 3 · v2: teste de compressão, data-limite do CSN e medida de mitigação
 const NOME_PASTA = 'Controle de Manutenção - PDFs';
 const ABA = 'Registros';
 const CABECALHO = ['id', 'tipo', 'salvoEm', 'leituraEm', 'embarcacao', 'om', 'usuario', 'json', 'pdfFileId', 'paginasFileId', 'atualizadoEm', 'excluido'];
@@ -129,11 +129,12 @@ function gravar_(req, props) {
     if (['fr027', 'hor', 'horp', 'saida', 'situ', 'avaria', 'om'].indexOf(r.kind) < 0) return { ok: false, error: 'sem_permissao' };
     if (r.kind === 'om' && (r.tipo !== 'C' || r.status !== 'aberta' || linhas_(aba_(props)).some(l => l[COL.id] === r.id))) return { ok: false, error: 'sem_permissao' };
   }
-  if (r.kind === 'om' && r.status === 'encerrada' && s.role !== 'admin') {
-    // só o Supervisor encerra; o Analista não pode aprovar
+  if (r.kind === 'om' && s.role !== 'admin') {
+    // só o Supervisor encerra (o Analista não pode aprovar) e só ele reabre: OM encerrada não volta a outra etapa por gravação de outro perfil
     const ant = linhas_(aba_(props)).find(l => l[COL.id] === r.id);
     let antSt = null; try { antSt = ant ? JSON.parse(ant[COL.json]).status : null; } catch (e) { }
-    if (antSt !== 'encerrada') return { ok: false, error: 'somente_supervisor' };
+    if (r.status === 'encerrada' && antSt !== 'encerrada') return { ok: false, error: 'somente_supervisor' };
+    if (antSt === 'encerrada' && r.status !== 'encerrada') return { ok: false, error: 'somente_supervisor' };
   }
   const sh = aba_(props), dados = linhas_(sh);
   const idx = dados.findIndex(l => l[COL.id] === r.id);

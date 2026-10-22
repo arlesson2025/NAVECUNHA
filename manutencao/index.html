@@ -1488,7 +1488,7 @@ function situacao(v, pos, t, viagemH) {
     up(rest < 0 ? 'venc' : rest <= viagemH ? 'viag' : 'ok');
   } else if (iv.h && cur === null) txt.push('sem horímetro');
   if (iv.m) {
-    alvoD = addM(pD(L.date), iv.m); const dd = Math.floor((alvoD - hoje()) / 864e5);
+    alvoD = addM(pD(L.date), iv.m); const dd = Math.round((alvoD - pD(isoD(hoje()))) / 864e5);
     txt.push(dd < 0 ? (-dd) + (dd === -1 ? ' dia vencido' : ' dias vencido') : 'vence ' + alvoD.toLocaleDateString('pt-BR'));
     up(dd < 0 ? 'venc' : dd <= Math.ceil(viagemH / horasDia(v.id)) ? 'viag' : 'ok');
   }
@@ -3756,7 +3756,7 @@ const SERV_TERC = ['Retífica / overhaul de motor', 'Calibração de bicos e bom
 const TREIN_TIPOS = [['integ', 'Integração (admissão)', 0, 8], ['recic', 'Reciclagem anual', 12, 4], ['posf', 'Pós-falha Crítica/Alta', 0, 2], ['nr', 'NR / curso específico', 0, 0]];
 const TREIN_N = Object.fromEntries(TREIN_TIPOS.map(t => [t[0], t[1]]));
 const FUNCOES = ['CTF – Condutor Maquinista', 'MFM – Marinheiro de Máquinas', 'Comandante / Capitão Fluvial', 'Líder de Operação', 'Operador de Medição', 'Supervisor de Manutenção', 'Analista de Manutenção', 'Terceiro'];
-const diasAte = d => d ? Math.floor((pD(d) - hoje()) / 864e5) : null;
+const diasAte = d => d ? Math.round((pD(d) - pD(isoD(hoje()))) / 864e5) : null;   // dia contra dia (os dois ao meio-dia): vence no fim do dia, não ao meio-dia
 const valSt = d => { const n = diasAte(d); return n === null ? 'sem' : n < 0 ? 'venc' : n <= 30 ? 'viag' : 'ok'; };
 const valPill = (d, okTxt) => { const s = valSt(d), n = diasAte(d); return s === 'sem' ? '<span class="pill p-mut">sem validade</span>' : s === 'venc' ? `<span class="pill p-bad">vencido ${brD(d)}</span>` : s === 'viag' ? `<span class="pill p-warn">vence em ${n} d</span>` : `<span class="pill p-ok">${okTxt || 'válido até'} ${brD(d)}</span>`; };
 function lerArquivo(f) { return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(f); }); }
@@ -4543,7 +4543,7 @@ function frotaMatriz() {
 }
 function frotaMatrizHtml() {
   const L = frotaMatriz(), tot = { venc: 0, viag: 0, ok: 0 }; L.forEach(x => { tot.venc += x.n.venc; tot.viag += x.n.viag; tot.ok += x.n.ok; });
-  const lib = L.filter(x => x.sit < 2).length, aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null;
+  const lib = L.filter(x => x.sit >= 0 && x.sit < 2).length, aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null;
   const cel = (s, i) => { const nm = SISTEMAS[i]; if (!s) return `<td class="m2-c"><span class="m2-na" title="${esc(nm)}: não se aplica"></span></td>`;
     const t = esc(`${nm} · ${s.n} itens: ${s.c.venc} vencidos · ${s.c.viag} vencem na viagem · ${s.c.ok} em dia${s.c.sem ? ' · ' + s.c.sem + ' sem histórico' : ''}`);
     if (s.pior === 'venc') return `<td class="m2-c" title="${t}"><span class="m2-t v">${s.c.venc}</span></td>`;
@@ -6123,7 +6123,7 @@ function cronoMarcas(v, ano) {   // por PACOTE: uma execução programada por ve
 /* ---------- próximo vencimento por linha (para a janela e o óleo) ---------- */
 function proxLinha(v, l) {
   let best = null; l.its.filter(({ t, pos }) => l.tr !== 'bordo' || !compDe(v, pos, t)).forEach(({ t, pos }) => { const s = situacao(v, pos, t); if (!s.L && s.st === 'sem') return; const hr = horAtual(v.id, posHor(pos, t, v.id)), rest = s.alvoH != null && hr ? s.alvoH - hr.h : null;
-    const dd0 = s.alvoD ? Math.round((pD(s.alvoD) - hoje()) / 864e5) : null, dd = dd0 != null && dd0 < -3650 ? null : dd0; const sc = rest != null ? rest / Math.max(1, horasDiaPos ? (horasDiaPos(v.id, posHor(pos, t, v.id)) || 10) : 10) : dd;
+    const dd0 = s.alvoD ? Math.round((pD(s.alvoD) - hoje()) / 864e5) : null, dd = dd0 != null && dd0 < -3650 ? null : dd0; const scH = rest != null ? rest / Math.max(1, horasDiaPos ? (horasDiaPos(v.id, posHor(pos, t, v.id)) || 10) : 10) : null, sc = scH == null ? dd : dd == null ? scH : Math.min(scH, dd);   // o que vencer primeiro: horas ou data
     if (sc == null) return; if (!best || sc < best.sc) best = { sc, rest, dd, s, t, pos }; });
   return best;
 }
@@ -6347,13 +6347,17 @@ async function situSalvar(vid, st) {
 const diasDesde = d => d ? Math.max(0, Math.round((hoje() - pD(d)) / 864e5)) : null;
 function oleoDoBarco(v) {
   return cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null)
-    .map(x => ({ nome: MCAS.includes(x.p.pos) ? posCurtoE(v, x.p.pos) : x.l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''), rest: x.p.rest, pos: x.p.pos })).sort((a, b) => a.rest - b.rest);
+    .map(x => { const rate = (typeof horasDiaPos === 'function' && horasDiaPos(v.id, x.p.pos)) || 20, dh = x.p.dd != null ? x.p.dd * rate : null, porData = dh != null && dh < x.p.rest;   /* 350 h ou 6 meses: vale o que vencer primeiro (antes só horas) */
+      return { nome: MCAS.includes(x.p.pos) ? posCurtoE(v, x.p.pos) : x.l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''), rest: porData ? dh : x.p.rest, porData, dd: x.p.dd, pos: x.p.pos }; }).sort((a, b) => a.rest - b.rest);
 }
 function horPainelTotal(vid, pos, h, date) {   // devolve o total se 'h' é com certeza o número do painel; senão null
   if (h == null || +h >= VOLTA) return null;
   const L = recs('hor').filter(r => r.vessel === vid && r.pos === pos && !r.est).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.h - b.h);
-  const ant = L.filter(r => r.date <= date).pop() || L[0]; if (!ant || ant.h < VOLTA) return null;
-  let t = Math.floor(ant.h / VOLTA) * VOLTA + +h; if (t < ant.h - 0.05 && ant.date <= date) t += VOLTA; return Math.round(t * 10) / 10;
+  const ant = L.filter(r => r.date <= date).pop() || L[0]; if (!ant) return null;
+  if (ant.h < VOLTA && !(+h < ant.h - 0.05 && ant.date <= date)) return null;   // abaixo de 10.000 h só há volta se o painel caiu
+  let t = Math.floor(ant.h / VOLTA) * VOLTA + +h; if (t < ant.h - 0.05 && ant.date <= date) t += VOLTA;
+  if (ant.h < VOLTA) { const dias = Math.max(0, Math.round((pD(date) - pD(ant.date)) / 864e5)); if (t - ant.h > dias * 24 + 24) return null; }   // 1ª volta só se as horas a mais cabem nos dias passados; senão vira pendência (horp)
+  return Math.round(t * 10) / 10;
 }
 let FRFIX = false;
 async function frPainelFix() {   // FR 049_B lançados com o número do painel (antes da correção): converte para o horímetro total
@@ -6377,10 +6381,10 @@ vRotina = function () {
      ${typeof fr27Linha === 'function' ? fr27Linha(v) : ''}${crit ? `<div class="rt2-l bad">⛔ <b>Saída bloqueada:</b> item Crítico vencido sem OM.</div>` : ''}
      ${hrVelho ? `<div class="rt2-l"><span>⏱ Lançar o horímetro da chegada</span><span class="sp"></span><a class="mbtn sm" href="#hor">Lançar</a></div>` : ''}
      ${omPasso(x) || (n ? `<div class="rt2-l"><span>🔧 <b>OM da janela:</b> ${x.venc.length ? `<b style="color:#D93025">${x.venc.length} vencidos</b> + ` : ''}${x.viag.length} vencem antes da volta</span><span class="sp"></span><a class="mbtn sm pri" href="#emitir/${v.id}">Programar OM</a></div>` : '<div class="rt2-l ok">✓ Nada da janela vence antes da volta</div>')}
-     ${oleoAgora.length ? `<div class="rt2-l"><span>🛢 <b>Troca de óleo antes de sair</b> (equipe + CTF/MFM) ou mandar óleo e filtros: ${oleoAgora.map(o => esc(o.nome) + (o.rest < 0 ? ' <b style="color:#D93025">vencida</b>' : ' faltam ' + nf(o.rest) + ' h')).join(' · ')}</span><span class="sp"></span><button class="mbtn sm pri" data-frv="${v.id}">🛢 Lançar troca de óleo</button></div>` : '<div class="rt2-l ok">✓ Óleo aguenta a próxima viagem</div>'}
+     ${oleoAgora.length ? `<div class="rt2-l"><span>🛢 <b>Troca de óleo antes de sair</b> (equipe + CTF/MFM) ou mandar óleo e filtros: ${oleoAgora.map(o => esc(o.nome) + (o.rest < 0 ? ' <b style="color:#D93025">vencida' + (o.porData ? ' (por data)' : '') + '</b>' : o.porData ? ' vence por data em ' + o.dd + ' dias' : ' faltam ' + nf(o.rest) + ' h')).join(' · ')}</span><span class="sp"></span><button class="mbtn sm pri" data-frv="${v.id}">🛢 Lançar troca de óleo</button></div>` : '<div class="rt2-l ok">✓ Óleo aguenta a próxima viagem</div>'}
     </div>`; };
   const linhaViag = x => { const v = x.v, O = oleoDoBarco(v), o = O[0], d = diasDesde(v.situ.at), rate = (typeof horasDiaPos === 'function' && o && horasDiaPos(v.id, o.pos)) || 20;
-    const quando = o ? (o.rest < 0 ? `<b style="color:#D93025">${esc(o.nome)}: troca vencida (${nf(-o.rest)} h)</b>` : `${esc(o.nome)}: faltam ${nf(o.rest)} h ≈ ${o.rest / rate < 1 ? 'hoje/amanhã' : 'em ' + Math.round(o.rest / rate) + ' dias'}`) : 'sem horímetro';
+    const quando = o ? (o.rest < 0 ? `<b style="color:#D93025">${esc(o.nome)}: troca vencida (${o.porData ? 'por data, há ' + (-o.dd) + ' dias' : nf(-o.rest) + ' h'})</b>` : o.porData ? `${esc(o.nome)}: vence por data em ${o.dd} dias` : `${esc(o.nome)}: faltam ${nf(o.rest)} h ≈ ${o.rest / rate < 1 ? 'hoje/amanhã' : 'em ' + Math.round(o.rest / rate) + ' dias'}`) : 'sem horímetro';
     const urg = o && o.rest < rate * 2;
     return `<tr class="${urg ? 'rt2-urg' : ''}"><td><b>${esc(v.nome)}</b>${typeof saidaTag === 'function' ? saidaTag(v) : ''}</td><td class="note">viajando ${d === 0 ? 'desde hoje' : 'há ' + d + ' d'}</td><td>🛢 ${quando}${urg ? ' · <b>acompanhar a troca pela câmera e lançar o FR 049_B</b>' : ''}</td><td class="note mono">${hrTxt(x)}</td><td class="rt-b">${urg ? '<button class="mbtn sm pri" data-frv="${v.id}">🛢 Lançar troca de óleo</button>' : ''}<button class="mbtn sm" data-situ="${v.id}|porto">⚓ Chegou em Manaus</button></td></tr>`; };
   const corr = A.reduce((a, x) => a + x.corr.length, 0);
@@ -7334,8 +7338,8 @@ function fsHTML() {
   const sit = x => [['o', 'Liberada'], ['a', 'Liberada com restrição'], ['v', 'Saída bloqueada'], ['v', 'Interditada']][x.sit] || ['o', 'Liberada'];   // x.sit inclui NO do FR 027_L sem OM
   const semH = x => !x.n.venc && !x.n.viag && !x.n.ok;
   const tot = { venc: 0, viag: 0, ok: 0 }; L.forEach(x => { tot.venc += x.n.venc; tot.viag += x.n.viag; tot.ok += x.n.ok; });
-  const aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null, lib = L.filter(x => x.sit < 2).length, nRes = L.filter(x => x.sit === 1).length;
-  const titLib = [[lib - nRes, 'liberada', 'liberadas'], [nRes, 'com restrição', 'com restrição'], [L.length - lib, 'bloqueada ou interditada', 'bloqueadas ou interditadas']].filter(a => a[0]).map(a => a[0] + ' ' + (a[0] === 1 ? a[1] : a[2])).join(' · ');
+  const aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null, lib = L.filter(x => x.sit >= 0 && x.sit < 2).length, nRes = L.filter(x => x.sit === 1).length, nFora = L.filter(x => x.sit < 0).length;   // fora de operação: nem liberada nem bloqueada
+  const titLib = [[lib - nRes, 'liberada', 'liberadas'], [nRes, 'com restrição', 'com restrição'], [L.length - lib - nFora, 'bloqueada ou interditada', 'bloqueadas ou interditadas'], [nFora, 'fora de operação', 'fora de operação']].filter(a => a[0]).map(a => a[0] + ' ' + (a[0] === 1 ? a[1] : a[2])).join(' · ');
   const demais = (n, txt) => n ? `<div class="fs-sr fs-dm"><span class="fs-n"></span><span class="fs-sn">demais ${n} sistema${n === 1 ? '' : 's'} ${txt}</span></div>` : '';
   const corA = a => a == null ? '#5F6368' : a >= 95 ? '#188038' : a >= 85 ? '#B06000' : '#C5221F';
   const lista = `<div class="fs-l"><div class="fs-lh"><h2>Situação da frota</h2><div class="note">agora · ordenada por criticidade</div></div>
@@ -7741,6 +7745,27 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   const x = n0.apply(this, arguments), A = [...document.querySelectorAll('#nav > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
   L.forEach((s, i) => { const sp = A[i] && A[i].querySelector('span'); if (s.sub && sp && !sp.querySelector('.nav-sub')) sp.insertAdjacentHTML('beforeend', `<small class="nav-sub">${esc(s.sub)}</small>`); }); return x; }; }
 { const st = document.createElement('style'); st.textContent = `#nav .nav-sub{display:block;font-size:10.5px;font-weight:400;line-height:1.15;opacity:.75;margin-top:1px}`; document.head.appendChild(st); }
+/* menu na ordem do trabalho (pedido do Supervisor, 21/10/2026): Frota (chegou · saiu · em viagem) → Fazer preventiva → OMs (Sankhya) → Conferir e encerrar;
+   Plano preventivo, Condição, Indicadores, Biblioteca e Administração descem para "Consulta" (cfg). A preventiva tinha a entrada escondida no cartão Situação da frota. */
+{ const by = id => SECOES.find(s => s.id === id), om = by('omsv2');
+  const prev = { id: 'prev2', nome: 'Fazer preventiva', sub: 'o que vence na janela', views: [['emitir', 'Programação da janela']] };
+  const conf = { id: 'conf2', nome: 'Conferir e encerrar', sub: 'OMs lançadas', views: [['omconf', 'Conferir e encerrar']] };
+  if (om) { om.extra = (om.extra || []).filter(x => x !== 'emitir'); om.sub = 'lançar o que foi feito'; SECOES.splice(SECOES.indexOf(om), 0, prev); SECOES.splice(SECOES.indexOf(om) + 1, 0, conf); }
+  ['crono', 'cond2', 'graf', 'apoio2', 'adm'].forEach(id => { const s = by(id); if (s) s.cfg = true; });
+  ICO.prev2 = ICO.crono || ICO.oms || ICO.hoje; ICO.conf2 = ICO.adm || ICO.omsv2 || ICO.oms; }
+{ const n0 = renderNav; renderNav = function () { const x = n0.apply(this, arguments), nav = document.getElementById('nav');
+  if (nav && !(typeof ehOperador === 'function' && ehOperador())) { const g = nav.querySelector('.grp-t'); if (g) g.textContent = 'Consulta'; if (!nav.querySelector('.grp-trab')) nav.insertAdjacentHTML('afterbegin', '<div class="grp-t grp-trab">O trabalho</div>'); }
+  return x; }; }
+// Conferir e encerrar: OMs (preventiva e corretiva) na etapa "Em conferência", que só o Supervisor aprova
+function vOmConf() { const L = [], vis = new Set();
+  oms().filter(o => !o.excluido && o.status !== 'encerrada').forEach(o => { const g = o.grupo || o.id; if (vis.has(g)) return; vis.add(g); const st = o.grupo ? grpStatus(omGrupo(o.grupo)) : o.status; if (st === 'conferencia') L.push({ o, g }); });
+  L.sort((a, b) => (a.o.updatedAt || 0) - (b.o.updatedAt || 0));
+  const linha = ({ o, g }) => { const dias = o.updatedAt ? Math.floor((Date.now() - o.updatedAt) / 864e5) : null;
+    return `<tr><td class="mono"><b>OM ${esc(o.num || '—')}</b></td><td><b>${esc(vName(o.vessel))}</b></td><td>${o.tipo === 'C' ? '<span class="pill p-bad">Corretiva</span> ' + esc(o.classe || '') : '<span class="pill p-ok">Preventiva</span>'}</td><td class="note">${dias == null ? '' : dias === 0 ? 'lançada hoje' : 'esperando há ' + dias + ' dia' + (dias > 1 ? 's' : '')}</td>
+      <td class="r"><a class="mbtn sm pri" href="${o.grupo ? '#omg/' + encodeURIComponent(g) : '#om/' + o.id}">Conferir e encerrar</a></td></tr>`; };
+  return `<div class="vh"><div><h1>Conferir e encerrar</h1><p>OMs já lançadas que esperam a conferência do Supervisor. Só você aprova e encerra.</p></div></div>
+   <div class="card"><h2>Esperando conferência · ${L.length}</h2>${L.length ? `<div class="tw"><table class="t"><tbody>${L.map(linha).join('')}</tbody></table></div>` : '<p class="note">Nada esperando conferência.</p>'}</div>`; }
+VX.omconf = vOmConf;
 // Calibração e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
 { const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
@@ -8248,7 +8273,7 @@ function fr27Pend(vid) { return fr27s(vid).flatMap(r => fr27SemOM(r).map(x => Ob
 const drivePdf = (id, txt) => id ? `<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${txt}</a>` : '<span class="note">PDF no Drive depois de sincronizar</span>';
 // 1 · Situação da frota enxerga os NO sem OM
 { const f0 = frotaMatriz; frotaMatriz = function () { const L = f0();
-  L.forEach(x => { const P = fr27Pend(x.v.id); x.noPend = P; if (x.sit < 2 && P.some(p => p.c === 'Crítica')) x.sit = 2; else if (x.sit < 1 && P.some(p => p.c === 'Alta')) x.sit = 1; });
+  L.forEach(x => { if (x.sit < 0) { x.noPend = []; return; } const P = fr27Pend(x.v.id); x.noPend = P; if (x.sit < 2 && P.some(p => p.c === 'Crítica')) x.sit = 2; else if (x.sit < 1 && P.some(p => p.c === 'Alta')) x.sit = 1; });
   return L.sort((a, b) => b.sit - a.sit || b.n.venc - a.n.venc || (a.ader || 0) - (b.ader || 0)); }; }
 // 4 e 5 · OM: de onde veio (FR 027_L) e linha do tempo
 function omHistHTML(o) {
@@ -8265,9 +8290,9 @@ if (VX.omg) { const g0 = VX.omg; VX.omg = function () { const h = g0.apply(this,
 // 6 · Hoje: o que precisa de você agora
 function agoraLista() {
   const out = [], add = (p, txt, btn) => out.push({ p, txt, btn }), FM = frotaMatriz();
-  FM.filter(x => x.sit >= 2 && !foraOp(x.v) && situDe(x.v) && x.v.situ.st === 'porto').forEach(x => add(1, `<b>${esc(x.v.nome)}</b> · ${x.sit === 3 ? 'interditada' : 'saída bloqueada'}${x.noPend.some(p => p.c === 'Crítica') ? ' (falha Crítica sem OM)' : ''}`, `<button class="mbtn sm" data-agfs="${x.v.id}">Ver situação</button>`));
+  FM.filter(x => x.sit >= 2 && !foraOp(x.v) && situDe(x.v) && x.v.situ.st === 'porto' && (x.sit === 3 || !x.noPend.some(p => p.c === 'Crítica'))).forEach(x => add(1, `<b>${esc(x.v.nome)}</b> · ${x.sit === 3 ? 'interditada' : 'saída bloqueada'}${x.noPend.some(p => p.c === 'Crítica') ? ' (falha Crítica sem OM)' : ''}`, `<button class="mbtn sm" data-agfs="${x.v.id}">Ver situação</button>`));
   S.cfg.frota.filter(v => !foraOp(v)).forEach(v => { const P = fr27Pend(v.id); if (!P.length) return; const g = P.some(p => p.c === 'Crítica' || p.c === 'Alta') ? 1 : 2;
-    add(g, `<b>${esc(v.nome)}</b> · ${P.length} falha${P.length > 1 ? 's' : ''} sem OM (${[...new Set(P.map(x => (x.orig || 'FR 027_L').replace(/ \(.*$/, '').replace(/ OM \d+$/, '')))].join(', ')})${P.some(p => p.c === 'Crítica') ? ' · <b>Crítica</b>' : P.some(p => p.c === 'Alta') ? ' · Alta' : ''}`, `<button class="mbtn sm pri" data-fr27pend="${P[0].rec}">Informar OM</button>`); });
+    add(g, `<b>${esc(v.nome)}</b> · ${P.length} falha${P.length > 1 ? 's' : ''} sem OM (${[...new Set(P.map(x => (x.orig || 'FR 027_L').replace(/ \(.*$/, '').replace(/ OM \d+$/, '')))].join(', ')})${P.some(p => p.c === 'Crítica') ? ' · <b>Crítica · saída bloqueada</b>' : P.some(p => p.c === 'Alta') ? ' · Alta' : ''}`, `<button class="mbtn sm pri" data-fr27pend="${P[0].rec}">Informar OM</button>`); });
   oms().filter(o => o.tipo === 'C' && o.status !== 'encerrada' && (o.classe === 'Crítica' || o.classe === 'Alta') && !o.excluido).forEach(o => add(o.classe === 'Crítica' ? 1 : 2, `Corretiva <b>${esc(o.classe)}</b> OM ${esc(o.num)} · ${esc(vName(o.vessel))} · ${esc(ETAPAS_C.find(e => e[0] === o.status)?.[1] || o.status)}`, `<a class="mbtn sm" href="#om/${o.id}">Abrir</a>`));
   const G = {}; oms().filter(o => o.tipo === 'P' && !o.excluido && ['executada', 'conferencia'].includes(o.status)).forEach(o => (G[o.grupo || o.id] = G[o.grupo || o.id] || []).push(o));
   Object.entries(G).forEach(([g, L]) => { const o = L[0], st = o.grupo ? grpStatus(omGrupo(g)) : o.status, link = o.grupo ? `#omg/${encodeURIComponent(g)}` : `#om/${o.id}`; if (foraOp(vessel(o.vessel) || {})) return;
@@ -8585,7 +8610,10 @@ const atrasoTx = ms => { const h = ms / 3600e3; return h < 48 ? Math.round(h) + 
     L.push({ p: 1, txt: `Corretiva <b>${esc(o.classe)}</b> OM ${esc(o.num)} · ${esc(vName(o.vessel))} · <b>prazo de início estourado</b> há ${atrasoTx(agora - p)} (${esc(CLASSES[o.classe].prazo)})`, btn: `<a class="mbtn sm pri" href="#om/${o.id}">Abrir</a>` }); });
   const sem = L.filter(x => !(/^Corretiva <b>/.test(x.txt) && !/prazo de início/.test(x.txt) && [...atrasadas].some(n => x.txt.includes('OM ' + n + ' ·'))));   // sem repetir a corretiva atrasada
   S.cfg.frota.filter(v => !foraOp(v)).forEach(v => { const P = fr27Pend(v.id).filter(x => { const p = prazoDe(x.c, x.date ? (S.recs.get(x.rec) || {}).at || x.date : null); return p && agora > p; });
-    if (P.length) sem.push({ p: P.some(x => x.c === 'Crítica' || x.c === 'Alta') ? 1 : 2, txt: `<b>${esc(v.nome)}</b> · ${P.length} falha${P.length > 1 ? 's' : ''} sem OM com <b>prazo estourado</b> (${[...new Set(P.map(x => x.c))].join(', ')})`, btn: `<button class="mbtn sm pri" data-fr27pend="${P[0].rec}">Informar OM</button>` }); });
+    if (!P.length) return; const pz = ` · <b>prazo estourado</b> (${[...new Set(P.map(x => x.c))].join(', ')})`, cab = `<b>${esc(v.nome)}</b> · `;
+    const ja = sem.find(x => x.txt.startsWith(cab) && x.txt.includes(' sem OM ('));   /* a mesma falha já tem linha: acrescenta o prazo nela (antes eram 3 linhas P1) */
+    if (ja) { ja.txt += pz; ja.p = Math.min(ja.p, P.some(x => x.c === 'Crítica' || x.c === 'Alta') ? 1 : 2); return; }
+    sem.push({ p: P.some(x => x.c === 'Crítica' || x.c === 'Alta') ? 1 : 2, txt: cab + `${P.length} falha${P.length > 1 ? 's' : ''} sem OM` + pz, btn: `<button class="mbtn sm pri" data-fr27pend="${P[0].rec}">Informar OM</button>` }); });
   efPend().forEach(o => sem.push({ p: 2, txt: `Verificação de eficácia da corretiva <b>${esc(o.classe)}</b> OM ${esc(o.num)} · ${esc(vName(o.vessel))} (${EF_DIAS} dias) pendente`, btn: `<a class="mbtn sm" href="#om/${o.id}">Verificar</a>` }));
   return sem.sort((a, b) => a.p - b.p); }; }
 </script>
