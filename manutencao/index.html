@@ -9013,5 +9013,65 @@ function popaSit(v, e, s) { const pend = popaPend(v).some(x => x.key === e.key),
   return x; }; }
 { const st = document.createElement('style'); st.textContent = `#nav .nav-ct{display:inline-block;margin-left:6px;padding:0 6px;border-radius:9px;background:#E8EAED;color:#5F6368;font-size:10.5px;font-weight:600;vertical-align:1px}`; document.head.appendChild(st); }
 </script>
+<script>
+/* ===== Tela Frota profissional (aprovada pelo Supervisor em 22/10/2026; vence as versões anteriores de VX.rotina) =====
+   Resumo em 4 números · pendências agrupadas (f2Agora) · No porto com UM próximo passo na ordem do ciclo (horímetro → programar preventiva → lançar formulário → troca de óleo → saiu de viagem) e o resto no ⋯ ·
+   Em viagem com cabeçalho · Situação da frota só vencido/em dia com barrinha. O Operador continua vendo a tela dele (versão anterior de VX.rotina). */
+'use strict';
+const F2_SIT = { '-1': ['p-mut', 'Fora de operação'], 0: ['p-ok', 'Liberado'], 1: ['p-warn', 'Com restrição'], 2: ['p-bad', 'Bloqueado'], 3: ['p-bad', 'Interditado'] };
+const f2Dias = d => d ? Math.max(0, Math.floor((hoje() - pD(String(d).slice(0, 10))) / 864e5)) : null;
+const f2DiasTx = n => n == null ? '—' : n === 0 ? 'hoje' : n === 1 ? '1 dia' : n + ' dias';
+// pendências agrupadas: o mesmo tipo de aviso em vários empurradores vira uma linha só
+function f2Agora() { const L = agoraLista(), G = new Map();
+  L.forEach(x => { const m = x.txt.match(/^<b>([^<]+)<\/b> · ([\s\S]*)$/), nome = m ? m[1] : '', resto = m ? m[2] : x.txt, chave = x.p + '|' + resto.replace(/<[^>]+>/g, '').replace(/\d+([.,]\d+)?/g, '#').replace(/\(.*?\)/g, '').trim().slice(0, 60);
+    const g = G.get(chave) || { p: x.p, itens: [], btn: x.btn, txt: x.txt, resto }; g.itens.push({ nome, x }); G.set(chave, g); });
+  return [...G.values()].map(g => { if (g.itens.length < 2 || !g.itens[0].nome) return { p: g.p, txt: g.txt, btn: g.btn };
+    const tipo = g.resto.replace(/<[^>]+>/g, '').replace(/\s+há \d+ dias/, ' há mais de 14 dias').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
+    return { p: g.p, txt: `${esc(tipo)} · <b>${g.itens.length} empurradores</b> <span class="note">(${g.itens.map(i => esc(i.nome)).join(', ')})</span>`, btn: g.btn }; }).sort((a, b) => a.p - b.p); }
+function f2Porto(v, FM) { const x = FM.find(y => y.v === v) || { sit: 0 }, falta = [], hp = mpos(v.id), hr = horAtual(v.id, hp), ch = String(v.situ.at || '').slice(0, 10);
+  const horPend = !hr || hr.date < ch; if (horPend) falta.push('horímetro da chegada');
+  const P = painelVessel(v, viagemDe(v)).filter(y => y.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, y)) && !y.om);
+  if (P.length) falta.push(P.length + ' ite' + (P.length > 1 ? 'ns' : 'm') + ' para programar');
+  const G = {}; oms().filter(o => o.tipo === 'P' && o.vessel === v.id && !o.excluido && ['emitida', 'abordo', 'executada'].includes(o.status)).forEach(o => { G[o.grupo || o.id] = o; });
+  const om = Object.entries(G)[0]; if (om) falta.push('OM ' + om[1].num + ' emitida');
+  const O = (typeof oleoDoBarco === 'function' ? oleoDoBarco(v) : []).filter(o => o.rest < (typeof horasViagem === 'function' ? horasViagem(v, o.pos) : 480)), PP = typeof popaPend === 'function' ? popaPend(v) : [];
+  if (O.length + PP.length) falta.push((O.length + PP.length) + ' troca' + (O.length + PP.length > 1 ? 's' : '') + ' de óleo');
+  const acoes = { hor: `<a class="mbtn sm pri" href="#hor">Lançar horímetro</a>`, prog: `<a class="mbtn sm pri" href="#emitir/${v.id}">Programar preventiva</a>`,
+    lan: om ? `<a class="mbtn sm pri" href="${om[1].grupo ? '#omg/' + encodeURIComponent(om[0]) : '#om/' + om[1].id}">Lançar formulário</a>` : '', ole: `<button class="mbtn sm pri" data-frv="${v.id}">Lançar troca de óleo</button>`, sai: `<button class="mbtn sm pri" data-situ="${v.id}|viagem">Saiu de viagem</button>` };
+  const prox = horPend ? 'hor' : P.length ? 'prog' : om ? 'lan' : O.length + PP.length ? 'ole' : 'sai';
+  const mais = [prox !== 'prog' && P.length ? `<a class="mbtn sm" href="#emitir/${v.id}">Programar preventiva</a>` : '', prox !== 'ole' ? `<button class="mbtn sm" data-frv="${v.id}">Lançar troca de óleo</button>` : '', prox !== 'sai' ? `<button class="mbtn sm" data-situ="${v.id}|viagem">Saiu de viagem</button>` : '', `<button class="mbtn sm" data-sitboia="${v.id}|boia">Foi para a boia</button>`].filter(Boolean).join('');
+  const [cl, tx] = F2_SIT[x.sit] || F2_SIT[0];
+  return `<tr><td><b>${esc(v.nome)}</b></td><td class="note">${f2DiasTx(f2Dias(ch))}</td><td><span class="pill ${cl}">${tx}</span></td><td class="note">${falta.length ? esc(falta.join(' · ')) : 'nada pendente'}</td>
+    <td class="f2-ac">${acoes[prox]}<details class="f2-m"><summary class="mbtn sm" aria-label="Mais ações">⋯</summary><div>${mais}</div></details></td></tr>`; }
+function f2Viagem(v) { const O = (typeof oleoDoBarco === 'function' ? oleoDoBarco(v) : [])[0], hr = horAtual(v.id, mpos(v.id));
+  const ol = !O ? '—' : O.rest < 0 ? `<span style="color:var(--badt)">${esc(O.nome)} · vencida</span>` : O.porData ? `${esc(O.nome)} · vence por data em ${O.dd} dias` : `${esc(O.nome)} · faltam ${nf(O.rest)} h`;
+  return `<tr><td><b>${esc(v.nome)}</b></td><td class="note">${f2DiasTx(f2Dias(v.situ.at))}</td><td class="note">${ol}</td><td class="note">${hr ? nf(hr.h) + ' h · lido há ' + f2DiasTx(f2Dias(hr.date)) : 'sem leitura'}</td>
+    <td class="f2-ac"><button class="mbtn sm" data-avaria="${v.id}">Avaria</button><button class="mbtn sm" data-pmcnovo="${v.id}">Leituras</button><button class="mbtn sm" data-situ="${v.id}|porto">Chegou em Manaus</button></td></tr>`; }
+function vFrota2() {
+  const F = S.cfg.frota, FM = frotaMatriz(), op = F.filter(v => !foraOp(v)), porto = op.filter(v => situDe(v) && v.situ.st === 'porto'), viag = op.filter(v => situDe(v) && v.situ.st === 'viagem'), sem = op.filter(v => !situDe(v)), fora = F.filter(v => foraOp(v));
+  const lib = FM.filter(x => x.sit >= 0 && x.sit < 2).length, A = f2Agora(), n1 = A.filter(a => a.p === 1).length, n2 = A.length - n1;
+  const dia = hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+  const k = (l, v, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
+  const lin = (a, i) => `<tr${i >= 6 ? ' class="f2-x" hidden' : ''}><td style="width:40px"><span class="pill ${a.p === 1 ? 'p-bad' : 'p-warn'}">P${a.p}</span></td><td>${a.txt}</td><td class="f2-ac">${a.btn || ''}</td></tr>`;
+  const ind = x => { const t = x.n.venc + x.n.viag + x.n.ok; if (!t) return '—'; const pc = Math.round((x.n.viag + x.n.ok) / t * 100); return `<span class="f2-bar" title="${pc}% dos itens em dia"><i style="width:${pc}%"></i></span> ${pc}%`; };
+  return `<div class="vh"><div><h1>Frota</h1><p>Chegada, saída e viagem · ${esc(dia)}</p></div></div>
+  <div class="f2-ks">${k('No porto', porto.length)}${k('Em viagem', viag.length)}${k('Liberados', lib + ' de ' + op.length)}${k('Pendências', `<span style="color:var(--badt)">${n1} P1</span> · ${n2} P2`)}</div>
+  <div class="card"><div class="row"><h2>O que precisa de você agora</h2><span class="sp"></span><span class="note">${n1} P1 · ${n2} P2</span></div>
+   ${A.length ? `<div class="tw"><table class="t f2-t"><tbody>${A.map(lin).join('')}</tbody></table></div>${A.length > 6 ? `<button class="mbtn sm" data-f2mais>+ ${A.length - 6} pendências</button>` : ''}` : '<p class="note">Nada pendente agora.</p>'}</div>
+  <div class="card"><h2>No porto · ${porto.length}</h2>${porto.length ? `<div class="tw"><table class="t f2-t"><thead><tr><th>Empurrador</th><th>No porto</th><th>Situação</th><th>Falta</th><th>Próximo passo</th></tr></thead><tbody>${porto.map(v => f2Porto(v, FM)).join('')}</tbody></table></div>` : '<p class="note">Nenhum empurrador no porto.</p>'}</div>
+  <div class="card"><h2>Em viagem · ${viag.length}</h2>${viag.length ? `<div class="tw"><table class="t f2-t"><thead><tr><th>Empurrador</th><th>Viajando</th><th>Próxima troca de óleo</th><th>Último horímetro</th><th></th></tr></thead><tbody>${viag.map(f2Viagem).join('')}</tbody></table></div>` : '<p class="note">Nenhum empurrador em viagem.</p>'}</div>
+  ${sem.length ? `<div class="card"><h2>Sem situação informada · ${sem.length}</h2><div class="tw"><table class="t f2-t"><tbody>${sem.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td class="note">informe onde está</td><td class="f2-ac"><button class="mbtn sm" data-situ="${v.id}|porto">Está no porto</button><button class="mbtn sm" data-situ="${v.id}|viagem">Está viajando</button></td></tr>`).join('')}</tbody></table></div></div>` : ''}
+  <div class="card"><div class="row"><h2>Situação da frota</h2><span class="sp"></span><a class="mbtn sm" href="#cxr">Cronograma</a></div><div class="tw"><table class="t f2-t"><thead><tr><th>Empurrador</th><th class="r">Vencidos</th><th class="r">Itens em dia</th><th>Situação</th></tr></thead><tbody>
+   ${FM.filter(x => x.sit >= 0).map(x => { const [cl, tx] = F2_SIT[x.sit] || F2_SIT[0]; return `<tr><td><b>${esc(x.v.nome)}</b></td><td class="r mono" style="color:${x.n.venc ? 'var(--badt)' : ''}">${x.n.venc}</td><td class="r mono">${ind(x)}</td><td><span class="pill ${cl}">${tx}</span></td></tr>`; }).join('')}</tbody></table></div>
+   ${fora.length ? `<p class="note">Fora de operação: ${fora.map(v => esc(v.nome)).join(', ')}</p>` : ''}</div>`;
+}
+VX.frota2 = vFrota2;
+AFTER.frota2 = () => { if (AFTER.rotina) AFTER.rotina(); };
+{ const r0 = VX.rotina; VX.rotina = function () { return typeof ehOperador === 'function' && ehOperador() ? r0.apply(this, arguments) : vFrota2(); }; }
+document.addEventListener('click', e => { const b = e.target.closest('[data-f2mais]'); if (!b) return; document.querySelectorAll('#main tr.f2-x').forEach(r => r.hidden = false); b.remove(); }, true);
+{ const st = document.createElement('style'); st.textContent = `.f2-ks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}.f2-k{background:#fff;border:1px solid #E3E6EA;border-radius:10px;padding:12px 14px}.f2-k span{display:block;font-size:12px;color:#5F6368}.f2-k b{font-size:22px;font-weight:600;white-space:nowrap}
+#main .f2-t td{vertical-align:middle}.f2-bar{display:inline-block;width:90px;height:8px;border-radius:4px;background:#F4C7C3;vertical-align:middle;overflow:hidden;margin-right:6px}.f2-bar i{display:block;height:100%;background:#34A853}.f2-ac{text-align:right;white-space:nowrap}.f2-ac .mbtn{margin-left:6px}.f2-m{display:inline-block;position:relative}.f2-m summary{list-style:none;cursor:pointer;margin-left:6px}.f2-m summary::-webkit-details-marker{display:none}.f2-m>div{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:#fff;border:1px solid #DADCE0;border-radius:8px;box-shadow:0 6px 18px rgba(60,64,67,.18);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:190px}.f2-m>div .mbtn{margin:0;text-align:left}
+@media(max-width:760px){.f2-ks{grid-template-columns:1fr 1fr}}`; document.head.appendChild(st); }
+</script>
 </body>
 </html>
