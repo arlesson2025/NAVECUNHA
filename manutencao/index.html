@@ -1328,7 +1328,9 @@ const S = {
 function cfgPadrao() {
   return { frota: FROTA_PADRAO.map((n, i) => vesselDaMatriz({ id: 'v' + (i + 1), nome: n, off: [] })), intervalos: {}, viagemH: 120, cfgAt: 0 };
 }
-const recs = kind => [...S.recs.values()].filter(r => r.kind === kind && !r.excluido);
+const RECS_C = { m: null, v: -1, k: {} };   /* recs guardado por tipo até o Map mudar (set/delete/clear contam a versão) — a tela recalculava a frota varrendo todos os registros milhares de vezes */
+const recs = kind => { const M = S.recs; if (!M.__tag) { M.__tag = 1; M.__v = 0; const s0 = M.set, d0 = M.delete, c0 = M.clear; M.set = function (k, v) { this.__v++; return s0.call(this, k, v); }; M.delete = function (k) { this.__v++; return d0.call(this, k); }; M.clear = function () { this.__v++; return c0.call(this); }; }
+  if (RECS_C.m !== M || RECS_C.v !== M.__v) { RECS_C.m = M; RECS_C.v = M.__v; RECS_C.k = {}; } return (RECS_C.k[kind] || (RECS_C.k[kind] = [...M.values()].filter(r => r.kind === kind && !r.excluido))).slice(); };
 const oms = () => recs('om');
 const vessel = id => S.cfg.frota.find(v => v.id === id);
 const vName = id => (vessel(id) || { nome: id }).nome;
