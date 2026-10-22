@@ -7042,7 +7042,7 @@ vOleo = function () {
     ? `<div class="o2-ph"><b>Frota inteira</b><span class="note">o motor mais urgente de cada empurrador</span></div>${ol2Barras(frotaL, d => d.v.nome)}`
     : `<div class="o2-ph"><b>${esc(vSel ? vSel.nome : '')}</b>${LV.filter(d => d.st2 === 'venc').length ? `<span class="o2-bd venc">${LV.filter(d => d.st2 === 'venc').length} vencidas</span>` : ''}</div><p class="note" style="margin:-4px 0 8px">${situDe(vSel) ? (situDe(vSel).st === 'porto' ? '⚓ no porto · equipe de manutenção + CTF/MFM' : '⛴ em viagem · MFM troca, você acompanha pela câmera') : ''} · esquerda = atraso · direita = % restante</p>${ol2Barras(LV, d => d.nome.replace('Motobomba de incêndio', 'Motobomba'))}`;
   return `<div class="o2-top"><h1>Óleo da frota</h1><span class="o2-pl venc"><b>${cnt('venc')}</b> vencidas</span><span class="o2-pl aten"><b>${cnt('aten')}</b> ≤ ${OL_ALERTA_H} h</span><span class="o2-pl ok"><b>${cnt('ok')}</b> em dia</span><span class="sp"></span><button class="mbtn pri" data-frv="">+ Lançar troca</button></div>
-   <div class="o2-wrap"><div class="card o2-tab"><div class="tw"><table class="o2-t"><thead><tr><th rowspan="2">Embarcação</th><th rowspan="2">Equipamento</th><th rowspan="2" class="num">Hor. atual</th><th colspan="2" class="o2-gu">Última troca</th><th colspan="2" class="o2-gp">Próx. troca</th><th rowspan="2" class="num">Falta</th></tr><tr><th class="num o2-gu">Horímetro</th><th class="num o2-gu">Data</th><th class="num o2-gp">Horímetro</th><th class="num o2-gp">Data</th></tr></thead><tbody>${corpo}</tbody></table></div>
+   <div class="o2-wrap"><div class="card o2-tab"><div class="tw"><table class="o2-t"><thead><tr><th rowspan="2">Empurrador</th><th rowspan="2">Equipamento</th><th rowspan="2" class="num">Hor. atual</th><th colspan="2" class="o2-gu">Última troca</th><th colspan="2" class="o2-gp">Próx. troca</th><th rowspan="2" class="num">Falta</th></tr><tr><th class="num o2-gu">Horímetro</th><th class="num o2-gu">Data</th><th class="num o2-gp">Horímetro</th><th class="num o2-gp">Data</th></tr></thead><tbody>${corpo}</tbody></table></div>
      <p class="note">Clique no nome do empurrador para abrir ou fechar. Clique num equipamento para lançar a troca (FR 049_B).</p></div>
     <div class="card o2-pn"><div class="o2-sg"><button data-o2m="frota" class="${OL2.modo === 'frota' ? 'on' : ''}">Frota inteira</button><label class="${OL2.modo === 'um' ? 'on' : ''}">1 empurrador: <select id="o2V">${V.map(v => `<option value="${v.id}"${v.id === OL2.v ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label></div>${painel}</div></div>
    <div class="card"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver todas</a></div><div class="tw"><table class="t"><tbody>${recs('lub').filter(r => r.tipo === 'fr049').sort((a, b) => (b.date || '') < (a.date || '') ? -1 : 1).slice(0, 6).map(r => `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(vName(r.vessel) || r.vNome || '')}</b></td><td>${(r.eq || []).filter(q => q.status === 'T').map(q => { const vv = vessel(r.vessel), e = lubEq(vv, q.key); return esc(e ? eqNomeC(vv, e) : q.key); }).join(', ')}</td><td class="note">O.M. ${esc(r.om || '')}</td></tr>`).join('') || '<tr><td class="note">Nenhuma troca lançada ainda.</td></tr>'}</tbody></table></div></div>`;
@@ -7816,14 +7816,14 @@ function vOleoP() {
      return `<button class="ol-an${OLF.g === g ? ' on' : ''}" data-olg="${g}" title="${OLF.g === g ? 'Clique para tirar o filtro' : 'Clique para ver só ' + nome + ' na tabela'}">${a.svg}<b>${nome}</b><small>${sub}</small><span><i class="ok">${a.ok} em dia</i>${a.am ? ` · <i class="am">${a.am} até 50 h</i>` : ''}${a.rd ? ` · <i class="rd">${a.rd} vencida${a.rd > 1 ? 's' : ''}</i>` : ''}${a.sm ? ` · ${a.sm} sem hist.` : ''}</span></button>`; }).join('')}</div></div>`;
   const tab = `<div class="card"><div class="row"><h2>Equipamentos${OLF.g ? ` <button class="cm-chip on" data-olg="${OLF.g}" title="Tirar o filtro de sistema">${(OL_SIS.find(x => x[0] === OLF.g) || [, OLF.g])[1]} ✕</button>` : ''}</h2><span class="sp"></span><button class="mbtn sm" data-olall="1">Abrir todas</button><button class="mbtn sm" data-olall="0">Fechar todas</button></div>
    <div class="cm-chips">${chips.map(([k, l, c]) => `<button class="cm-chip${OLF.f === k ? ' on' : ''}" data-olf="${k}">${l} <b>${c}</b></button>`).join('')}</div>
-   <div class="tw"><table class="t ol-t"><thead><tr><th rowspan="2">Embarcação</th><th rowspan="2">Equipamento</th><th rowspan="2" class="r">Cárter</th><th rowspan="2" class="r">Hor. atual</th><th colspan="2" class="ol-gu">Última troca</th><th colspan="2" class="ol-gp">Próxima troca</th><th rowspan="2" class="r">Saldo</th></tr>
+   ${olSisChips(ENG)}<div class="tw"><table class="t ol-t"><thead><tr><th rowspan="2">Empurrador</th><th rowspan="2">Equipamento</th><th rowspan="2" class="r">Cárter</th><th rowspan="2" class="r">Hor. atual</th><th colspan="2" class="ol-gu">Última troca</th><th colspan="2" class="ol-gp">Próxima troca</th><th rowspan="2" class="r">Saldo</th></tr>
     <tr><th class="r ol-gu">Horímetro</th><th class="r ol-gu">Data</th><th class="r ol-gp">Horímetro</th><th class="r ol-gp">Data</th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="note">Nenhum equipamento neste filtro.</td></tr>'}</tbody></table></div>
    <p class="note">Clique no empurrador para abrir ou fechar · clique num equipamento para lançar a troca (FR 049_B) · saldo negativo = atrasado · cárter = volume da matriz de lubrificação</p></div>`;
   // saldo para a troca: esquerda = atraso (h ou d), direita = % do intervalo que ainda resta
   const crit = id => ENG.filter(e => e.vid === id && !e.sem).sort((a, z) => (a.v < 0 || z.v < 0) ? a.v - z.v : a.pct - z.pct)[0];
   const barras = L => { const mx = Math.max(1, ...L.filter(r => r.v < 0).map(r => -r.v));
     return `<div class="ol-bs">${L.map(r => `<div class="ol-br${r.go ? ' click' : ''}"${r.go ? ` data-olgo="${r.go}"` : ''}><span class="ol-bl">${r.l}</span><span class="ol-bL">${r.v < 0 ? `<i style="width:${Math.max(2, -r.v / mx * 100)}%"></i>` : ''}</span><span class="ol-bR">${r.v >= 0 ? `<i style="width:${r.p * 100}%"></i>` : ''}</span><span class="mono r" style="color:${cor(r.st)}">${r.t}</span></div>`).join('')}
-      <div class="ol-br ol-ax"><span></span><span><span>${nf(mx)}</span><span>0</span></span><span><span>0%</span><span>100%</span></span><span></span></div></div>`; };
+      <div class="ol-br ol-ax"><span></span><span class="ol-axl">← atraso</span><span class="ol-axr">intervalo que resta →</span><span></span></div></div>`; };
   let corpo;
   if (O3.mode === 'frota') {
     const L = F.map(b => { const c = crit(b.id); return c ? { l: `<b>${esc(b.n)}</b><small>${esc(c.name)}</small>`, v: c.v, p: c.pct, st: c.st, t: c.restTxt, go: b.id } : null; }).filter(Boolean);
@@ -7831,13 +7831,13 @@ function vOleoP() {
     corpo = `<p class="note">o equipamento mais crítico de cada empurrador · clique numa barra para abrir o empurrador</p>${barras(L)}
      <div class="ol-ft"><div><span>Mais atrasado</span><b style="color:${pior ? 'var(--badt)' : 'var(--okt)'}">${pior ? esc(pior.b + ' · ' + pior.name + ' · ' + pior.restTxt.replace('−', '')) : 'nenhum'}</b></div><div><span>Próxima a vencer</span><b>${prox ? esc(prox.b + ' · ' + prox.name + ' · ' + dt(prox.proxD)) : '—'}</b></div></div>`;
   } else { const b = F.find(x => x.id === O3.ves) || F[0];
-    corpo = !b ? '<p class="note">Sem equipamentos.</p>' : `<p class="note">${b.st === 'porto' ? 'no porto · equipe de manutenção + CTF/MFM' : b.st === 'viagem' ? 'em viagem · troca pelo MFM' : 'situação não informada'}</p>${barras(ENG.filter(e => e.vid === b.id && !e.sem).map(e => ({ l: esc(e.name), v: e.v, p: e.pct, st: e.st, t: e.restTxt })))}`; }
+    corpo = !b ? '<p class="note">Sem equipamentos.</p>' : `${barras(ENG.filter(e => e.vid === b.id && !e.sem).map(e => ({ l: esc(e.name), v: e.v, p: e.pct, st: e.st, t: e.restTxt })))}`; }
   const graf = `<div class="card"><div class="row"><h2>Saldo para a troca</h2><span class="sp"></span><span class="ol-seg"><button data-olm="frota" class="${O3.mode === 'frota' ? 'on' : ''}">Frota inteira</button><button data-olm="1" class="${O3.mode !== 'frota' ? 'on' : ''}">1 empurrador</button></span><select id="olSv" class="ol-sv">${F.map(b => `<option value="${b.id}"${b.id === O3.ves ? ' selected' : ''}>${esc(b.n)}</option>`).join('')}</select></div>
    ${corpo}<p class="note">Esquerda = atraso · direita = % do intervalo que ainda resta · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d</p></div>`;
   const t = document.createElement('div'); t.innerHTML = vLubReg(); const card = t.querySelector(':scope > .card');   // filtros e tabela da antiga tela Registros de lubrificação
   const reg = card ? `<div class="card" id="ol-trocas"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><span class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e complementos de óleo</span></div>${card.innerHTML}</div>` : '';
   return `<div class="cm-v"><div class="vh"><div><h1>Óleo da frota</h1><p>Troca de óleo por horímetro ou prazo (Anexo I · matriz de lubrificação) · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d · registro pelo FR 049_B</p></div><span class="sp"></span><button class="mbtn" data-olreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn pri" data-ollanca>＋ Lançar troca</button></div>
-   <div class="cm-ws">${sis}${tab}${graf}${reg}</div></div>`;
+   <div class="cm-ws">${olResumo(ENG)}${tab}${graf}${reg}</div></div>`;
 }
 VX.oleo = vOleoP;
 AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.open]); O3.S('mode', O3.mode); O3.S('ves', O3.ves); };
@@ -9294,17 +9294,44 @@ VX.barco = vBarco2;
   const N = new Map(S.cfg.frota.map(v => [v.nome, v.id]));
   document.querySelectorAll('#main b').forEach(b => { const id = N.get(b.textContent.trim()); if (!id || b.closest('a,button,select,label')) return;
     const a = document.createElement('a'); a.href = '#barco/' + id; a.className = 'f2-nm'; a.title = 'Abrir a ficha do empurrador'; b.replaceWith(a); a.appendChild(b); }); }; }
-{ const v0 = VX.oleo; VX.oleo = function () { const t = document.createElement('div'); t.innerHTML = v0.apply(this, arguments); const bs = t.querySelector('.ol-bs'); if (!bs) return t.innerHTML;
-  const { F, ENG } = o3Dados(), crit = id => ENG.filter(e => e.vid === id && !e.sem).sort((a, z) => (a.v < 0 || z.v < 0) ? a.v - z.v : a.pct - z.pct)[0];
-  const L = O3.mode === 'frota' ? F.map(b => { const c = crit(b.id); return c ? { l: `<b>${esc(b.n)}</b><small>${esc(c.name)}</small>`, e: c, go: b.id } : null; }).filter(Boolean)
-    : ENG.filter(e => e.vid === (F.find(b => b.id === O3.ves) || F[0] || {}).id).map(e => ({ l: `<b>${esc(e.name)}</b><small>${e.atual != null ? 'horímetro ' + nf(e.atual) + ' h' : 'sem leitura'}</small>`, e }));
-  bs.outerHTML = `<div class="sb-l">${L.map(r => `<div class="sb-li${r.go ? ' click' : ''}"${r.go ? ` data-olgo="${r.go}"` : ''}><span class="sb-lb">${r.l}</span>${sbBar(r.e)}</div>`).join('') || '<p class="note">Sem equipamentos com histórico.</p>'}</div>`;
-  t.querySelectorAll('p.note').forEach(p => { if (/^Esquerda = atraso/.test(p.textContent)) p.innerHTML = `Barra = parte do intervalo que ainda resta · <span class="sb-greent">em dia</span> · <span class="sb-ambert">até ${OL_ALERTA_H} h ou 7 dias</span> · <span class="sb-redt">atrasado</span> (barra cheia)`; });
-  return t.innerHTML; }; }
+/* (Saldo para a troca: voltou o gráfico original a pedido do Supervisor) */
 { const st = document.createElement('style'); st.textContent = `.sb-r{display:flex;align-items:center;gap:10px}.sb-t{flex:1;min-width:80px;height:10px;background:#EEF2F6;border-radius:5px;overflow:hidden}.sb-t i{display:block;height:100%;border-radius:5px}
 .sb-green{background:#1967D2}.sb-amber{background:#E3A008}.sb-red{background:#D93025}.sb-sem{background:#BDC1C6}.sb-x{min-width:118px;font-size:13px;white-space:nowrap}.sb-greent{color:#1967D2}.sb-ambert{color:#B06000}.sb-redt{color:#C5221F}.sb-semt{color:#5F6368}
 .sb-l{display:flex;flex-direction:column;gap:10px;margin:8px 0}.sb-li{display:grid;grid-template-columns:minmax(120px,190px) 1fr;align-items:center;gap:12px}.sb-li.click{cursor:pointer}.sb-li.click:hover{background:#F8F9FA}.sb-lb b{display:block;font-size:13.5px}.sb-lb small{color:#5F6368;font-size:11.5px}
 a.f2-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #9AA0A6}a.f2-nm:hover{color:#1967D2;border-bottom-color:#1967D2}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Condição: Óleo da frota no padrão e aba Horímetros da frota (pedido do Supervisor, 22/10/2026: "condição por sistema é vago; não consigo ver de forma global por empurrador o horímetro de cada equipamento") =====
+   Óleo da frota: Resumo em números (olResumo) no lugar dos anéis "Condição por sistema"; filtro por sistema em chips na tabela (olSisChips, mesmo data-olg); "Empurrador" na tabela; Saldo para a troca com o gráfico original e o eixo legível.
+   Horímetros (view horfrota, 1ª aba da Condição): uma linha por empurrador, uma coluna por motor (horímetro total e data da leitura; âmbar com mais de MCA_SEM_LEITURA_D dias); o registro (#hor) sai de Administração e fica nesta seção. */
+'use strict';
+function olResumo(ENG) { const n = st => ENG.filter(e => e.st === st).length, k = (l, v, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
+  return `<div class="card"><h2>Resumo</h2><div class="f2-ks">${k('Trocas vencidas', n('red'), n('red') ? 'var(--badt)' : 'var(--okt)')}${k('Vencem em até ' + OL_ALERTA_H + ' h ou 7 dias', n('amber'), n('amber') ? 'var(--warnt)' : '')}${k('Em dia', n('green'), 'var(--okt)')}${k('Sem histórico', n('sem'))}</div></div>`; }
+function olSisChips(ENG) { const c = g => ENG.filter(e => e.g === g).length;
+  return `<div class="cm-chips" style="margin:-2px 0 10px"><span class="note" style="margin-right:4px">Sistema</span><button class="cm-chip${OLF.g ? '' : ' on'}" data-olg="${OLF.g}">Todos</button>${OL_SIS.filter(([g]) => c(g)).map(([g, nome]) => `<button class="cm-chip${OLF.g === g ? ' on' : ''}" data-olg="${g}">${nome} <b>${c(g)}</b></button>`).join('')}</div>`; }
+function vHorFrota() {
+  const V = S.cfg.frota.filter(v => !foraOp(v)), LD = lubDados(), H = hoje(), cols = [], lin = [];
+  let emDia = 0, velha = 0, est = 0;
+  V.forEach(v => { const cel = {}; LD.filter(d => d.v === v && !d.saida && ['mcp', 'mca'].includes(d.e.g)).forEach(d => { const nm = eqNomeC(v, d.e), h = horAtual(v.id, lubHp(v, d.e)); if (!cols.includes(nm)) cols.push(nm);
+      const dias = h && h.date && !h.est ? Math.floor((H - pD(h.date)) / 864e5) : null; cel[nm] = { h, dias }; if (!h || h.est) est++; else if (dias > MCA_SEM_LEITURA_D) velha++; else emDia++; });
+    lin.push({ v, cel, s: situDe(v) }); });
+  const ord = n => (/^MCP/.test(n) ? 0 : /^MCA (BB|BE)/.test(n) ? 1 : 2) + (/BE/.test(n) ? 0.5 : 0);
+  cols.sort((a, b) => ord(a) - ord(b) || a.localeCompare(b, 'pt-BR', { numeric: true }));
+  const k = (l, val, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${val}</b></div>`;
+  const td = c => { if (!c) return '<td class="r note" title="não tem este motor">·</td>'; if (!c.h) return '<td class="mono r note">—<div class="note">sem leitura</div></td>'; const h = c.h, cls = h.est ? 'hf-est' : c.dias > MCA_SEM_LEITURA_D ? 'hf-old' : '';
+    return `<td class="mono r ${cls}"><b>${nf(h.h)} h</b><div class="note">${h.est ? 'estimado' : brD(h.date) + (c.dias > MCA_SEM_LEITURA_D ? ' · ' + c.dias + ' dias' : '')}</div></td>`; };
+  const tab = `<div class="tw"><table class="t hf-t"><thead><tr><th>Empurrador</th><th>Situação</th>${cols.map(c => `<th class="r">${esc(c)}</th>`).join('')}</tr></thead><tbody>${lin.map(l => `<tr><td><a class="f2-nm" href="#barco/${l.v.id}"><b>${esc(l.v.nome)}</b></a></td><td class="note">${l.s ? (l.s.st === 'porto' ? 'No porto' : 'Em viagem') : '—'}</td>${cols.map(c => td(l.cel[c])).join('')}</tr>`).join('')}</tbody></table></div>
+   <p class="note">Horímetro total (soma as voltas do MCP a cada 10.000 h e as trocas de horímetro) · <span class="hf-old" style="padding:0 4px">âmbar</span> = leitura com mais de ${MCA_SEM_LEITURA_D} dias · reversor e governo contam pelas horas do MCP · clique no empurrador para abrir a ficha</p>`;
+  return `<div class="cm-v"><div class="vh"><div><h1>Horímetros da frota</h1><p>Último horímetro de cada motor, por empurrador · leitura pelo FR 027_L ou lançada à mão</p></div><span class="sp"></span><a class="mbtn pri" href="#hor">⏱ Lançar horímetro</a><button class="mbtn" data-hfreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
+   <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="f2-ks">${k('Empurradores', V.length)}${k('Leituras em dia', emDia, 'var(--okt)')}${k('Leituras com mais de ' + MCA_SEM_LEITURA_D + ' dias', velha, velha ? 'var(--warnt)' : '')}${k('Estimadas ou sem leitura', est)}</div></div>
+    <div class="card"><h2>Horímetros por empurrador</h2>${tab}</div></div></div>`;
+}
+VX.horfrota = vHorFrota;
+AFTER.horfrota = function () { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_horfrota_lay', '[data-hfreset]'); };
+{ SECOES.forEach(s => { if (s.id !== 'cond2') s.views = s.views.filter(x => x[0] !== 'hor'); });
+  const c = SECOES.find(s => s.id === 'cond2'); if (c) { if (!c.views.some(x => x[0] === 'horfrota')) c.views.unshift(['horfrota', 'Horímetros']); c.extra = (c.extra || []).filter(x => x !== 'hor').concat('hor'); } }
+{ const st = document.createElement('style'); st.textContent = `.ol-ax .ol-axl{display:block;text-align:right;padding-right:6px}.ol-ax .ol-axr{display:block;padding-left:6px}
+.hf-t td,.hf-t th{white-space:nowrap}.hf-t td b{font-size:14px}.hf-old{background:#FEF7E0}.hf-old b{color:#B06000}.hf-est b{color:#5F6368;font-weight:500}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
