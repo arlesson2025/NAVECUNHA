@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <!--
- FLUXO DA MANUTENÇÃO · SMF × SANKHYA
- Uma edição só alimenta os dois formatos:
- - "Por etapas": clique no texto de uma etapa e edite; o formato "Por quem faz (raias)" é redesenhado na hora.
- - "Baixar HTML com alterações" grava as edições dentro do arquivo (bloco <script id="dados">).
- - Para criar/mover caixas e setas (avançado): edite o bloco "dados" (nodes = [id, coluna, raia, linha, tipo, texto]; edges = [de, lado, para, lado, rótulo]).
+ FLUXO DA MANUTENÇÃO · SMF × SANKHYA (versão para apresentação, 22/10/2026)
+ Conteúdo aprovado pelo Supervisor no chat. Os fluxos ficam no objeto FLUXOS (no fim do arquivo):
+ cada etapa tem raia (quem faz), título (verbo + objeto), sistema, documento, notas e decisão.
+ "Editar" deixa os textos editáveis e "Baixar HTML" salva o arquivo com as alterações.
 -->
 <html lang="pt-BR">
 <head>
@@ -12,907 +11,197 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fluxo SMF × Sankhya</title>
 <style>
-:root{--ink:#16202c;--mut:#5b6877;--azul:#1f3a5f;--linha:#d5dce5}
+:root{--navy:#16244A;--smf:#1967D2;--smf-bg:#E8F0FE;--sk:#7B1FA2;--sk-bg:#F3E8FD;--pp:#5F6368;--pp-bg:#F1F3F4;--ok:#188038;--warn:#B06000;--warn-bg:#FEF7E0;--bad:#C5221F;--bad-bg:#FCE8E6;--line:#DADCE0;--mut:#5F6368;--bg:#F6F7F9}
 *{box-sizing:border-box}
-body{margin:0;background:#f4f6f9;color:var(--ink);font:13px/1.45 Arial,Helvetica,sans-serif;padding:20px}
-h1{font-size:20px;margin:0} .sub{color:var(--mut);margin:2px 0 12px}
-.topo{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
-.vista button,.acao{border:2px solid var(--azul);background:#fff;color:var(--azul);font-weight:bold;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px}
-.vista{display:flex;gap:6px}.vista button.on{background:var(--azul);color:#fff}
-.acao.pri{background:#214c68;border-color:#214c68;color:#fff}.sp{flex:1}
-.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
-.tab{border:0;background:#dfe6ef;color:var(--azul);font-weight:bold;padding:9px 16px;border-radius:6px 6px 0 0;cursor:pointer;font-size:13px}.tab.on{background:var(--azul);color:#fff}
-.fit{margin-left:auto;border:1px solid var(--azul);background:#fff;color:var(--azul);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px}
-.panel{display:none}.panel.on{display:block}
-.chart{background:#fff;box-shadow:0 1px 3px #0002;overflow-x:auto;border-radius:0 6px 6px 6px}.chart svg{display:block}.chart.fitw svg{width:100%;height:auto}
-body.vEt .chart,body.vEt .fit{display:none} body.vRa .ets{display:none}
-.leg{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-size:12px;color:var(--mut)}.leg i{display:inline-block;width:14px;height:12px;border-radius:3px;border:2px solid;vertical-align:-2px;margin-right:5px}
-.ets{background:#fff;box-shadow:0 1px 3px #0002;border-radius:0 6px 6px 6px;overflow-x:auto}.ets svg{display:block}
-.vbox{width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;font-family:Arial,sans-serif;color:#17232e}.vbox.vdec{align-items:center;text-align:center}
-.vq{font-size:10px;font-weight:bold;letter-spacing:.3px;text-transform:uppercase;color:#5b6877;margin:0 0 2px}
-.vt{font-size:13px;font-weight:bold;line-height:1.25;outline:none;border-radius:3px;padding:1px 2px;cursor:text}.vt:focus{background:#fffde9;box-shadow:inset 0 0 0 2px #e1b52f}
-.et{position:relative;background:#fff;border:1.6px solid #1f5fa8;border-radius:8px;padding:8px 12px 8px 12px;margin:0 0 26px;box-shadow:0 1px 2px #0001}
-.et:not(:last-child)::after{content:"↓";position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);color:#3b4a5e;font-size:18px;font-weight:bold}
-.et.crit{border-color:#c0392b;background:#fdecea}.et.trig{border-color:#5b3fb0;background:#efe7ff}.et.ok{border-color:#2e7d4f;background:#e6f4ea}.et.term{border-color:#1f3a5f;background:#1f3a5f;color:#fff}.et.dec{border-color:#6b4c9a;background:#f6f2fd;border-style:dashed}
-.et-q{display:inline-block;font-size:10.5px;font-weight:bold;letter-spacing:.3px;text-transform:uppercase;padding:1px 7px;border-radius:9px;margin-bottom:4px}
-.et-q.sk{background:#5b3fb0;color:#fff}.et-q.smf{background:#1f5fa8;color:#fff}.et-q.ext{background:#dfe6ef;color:#1f3a5f}
-.et.term .et-q{background:#fff;color:#1f3a5f}
-.et-t{font-size:14px;font-weight:bold;outline:none;border-radius:4px;padding:1px 3px;cursor:text}.et-t:focus{background:#fffde9;box-shadow:inset 0 0 0 2px #e1b52f;color:#16202c}
-.et.dec .et-t::before{content:"◆ ";color:#6b4c9a}
-.et-l{margin:4px 0 0;padding-left:18px;font-size:12px;color:#384957}.et.term .et-l{color:#dfe6ef}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
-.card{background:#fff;box-shadow:0 1px 3px #0002;border-radius:6px;padding:12px 14px}.card h2{font-size:13px;margin:0 0 8px;color:var(--azul);text-transform:uppercase;letter-spacing:.3px}
-table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--azul);color:#fff;text-align:left;padding:6px 8px}td{padding:6px 8px;border-bottom:1px solid var(--linha);vertical-align:top}
-ul{margin:0;padding-left:16px}li{margin:0 0 4px}
-.rule{margin-top:12px;background:#efe7ff;border-left:4px solid #5b3fb0;padding:9px 14px;font-weight:bold;color:#3b2a7a;border-radius:4px}
-.dica{font-size:12px;color:var(--mut);margin:0 0 10px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
-@media print{@page{size:A3 landscape;margin:10mm}body{background:#fff;padding:0}.topo,.tabs,.dica{display:none}.panel{display:block!important;break-after:page}.chart{overflow:visible;box-shadow:none}.chart svg{width:100%;height:auto}.card{box-shadow:none;border:1px solid var(--linha)}}
+body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#202124;background:var(--bg)}
+header{background:var(--navy);color:#fff;padding:16px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:20px;margin:0;font-weight:600}
+header p{margin:2px 0 0;font-size:13px;opacity:.8}
+header .sp{flex:1}
+.bt{font:inherit;font-size:13px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:6px;padding:7px 14px;cursor:pointer}
+.bt.pri{background:#fff;color:var(--navy);border-color:#fff;font-weight:600}
+.bt:hover{opacity:.9}
+nav{display:flex;gap:4px;padding:0 28px;background:#fff;border-bottom:1px solid var(--line)}
+nav button{font:inherit;font-size:14px;border:0;background:none;padding:13px 16px;cursor:pointer;color:var(--mut);border-bottom:3px solid transparent}
+nav button.on{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
+main{padding:22px 28px 40px}
+.lead{font-size:15px;color:#3C4043;margin:0 0 16px;max-width:980px}
+.leg{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin:0 0 14px}
+.leg span{display:inline-flex;align-items:center;gap:6px}
+.sel{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.3px;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.s-smf{background:var(--smf-bg);color:var(--smf)}.s-sk{background:var(--sk-bg);color:var(--sk)}.s-pp{background:var(--pp-bg);color:var(--pp)}
+.doc{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--line);color:#3C4043;background:#fff;white-space:nowrap}
+/* visão geral */
+.ciclo{display:flex;gap:0;margin:8px 0 22px;flex-wrap:wrap}
+.ch{flex:1;min-width:170px;background:#fff;border:1px solid var(--line);padding:18px 18px 16px 30px;position:relative;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,0 100%,22px 50%)}
+.ch:first-child{clip-path:polygon(0 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,0 100%);padding-left:20px}
+.ch b{display:block;font-size:19px;color:var(--navy)}
+.ch .n{font-size:12px;font-weight:700;color:var(--smf);letter-spacing:.4px}
+.ch small{display:block;font-size:12.5px;color:var(--mut);margin-top:6px;line-height:1.35}
+.sis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1100px}
+.sis div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.sis h3{margin:6px 0 4px;font-size:15px}.sis p{margin:0;font-size:13px;color:#3C4043;line-height:1.45}
+.frota{margin-top:14px;max-width:1100px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--smf);border-radius:8px;padding:12px 16px;font-size:13.5px}
+/* raias */
+.wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;position:relative}
+.grid{display:grid;position:relative;min-width:max-content}
+.lane{grid-column:1;background:#FAFBFC;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);display:flex;align-items:center;position:sticky;left:0;z-index:3}
+.lane small{display:block;font-weight:400;color:var(--mut);font-size:11.5px}
+.cell{border-bottom:1px solid #EEF0F2;padding:12px 10px;display:flex;align-items:center;justify-content:center;min-height:96px}
+.card{position:relative;z-index:2;width:205px;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px 11px;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:opacity .25s,transform .25s,box-shadow .25s}
+.card.smf{border-color:#A8C7FA}.card.sk{border-color:#D7AEFB;background:#FCF8FF}.card.pp{border-color:#C4C7C5}
+.card .num{position:absolute;top:-11px;left:10px;background:var(--navy);color:#fff;font-size:11.5px;font-weight:700;border-radius:11px;padding:2px 8px}
+.card .num.x{background:#80868B}
+.card .t{font-size:14px;font-weight:700;line-height:1.3;margin:4px 0 7px}
+.card .bd{display:flex;gap:5px;flex-wrap:wrap}
+.card ul{margin:7px 0 0;padding-left:16px;font-size:12px;color:#3C4043;line-height:1.4}
+.card .dec{margin-top:8px;background:var(--warn-bg);border:1px solid #F6D58A;border-radius:6px;padding:6px 8px;font-size:12px;line-height:1.4}
+.card .dec b{color:var(--warn)}
+.card .vai{margin-top:7px;font-size:12px;font-weight:600;color:var(--bad)}
+.card .vai.ok{color:var(--smf)}
+svg.lig{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
+/* apresentação */
+body.pres .card{opacity:.22}
+body.pres .card.at{opacity:1;transform:scale(1.06);box-shadow:0 6px 22px rgba(22,36,74,.25);border-color:var(--navy)}
+body.pres .card.feito{opacity:.55}
+.barra{display:none;position:fixed;left:0;right:0;bottom:0;background:var(--navy);color:#fff;padding:14px 28px;z-index:20;align-items:center;gap:16px}
+body.pres .barra{display:flex}
+.barra .tx{flex:1;font-size:16px}.barra .tx small{display:block;font-size:12.5px;opacity:.8;margin-top:2px}
+body.edit [data-ed]{outline:1px dashed #1967D2;outline-offset:2px;cursor:text}
+.aviso{display:none;background:var(--smf-bg);color:var(--smf);padding:8px 28px;font-size:13px}
+body.edit .aviso{display:block}
+@media print{header .bt,nav,.barra,.aviso{display:none!important}body{background:#fff}main{padding:8px}.wrap{border:0;overflow:visible}section{page-break-after:always}section[hidden]{display:block!important}@page{size:A4 landscape;margin:8mm}}
 </style>
 </head>
-<body class="vEt">
-<h1 contenteditable="true">Fluxo da manutenção · SMF × Sankhya</h1>
-<div class="sub" contenteditable="true">Como está hoje (21/10/2026): onde o SMF consolida, onde o Sankhya gera a OM e onde ela é encerrada com as evidências.</div>
-<div class="topo">
- <div class="vista"><button class="on" data-v="vEt">Fluxograma (editar aqui)</button><button data-v="vRa">Por quem faz (raias)</button></div>
- <span class="sp"></span>
- <button class="acao pri" id="baixar">Baixar HTML com alterações</button><button class="acao" onclick="window.print()">Imprimir / PDF</button>
-</div>
-<p class="dica">Edite os textos no <b>Fluxograma</b> (clique no texto da caixa). O formato <b>Por quem faz (raias)</b> se atualiza sozinho. Depois clique em “Baixar HTML com alterações” e envie o arquivo de volta. Os quadros de baixo também são editáveis.</p>
-<div class="tabs">
- <button class="tab on" data-t="p">Preventiva</button>
- <button class="tab" data-t="c">Corretiva</button>
- <button class="tab" data-t="v">Chegada, óleo, saída e viagem</button>
- <button class="fit" id="fit">Ajustar à tela</button>
-</div>
-<div class="leg">
- <span><i style="border-color:#1f5fa8;background:#fff"></i>Etapa no SMF ou no terminal</span>
- <span><i style="border-color:#5b3fb0;background:#efe7ff"></i>Momento no SANKHYA</span>
- <span><i style="border-color:#6b4c9a;background:#efe9fb"></i>Decisão</span>
- <span><i style="border-color:#c0392b;background:#fdecea"></i>Falha / restrição</span>
- <span><i style="border-color:#2e7d4f;background:#e6f4ea"></i>Fechamento</span>
- <span><i style="border-color:#1f3a5f;background:#1f3a5f"></i>Início / fim</span>
-</div>
+<body>
+<header>
+  <div><h1>Fluxo da manutenção · SMF × Sankhya</h1><p>NP Navecunha 055 · quem faz, em qual sistema e com qual documento</p></div>
+  <span class="sp"></span>
+  <button class="bt pri" id="bAp">▶ Apresentar</button>
+  <button class="bt" id="bPr">Imprimir / PDF</button>
+  <button class="bt" id="bEd">Editar</button>
+  <button class="bt" id="bBx" hidden>Baixar HTML</button>
+</header>
+<div class="aviso">Modo de edição: clique nos textos marcados para alterar. Depois clique em "Baixar HTML" para salvar o arquivo com as alterações.</div>
+<nav id="abas"></nav>
+<main id="tela"></main>
+<div class="barra"><div class="tx" id="bTx"></div><button class="bt" id="bAnt">← Anterior</button><button class="bt pri" id="bProx">Próximo →</button><button class="bt" id="bSai">Sair (Esc)</button></div>
 
-<section class="panel on" id="p">
-<div class="chart" id="chart-p"></div><div class="ets" id="et-p"></div>
-<div class="grid" contenteditable="true">
- <div class="card"><h2>Os 3 momentos do Sankhya na preventiva</h2>
- <table><tr><th>Momento</th><th>O que você faz</th></tr>
- <tr><td><b>1. Abrir a OM</b></td><td>Cola no Sankhya o texto que o SMF gerou (“Abrir OM com N itens”); o Sankhya gera o nº</td></tr>
- <tr><td><b>2. Nº de volta ao SMF</b></td><td>Digita o nº no SMF e imprime o Formulário de execução</td></tr>
- <tr><td><b>3. Encerrar</b></td><td>Depois de conferir no SMF: anexa o PDF do Anexo II-B na OM e encerra no Sankhya</td></tr></table></div>
- <div class="card"><h2>Pontos de controle</h2><ul>
- <li>O que vence: vencidos + do mês, esteja o empurrador onde estiver. “Vence antes de voltar” é só aviso para adiantar.</li>
- <li><b>OM embarcada (NP 7.3):</b> itens simples que vencem na viagem (correias, pré-filtro do turbo, filtros da bomba alimentadora e do regulador, baterias, drenagem do escape; no MCA: bomba injetora, filtros de combustível e de ar, bateria, tanque, radiador) vão na OM marcados “EMBARCADA · CTF/MFM · hora-alvo”. Zincos, reversores e itens de 1.000 h ficam no porto.</li>
- <li>Formulário de execução: checklist gerado pelo SMF; foto do formulário assinado é obrigatória no lançamento.</li>
- <li>NOK vira falha sem OM e segue o fluxo da corretiva; a OM preventiva continua.</li>
- <li>O cronograma só recebe o realizado quando a OM é encerrada no SMF.</li></ul></div>
-</div>
-</section>
-
-<section class="panel" id="c">
-<div class="chart" id="chart-c"></div><div class="ets" id="et-c"></div>
-<div class="grid" contenteditable="true">
- <div class="card"><h2>Classe e prazo de início (NP 5.5.1)</h2>
- <table><tr><th>Classe</th><th>Na situação do empurrador</th><th>Início</th></tr>
- <tr><td><b>Crítica</b></td><td>Bloqueia a saída</td><td>Imediato</td></tr>
- <tr><td><b>Alta</b></td><td>Restringe a saída</td><td>≤ 4 h</td></tr>
- <tr><td><b>Média</b></td><td>—</td><td>≤ 48 h</td></tr>
- <tr><td><b>Baixa</b></td><td>—</td><td>≤ 15 dias</td></tr></table>
- <p style="font-size:11px;color:var(--mut);margin:8px 0 0">Prazo de início contado da abertura da OM. Falha ainda sem OM conta da detecção (critério interno).</p></div>
- <div class="card"><h2>Pontos de controle</h2><ul>
- <li>Origens da falha: NO do FR 027_L, NOK da preventiva, avaria em viagem (MFM avisa, você lança) ou “Registrar falha”.</li>
- <li>Crítica e Alta: RNC com causa raiz; se a RNC indicar, revisão do Anexo I (NP 5.2); eficácia verificada em 90 dias.</li>
- <li>Serviço do Anexo I refeito por completo na corretiva: a contagem do item recomeça, sem contar como preventiva realizada.</li>
- <li>Encerrar no Sankhya com o PDF do Anexo II-A (e o FR 027_L de origem).</li></ul></div>
-</div>
-</section>
-
-<section class="panel" id="v">
-<div class="chart" id="chart-v"></div><div class="ets" id="et-v"></div>
-<div class="grid" contenteditable="true">
- <div class="card"><h2>Saída (vale a pior situação)</h2>
- <table><tr><th>Situação</th><th>O que o SMF pede</th></tr>
- <tr><td><b>Liberada</b></td><td>Só confirmar</td></tr>
- <tr><td><b>Com restrição</b></td><td>Justificativa + foto do FR 027_L de saída</td></tr>
- <tr><td><b>Bloqueada / interditada</b></td><td>Justificativa + nome do Coordenador que autorizou + foto</td></tr></table>
- <p style="font-size:11px;color:var(--mut);margin:8px 0 0">O SMF compara o plano com o C13 do FR 027_L e vale o pior. A lista de pendências fica congelada no registro de saída.</p></div>
- <div class="card"><h2>Em viagem</h2><ul>
- <li><b>Rotina diária (NP 5.4), CTF/MFM:</b> instrumentos, vazamentos, bucim, porão e alarme, filtro separador e níveis; tudo no Diário de Máquinas. <b>Não gera OM.</b></li>
- <li><b>OM embarcada (NP 7.3):</b> o CTF/MFM executa na hora-alvo; você lança o formulário na chegada.</li>
- <li><b>Óleo e filtros:</b> FR 049_B a bordo.</li>
- <li><b>Irregularidade:</b> CTF/MFM → Comandante → Coordenação e Supervisão; você lança “⚠ Avaria” (Crítica: parada imediata a bordo e empurrador bloqueado). Parâmetros do Diário: você lança “📋 Leituras”.</li>
- <li>Leitura do MCP abaixo do limite do fabricante = alerta P1.</li>
- <li>Na volta, recomeça na chegada (FR 027_L).</li></ul></div>
-</div>
-</section>
-<div class="rule" contenteditable="true">REGRA: TODA OM NASCE NO SANKHYA (Nº) E TERMINA NO SANKHYA (PDF ANEXADO E OM ENCERRADA). O TRABALHO NO MEIO É FEITO NO SMF.</div>
-
-<script type="application/json" id="dados">
-{
- "p": {
-  "lanes": [
-   [
-    "Terminal / a bordo",
-    1
-   ],
-   [
-    "Supervisor|no SMF",
-    2
-   ],
-   [
-    "SANKHYA",
-    1
-   ],
-   [
-    "Execução|(equipe própria|ou terceiro)",
-    1
-   ]
-  ],
-  "nodes": [
-   [
-    "s",
-    0,
-    1,
-    0,
-    "term",
-    "Início do mês ou empurrador no porto"
-   ],
-   [
-    "fp",
-    1,
-    1,
-    0,
-    "step",
-    "Fazer preventiva: vencidos + vencem no mês + OM embarcada (CTF/MFM a bordo)"
-   ],
-   [
-    "adi",
-    1,
-    1,
-    1,
-    "step",
-    "Vence antes de voltar: adiantar? (só aviso)"
-   ],
-   [
-    "sel",
-    2,
-    1,
-    0,
-    "step",
-    "Marcar itens e \"Abrir OM com N itens\": o SMF gera o texto da OM"
-   ],
-   [
-    "sk",
-    3,
-    2,
-    0,
-    "trig",
-    "Abrir a OM no Sankhya com o texto do SMF; o Sankhya gera o nº"
-   ],
-   [
-    "num",
-    4,
-    1,
-    0,
-    "step",
-    "Digitar o nº no SMF: \"Emitir OM e imprimir formulário\""
-   ],
-   [
-    "exe",
-    5,
-    3,
-    0,
-    "step",
-    "Executar: equipe de terra no porto; itens EMBARCADOS o CTF/MFM faz a bordo na hora-alvo"
-   ],
-   [
-    "lan",
-    6,
-    1,
-    0,
-    "step",
-    "OMs → \"Lançar o formulário\" (embarcada: na chegada): foto assinada, OK/NOK"
-   ],
-   [
-    "d1",
-    7,
-    1,
-    0,
-    "dec",
-    "Algum NOK?"
-   ],
-   [
-    "nok",
-    7,
-    1,
-    1,
-    "crit",
-    "NOK vira falha sem OM → aba Corretiva"
-   ],
-   [
-    "conf",
-    8,
-    1,
-    0,
-    "step",
-    "Conferir e encerrar: PDF do Anexo II-B; o cronograma recebe o realizado"
-   ],
-   [
-    "anx",
-    9,
-    2,
-    0,
-    "trig",
-    "Anexar o PDF na OM e encerrar a OM no Sankhya"
-   ],
-   [
-    "mk",
-    10,
-    1,
-    0,
-    "ok",
-    "Marcar \"Anexado e encerrado no Sankhya\""
-   ],
-   [
-    "fim",
-    11,
-    1,
-    0,
-    "term",
-    "OM fechada nos dois sistemas"
-   ]
-  ],
-  "edges": [
-   [
-    "s",
-    "r",
-    "fp",
-    "l"
-   ],
-   [
-    "fp",
-    "b",
-    "adi",
-    "t"
-   ],
-   [
-    "fp",
-    "r",
-    "sel",
-    "l"
-   ],
-   [
-    "adi",
-    "r",
-    "sel",
-    "b",
-    "se quiser"
-   ],
-   [
-    "sel",
-    "r",
-    "sk",
-    "t"
-   ],
-   [
-    "sk",
-    "r",
-    "num",
-    "b",
-    "nº"
-   ],
-   [
-    "num",
-    "r",
-    "exe",
-    "t"
-   ],
-   [
-    "exe",
-    "r",
-    "lan",
-    "b"
-   ],
-   [
-    "lan",
-    "r",
-    "d1",
-    "l"
-   ],
-   [
-    "d1",
-    "b",
-    "nok",
-    "t",
-    "Sim"
-   ],
-   [
-    "d1",
-    "r",
-    "conf",
-    "l",
-    "Não"
-   ],
-   [
-    "nok",
-    "r",
-    "conf",
-    "b"
-   ],
-   [
-    "conf",
-    "r",
-    "anx",
-    "t"
-   ],
-   [
-    "anx",
-    "r",
-    "mk",
-    "b"
-   ],
-   [
-    "mk",
-    "r",
-    "fim",
-    "l"
-   ]
-  ]
- },
- "c": {
-  "lanes": [
-   [
-    "Terminal / a bordo|(Operador, CTF, MFM)",
-    1
-   ],
-   [
-    "Supervisor|no SMF",
-    2
-   ],
-   [
-    "SANKHYA",
-    1
-   ],
-   [
-    "Execução|(equipe própria|ou terceiro)",
-    1
-   ]
-  ],
-  "nodes": [
-   [
-    "s",
-    0,
-    0,
-    0,
-    "term",
-    "Falha: NO no FR 027_L, NOK da preventiva ou avaria em viagem"
-   ],
-   [
-    "pen",
-    1,
-    1,
-    0,
-    "step",
-    "Fica em \"Falha sem OM\" no \"O que precisa de você agora\""
-   ],
-   [
-    "cls",
-    2,
-    1,
-    0,
-    "step",
-    "\"Informar OM\": classificar (Crítica bloqueia a saída · Alta restringe)"
-   ],
-   [
-    "sk",
-    3,
-    2,
-    0,
-    "trig",
-    "Abrir a OM no Sankhya; o Sankhya gera o nº"
-   ],
-   [
-    "num",
-    4,
-    1,
-    0,
-    "step",
-    "Digitar o nº no SMF: corretiva aberta (Anexo II-A); prazo NP 5.5.1 conta daqui"
-   ],
-   [
-    "d0",
-    5,
-    1,
-    0,
-    "dec",
-    "Crítica ou Alta?"
-   ],
-   [
-    "rnc",
-    5,
-    1,
-    1,
-    "crit",
-    "RNC com causa raiz; eficácia em 90 dias"
-   ],
-   [
-    "ini",
-    6,
-    1,
-    0,
-    "step",
-    "\"Iniciar execução\": marca o início para o prazo"
-   ],
-   [
-    "exe",
-    7,
-    3,
-    0,
-    "step",
-    "Executar; fotos antes/depois; marcar serviços do Anexo I refeitos"
-   ],
-   [
-    "conf",
-    8,
-    1,
-    0,
-    "step",
-    "Conferir e encerrar: PDF do Anexo II-A; itens refeitos recomeçam a contagem"
-   ],
-   [
-    "anx",
-    9,
-    2,
-    0,
-    "trig",
-    "Anexar o PDF (Anexo II-A + FR 027_L de origem) e encerrar a OM no Sankhya"
-   ],
-   [
-    "mk",
-    10,
-    1,
-    0,
-    "ok",
-    "Marcar \"Anexado e encerrado no Sankhya\""
-   ],
-   [
-    "fim",
-    11,
-    1,
-    0,
-    "term",
-    "Falha tratada; situação do empurrador atualizada"
-   ]
-  ],
-  "edges": [
-   [
-    "s",
-    "r",
-    "pen",
-    "t"
-   ],
-   [
-    "pen",
-    "r",
-    "cls",
-    "l"
-   ],
-   [
-    "cls",
-    "r",
-    "sk",
-    "t"
-   ],
-   [
-    "sk",
-    "r",
-    "num",
-    "b",
-    "nº"
-   ],
-   [
-    "num",
-    "r",
-    "d0",
-    "l"
-   ],
-   [
-    "d0",
-    "b",
-    "rnc",
-    "t",
-    "Sim"
-   ],
-   [
-    "d0",
-    "r",
-    "ini",
-    "l",
-    "Não"
-   ],
-   [
-    "rnc",
-    "r",
-    "ini",
-    "b"
-   ],
-   [
-    "ini",
-    "r",
-    "exe",
-    "t"
-   ],
-   [
-    "exe",
-    "r",
-    "conf",
-    "b"
-   ],
-   [
-    "conf",
-    "r",
-    "anx",
-    "t"
-   ],
-   [
-    "anx",
-    "r",
-    "mk",
-    "b"
-   ],
-   [
-    "mk",
-    "r",
-    "fim",
-    "l"
-   ]
-  ]
- },
- "v": {
-  "lanes": [
-   [
-    "Terminal|(Operador/Líder,|CTF, Coord.)",
-    1
-   ],
-   [
-    "Supervisor|no SMF",
-    2
-   ],
-   [
-    "SANKHYA",
-    1
-   ],
-   [
-    "A bordo|(CTF, MFM)",
-    1
-   ]
-  ],
-  "nodes": [
-   [
-    "s",
-    0,
-    0,
-    0,
-    "term",
-    "Chegou em Manaus"
-   ],
-   [
-    "fr",
-    1,
-    0,
-    0,
-    "step",
-    "FR 027_L de chegada: Operador/Líder preenche, CTF atesta, Coord. valida"
-   ],
-   [
-    "sv",
-    2,
-    1,
-    0,
-    "step",
-    "\"Salvar no SMF\": PDF no Drive, horímetros lançados, situação recalculada"
-   ],
-   [
-    "d0",
-    3,
-    1,
-    0,
-    "dec",
-    "Tem NO?"
-   ],
-   [
-    "no",
-    3,
-    1,
-    1,
-    "crit",
-    "NO → aba Corretiva (o FR 027_L mostra o texto da OM)"
-   ],
-   [
-    "pv",
-    4,
-    1,
-    0,
-    "step",
-    "Fazer preventiva → aba Preventiva"
-   ],
-   [
-    "d1",
-    5,
-    1,
-    0,
-    "dec",
-    "Óleo vence? 350 h ou 6 meses"
-   ],
-   [
-    "ol",
-    6,
-    3,
-    0,
-    "step",
-    "Troca pelo FR 049_B: CTF/MFM executa, você recebe"
-   ],
-   [
-    "olsk",
-    7,
-    2,
-    0,
-    "trig",
-    "Nº da OM no FR 049_B; anexar o PDF e encerrar no Sankhya"
-   ],
-   [
-    "sai",
-    8,
-    0,
-    0,
-    "step",
-    "\"Saiu de viagem\": FR 027_L de saída"
-   ],
-   [
-    "d2",
-    9,
-    1,
-    0,
-    "dec",
-    "Liberada?"
-   ],
-   [
-    "bq",
-    9,
-    1,
-    1,
-    "crit",
-    "Restrição ou bloqueio: justificativa + foto (+ Coord. que autorizou)"
-   ],
-   [
-    "via",
-    10,
-    3,
-    0,
-    "step",
-    "Em viagem: rotina 5.4 no Diário de Máquinas (sem OM); OM embarcada na hora-alvo; óleo pelo FR 049_B; irregularidade → Comandante → você lança ⚠ Avaria"
-   ],
-   [
-    "fim",
-    11,
-    0,
-    0,
-    "term",
-    "Volta a Manaus: recomeça"
-   ]
-  ],
-  "edges": [
-   [
-    "s",
-    "r",
-    "fr",
-    "l"
-   ],
-   [
-    "fr",
-    "r",
-    "sv",
-    "t"
-   ],
-   [
-    "sv",
-    "r",
-    "d0",
-    "l"
-   ],
-   [
-    "d0",
-    "b",
-    "no",
-    "t",
-    "Sim"
-   ],
-   [
-    "d0",
-    "r",
-    "pv",
-    "l",
-    "Não"
-   ],
-   [
-    "no",
-    "r",
-    "pv",
-    "b"
-   ],
-   [
-    "pv",
-    "r",
-    "d1",
-    "l"
-   ],
-   [
-    "d1",
-    "r",
-    "ol",
-    "t",
-    "Sim"
-   ],
-   [
-    "d1",
-    "t",
-    "sai",
-    "l",
-    "Não"
-   ],
-   [
-    "ol",
-    "r",
-    "olsk",
-    "b"
-   ],
-   [
-    "olsk",
-    "r",
-    "sai",
-    "b"
-   ],
-   [
-    "sai",
-    "r",
-    "d2",
-    "t"
-   ],
-   [
-    "d2",
-    "b",
-    "bq",
-    "t",
-    "Não"
-   ],
-   [
-    "d2",
-    "r",
-    "via",
-    "t",
-    "Sim"
-   ],
-   [
-    "bq",
-    "r",
-    "via",
-    "l"
-   ],
-   [
-    "via",
-    "r",
-    "fim",
-    "b"
-   ]
-  ]
- }
-}
-</script>
 <script>
-let FLUXOS = JSON.parse(document.getElementById('dados').textContent);
-/* =====================================================================
-   CORES DOS TIPOS DE CAIXA  ·  [fundo, borda, texto, arredondamento]
-   ===================================================================== */
-const ESTILO={step:['#fff','#1f5fa8','#16202c',7],crit:['#fdecea','#c0392b','#16202c',7],trig:['#efe7ff','#5b3fb0','#16202c',7],
- ok:['#e6f4ea','#2e7d4f','#16202c',7],term:['#1f3a5f','#1f3a5f','#fff',34],dec:['#efe9fb','#6b4c9a','#16202c',0]};
-
-/* =====================================================================
-   MOTOR DE DESENHO  ·  não precisa alterar
-   ===================================================================== */
-const G={CW:158,X0:140,NW:138,NH:78,LH:122,RH:118};
-function wrap(t,w){const out=[];let cur='';t.split(/\s+/).forEach(word=>{if(!cur)cur=word;else if((cur+' '+word).length<=w)cur+=' '+word;else{out.push(cur);cur=word;}
- while(cur.length>w){out.push(cur.slice(0,w));cur=cur.slice(w);}});if(cur)out.push(cur);return out;}
-const escR=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-function desenhar(key){
- const F=FLUXOS[key];const tops=[];let y=0;
- F.lanes.forEach(([n,r])=>{tops.push(y);y+=r===1?G.LH:G.LH+G.RH*(r-1)+10;});
- const H=y,ncol=Math.max(...F.nodes.map(n=>n[1]))+1,W=G.X0+G.CW*ncol+10,N={};
- F.nodes.forEach(([id,col,lane,row,kind,text])=>{const cx=G.X0+col*G.CW+G.NW/2;const rows=F.lanes[lane][1];
-  const cy=row==='mid'?tops[lane]+61+(rows-1)*G.RH/2:tops[lane]+61+row*G.RH;
-  if(kind==='dec'){N[id]={kind,cx,cy,lane,lines:wrap(text,15),hw:70,hh:50};}
-  else{const lines=wrap(text,23);const h=Math.max(G.NH,13*lines.length+14);N[id]={kind,cx,cy,lane,lines,hw:G.NW/2,hh:h/2};}});
- const port=(id,p)=>{const n=N[id];if(!n)throw new Error('Caixa inexistente: '+id);return {r:[n.cx+n.hw,n.cy],l:[n.cx-n.hw,n.cy],t:[n.cx,n.cy-n.hh],b:[n.cx,n.cy+n.hh]}[p];};
- const mk='ar_'+key;let o=[];
- o.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Arial,Helvetica,sans-serif">`);
- o.push(`<defs><marker id="${mk}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3b4a5e"/></marker></defs>`);
- F.lanes.forEach(([name],i)=>{const t=tops[i],h=(i+1<tops.length?tops[i+1]:H)-t;
-  o.push(`<rect x="0" y="${t}" width="${W}" height="${h}" fill="${i%2?'#ffffff':'#f2f5fa'}" stroke="#d5dce5"/><rect x="0" y="${t}" width="122" height="${h}" fill="#1f3a5f"/>`);
-  const ls=name.split('|'),y0=t+h/2-(ls.length-1)*8+4;ls.forEach((l,k)=>o.push(`<text x="61" y="${Math.round(y0+16*k)}" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">${escR(l)}</text>`));});
- const labels=[];
- F.edges.forEach(([a,pa,b,pb,label,opt])=>{opt=opt||{};const [x1,y1]=port(a,pa),[x2,y2]=port(b,pb);let pts;
-  if(opt.mode==='branch'){const x=N[a].cx+80;pts=[[x1,y1],[x,y1],[x,y2],[x2,y2]];}
-  else if(opt.mode==='loop'){const ly=tops[N[a].lane]+(opt.dy||117);pts=[[x1,y1],[N[a].cx,ly],[N[b].cx,ly],[x2,y2]];}
-  else if('rl'.includes(pa)&&'rl'.includes(pb)){if(y1===y2)pts=[[x1,y1],[x2,y2]];else{const xm=pb==='l'?x2-10:x2+10;pts=[[x1,y1],[xm,y1],[xm,y2],[x2,y2]];}}
-  else if('rl'.includes(pa))pts=[[x1,y1],[x2,y1],[x2,y2]];
-  else if('rl'.includes(pb))pts=[[x1,y1],[x1,y2],[x2,y2]];
-  else pts=x1===x2?[[x1,y1],[x2,y2]]:[[x1,y1],[x1,(y1+y2)/2],[x2,(y1+y2)/2],[x2,y2]];
-  o.push(`<polyline points="${pts.map(p=>Math.round(p[0])+','+Math.round(p[1])).join(' ')}" fill="none" stroke="#3b4a5e" stroke-width="1.6" marker-end="url(#${mk})"/>`);
-  if(label){let lx,ly;const n=N[a];
-   if(opt.lbl){lx=n.cx+opt.lbl[0];ly=n.cy+opt.lbl[1];}
-   else if(opt.mode==='branch'){lx=n.cx+76;ly=y2<y1?n.cy-6:n.cy+16;}
-   else if(opt.mode==='loop'){lx=n.cx+6;ly=n.cy+62;}
-   else if(pa==='r'){lx=x1+6;ly=y1-7;}else if(pa==='b'){lx=x1+6;ly=y1+15;}else if(pa==='t'){lx=x1+6;ly=y1-6;}else{lx=x1-26;ly=y1-7;}
-   labels.push(`<text x="${Math.round(lx)}" y="${Math.round(ly)}" font-size="11" font-weight="bold" fill="#3b4a5e" stroke="#fff" stroke-width="3" paint-order="stroke">${escR(label)}</text>`);}});
- Object.values(N).forEach(n=>{const [fill,stroke,fc,rx0]=ESTILO[n.kind];const {cx,cy,hw,hh,lines}=n;let lh;
-  if(n.kind==='dec'){o.push(`<polygon points="${cx},${cy-hh} ${cx+hw},${cy} ${cx},${cy+hh} ${cx-hw},${cy}" fill="${fill}" stroke="${stroke}" stroke-width="1.6"/>`);lh=12;}
-  else{const rx=n.kind==='term'&&lines.length>3?16:rx0;o.push(`<rect x="${cx-hw}" y="${cy-hh}" width="${2*hw}" height="${2*hh}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="1.6"/>`);lh=13;}
-  const y0=cy-(lines.length-1)*lh/2+4;lines.forEach((l,k)=>o.push(`<text x="${cx}" y="${Math.round(y0+k*lh)}" font-size="10.5" fill="${fc}" text-anchor="middle">${escR(l)}</text>`));});
- o.push(...labels,'</svg>');
- document.getElementById('chart-'+key).innerHTML=o.join('\n');
-}
-['c','p','v'].forEach(k=>{try{desenhar(k);}catch(e){document.getElementById('chart-'+k).innerHTML='<p style="padding:20px;color:#c0392b"><b>Erro no fluxograma:</b> '+e.message+'</p>';}});
-
-/* formato "Fluxograma" (editável): desenhado dos mesmos dados das raias.
-   Coluna principal = caixas da linha 0 (na ordem); coluna da direita = caixas da linha 1 (desvios).
-   Cor pela raia: SANKHYA roxo · SMF azul · terminal / a bordo / execução cinza; falha vermelho; decisão amarelo; início/fim verde. */
-const VC = { MX: 70, MW: 400, SX: 560, SW: 330, GAP: 46, TOPO: 20 };
-const vCor = (kind, lane) => kind === 'crit' ? ['#fdecea', '#b84943'] : kind === 'dec' ? ['#fff4d7', '#b28423'] : kind === 'term' || kind === 'ok' ? ['#e9f6ed', '#258454']
-  : /SANKHYA/i.test(lane) ? ['#ddd2f7', '#4b3590'] : /SMF/.test(lane) ? ['#eef5fb', '#527c9c'] : ['#f3f5f7', '#6c7c89'];
-function vLinhas(t, w) { return wrap(t, w); }
-function vertical(key) {
-  const F = FLUXOS[key], N = {}, main = [], side = [];
-  F.nodes.forEach((n, i) => { const [id, , lane, row, kind, text] = n; const o = { id, i, lane: F.lanes[lane][0].replace(/\|/g, ' '), kind, text, side: row === 1 };
-    const w = o.side ? VC.SW : VC.MW; o.w = kind === 'dec' ? 260 : w; o.lines = vLinhas(text, kind === 'dec' ? 26 : Math.floor(w / 7.4)); o.h = kind === 'dec' ? Math.max(86, 26 + 15 * o.lines.length) : 34 + 16 * o.lines.length;
-    N[id] = o; (o.side ? side : main).push(o); });
-  let y = VC.TOPO; main.forEach(o => { o.x = VC.MX + (VC.MW - o.w) / 2; o.y = y; y += o.h + VC.GAP; });
-  let sb = 0; side.forEach(o => { const pai = F.edges.find(e => e[2] === o.id && N[e[0]] && !N[e[0]].side); const py = pai ? N[pai[0]].y : (main[0] || { y: 0 }).y; o.x = VC.SX; o.y = Math.max(py, sb + 18); sb = o.y + o.h; });
-  const H = Math.max(y, sb + 40), W = VC.SX + VC.SW + 60, mid = o => o.y + o.h / 2, cxM = VC.MX + VC.MW / 2;
-  const out = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="vsvg"><defs><marker id="va_${key}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#465564"/></marker></defs>`];
-  const seta = (d, lbl, lx, ly) => { out.push(`<path d="${d}" fill="none" stroke="#465564" stroke-width="1.8" marker-end="url(#va_${key})"/>`); if (lbl) out.push(`<text x="${lx}" y="${ly}" font-size="12" font-weight="bold" fill="#394956" stroke="#fff" stroke-width="3" paint-order="stroke">${escR(lbl)}</text>`); };
-  let gut = 0;
-  F.edges.forEach(([a, , b, , lbl]) => { const A = N[a], B = N[b]; if (!A || !B) return;
-    if (!A.side && !B.side) { const ia = main.indexOf(A), ib = main.indexOf(B);
-      if (ib === ia + 1) seta(`M${cxM} ${A.y + A.h} V${B.y - 2}`, lbl, cxM + 8, A.y + A.h + 16);
-      else { const gx = VC.MX - 18 - 12 * (gut++ % 3); seta(`M${A.x} ${mid(A)} H${gx} V${mid(B)} H${B.x - 2}`, lbl, gx + 4, mid(A) - 6); } }
-    else if (!A.side && B.side) seta(`M${A.x + A.w} ${mid(A)} H${B.x - 30} V${mid(B)} H${B.x - 2}`, lbl, A.x + A.w + 6, mid(A) - 6);
-    else if (A.side && !B.side) { const gx = VC.SX + VC.SW + 22; seta(`M${A.x + A.w} ${mid(A)} H${gx} V${mid(B) + 10} H${B.x + B.w + 2}`, lbl, gx - 30, mid(A) - 6); }
-    else seta(`M${A.x + A.w / 2} ${A.y + A.h} V${B.y - 2}`, lbl, A.x + A.w / 2 + 8, A.y + A.h + 16); });
-  Object.values(N).forEach(o => { const [fill, stroke] = vCor(o.kind, o.lane), tag = o.kind === 'term' ? '' : `<div class="vq">${escR(o.lane)}</div>`;
-    if (o.kind === 'dec') out.push(`<polygon points="${o.x + o.w / 2},${o.y} ${o.x + o.w},${o.y + o.h / 2} ${o.x + o.w / 2},${o.y + o.h} ${o.x},${o.y + o.h / 2}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`);
-    else out.push(`<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="${o.kind === 'term' ? 22 : 5}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`);
-    const fx = o.kind === 'dec' ? o.x + 40 : o.x + 6, fw = o.kind === 'dec' ? o.w - 80 : o.w - 12;
-    out.push(`<foreignObject x="${fx}" y="${o.y + 3}" width="${fw}" height="${o.h - 6}"><div xmlns="http://www.w3.org/1999/xhtml" class="vbox${o.kind === 'dec' ? ' vdec' : ''}">${o.kind === 'dec' ? '' : tag}<div class="vt" contenteditable="true" spellcheck="false" data-k="${key}" data-i="${o.i}">${escR(o.text)}</div></div></foreignObject>`); });
-  out.push('</svg>');
-  document.getElementById('et-' + key).innerHTML = out.join('');
-}
-
-function tudo() { ['p', 'c', 'v'].forEach(k => { try { desenhar(k); } catch (e) { document.getElementById('chart-' + k).innerHTML = '<p style="padding:20px;color:#c0392b"><b>Erro no fluxograma:</b> ' + e.message + '</p>'; } vertical(k); }); }
-tudo();
-document.addEventListener('input', e => { const d = e.target.closest('.vt'); if (!d) return; FLUXOS[d.dataset.k].nodes[+d.dataset.i][5] = d.innerText.replace(/\s+/g, ' ').trim(); try { desenhar(d.dataset.k); } catch (er) { } });
-document.addEventListener('focusout', e => { const d = e.target.closest('.vt'); if (d) setTimeout(() => vertical(d.dataset.k), 0); });
-document.querySelectorAll('.vista button').forEach(b => b.onclick = () => { document.querySelectorAll('.vista button').forEach(x => x.classList.toggle('on', x === b)); document.body.className = b.dataset.v; });
-const tabs = document.querySelectorAll('.tab'), panels = document.querySelectorAll('.panel');
-tabs.forEach(b => b.onclick = () => { tabs.forEach(x => x.classList.toggle('on', x === b)); panels.forEach(x => x.classList.toggle('on', x.id === b.dataset.t)); });
-document.getElementById('fit').onclick = function () { const on = this.dataset.on !== '1'; this.dataset.on = on ? '1' : ''; this.textContent = on ? 'Tamanho real' : 'Ajustar à tela'; document.querySelectorAll('.chart').forEach(c => c.classList.toggle('fitw', on)); };
-document.getElementById('baixar').onclick = () => {
-  const c = document.documentElement.cloneNode(true);
-  c.querySelector('#dados').textContent = '\n' + JSON.stringify(FLUXOS, null, 1) + '\n';
-  c.querySelectorAll('.chart, .ets').forEach(x => x.innerHTML = '');
-  c.querySelector('body').className = 'vEt';
-  const blob = new Blob(['<!DOCTYPE html>\n' + c.outerHTML], { type: 'text/html;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = 'fluxo_smf_sankhya_editado.html'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+const RAIAS = {
+  sup: ['Supervisor de Manutenção', 'programa, lança, confere e encerra'],
+  eq:  ['Equipe de manutenção / terceiro', 'executa no porto (NP 5.8)'],
+  bo:  ['Bordo', 'Comandante ou Coord. de Operações'],
+  ctf: ['CTF / MFM', 'troca de óleo, itens embarcados, viagem'],
+  op:  ['Operador de Medição / Líder', 'FR 027_L no terminal']
 };
+const SIS = { smf: ['SMF', 's-smf'], sk: ['Sankhya', 's-sk'], pp: ['Papel', 's-pp'] };
+const FLUXOS = [
+ { id: 'prev', nome: '1 · Preventiva', lead: 'Do plano (Anexo I) até a OM encerrada no Sankhya com a evidência anexada.', raias: ['sup', 'eq', 'ctf', 'bo'], etapas: [
+  { r: 'sup', t: 'Programar a preventiva', s: 'smf', d: '2 · Programar preventiva', n: ['Vencidos, do mês e embarcados já vêm marcados'] },
+  { r: 'sup', t: 'Abrir a OM', s: 'sk', d: 'nº da OM', n: ['Com o texto gerado pelo SMF'] },
+  { r: 'sup', t: 'Emitir o formulário', s: 'smf', d: 'Anexo II-B' },
+  { r: 'eq', t: 'Executar o serviço no porto', s: 'pp', d: 'Anexo II-B', x: [{ r: 'ctf', t: 'Itens embarcados em viagem', s: 'pp', d: 'hora-alvo', n: ['CTF/MFM faz a bordo'] }] },
+  { r: 'bo', t: 'Receber o serviço', s: 'pp', d: 'assina o Anexo II-B' },
+  { r: 'sup', t: 'Lançar o formulário', s: 'smf', d: '3 · Executar e lançar', n: ['Foto do formulário assinado', 'OK / NOK por item'], dec: ['Algum NOK?', 'Sim → vira falha e segue para a Corretiva'] },
+  { r: 'sup', t: 'Conferir e encerrar', s: 'smf', d: '4 · Conferir e encerrar', n: ['O cronograma recebe o realizado'] },
+  { r: 'sup', t: 'Anexar o PDF e encerrar a OM', s: 'sk', d: 'PDF do Anexo II-B', fim: true }
+ ]},
+ { id: 'corr', nome: '2 · Corretiva', lead: 'Da falha detectada até o reparo encerrado e a eficácia verificada.', raias: ['op', 'sup', 'ctf', 'eq', 'bo'], etapas: [
+  { r: 'op', t: 'Detectar a falha', s: 'pp', d: 'FR 027_L (NO)', n: ['O SMF registra como falha sem OM'], x: [{ r: 'sup', t: 'NOK da preventiva', s: 'smf', d: 'lançamento' }, { r: 'ctf', t: 'Avaria em viagem', s: 'smf', d: '⚠ Avaria' }] },
+  { r: 'sup', t: 'Classificar a criticidade', s: 'smf', d: 'NP 5.5.1', n: ['Crítica, Alta, Média ou Baixa'], dec: ['Efeito na saída', 'Crítica bloqueia · Alta restringe'] },
+  { r: 'sup', t: 'Abrir a OM corretiva', s: 'sk', d: 'nº da OM', n: ['O prazo de início conta daqui'] },
+  { r: 'sup', t: 'Informar o nº da OM', s: 'smf', d: 'Anexo II-A' },
+  { r: 'eq', t: 'Executar o reparo', s: 'pp', d: 'Anexo II-A', n: ['Fotos de antes e depois', 'Causa da falha'] },
+  { r: 'bo', t: 'Receber o serviço', s: 'pp', d: 'assina o Anexo II-A' },
+  { r: 'sup', t: 'Conferir e encerrar', s: 'smf', d: '4 · Conferir e encerrar', n: ['Serviço do Anexo I refeito por completo: o vencimento conta dali'] },
+  { r: 'sup', t: 'Anexar o PDF e encerrar a OM', s: 'sk', d: 'PDF do Anexo II-A' },
+  { r: 'sup', t: 'Verificar a eficácia', s: 'smf', d: '90 dias', n: ['Crítica e Alta'], fim: true }
+ ]},
+ { id: 'porto', nome: '3 · Porto e viagem', lead: 'O ciclo do empurrador: chegada, óleo, preventiva, saída e acompanhamento em viagem.', raias: ['op', 'bo', 'ctf', 'sup'], etapas: [
+  { r: 'op', t: 'Registrar a chegada', s: 'pp', d: 'FR 027_L de chegada', n: ['CTF atesta · Coord. de Operações valida', 'Horímetros entram no SMF', 'NO com nº vira corretiva; sem nº fica pendente'] },
+  { r: 'ctf', t: 'Trocar o óleo', s: 'pp', d: 'FR 049_B', n: ['O Supervisor recebe', 'Popa e motobomba 5 HP: a cada saída'] },
+  { r: 'sup', t: 'Programar e executar a preventiva', s: 'smf', d: '2 → 3 → 4', vai: ['Fluxo 1 · Preventiva', 'ok'] },
+  { r: 'op', t: 'Registrar a saída', s: 'pp', d: 'FR 027_L de saída', dec: ['Situação na saída', 'Liberada → confirmar · Com restrição → justificativa + foto · Bloqueada → justificativa + Coord. de Operações que autorizou + foto'] },
+  { r: 'ctf', t: 'Acompanhar a viagem', s: 'smf', d: 'parâmetros do MCP', n: ['MFM informa por rádio ou WhatsApp', 'O Supervisor lança no SMF'], vai: ['Avaria → Fluxo 2 · Corretiva'] },
+  { r: 'op', t: 'Voltar ao porto', s: 'pp', d: 'recomeça no 1', fim: true }
+ ]}
+];
+const VISAO = { nome: 'Visão geral' };
+const $ = s => document.querySelector(s);
+let ABA = 'geral', PI = -1;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function abas() { $('#abas').innerHTML = [['geral', 'Visão geral'], ...FLUXOS.map(f => [f.id, f.nome])].map(([id, n]) => `<button data-aba="${id}" class="${ABA === id ? 'on' : ''}">${n}</button>`).join(''); }
+function geral() {
+  const C = [['Chegada', 'FR 027_L de chegada', 'Operador/Líder no terminal · horímetros e não conformidades entram no SMF', 'no terminal'],
+    ['Programar', '2 · Programar preventiva', 'Supervisor monta a OM com o que venceu e o que vence no mês e abre no Sankhya', 'menu 2'],
+    ['Executar', '3 · Executar e lançar', 'Equipe executa, bordo recebe e assina, Supervisor lança o formulário', 'menu 3'],
+    ['Conferir', '4 · Conferir e encerrar', 'Supervisor confere no SMF, anexa o PDF e encerra a OM no Sankhya', 'menu 4'],
+    ['Saída', 'FR 027_L de saída', 'O SMF calcula: liberada, com restrição ou bloqueada', 'no terminal']];
+  return `<section><p class="lead">O SMF organiza o trabalho da manutenção da frota na ordem em que ele acontece. O Sankhya continua sendo o registro oficial da OM: número, compras e encerramento com a evidência anexada.</p>
+   <div class="ciclo">${C.map(c => `<div class="ch"><span class="n">${c[3].toUpperCase()}</span><b>${c[0]}</b><span class="doc" style="margin-top:6px">${c[1]}</span><small>${c[2]}</small></div>`).join('')}</div>
+   <div class="sis"><div><span class="sel s-smf">SMF</span><h3>Fluxo e controle</h3><p>O que vence, o que está aberto, quem precisa fazer o quê, situação de cada empurrador, horímetros, óleo e indicadores.</p></div>
+    <div><span class="sel s-sk">Sankhya</span><h3>Registro oficial da OM</h3><p>Número da OM, compras e requisições, encerramento com o PDF do Anexo II anexado. Vale para a auditoria.</p></div>
+    <div><span class="sel s-pp">Papel</span><h3>Formulários assinados</h3><p>FR 027_L, Anexo II-A/II-B e FR 049_B. A foto ou o PDF assinado volta para o SMF.</p></div></div>
+   <div class="frota"><b>1 · Frota</b> é a tela de todo dia: mostra o que precisa de você agora, os empurradores no porto e em viagem e a situação de cada um. A ficha de cada empurrador abre pelo nome.</div></section>`;
+}
+function cardHTML(e, num, extra, path) {
+  const s = SIS[e.s] || SIS.smf;
+  return `<div class="card ${e.s}" data-p="${num}" data-path="${path}"><span class="num${extra ? ' x' : ''}">${extra ? num + '·' : num}</span>
+    <div class="t" data-ed="t">${esc(e.t)}</div><div class="bd"><span class="sel ${s[1]}">${s[0]}</span>${e.d ? `<span class="doc" data-ed="d">${esc(e.d)}</span>` : ''}</div>
+    ${e.n ? `<ul>${e.n.map((x, j) => `<li data-ed="n${j}">${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${e.dec ? `<div class="dec">◇ <b data-ed="dec0">${esc(e.dec[0])}</b><br><span data-ed="dec1">${esc(e.dec[1])}</span></div>` : ''}
+    ${e.vai ? `<div class="vai${e.vai[1] ? ' ' + e.vai[1] : ''}" data-ed="vai">→ ${esc(e.vai[0])}</div>` : ''}
+    ${e.fim ? '<div class="vai ok">■ Fim</div>' : ''}</div>`;
+}
+function fluxo(f) {
+  const R = f.raias, N = f.etapas.length;
+  let cells = R.map((r, i) => `<div class="lane" style="grid-row:${i + 1}"><div>${RAIAS[r][0]}<small>${RAIAS[r][1]}</small></div></div>`).join('');
+  R.forEach((r, i) => { for (let c = 0; c < N; c++) { const e = f.etapas[c]; let h = '';
+      if (e.r === r) h = cardHTML(e, c + 1, false, FLUXOS.indexOf(f) + '.' + c); else (e.x || []).forEach((x, k) => { if (x.r === r) h = cardHTML(x, c + 1, true, FLUXOS.indexOf(f) + '.' + c + '.' + k); });
+      cells += `<div class="cell" style="grid-row:${i + 1};grid-column:${c + 2}">${h}</div>`; } });
+  return `<section><p class="lead">${f.lead}</p><div class="leg"><span><i class="sel s-smf">SMF</i> no sistema</span><span><i class="sel s-sk">Sankhya</i> registro oficial da OM</span><span><i class="sel s-pp">Papel</i> formulário assinado</span><span><span class="doc">doc</span> documento ou tela</span><span>◇ decisão</span><span>Cartão cinza = acontece junto com a etapa do mesmo número</span></div>
+   <div class="wrap"><div class="grid" style="grid-template-columns:200px repeat(${N},232px)">${cells}</div><svg class="lig"></svg></div></section>`;
+}
+function ligar() {
+  const w = $('.wrap'); if (!w) return; const svg = w.querySelector('svg.lig'), g = w.querySelector('.grid'); svg.setAttribute('width', g.scrollWidth); svg.setAttribute('height', g.scrollHeight);
+  const wr = w.getBoundingClientRect(), pos = el => { const r = el.getBoundingClientRect(); return { l: r.left - wr.left + w.scrollLeft, r: r.right - wr.left + w.scrollLeft, t: r.top - wr.top + w.scrollTop, b: r.bottom - wr.top + w.scrollTop }; };
+  const M = [...w.querySelectorAll('.card')].filter(c => !c.querySelector('.num.x')).sort((a, b) => a.dataset.p - b.dataset.p);
+  let d = '<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5F6368"/></marker></defs>';
+  for (let i = 0; i < M.length - 1; i++) { const a = pos(M[i]), b = pos(M[i + 1]), y1 = (a.t + a.b) / 2, y2 = (b.t + b.b) / 2, x1 = a.r, x2 = b.l - 2, xm = (x1 + x2) / 2;
+    d += `<path d="M${x1},${y1} L${xm},${y1} L${xm},${y2} L${x2},${y2}" fill="none" stroke="#5F6368" stroke-width="1.6" marker-end="url(#ar)"/>`; }
+  w.querySelectorAll('.card .num.x').forEach(n => { const c = n.closest('.card'), m = M.find(x => x.dataset.p === c.dataset.p); if (!m) return; const a = pos(m), b = pos(c), x = (a.l + a.r) / 2;
+    d += `<path d="M${x},${a.b < b.t ? a.b : a.t} L${x},${a.b < b.t ? b.t : b.b}" fill="none" stroke="#9AA0A6" stroke-width="1.4" stroke-dasharray="4 3"/>`; });
+  svg.innerHTML = d;
+}
+function sincroniza() {   /* leva o que foi editado na tela de volta para FLUXOS */
+  document.querySelectorAll('.card[data-path]').forEach(c => { const [fi, ei, xi] = c.dataset.path.split('.').map(Number), e0 = FLUXOS[fi].etapas[ei], e = xi >= 0 ? e0.x[xi] : e0;
+    c.querySelectorAll('[data-ed]').forEach(el => { const k = el.dataset.ed, v = el.textContent.replace(/^→\s*/, '').trim();
+      if (k === 't' || k === 'd') e[k] = v; else if (k[0] === 'n') e.n[+k.slice(1)] = v; else if (k.startsWith('dec')) e.dec[+k.slice(3)] = v; else if (k === 'vai') e.vai[0] = v; }); });
+}
+function tela() { abas(); const f = FLUXOS.find(x => x.id === ABA); $('#tela').innerHTML = f ? fluxo(f) : geral(); if (f) requestAnimationFrame(ligar); PI = -1; marca(); }
+function passos() { const f = FLUXOS.find(x => x.id === ABA); return f ? f.etapas : []; }
+function marca() { const E = passos(); document.querySelectorAll('.card').forEach(c => { const p = +c.dataset.p - 1; c.classList.toggle('at', p === PI); c.classList.toggle('feito', PI >= 0 && p < PI); });
+  const e = E[PI]; if (!e) { $('#bTx').innerHTML = ABA === 'geral' ? 'Escolha um fluxo nas abas para apresentar passo a passo.' : ''; return; }
+  const at = document.querySelector(`.card[data-p="${PI + 1}"]`); if (at) at.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  $('#bTx').innerHTML = `<b>${PI + 1} de ${E.length} · ${esc(e.t)}</b><small>${esc(RAIAS[e.r][0])} · ${SIS[e.s][0]}${e.d ? ' · ' + esc(e.d) : ''}${e.n ? ' · ' + e.n.map(esc).join(' · ') : ''}</small>`; }
+function apresentar(on) { document.body.classList.toggle('pres', on); if (on) { if (ABA === 'geral') { ABA = FLUXOS[0].id; tela(); } PI = 0; } else PI = -1; marca(); }
+function anda(d) { const E = passos(); if (!document.body.classList.contains('pres')) return; PI = Math.max(0, Math.min(E.length - 1, PI + d));
+  if (d > 0 && PI === E.length - 1 && document.querySelector(`.card.at[data-p="${E.length}"]`)) { const i = FLUXOS.findIndex(x => x.id === ABA); if (i < FLUXOS.length - 1) { ABA = FLUXOS[i + 1].id; tela(); document.body.classList.add('pres'); PI = 0; } }
+  marca(); }
+document.addEventListener('click', e => { const a = e.target.closest('[data-aba]'); if (a) { if (document.body.classList.contains('edit')) sincroniza(); ABA = a.dataset.aba; const p = document.body.classList.contains('pres'); tela(); if (p && ABA !== 'geral') { PI = 0; marca(); } } });
+$('#bAp').onclick = () => apresentar(!document.body.classList.contains('pres'));
+$('#bProx').onclick = () => anda(1); $('#bAnt').onclick = () => anda(-1); $('#bSai').onclick = () => apresentar(false);
+$('#bPr').onclick = () => { document.querySelectorAll('section').forEach(s => s.hidden = false); window.print(); };
+document.addEventListener('keydown', e => { if (!document.body.classList.contains('pres')) return; if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); anda(1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') anda(-1); if (e.key === 'Escape') apresentar(false); });
+$('#bEd').onclick = () => { const on = !document.body.classList.toggle('edit') ? false : true; document.querySelectorAll('[data-ed]').forEach(x => x.contentEditable = on); $('#bBx').hidden = !on; $('#bEd').textContent = on ? 'Terminar edição' : 'Editar'; };
+$('#bBx').onclick = () => { sincroniza(); const sc = document.querySelector('script'), t0 = sc.textContent, i = t0.indexOf('const FLUXOS = '), j = t0.indexOf('\nconst VISAO');
+  sc.textContent = t0.slice(0, i) + 'const FLUXOS = ' + JSON.stringify(FLUXOS, null, 1) + ';' + t0.slice(j);
+  document.body.classList.remove('edit', 'pres'); $('#abas').innerHTML = ''; $('#tela').innerHTML = ''; $('#bBx').hidden = true; $('#bEd').textContent = 'Editar';
+  const b = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' }), a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'fluxo_smf_sankhya.html'; a.click(); sc.textContent = t0; tela(); };
+addEventListener('resize', () => ligar());
+tela();
 </script>
-</body></html>
+</body>
+</html>
