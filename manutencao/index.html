@@ -9205,6 +9205,31 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-omsf
 { const st = document.createElement('style'); st.textContent = `.tp-pv,.tp-cr{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:5px;color:#fff;white-space:nowrap}.tp-pv{background:#188038}.tp-cr{background:#C5221F}`; document.head.appendChild(st); }
 </script>
 <script>
+/* ===== Plano preventivo no padrão das telas (pedido do Supervisor, 22/10/2026) =====
+   Cronograma preventivo: linha de explicação, Resumo (os números do prKpis) numa janela, "Empurrador" no lugar de "Embarcação"; o gráfico "Carga e execução por mês" sai daqui e vai para Indicadores.
+   Anexo I: sai o quadro de contagens antigo (o Resumo do padTela explica 164 = 157 no cronograma + 7 fora), filtros, legenda e lista numa janela só "Itens do plano", só "Imprimir" no topo (PDF completo no ⋯). */
+'use strict';
+{ const v0 = VX.cxr; VX.cxr = function () { const t = document.createElement('div'); t.innerHTML = v0.apply(this, arguments);
+  const vh = t.querySelector('.vh'), ws = t.querySelector('.cm-ws'); if (!vh || !ws) return t.innerHTML;
+  const d = vh.querySelector(':scope > div'); if (d && !d.querySelector('p')) d.insertAdjacentHTML('beforeend', '<p>Previsto × realizado por empurrador e mês · plano do Anexo I da NP 055</p>');
+  const ks = t.querySelector('.cf-ks'); if (ks) { ks.remove(); ws.insertAdjacentHTML('afterbegin', `<div class="card cf-card"><h2>Resumo</h2>${ks.outerHTML}</div>`); }
+  [...ws.querySelectorAll(':scope > .card')].forEach(c => { if (c.querySelector('#cfGraf')) c.remove(); });
+  t.querySelectorAll('label, th').forEach(x => x.childNodes.forEach(n => { if (n.nodeType === 3 && /Embarcação/.test(n.textContent)) n.textContent = n.textContent.replace('Embarcação', 'Empurrador'); }));
+  return t.innerHTML; }; }
+{ const v0 = VX.kpi || vKpi; VX.kpi = function () { let g = ''; try { const ms = PRV.ms; PRV.ms = null; const T = prFrotaV2(hoje().getFullYear()); PRV.ms = ms;
+    g = `<div class="card"><h2>Cronograma preventivo · carga e execução por mês · frota ${hoje().getFullYear()}</h2>${prGrafico(T.F, T.hm, T.sel)}</div>`; } catch (e) { }
+  return v0.apply(this, arguments) + g; }; }
+{ const v0 = VX.matriz; VX.matriz = function () { const t = document.createElement('div'); t.innerHTML = v0.apply(this, arguments);
+  const c = t.querySelector('.a1-counts'); if (c) c.remove();
+  const pr = t.querySelectorAll('.vh [data-a1pr]'); if (pr[0]) pr[0].textContent = '🖨 Imprimir';
+  if (pr[1]) { const m = document.createElement('details'); m.className = 'pt-mais'; m.innerHTML = `<summary class="mbtn" title="Mais opções">⋯</summary><div>${pr[1].outerHTML}</div>`; pr[1].replaceWith(m); }
+  t.querySelectorAll('.vh button').forEach(b => { if (/Ver cronograma/.test(b.textContent)) b.remove(); });
+  const parts = ['.a1-bar', '.a1-leg', '.a1-lista'].map(s => t.querySelector(':scope > ' + s)).filter(Boolean);
+  if (parts.length) { const card = document.createElement('div'); card.className = 'card'; card.innerHTML = '<h2>Itens do plano</h2>'; parts[0].before(card); parts.forEach(p => card.appendChild(p)); }
+  return t.innerHTML; }; }
+{ const st = document.createElement('style'); st.textContent = `.pt-mais{position:relative;display:inline-block}.pt-mais>summary{list-style:none;cursor:pointer}.pt-mais>summary::-webkit-details-marker{display:none}.pt-mais>div{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #DADCE0;border-radius:8px;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:30;white-space:nowrap}`; document.head.appendChild(st); }
+</script>
+<script>
 /* ===== Padrão das telas aplicado às telas restantes (aprovado em 22/10/2026) =====
    padTela(view, cfg): só apresentação sobre o HTML que a tela já gera — cabeçalho padrão (título + 1 linha + botões da tela + Reorganizar),
    janela "Resumo" com 3–4 números (cfg.resumo) e todos os blocos em janelas livres (janelasLivres, chave smf_<view>_lay). A lógica e os handlers da tela não mudam. */
@@ -9213,7 +9238,7 @@ function padTela(view, cfg) {
   const nm = 'v' + view[0].toUpperCase() + view.slice(1), v0 = VX[view] || (typeof window[nm] === 'function' ? window[nm] : null); if (!v0) return;
   VX[view] = function () { const h = v0.apply(this, arguments), t = document.createElement('div'); t.innerHTML = h;
     if (t.querySelector(':scope > .cm-v')) return h;
-    const old = t.querySelector(':scope > .vh'), btns = old ? [...old.querySelectorAll(':scope > button, :scope > a.mbtn, :scope > label.mbtn, :scope > nav')].map(b => b.outerHTML).join('') : ''; if (old) old.remove();
+    const old = t.querySelector(':scope > .vh'), btns = old ? [...old.querySelectorAll(':scope > button, :scope > a.mbtn, :scope > label.mbtn, :scope > nav, :scope > details')].map(b => b.outerHTML).join('') : ''; if (old) old.remove();
     const k = (l, val, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${val}</b></div>`;
     let res = ''; try { const R = cfg.resumo ? cfg.resumo() : null; if (R && R.length) res = `<div class="card"><h2>Resumo</h2><div class="f2-ks">${R.map(r => k(...r)).join('')}</div></div>`; } catch (e) { }
     const cards = [...t.children].filter(c => !(c.tagName === 'P' && !c.textContent.trim())).map(c => c.classList.contains('card') ? c.outerHTML : `<div class="card">${c.outerHTML}</div>`).join('');
@@ -9230,8 +9255,8 @@ padTela('apoio', { titulo: 'Biblioteca', desc: 'Documentos, sobressalentes crít
   resumo: () => [['Documentos', recs('doc').length], ['Sobressalentes críticos', recs('peca').length], ['Prestadores', recs('terc').length], ['Treinamentos', recs('trein').length]] });
 padTela('admin', { titulo: 'Administração', desc: 'Cadastro da frota, senhas e perfis, nuvem e dados de exemplo' });
 padTela('kpi', { titulo: 'Indicadores', desc: 'Indicadores da NP 055 (item 9), riscos e medidas de mitigação' });
-padTela('matriz', { titulo: 'Anexo I · plano de manutenção', desc: 'Itens do plano preventivo e preditivo (NP 055) · consulta',
-  resumo: () => [['Itens no plano', A1.filter(t => t.kind === 'prog').length], ['Prioridade crítica', A1.filter(t => t.kind === 'prog' && t.prio === 'Crítica').length, 'var(--badt)'], ['Por horímetro', A1.filter(t => t.kind === 'prog' && t.h).length], ['Por calendário', A1.filter(t => t.kind === 'prog' && !t.h && t.m).length]] });
+padTela('matriz', { titulo: 'Anexo I · plano de manutenção', desc: 'Itens do plano preventivo e preditivo (NP 055 · 7.2) · consulta · clique num item para ver o método',
+  resumo: () => { const P = A1.filter(t => t.kind !== 'sup'), fora = P.filter(t => t.kind !== 'prog'), n = k => fora.filter(t => t.kind === k).length; return [['Itens no plano', P.length], ['No cronograma (periódicos)', P.length - fora.length], ['Fora do cronograma', fora.length + ' <small class="note" style="font-size:11px;font-weight:400">' + [n('cond') && n('cond') + ' por condição', n('novo') && n('novo') + ' de equipamento novo', n('saida') && n('saida') + ' por saída'].filter(Boolean).join(' · ') + '</small>'], ['Prioridade Crítica', P.filter(t => t.prio === 'Crítica').length, 'var(--badt)']]; } });
 padTela('controle', { titulo: 'Calibração e docagem', desc: 'Calibração de instrumentos e plano de docagem (vistoria em seco)' });
 </script>
 </body>
