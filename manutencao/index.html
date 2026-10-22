@@ -3656,7 +3656,7 @@ const ULT = {};   // última aba aberta em cada área
 const ico = k => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
 function numBadge(k) { const h = badge(k); const m = h.match(/>(\d+)</); return m ? +m[1] : 0; }
 renderNav = function () {
-  const cur = secDe(VIEW); ULT[cur.id] = VIEW === 'om' ? (ULT[cur.id] || 'acomp') : VIEW;
+  const cur = secDe(VIEW); ULT[cur.id] = cur.views.some(v => v[0] === VIEW) ? VIEW : (ULT[cur.id] || cur.views[0][0]);   /* o menu volta para a última ABA da seção, nunca para uma tela de dentro (ficha, OM, programar) */
   const item = s => { const n = s.views.reduce((a, [k]) => a + numBadge(k), 0), red = s.views.some(([k]) => /class="n"/.test(badge(k)));
     return `<a href="#${ULT[s.id] || s.views[0][0]}" class="${s === cur ? 'on' : ''}">${ico(s.id)}<span>${s.nome}</span>${n ? `<span class="n${red ? '' : ' blue'}">${n}</span>` : ''}</a>`; };
   $('#nav').innerHTML = SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Configuração</div>' + SECOES.filter(s => s.cfg).map(item).join('');
@@ -9297,7 +9297,7 @@ function vBarco2() {   /* ficha compacta (22/10/2026): situação no cabeçalho,
     ${hist.slice(0, 12).map(h => `<tr><td>${tag(h)}</td><td class="mono">${brD(h.d)}</td><td colspan="3">${h.t}</td></tr>`).join('') || '<tr><td colspan="5" class="note">Nada registrado ainda.</td></tr>'}</tbody></table></div>`;
   const sel = `<select id="brV" style="font-size:15px;font-weight:600;width:auto">${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>`;
   const situ = s ? (s.st === 'porto' ? '⚓ No porto' : '⛴ Em viagem') + ' desde ' + brD(s.at) : 'Situação não informada';
-  return `<div class="cm-v"><div class="vh"><div><h1>${esc(v.nome)}</h1><p>${situ} · ficha do empurrador</p></div><span class="sp"></span>${sel}<a class="mbtn" href="#hor">⏱ Lançar horímetro</a><a class="mbtn pri" href="#emitir/${v.id}">Programar preventiva</a>
+  return `<div class="cm-v fb-v"><div class="vh"><div><h1>${esc(v.nome)}</h1><p>${situ} · ficha do empurrador</p></div><span class="sp"></span>${sel}<a class="mbtn" href="#hor">⏱ Lançar horímetro</a><a class="mbtn pri" href="#emitir/${v.id}">Programar preventiva</a>
     <details class="pt-mais"><summary class="mbtn" title="Mais opções">⋯</summary><div><button class="mbtn" data-frv="${v.id}">🛢 Lançar troca de óleo</button><br><button class="mbtn" data-situ="${v.id}|${s && s.st === 'porto' ? 'viagem' : 'porto'}">${s && s.st === 'porto' ? '⛴ Saiu de viagem' : '⚓ Chegou em Manaus'}</button><br><a class="mbtn" href="#crono" data-prit="${v.id}">Item por item (Anexo I)</a></div></details>
     <button class="mbtn" data-brreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
    <div class="cm-ws">${resumo}${eq}${omsH}</div></div>`;
@@ -9313,7 +9313,7 @@ VX.barco = vBarco2;
 { const st = document.createElement('style'); st.textContent = `.sb-r{display:flex;align-items:center;gap:10px}.sb-t{flex:1;min-width:80px;height:10px;background:#EEF2F6;border-radius:5px;overflow:hidden}.sb-t i{display:block;height:100%;border-radius:5px}
 .sb-green{background:#1967D2}.sb-amber{background:#E3A008}.sb-red{background:#D93025}.sb-sem{background:#BDC1C6}.sb-x{min-width:118px;font-size:13px;white-space:nowrap}.sb-greent{color:#1967D2}.sb-ambert{color:#B06000}.sb-redt{color:#C5221F}.sb-semt{color:#5F6368}
 .sb-l{display:flex;flex-direction:column;gap:10px;margin:8px 0}.sb-li{display:grid;grid-template-columns:minmax(120px,190px) 1fr;align-items:center;gap:12px}.sb-li.click{cursor:pointer}.sb-li.click:hover{background:#F8F9FA}.sb-lb b{display:block;font-size:13.5px}.sb-lb small{color:#5F6368;font-size:11.5px}
-.fb-t td{padding:4px 8px}.fb-sep td{font-size:11px;color:#5F6368;text-transform:uppercase;letter-spacing:.3px;padding-top:12px!important;border-bottom:1px solid #E3E6EA}a.f2-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #9AA0A6}a.f2-nm:hover{color:#1967D2;border-bottom-color:#1967D2}`; document.head.appendChild(st); }
+.fb-v{max-width:1180px}.fb-t td{padding:4px 8px}.fb-sep td{font-size:11px;color:#5F6368;text-transform:uppercase;letter-spacing:.3px;padding-top:12px!important;border-bottom:1px solid #E3E6EA}a.f2-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #9AA0A6}a.f2-nm:hover{color:#1967D2;border-bottom-color:#1967D2}`; document.head.appendChild(st); }
 </script>
 <script>
 /* ===== Condição: Óleo da frota no padrão e aba Horímetros da frota (pedido do Supervisor, 22/10/2026: "condição por sistema é vago; não consigo ver de forma global por empurrador o horímetro de cada equipamento") =====
