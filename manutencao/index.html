@@ -6926,13 +6926,6 @@ function vPR() {
   const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
   if (!v) return prTelaFrota(ativos, ano, nAp, anos);   // frota toda: layout de uma linha por empurrador
   return prTelaEmp(v, ativos, ano, B, anos);            // um empurrador: uma linha por serviço (o PDF continua no formato P/R)
-  return `<div class="vh"><div><h1>Cronograma · ${esc(v ? v.nome : 'frota toda')} · ${ano}</h1><p>Cada serviço tem duas linhas: <b>P</b> = previsto no mês · <b>R</b> = realizado (<span style="color:#188038">✓ no prazo</span>, <span style="color:#E37400">✓ com atraso</span>, <span style="color:#C5221F">✗ venceu e não foi feito</span>). Passe o mouse no R para ver a OM ou o FR 049_B.</p></div><span class="sp"></span>${v ? `<a class="mbtn" href="#crono" data-prit="${v.id}">📋 Item por item (Anexo I)</a>` : ''}<a class="mbtn" href="#audit">📁 Histórico e evidências</a><button class="mbtn" data-prpdf="${PRV.v === 'frota' ? 'resumo' : 'um'}">⬇ PDF desta tela</button><button class="mbtn" data-prpdf="frota">⬇ PDF completo (resumo + cada empurrador)</button></div>
-   <div class="card row" style="gap:12px;flex-wrap:wrap"><select id="prV" style="font-size:18px;font-weight:600;width:auto;min-width:150px"><option value="frota"${PRV.v === 'frota' ? ' selected' : ''}>Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}"${a.id === PRV.v ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select>
-    <select id="prA" style="width:auto">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select>
-    ${v ? (B ? `<span class="pill p-ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : `<span class="pill p-warn">Previsto ainda não aprovado</span>`) : `<span class="pill ${nAp === ativos.length ? 'p-ok' : 'p-warn'}">${nAp}/${ativos.length} empurradores com o previsto aprovado</span>`}<span class="sp"></span>
-    ${can.admin() ? `<button class="mbtn ${(v ? B : nAp === ativos.length) ? '' : 'pri'}" data-prapr>${(v ? B : nAp) ? 'Revisar aprovação da frota' : '✓ Aprovar o previsto de ' + ano + ' (frota)'}</button>` : ''}</div>
-   <div class="card pr-card"><div class="pr-hd"><b>Cronograma de manutenção preventiva · previsto × realizado</b><span>${esc(v ? v.nome : 'Consolidado da frota')} · ${ano}</span></div>${v ? '' : '<p class="note" style="margin:-2px 0 8px">Número = quantidade de serviços no mês. Clique no empurrador para ver serviço por serviço.</p>'}<div class="tw">${v ? prTabela(v, ano) : prFrota(ano)}</div>
-    <div class="pr-ass"><div>Supervisor de Manutenção</div><div>Data</div></div></div>`;
 }
 VX.cxr = vPR;
 AFTER.cxr = function () { const m = $('#main');
