@@ -2364,10 +2364,12 @@ async function salvarViagem(vid, h) {
   if (S.url && can.admin()) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } } catch (e) { } }
 }
 // Fazer preventiva: vencido · vence no mês (data, ou horas projetadas no ritmo do motor, a mesma conta do cronograma) · vence antes de voltar (adi = só aviso) · em dia
+// OM embarcada (NP 7.3): itens que o CTF/MFM executa a bordo na hora-alvo, definidos pelo Supervisor em 22/10/2026 (zincos, reversores e itens de 1.000 h ficam no porto)
+const EMBARCA = ['1.1.2', '1.1.3', '1.1.4', '1.1.5', '1.1.7', '1.1.8', '3.1.4', '3.1.5', '3.1.6', '3.1.17', '3.2.3', '3.2.4', '3.2.5'];
 function emGrp(v, x) { const s = x.s; if (s.st === 'venc') return 'venc'; if (s.st === 'sem' || s.st === 'cond') return 'sem';
   const fimMes = new Date(hoje().getFullYear(), hoje().getMonth() + 1, 0, 23, 59), hp = posHor(x.pos, x.t, v.id), hr = horAtual(v.id, hp), rate = (typeof horasDiaPos === 'function' && horasDiaPos(v.id, hp)) || horasDia(v.id) || 10;
   const dd = s.alvoD ? new Date(s.alvoD) : null, dh = s.alvoH != null && hr ? new Date(Date.now() + Math.max(0, s.alvoH - hr.h) / rate * 864e5) : null, due = [dd, dh].filter(Boolean).sort((a, b) => a - b)[0];
-  return due && due <= fimMes ? 'mes' : s.st === 'viag' ? 'adi' : 'ok'; }
+  return due && due <= fimMes ? 'mes' : s.st === 'viag' ? (EMBARCA.includes(x.t.id) ? 'emb' : 'adi') : 'ok'; }
 function vEmitir() {
   const vid = ARG || S.cfg.frota[0].id, v = vessel(vid); if (!v) return '<div class="empty">Embarcação não encontrada.</div>';
   if (EM.vid !== vid) { EM.sel.clear(); EM.draft = null; EM.vid = vid; EM.viag = null; }
@@ -2375,17 +2377,17 @@ function vEmitir() {
   const P = painelVessel(v, vh);
   // o que fazer no mês, esteja o empurrador onde estiver (decisão do Supervisor, 21/10/2026): vencido · vence no mês (data, ou horas projetadas no ritmo do motor, a mesma conta do cronograma) · vence antes de voltar = só aviso para adiantar
   const grp = x => emGrp(v, x);
-  const GRP = { venc: ['Vencidos', 'p-bad', 'Vencido'], mes: ['Vencem neste mês', 'p-warn', 'Vence no mês'], adi: ['Vence antes de voltar · adiantar?', 'p-inf', 'Vence antes de voltar · adiantar?'], sem: ['Sem histórico', 'p-mut', 'Sem histórico'], ok: ['Em dia', 'p-ok', 'Em dia'] };
+  const GRP = { venc: ['Vencidos', 'p-bad', 'Vencido'], mes: ['Vencem neste mês', 'p-warn', 'Vence no mês'], emb: ['OM embarcada · o CTF/MFM executa a bordo na hora-alvo', 'p-inf', 'Embarcada · CTF/MFM'], adi: ['Vence antes de voltar · adiantar?', 'p-inf', 'Vence antes de voltar · adiantar?'], sem: ['Sem histórico', 'p-mut', 'Sem histórico'], ok: ['Em dia', 'p-ok', 'Em dia'] };
   const bloco = pos => {
     let rows = P.filter(x => x.pos === pos && x.t.kind === 'prog'); if (!rows.length) return '';
     rows.forEach(x => { x.g = grp(x); });
-    const pend = rows.filter(x => ['venc', 'mes'].includes(x.g) && !x.om && !(typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos)));
-    if (EM.mostrar === 'pend') rows = rows.filter(x => ['venc', 'mes', 'adi', 'sem'].includes(x.g) || x.om);
-    const ord = { venc: 0, mes: 1, adi: 2, sem: 3, ok: 4 }; rows.sort((a, b) => ord[a.g] - ord[b.g]);
+    const pend = rows.filter(x => ['venc', 'mes', 'emb'].includes(x.g) && !x.om && !(typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos)));
+    if (EM.mostrar === 'pend') rows = rows.filter(x => ['venc', 'mes', 'emb', 'adi', 'sem'].includes(x.g) || x.om);
+    const ord = { venc: 0, mes: 1, emb: 2, adi: 3, sem: 4, ok: 5 }; rows.sort((a, b) => ord[a.g] - ord[b.g]);
     const cnt = [...EM.sel].filter(k => k.startsWith(pos + '|')).length;
     const hr = horAtual(v.id, pos === 'UN' ? mcpPos(v)[0] : pos);
     return `<div class="card"><div class="row"><h2>${posTag(pos)} ${posNome(v, pos)}${MCAS.includes(pos) ? ' · ' + mcaNome(v, pos) : isMcp(pos) ? ' · MCP + ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : 'reversor ?') : ''}</h2><span class="mono note">${hr ? nf(hr.h) + ' h · ' + brD(hr.date) : 'sem horímetro'}</span><span class="sp"></span>
-     <button class="mbtn sm" data-pick="${pos}" ${pend.length ? '' : 'disabled'}>Marcar os ${pend.length} vencidos e do mês</button><button class="mbtn sm pri" data-mkom="${pos}" ${cnt ? '' : 'disabled'}>Abrir OM com ${cnt} ${cnt === 1 ? 'item' : 'itens'}</button></div>
+     <button class="mbtn sm" data-pick="${pos}" ${pend.length ? '' : 'disabled'}>Marcar os ${pend.length} vencidos, do mês e embarcados</button><button class="mbtn sm pri" data-mkom="${pos}" ${cnt ? '' : 'disabled'}>Abrir OM com ${cnt} ${cnt === 1 ? 'item' : 'itens'}</button></div>
      ${EM.draft && EM.draft.pos === pos ? draftHtml(v, P) : ''}
      <div class="tw"><table class="t"><thead><tr><th></th><th>Nº</th><th>Item do Anexo I</th><th>Prior.</th><th>Intervalo</th><th>Situação</th></tr></thead><tbody>
      ${rows.map((x, i) => { const k = pos + '|' + x.t.id, iv = intervalo(x.t); return (i === 0 || rows[i - 1].g !== x.g ? `<tr class="em-g"><td colspan="6"><b>${GRP[x.g][0]}</b>${x.g === 'adi' ? ' <span class="note">— não entram no "Marcar"; adiante se quiser, pela próxima viagem</span>' : ''}</td></tr>` : '') + `<tr><td><input type="checkbox" data-sel="${k}" ${EM.sel.has(k) ? 'checked' : ''} ${x.om ? 'disabled' : ''} aria-label="Selecionar ${x.t.id}"></td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}<div class="note">${esc(EQN[x.t.eq])}</div></td><td>${x.t.prio === 'Crítica' ? '<span class="pill p-bad">Crítica</span>' : x.t.prio}</td><td class="mono">${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' ou ')}</td><td>${x.om ? `<a class="pill p-inf" href="#om/${x.om.id}">Já na OM ${esc(x.om.num)}</a>` : `<span class="pill ${GRP[x.g][1]}">${GRP[x.g][2]}</span>`}<div class="note">${esc(x.s.txt || '')}</div></td></tr>`; }).join('') || '<tr><td colspan="6" class="note">Nada vencido nem do mês nesta posição.</td></tr>'}
@@ -2406,7 +2408,7 @@ function draftHtml(v, P) {
   d.alvoH = hs.length ? Math.min(...hs) : (hr ? hr.h + (EM.viag ?? viagemDe(v)) : null);
   d.alvoD = ds.length ? isoD(new Date(Math.min(...ds))) : null;
   const sisL = [...new Set(d.ids.map(id => A1M[id].sis))].join(' / ');
-  d.txt = `PREVENTIVA – ${v.nome} – ${POSN[pos]}\nSistema: ${sisL}\nItens Anexo I: ${d.ids.join(', ')}\n${d.ids.map(id => '- ' + id + ' ' + A1M[id].chk).join('\n')}\nHorímetro atual: ${hr ? nf(hr.h) + ' h' : '—'}${d.alvoH ? ' · Hora-alvo: ' + nf(d.alvoH) + ' h' : ''}${d.alvoD ? ' · Data-limite: ' + brD(d.alvoD) : ''}\nRegistro: Anexo II (II-B) + fotos antes/depois – NP 055 7.4`;
+  d.txt = `PREVENTIVA – ${v.nome} – ${POSN[pos]}\nSistema: ${sisL}\nItens Anexo I: ${d.ids.join(', ')}\n${d.ids.map(id => { const x = P.find(y => y.pos === pos && y.t.id === id), emb = x && emGrp(v, x) === 'emb'; return '- ' + id + ' ' + A1M[id].chk + (emb ? ' [EMBARCADA · CTF/MFM a bordo' + (x.s.alvoH ? ' · hora-alvo ' + nf(x.s.alvoH) + ' h' : '') + ']' : ''); }).join('\n')}\nHorímetro atual: ${hr ? nf(hr.h) + ' h' : '—'}${d.alvoH ? ' · Hora-alvo: ' + nf(d.alvoH) + ' h' : ''}${d.alvoD ? ' · Data-limite: ' + brD(d.alvoD) : ''}\nRegistro: Anexo II (II-B) + fotos antes/depois – NP 055 7.4`;
   return `<div class="sk"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">1 · Texto para abrir a OM no Sankhya</b><div class="skt" id="omTxt">${esc(d.txt)}</div>
    <div class="row"><button class="mbtn sm" data-act="copiarTxt">Copiar texto</button><span class="note" id="cpM"></span></div>
    <b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">2 · Número gerado pelo Sankhya</b>
@@ -2420,7 +2422,7 @@ AFTER.emitir = () => {
     if (t.dataset.sel) { t.checked ? EM.sel.add(t.dataset.sel) : EM.sel.delete(t.dataset.sel); EM.draft = null; render(); } };
   m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.mostra) { EM.mostrar = t.dataset.mostra; render(); }
-    if (t.dataset.pick) { const v = vessel(EM.vid); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'mes'].includes(emGrp(v, x)) && !x.om).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); }
+    if (t.dataset.pick) { const v = vessel(EM.vid); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, x)) && !x.om).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); }
     if (t.dataset.mkom) { if (!precisa(true)) return; const pos = t.dataset.mkom; EM.draft = { pos, ids: [...EM.sel].filter(k => k.startsWith(pos + '|')).map(k => k.split('|')[1]) }; render(); setTimeout(() => $('#omNum') && $('#omNum').focus(), 30); }
     if (t.dataset.act === 'cancDraft') { EM.draft = null; render(); }
     if (t.dataset.act === 'copiarTxt') { try { await navigator.clipboard.writeText(EM.draft.txt); $('#cpM').textContent = 'Copiado.'; } catch (er) { const r = document.createRange(); r.selectNodeContents($('#omTxt')); getSelection().removeAllRanges(); getSelection().addRange(r); $('#cpM').textContent = 'Texto selecionado. Use Ctrl+C.'; } }
@@ -5811,13 +5813,15 @@ function embPartes(v) {
 }
 function embTexto(v, partes) {
   const n = partes.reduce((a, p) => a + p.ids.length, 0), ds = partes.map(p => p.alvoD).filter(Boolean).sort();
-  return `PREVENTIVA – ${v.nome} – janela de manutenção (equipe de terra)\n${n} itens do Anexo I (NP 055)${ds[0] ? ' · data-limite ' + brD(ds[0]) : ''}\n` +
-    partes.map(p => `\n[${posCurtoE(v, p.pos)}]${p.hr ? ' horímetro ' + nf(p.hr.h) + ' h' : ''}${p.alvoH && p.pos !== 'UN' ? ' · hora-alvo ' + nf(p.alvoH) + ' h' : ''}\n` + p.ids.map(id => '- ' + id + ' ' + A1M[id].chk).join('\n')).join('\n');
+  const PV = painelVessel(v, EM.viag ?? viagemDe(v)), emb = (pos, id) => { const x = PV.find(y => y.pos === pos && y.t.id === id); return x && emGrp(v, x) === 'emb' ? x : null; };   // OM embarcada (NP 7.3)
+  const temEmb = partes.some(p => p.ids.some(id => emb(p.pos, id)));
+  return `PREVENTIVA – ${v.nome} – janela de manutenção (equipe de terra)${temEmb ? ' + itens EMBARCADOS (CTF/MFM a bordo, na hora-alvo)' : ''}\n${n} itens do Anexo I (NP 055)${ds[0] ? ' · data-limite ' + brD(ds[0]) : ''}\n` +
+    partes.map(p => `\n[${posCurtoE(v, p.pos)}]${p.hr ? ' horímetro ' + nf(p.hr.h) + ' h' : ''}${p.alvoH && p.pos !== 'UN' ? ' · hora-alvo ' + nf(p.alvoH) + ' h' : ''}\n` + p.ids.map(id => { const x = emb(p.pos, id); return '- ' + id + ' ' + A1M[id].chk + (x ? ' [EMBARCADA · CTF/MFM' + (x.s.alvoH ? ' · hora-alvo ' + nf(x.s.alvoH) + ' h' : '') + ']' : ''); }).join('\n')).join('\n');
 }
 { const v0 = vEmitir; vEmitir = function () {
   let h = v0(); const v = vessel(ARG || S.cfg.frota[0].id); if (!v) return h;
   h = h.replace(/<button class="mbtn sm pri" data-mkom="[^"]*"[^>]*>[^<]*<\/button>/g, '')
-    .replace('Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.', 'Uma OM por embarcação em cada janela. 1) Marque o que vence na viagem · 2) abra a OM no Sankhya com o texto pronto · 3) digite o número · 4) imprima a ficha para a equipe de terra.');
+    .replace('Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.', 'Uma OM por embarcação em cada janela. 1) Marque os vencidos, os do mês e os embarcados · 2) abra a OM no Sankhya com o texto pronto · 3) digite o número · 4) imprima a ficha para a equipe de terra.');
   const P = painelVessel(v, EM.viag ?? viagemDe(v)), pend = P.filter(x => x.t.kind === 'prog' && ['venc', 'viag'].includes(x.s.st) && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)), n = EM.sel.size;
   const dr = EM.draft && EM.draft.emb ? (() => { const pt = embPartes(v); EM.draft.partes = pt; EM.draft.txt = embTexto(v, pt); return `<div class="sk" style="margin-top:10px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Texto para abrir a OM no Sankhya</b><div class="skt" id="omTxt">${esc(EM.draft.txt)}</div>
      <div class="row"><button class="mbtn sm" data-act="copiarTxt">Copiar texto</button><span class="note" id="cpM"></span></div>
@@ -5839,7 +5843,7 @@ function embTexto(v, partes) {
       EM.draft = null;
       if (t.dataset.emb === 'abrir') { if (!precisa(true)) return; EM.draft = { emb: true }; }
       render(); if (EM.draft) setTimeout(() => { const x = $('#omNum'); if (x) { x.focus(); x.scrollIntoView({ block: 'center' }); } }, 40); return; }
-    if (t && t.dataset.pick) { e.stopImmediatePropagation(); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'mes'].includes(emGrp(v, x)) && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); return; }
+    if (t && t.dataset.pick) { e.stopImmediatePropagation(); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, x)) && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); return; }
     if (t && t.dataset.act === 'emitirEmb') {
       const n = $('#omNum').value.trim();
       if (!/^\d{3,}$/.test(n)) { $('#emE').textContent = 'Digite o número da OM gerado pelo Sankhya (só números).'; return; }
