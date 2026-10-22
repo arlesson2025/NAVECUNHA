@@ -9508,5 +9508,74 @@ padTela('falhas2', { titulo: 'Executar e lançar · Corretivas e falhas', desc: 
 { const st = document.createElement('style'); st.textContent = `#nav .n.blue{background:#1967D2!important;color:#fff}#nav a.nav-zero{opacity:.55}#nav a.nav-zero:hover{opacity:1}
 .nx-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0 4px;padding:12px 16px;background:#E8F0FE;border:1px solid #C6DAFC;border-radius:10px;font-size:13.5px;color:#174EA6}`; document.head.appendChild(st); }
 </script>
+<script>
+/* ===== Menu pela NP 055 (aprovado em 22/10/2026): Operação (NP 5 e 7.3) · Acompanhamento (NP 6, 7 e 9) · Suporte (NP 5.6, 5.7, 8 e 10) =====
+   · Registros e evidências (view regs, NP 8): FR 027_L, Anexo II-B, Anexo II-A (+ RNC em Crítica/Alta) e FR 049_B num lugar só, por empurrador, período e tipo, com o PDF no Drive e se já foi anexado no Sankhya (skFim)
+   · item da NP ao lado do título de cada tela (NP_TAG) · Biblioteca em abas (Documentos, Peças e estoque mínimo, Prestadores, Treinamento, Óleo e resíduos)
+   · Plano preventivo ganha a aba Equipamentos críticos (view critic, NP 6, derivada da prioridade do Anexo I) */
+'use strict';
+const REGF = { v: '', per: '3m', t: 'todos', sk: '' };
+function regLista() {
+  const L = [], vis = new Set();
+  recs('fr027').forEach(r => L.push({ d: r.date, vid: r.vessel, doc: 'FR 027_L', cls: 'p-inf', ref: r.mov === 'saida' ? 'Saída' : 'Chegada', pdf: drivePdf(r.pdfFileId, '📄 PDF'), sk: null, go: '' }));
+  oms().filter(o => o.status === 'encerrada' && !o.excluido).forEach(o => { const g = o.grupo || o.id; if (vis.has(g)) return; vis.add(g); const P = o.grupo ? omGrupo(o.grupo) : [o], h = P.find(x => x.pdfFileId) || P[0], c = o.tipo === 'C';
+    L.push({ d: o.dreal || isoD(new Date(o.fechadoAt || 0)), vid: o.vessel, doc: c ? 'Anexo II-A' : 'Anexo II-B', cls: c ? 'p-bad' : 'p-ok', ref: 'OM ' + (o.num || '—') + (c && /Crít|Alta/.test(o.classe || '') ? ' · RNC' : ''), pdf: drivePdf(h.pdfFileId, '📄 PDF'), sk: P.some(x => x.skFim) ? (P.find(x => x.skFim).skFim) : (o.seed ? 'seed' : false), go: o.grupo ? '#omg/' + encodeURIComponent(g) : '#om/' + o.id }); });
+  recs('lub').filter(r => r.tipo === 'fr049').forEach(r => L.push({ d: r.date, vid: r.vessel, doc: 'FR 049_B', cls: 'p-warn', ref: r.om ? 'OM ' + r.om : 'sem nº de OM', pdf: drivePdf(r.pdfFileId, '📄 PDF'), sk: r.om ? (r.skFim || (r.seed ? 'seed' : false)) : null, go: '' }));
+  return L.sort((a, b) => String(b.d).localeCompare(String(a.d)));
+}
+function vRegs() {
+  const H = hoje(), ini = REGF.per === 'mes' ? isoD(new Date(H.getFullYear(), H.getMonth(), 1)) : REGF.per === '3m' ? isoD(new Date(H.getFullYear(), H.getMonth() - 2, 1)) : REGF.per === 'ano' ? isoD(new Date(H.getFullYear(), 0, 1)) : '';
+  const T0 = regLista().filter(x => (!REGF.v || x.vid === REGF.v) && (!ini || String(x.d) >= ini));
+  const T = T0.filter(x => (REGF.t === 'todos' || x.doc === REGF.t) && (!REGF.sk || x.sk === false));
+  const chip = (k, val, l, n) => `<button class="cm-chip${REGF[k] === val ? ' on' : ''}" data-rgf="${k}|${val}">${l}${n != null ? ` <b>${n}</b>` : ''}</button>`;
+  const c = d => T0.filter(x => x.doc === d).length, falta = T0.filter(x => x.sk === false).length;
+  const skTx = x => x.sk === null ? '<span class="note">—</span>' : x.sk === 'seed' ? '<span class="note">exemplo</span>' : x.sk ? `<span class="pill p-ok">✓ anexado ${x.sk.at ? brD(String(x.sk.at).slice(0, 10)) : ''}</span>` : '<span class="pill p-bad">falta anexar</span>';
+  const sel = `<select id="rgV" style="width:auto"><option value="">Todos os empurradores</option>${S.cfg.frota.map(v => `<option value="${v.id}"${REGF.v === v.id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select>`;
+  return `<div class="vh"><div><h1>Registros e evidências</h1><p>x</p></div></div>
+   <div class="card"><h2>Registros · ${T.length}</h2>
+    <div class="cm-chips" style="margin-bottom:6px">${sel}<span class="note" style="margin:0 4px 0 10px">Período</span>${chip('per', 'mes', 'Este mês')}${chip('per', '3m', 'Últimos 3 meses')}${chip('per', 'ano', 'Este ano')}${chip('per', 'tudo', 'Tudo')}</div>
+    <div class="cm-chips" style="margin-bottom:10px"><span class="note" style="margin-right:4px">Documento</span>${chip('t', 'todos', 'Todos', T0.length)}${['FR 027_L', 'Anexo II-B', 'Anexo II-A', 'FR 049_B'].map(d => chip('t', d, d, c(d))).join('')}<span style="width:10px"></span>${chip('sk', REGF.sk ? '' : '1', 'Só o que falta anexar no Sankhya', falta)}</div>
+    <div class="tw" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Documento</th><th>Referência</th><th>Evidência</th><th>Sankhya</th><th></th></tr></thead><tbody>
+    ${T.slice(0, 300).map(x => `<tr><td class="mono">${x.d ? brD(String(x.d).slice(0, 10)) : '—'}</td><td><b>${esc(vName(x.vid))}</b></td><td><span class="pill ${x.cls}">${x.doc}</span></td><td>${esc(x.ref)}</td><td>${x.pdf}</td><td>${skTx(x)}</td><td class="rt-b">${x.go ? `<a class="mbtn sm" href="${x.go}">Abrir</a>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="note">Nenhum registro neste filtro.</td></tr>'}</tbody></table></div>
+    <p class="note">FR 027_L não vai para o Sankhya (fica no Drive). Anexo II e FR 049_B com nº de OM são anexados na OM do Sankhya, marcados em 4 · Conferir e encerrar.</p></div>`;
+}
+VX.regs = vRegs;
+padTela('regs', { titulo: 'Registros e evidências', desc: 'Tudo o que a auditoria pede, por empurrador e período',
+  resumo: () => { const L = regLista(); return [['Registros no total', L.length], ['Sem PDF no Drive', L.filter(x => /depois de sincronizar/.test(x.pdf)).length, 'var(--warnt)'], ['Falta anexar no Sankhya', L.filter(x => x.sk === false).length, 'var(--badt)']]; } });
+document.addEventListener('click', e => { const b = e.target.closest('[data-rgf]'); if (!b || VIEW !== 'regs') return; e.preventDefault(); e.stopPropagation(); const [k, v] = b.dataset.rgf.split('|'); REGF[k] = v; render(); }, true);
+document.addEventListener('change', e => { if (e.target.id === 'rgV' && VIEW === 'regs') { REGF.v = e.target.value; render(); } }, true);
+/* Equipamentos críticos (NP 6), derivado da prioridade dos itens do Anexo I */
+function vCritic() {
+  const P = A1.filter(t => t.kind !== 'sup'), E = new Map();
+  P.forEach(t => { const k = t.sis + '|' + t.eqn; const e = E.get(k) || { sis: t.sis, eqn: t.eqn, cr: [], al: [], n: 0 }; e.n++; if (t.prio === 'Crítica') e.cr.push(t); if (t.prio === 'Alta') e.al.push(t); E.set(k, e); });
+  const L = [...E.values()].filter(e => e.cr.length || e.al.length).sort((a, b) => b.cr.length - a.cr.length || b.al.length - a.al.length);
+  const ids = A => A.map(t => `<span class="mono" title="${esc(t.item + ' · ' + (t.chk || ''))}">${t.id}</span>`).join(' ');
+  const S0 = [...new Set(L.map(e => e.sis))];
+  return `<div class="vh"><div><h1>Equipamentos críticos</h1><p>x</p></div></div>
+   ${S0.map(s => { const Ls = L.filter(e => e.sis === s); return `<div class="card"><h2>${esc(s)}</h2><div class="tw"><table class="t"><thead><tr><th>Equipamento</th><th class="r">Itens Críticos</th><th class="r">Itens Alta</th><th>Itens do Anexo I</th></tr></thead><tbody>${Ls.map(e => `<tr><td><b>${esc(e.eqn)}</b></td><td class="r"><b style="color:var(--badt)">${e.cr.length || ''}</b></td><td class="r" style="color:var(--warnt)">${e.al.length || ''}</td><td class="note">${e.cr.length ? '<b>Críticos:</b> ' + ids(e.cr) : ''}${e.cr.length && e.al.length ? ' · ' : ''}${e.al.length ? 'Alta: ' + ids(e.al) : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }).join('')}
+   <p class="note">Lista derivada da prioridade de cada item do Anexo I. Item Crítico vencido sem OM bloqueia a saída; Alta vencida restringe (NP 5.5).</p>`;
+}
+VX.critic = vCritic;
+padTela('critic', { titulo: 'Equipamentos críticos', desc: 'Equipamentos com itens de prioridade Crítica ou Alta no Anexo I',
+  resumo: () => { const P = A1.filter(t => t.kind !== 'sup'); let blo = 0; try { blo = frotaMatriz().filter(x => x.sit >= 2).length; } catch (e) { } return [['Equipamentos com item Crítico', new Set(P.filter(t => t.prio === 'Crítica').map(t => t.sis + t.eqn)).size, 'var(--badt)'], ['Itens Críticos', P.filter(t => t.prio === 'Crítica').length, 'var(--badt)'], ['Itens Alta', P.filter(t => t.prio === 'Alta').length, 'var(--warnt)'], ['Empurradores bloqueados agora', blo, blo ? 'var(--badt)' : 'var(--okt)']]; } });
+/* menu: Suporte = Registros e evidências · Biblioteca (abas) · Administração; Plano preventivo ganha Equipamentos críticos */
+{ const by = id => SECOES.find(s => s.id === id), cr = by('crono'), cd = by('cond2'), bib = by('apoio2'), adm = by('adm');
+  if (cr && !cr.views.some(x => x[0] === 'critic')) { const i = cr.views.findIndex(x => x[0] === 'matriz'); cr.views.splice(i < 0 ? cr.views.length : i + 1, 0, ['critic', 'Equipamentos críticos']); cr.sub = 'cronograma, Anexo I, críticos'; }
+  if (cd) cd.extra = (cd.extra || []).filter(x => x !== 'lubcons');
+  if (bib) { bib.views = [['bib', 'Documentos'], ['pecas', 'Peças e estoque mínimo'], ['terc', 'Prestadores'], ['trein', 'Treinamento'], ['lubcons', 'Óleo e resíduos']]; bib.extra = [...new Set((bib.extra || []).filter(x => !['bib', 'pecas', 'terc', 'trein', 'lubcons'].includes(x)).concat(['apoio']))]; bib.sub = 'documentos, peças, treinamento'; }
+  if (!by('regs2')) { const i = SECOES.indexOf(bib); SECOES.splice(i < 0 ? SECOES.length : i, 0, { id: 'regs2', nome: 'Registros e evidências', sub: 'para a auditoria', views: [['regs', 'Registros e evidências']], cfg: true }); }
+  if (adm) adm.sub = 'usuários, frota, nuvem';
+  ICO.regs2 = '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/>'; }
+{ const n0 = renderNav; renderNav = function () { const x = n0.apply(this, arguments), nav = document.getElementById('nav'); if (!nav || (typeof ehOperador === 'function' && ehOperador())) return x;
+  const g = nav.querySelector('.grp-apoio'); if (g) g.remove();
+  const A = [...nav.querySelectorAll(':scope > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg)), i = L.findIndex(s => s.id === 'regs2');
+  if (i >= 0 && A[i]) A[i].insertAdjacentHTML('beforebegin', '<div class="grp-t grp-apoio">Suporte</div>');
+  return x; }; }
+/* item da NP 055 ao lado do título de cada tela */
+const NP_TAG = { rotina: '5.3 a 5.5', barco: '5.3 a 5.5', emitir: '7.3', oms: '7.2', falhas2: '5.5', omconf: '7.4 e 5.8', om: '7.4 · Anexo II', omg: '7.4 · Anexo II-B', cxr: '7.3', matriz: '7 · Anexo I', critic: '6', controle: '7',
+  horfrota: '5.5.1', hor: '5.5.1', oleo: '7 · FR 049_B', anoleo: '7', parmcp: '5.4', compr: '7', kpi: '9', regs: '8', bib: '8', apoio: '8', pecas: '5.6 e 5.6.1', terc: '5.8', trein: '10', lubcons: '5.7', admin: '4' };
+{ const r0 = render; render = function () { const x = r0.apply(this, arguments); try { if (!(typeof ehOperador === 'function' && ehOperador())) { const t = NP_TAG[VIEW], h = document.querySelector('#main .vh h1'); if (t && h && !h.querySelector('.np-tag')) h.insertAdjacentHTML('beforeend', `<span class="np-tag">NP 055 · ${t}</span>`); } } catch (e) { } return x; }; }
+{ const st = document.createElement('style'); st.textContent = `.np-tag{display:inline-block;margin-left:10px;padding:2px 8px;border:1px solid #C6DAFC;background:#F3F7FE;color:#1967D2;border-radius:5px;font-size:11.5px;font-weight:600;letter-spacing:.2px;vertical-align:middle}`; document.head.appendChild(st); }
+</script>
 </body>
 </html>
