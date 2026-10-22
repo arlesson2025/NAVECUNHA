@@ -7756,7 +7756,7 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   const h = by('hoje'), cr = by('crono'), om = by('omsv2'); if (h) h.sub = 'Diário & Viagens'; if (cr) { cr.nome = 'Plano preventivo'; cr.views = [['cxr', 'Cronograma preventivo'], ['matriz', 'Anexo I']]; if (adm) adm.views = adm.views.filter(x => x[0] !== 'matriz'); }   /* Anexo I: aba do Plano preventivo (antes em Administração) */ if (om) om.nome = 'OMs (Sankhya)';
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
 // o número de empurradores acompanha o cadastro da frota · subtítulo (s.sub) em letra pequena dentro do item do menu
-{ const n0 = renderNav; renderNav = function () { const h = SECOES.find(s => s.id === 'hoje'); if (h && S.cfg && S.cfg.frota) h.nome = 'Frota ' + S.cfg.frota.length + ' Empurradores';
+{ const n0 = renderNav; renderNav = function () { const h = SECOES.find(s => s.id === 'hoje'); if (h && S.cfg && S.cfg.frota) h.nome = '1 · Frota';
   const solta = !SECOES.some(s => s.views.some(v => v[0] === VIEW) || (s.extra || []).includes(VIEW)) && VIEW !== 'om', u0 = h ? ULT[h.id] : null;   /* tela fora de todas as seções: secDe cai na 1ª seção e gravaria esta tela como a última da Frota */
   const x = n0.apply(this, arguments); if (solta && h) { ULT[h.id] = u0; const a1 = document.querySelector('#nav > a'); if (a1) { a1.setAttribute('href', '#' + (u0 || h.views[0][0])); a1.classList.remove('on'); } }
   const A = [...document.querySelectorAll('#nav > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
@@ -7772,7 +7772,7 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   ['crono', 'cond2', 'graf', 'apoio2', 'adm'].forEach(id => { const s = by(id); if (s) s.cfg = true; });
   ICO.prev2 = ICO.crono || ICO.oms || ICO.hoje; ICO.conf2 = ICO.adm || ICO.omsv2 || ICO.oms; }
 { const n0 = renderNav; renderNav = function () { const x = n0.apply(this, arguments), nav = document.getElementById('nav');
-  if (nav && !(typeof ehOperador === 'function' && ehOperador())) { const g = nav.querySelector('.grp-t'); if (g) g.textContent = 'Consulta'; if (!nav.querySelector('.grp-trab')) nav.insertAdjacentHTML('afterbegin', '<div class="grp-t grp-trab">O trabalho</div>'); }
+  if (nav && !(typeof ehOperador === 'function' && ehOperador())) { const g = nav.querySelector('.grp-t'); if (g) g.textContent = 'Gestão'; if (!nav.querySelector('.grp-trab')) nav.insertAdjacentHTML('afterbegin', '<div class="grp-t grp-trab">Operação</div>'); }
   return x; }; }
 // Conferir e encerrar: OMs (preventiva e corretiva) na etapa "Em conferência", que só o Supervisor aprova
 function vOmConf() { const L = [], vis = new Set();
@@ -8989,6 +8989,29 @@ function popaSit(v, e, s) { const pend = popaPend(v).some(x => x.key === e.key),
 { const a0 = agoraLista; agoraLista = function () { const L = a0();
   S.cfg.frota.forEach(v => { const P = popaPend(v); if (P.length) L.push({ p: 2, txt: `<b>${esc(v.nome)}</b> · trocar o óleo ${P.map(popaDo).join(' e ')} antes de sair (a cada saída · sem isso a saída fica com restrição)`, btn: `<a class="mbtn sm" href="#oleo">FR 049_B</a>` }); });
   return L.sort((a, b) => a.p - b.p); }; }
+</script>
+<script>
+/* ===== Menu profissional (aprovado pelo Supervisor em 22/10/2026): Operação = o ciclo numerado 1 a 4 (início, meio e fim) · Gestão = consulta =====
+   Nomes no mesmo padrão (substantivo + subtítulo curto em minúsculas, sem "&"), um ícone por item, nº de empurradores como número discreto ao lado de "Frota". */
+'use strict';
+{ const by = id => SECOES.find(s => s.id === id), set = (id, nome, sub) => { const s = by(id); if (s) { if (nome) s.nome = nome; s.sub = sub; } };
+  set('hoje', null, 'chegada, saída e viagem');
+  set('prev2', '2 · Programar preventiva', 'vencidos e do mês');
+  set('omsv2', '3 · Executar e lançar', 'OMs do Sankhya');
+  set('conf2', '4 · Conferir e encerrar', 'fechar no SMF e no Sankhya');
+  set('crono', 'Plano preventivo', 'cronograma e Anexo I');
+  set('cond2', 'Condição dos equipamentos', 'óleo, compressão, parâmetros');
+  const ic = { hoje: '<path d="M3 17l2 3h14l2-3"/><path d="M5 17v-6h14v6"/><path d="M12 11V4"/><path d="M12 4l5 3h-5"/>',
+    prev2: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M12 13v5M9.5 15.5h5"/>',
+    omsv2: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h4"/>',
+    conf2: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>',
+    crono: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+    cond2: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><circle cx="12" cy="18" r="1"/>' };
+  Object.assign(ICO, ic); }
+{ const n0 = renderNav; renderNav = function () { const x = n0.apply(this, arguments), a = document.querySelector('#nav > a'), sp = a && a.querySelector('span');
+  if (sp && S.cfg && S.cfg.frota && !sp.querySelector('.nav-ct') && !(typeof ehOperador === 'function' && ehOperador())) { const sub = sp.querySelector('.nav-sub'), ct = `<small class="nav-ct" title="empurradores cadastrados">${S.cfg.frota.length}</small>`; sub ? sub.insertAdjacentHTML('beforebegin', ct) : sp.insertAdjacentHTML('beforeend', ct); }
+  return x; }; }
+{ const st = document.createElement('style'); st.textContent = `#nav .nav-ct{display:inline-block;margin-left:6px;padding:0 6px;border-radius:9px;background:#E8EAED;color:#5F6368;font-size:10.5px;font-weight:600;vertical-align:1px}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
