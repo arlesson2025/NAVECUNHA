@@ -1,5 +1,5 @@
 /* SMF · service worker: deixa o painel abrir sem internet. Os dados vão ao Google quando houver sinal. */
-const CACHE='ctle-man-v18';
+const CACHE='ctle-man-v19';
 // essenciais: sem eles o SMF não abre ou o FR 049_B (óleo) não abre/salva — se algum falhar, a instalação é cancelada e o aparelho segue com a versão anterior inteira
 const ESSENCIAIS=['./','./index.html','./dados/anexo1.js','./forms/FR_049_B.html','./forms/FR_027_L.html','./lib/html2canvas.min.js','./lib/jspdf.umd.min.js'];
 // opcionais: se falharem (sinal fraco a bordo), usa a cópia da versão anterior ou fica para a próxima abertura com sinal
@@ -16,6 +16,6 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.
 self.addEventListener('fetch',e=>{
   const r=e.request;
   if(r.method!=='GET'||new URL(r.url).origin!==location.origin)return;   // chamadas ao Google não passam por aqui
-  e.respondWith(fetch(r).then(res=>{const cp=res.clone();caches.open(CACHE).then(c=>c.put(r,cp)).catch(()=>{});return res;})
+  e.respondWith(fetch(new Request(r.url,{cache:'no-cache',credentials:'same-origin'})).then(res=>{const cp=res.clone();caches.open(CACHE).then(c=>c.put(r,cp)).catch(()=>{});return res;})
     .catch(()=>caches.match(r).then(m=>m||caches.match('./index.html'))));
 });
