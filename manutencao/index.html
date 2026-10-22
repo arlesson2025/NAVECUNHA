@@ -3052,7 +3052,8 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
   try { await snapshotBacklog(); } catch (e) { }
   setSync('', S.url ? 'Conectando…' : 'Modo local (sem nuvem)');
   syncNow(); setInterval(() => scheduleSync(10), 5 * 60e3);
-  if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude|claudeusercontent/.test(location.host)) navigator.serviceWorker.register('sw.js').catch(() => { });
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude|claudeusercontent/.test(location.host)) { const tinha = !!navigator.serviceWorker.controller; navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => { });   /* versão nova assume e a tela recarrega uma vez sozinha (sem ficar na versão velha guardada) */
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (tinha && !sessionStorage.getItem('smf_recarregou')) { sessionStorage.setItem('smf_recarregou', '1'); location.reload(); } }); }
 })();
 
 </script>
