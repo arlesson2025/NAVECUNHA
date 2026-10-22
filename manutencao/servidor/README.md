@@ -21,7 +21,7 @@ O app usa a **versão implantada**, que pode ser mais antiga que o código abert
 | 21/10/2026 | `VERSAO = 12` · implantada e confirmada pelo ping do SMF | tipo `situ` (foi para a boia / voltou ao cais), também permitido ao Operador; colunas legíveis |
 | 21/10/2026 | `VERSAO = 13` · implantada e confirmada pelo ping do SMF | tipo `avaria` (avaria em viagem até virar corretiva), também permitido ao Operador; colunas legíveis |
 | 21/10/2026 | `VERSAO = 14` · implantada (o Supervisor viu “versão 14” no SMF) | tipo `param` (leituras do painel do MCP informadas pelo MFM em viagem, Anexo I 1.1.30), só Supervisor/Analista (o Operador não grava); colunas legíveis |
-| 21/10/2026 | `VERSAO = 15` · **a implantar** | OM encerrada não pode voltar a outra etapa por gravação de quem não é Supervisor (antes só o encerrar era barrado) |
+| 21/10/2026 | `VERSAO = 15` · implantada e confirmada pelo ping do SMF | OM encerrada não pode voltar a outra etapa por gravação de quem não é Supervisor (antes só o encerrar era barrado) |
 
 ## Como atualizar esta cópia
 
