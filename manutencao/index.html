@@ -9127,5 +9127,42 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-guia
 .gu-p.feito{color:#188038}.gu-p.feito i{background:#188038;border-color:#188038;color:#fff}.gu-p.atual{color:#1967D2;font-weight:700}.gu-p.atual i{border-color:#1967D2;color:#1967D2}.gu-l{flex:0 0 22px;height:2px;background:#DADCE0}
 #main:has(.gu) .stepsbar{display:none}.gu-a{display:flex;align-items:center;gap:10px;background:#E8F0FE;border-radius:8px;padding:8px 12px;font-size:13.5px}.gu-f{margin-top:8px;font-size:12.5px;color:#B3261E}`; document.head.appendChild(st); }
 </script>
+<script>
+/* ===== Programar preventiva em 3 etapas (pedido do Supervisor, 22/10/2026: "continua uma salada") =====
+   ① Empurrador e rota · ② O que entra (já marcado: vencidos, do mês e embarcados; um motor por linha, recolhido; "Adiantar?" à parte) · ③ Abrir a OM (texto para o Sankhya, nº, emitir).
+   Só apresentação: usa o mesmo estado (EM.sel, EM.draft) e os mesmos botões/handlers da tela anterior (data-sel, data-emb, data-act, #emV, #emRota). */
+'use strict';
+{ const v0 = VX.emitir; VX.emitir = function () {
+  const v = vessel(ARG || EM.vid || (S.cfg.frota[0] || {}).id); if (!v) return v0.apply(this, arguments);
+  if (EM.pvVid !== v.id) { EM.pvVid = v.id; EM.passo = 1; EM.pvIni = false; }
+  if (EM.draft && EM.draft.emb) EM.passo = 3;
+  const P = painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && !x.om), gr = x => emGrp(v, x), fj = x => typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos);
+  const entra = P.filter(x => ['venc', 'mes', 'emb'].includes(gr(x)) && !fj(x)), adi = P.filter(x => gr(x) === 'adi' && !fj(x));
+  const base = document.createElement('div'); base.innerHTML = v0.apply(this, arguments);
+  if (!EM.pvIni && !EM.sel.size) { entra.forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.pvIni = true; }
+  const cardDe = f => [...base.querySelectorAll('.cm-ws > .card')].find(f);
+  const cEmp = cardDe(c => c.querySelector('#emV')), cOleo = cardDe(c => /Óleo e filtros a bordo/.test(c.textContent)), cOM = cardDe(c => c.querySelector('.sk'));
+  if (cEmp) { const h = cEmp.querySelector('h2'); if (h) h.remove(); cEmp.querySelectorAll('[data-mostra]').forEach(b => b.closest('.seg') ? b.closest('.seg').remove() : b.remove()); }
+  const passos = ['Empurrador e rota', 'O que entra', 'Abrir a OM'].map((t, i) => `<div class="gu-p${i + 1 < EM.passo ? ' feito' : i + 1 === EM.passo ? ' atual' : ''}" data-pvpasso="${i + 1}" style="cursor:pointer"><i>${i + 1 < EM.passo ? '✓' : i + 1}</i><span>${t}</span></div>`).join('<div class="gu-l"></div>');
+  const nSel = EM.sel.size, cor = { venc: 'p-bad', mes: 'p-warn', emb: 'p-inf', adi: 'p-mut' }, rot = { venc: 'Vencido', mes: 'Vence no mês', emb: 'Embarcada · CTF/MFM', adi: 'Adiantar?' };
+  const linha = x => { const k = x.pos + '|' + x.t.id, g = gr(x); return `<tr><td style="width:28px"><input type="checkbox" data-sel="${k}"${EM.sel.has(k) ? ' checked' : ''}></td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}</td><td><span class="pill ${cor[g]}">${rot[g]}</span><div class="note">${esc(x.s.txt || '')}</div></td></tr>`; };
+  const porPos = L => { const pos = [...new Set(L.map(x => x.pos))]; return pos.map(p => { const I = L.filter(x => x.pos === p), m = I.filter(x => EM.sel.has(x.pos + '|' + x.t.id)).length, c = g => I.filter(x => gr(x) === g).length;
+    const res = [['venc', 'vencidos'], ['mes', 'do mês'], ['emb', 'embarcados'], ['adi', 'adiantar?']].filter(([g]) => c(g)).map(([g, l]) => c(g) + ' ' + l).join(' · ');
+    return `<details class="pv-d"><summary><b>${p === 'UN' ? 'Embarcação' : esc(posNome(v, p))}</b><span class="note"> · ${I.length} ite${I.length === 1 ? 'm' : 'ns'} (${res})</span><span class="sp"></span><span class="pill ${m ? 'p-ok' : 'p-mut'}">${m} marcado${m === 1 ? '' : 's'}</span></summary><div class="tw"><table class="t">${I.map(linha).join('')}</table></div></details>`; }).join(''); };
+  let corpo;
+  if (EM.passo === 1) corpo = `<div class="card"><h2>① Empurrador e rota</h2>${cEmp ? cEmp.innerHTML : ''}<div class="row end" style="margin-top:10px"><button class="mbtn pri" data-pvpasso="2">Próximo: o que entra →</button></div></div>`;
+  else if (EM.passo === 2) corpo = `<div class="card"><div class="row"><h2>② O que entra na OM · ${esc(v.nome)}</h2><span class="sp"></span><span class="pill ${nSel ? 'p-ok' : 'p-mut'}">${nSel} ite${nSel === 1 ? 'm' : 'ns'} marcado${nSel === 1 ? '' : 's'}</span></div>
+     <p class="note">Já vem marcado o que tem de entrar: vencidos, do mês e embarcados (o CTF/MFM faz a bordo na hora-alvo). Abra um motor para ver ou desmarcar itens.</p>
+     ${entra.length ? porPos(entra) : '<p class="note">Nada vencido, do mês ou embarcado neste empurrador.</p>'}
+     ${adi.length ? `<details class="pv-d pv-adi"><summary><b>Adiantar?</b><span class="note"> · ${adi.length} itens vencem antes de voltar (ficam fora da OM; marque se quiser adiantar)</span></summary>${porPos(adi)}</details>` : ''}
+     ${cOleo ? `<details class="pv-d"><summary><b>Óleo e filtros a bordo</b><span class="note"> · para esta viagem (FR 049_B, pelo CTF/MFM)</span></summary>${cOleo.innerHTML.replace(/<h2[\s\S]*?<\/h2>/, '')}</details>` : ''}
+     <div class="row end" style="margin-top:10px"><button class="mbtn" data-pvpasso="1">← Voltar</button><button class="mbtn pri" data-pvpasso="3" ${nSel ? '' : 'disabled'}>Próximo: abrir a OM com ${nSel} ite${nSel === 1 ? 'm' : 'ns'} →</button></div></div>`;
+  else corpo = `<div class="card"><h2>③ Abrir a OM · ${esc(v.nome)} · ${nSel} itens</h2>${cOM ? cOM.querySelector('.sk').outerHTML : '<p class="note">Volte ao passo 2 e marque os itens.</p>'}<div class="row" style="margin-top:10px"><button class="mbtn" data-pvpasso="2">← Voltar ao que entra</button></div></div>`;
+  return `<div class="cm-v"><div class="vh"><div><h1>Programar preventiva</h1><p>Monte a OM do empurrador em 3 passos: escolher · conferir o que entra · abrir no Sankhya e imprimir o formulário</p></div></div>
+   <div class="card gu"><div class="gu-ps" style="margin:0">${passos}</div></div>${corpo}</div>`; }; }
+document.addEventListener('click', e => { const ab = e.target.closest('[data-emb="abrir"]'); if (!ab || VIEW !== 'emitir' || ab.disabled) return; e.preventDefault(); e.stopPropagation(); if (!precisa(true)) return; EM.draft = { emb: true }; EM.passo = 3; render(); }, true);
+document.addEventListener('click', e => { const b = e.target.closest('[data-pvpasso]'); if (!b || VIEW !== 'emitir') return; e.preventDefault(); e.stopPropagation(); const n = +b.dataset.pvpasso; if (n === 3) { if (b.disabled || !EM.sel.size || !precisa(true)) return; EM.draft = { emb: true }; EM.passo = 3; render(); setTimeout(() => { const x = $('#omNum'); if (x) x.focus(); }, 40); return; } EM.draft = null; EM.passo = n; render(); }, true);
+{ const st = document.createElement('style'); st.textContent = `.pv-d{border:1px solid #E3E6EA;border-radius:8px;margin:8px 0;background:#fff}.pv-d>summary{display:flex;align-items:center;gap:6px;padding:10px 12px;cursor:pointer;list-style:none}.pv-d>summary::-webkit-details-marker{display:none}.pv-d>summary::before{content:"▸";color:#5F6368;margin-right:4px}.pv-d[open]>summary::before{content:"▾"}.pv-d>.tw,.pv-d>.pv-d,.pv-d>div{margin:0 12px 10px}.pv-adi{background:#FAFAFA}`; document.head.appendChild(st); }
+</script>
 </body>
 </html>
