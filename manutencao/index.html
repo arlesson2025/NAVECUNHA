@@ -9410,7 +9410,7 @@ function vPainel() {
     return { v, cls, rot, onde: desde('No porto', v.situ.at), passo: pfPasso(v), x, p: pend(v) }; });
   const c = k => Q.filter(q => q.cls === k).length;
   const ordem = { blo: 0, res: 1, sem: 2, lib: 3, via: 4 }; Q.sort((a, b) => ordem[a.cls] - ordem[b.cls] || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
-  const k = (cls, l, n) => `<div class="pf-k ${cls}"><b>${n}</b><span>${l}</span></div>`;
+  const PFC = { lib: 'var(--okt)', res: 'var(--warnt)', blo: 'var(--badt)', via: '#1967D2', sem: 'var(--mut)' }, k = (cls, l, n) => `<div class="f2-k"><span>${l}</span><b style="color:${n ? PFC[cls] : 'inherit'}">${n}</b></div>`;
   const quadro = Q.map(q => { const n1 = q.p.filter(a => a.p === 1).length, n = q.p.length;
     return `<div class="pf-q ${q.cls}" data-pfgo="${q.v.id}" title="Abrir a ficha do ${esc(q.v.nome)}"><div class="pf-h"><b>${esc(q.v.nome)}</b><span class="pf-st">${q.rot}</span></div>
       <div class="pf-o">${q.onde}${q.x.n && q.x.n.venc ? ` · <span style="color:var(--badt)">${q.x.n.venc} ite${q.x.n.venc > 1 ? 'ns' : 'm'} vencido${q.x.n.venc > 1 ? 's' : ''}</span>` : ''}</div>
@@ -9419,7 +9419,7 @@ function vPainel() {
   const lista = (L, cls, tit) => L.length ? `<div class="pf-g"><h3 class="${cls}">${tit} · ${L.length}</h3>${L.map((a, i) => `<div class="pf-l${i >= MX ? ' pf-x' : ''}"${i >= MX ? ' hidden' : ''}><span class="pf-d ${cls}"></span><span class="pf-lt">${a.txt}</span><span class="pf-lb">${a.btn || ''}</span></div>`).join('')}</div>` : '';
   const dia = hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
   return `<div class="cm-v pf"><div class="vh"><div><h1>Frota</h1><p>${esc(dia)} · ${op.length} empurradores em operação · clique num quadro para abrir a ficha</p></div><span class="sp"></span><button class="mbtn" data-f2reset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
-   <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="pf-ks">${k('lib', 'Liberados', c('lib'))}${k('res', 'Com restrição', c('res'))}${k('blo', 'Bloqueados', c('blo'))}${k('via', 'Em viagem', c('via'))}${c('sem') ? k('sem', 'Sem situação', c('sem')) : ''}</div></div>
+   <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="f2-ks">${k('lib', 'Liberados', c('lib'))}${k('res', 'Com restrição', c('res'))}${k('blo', 'Bloqueados', c('blo'))}${k('via', 'Em viagem', c('via'))}${c('sem') ? k('sem', 'Sem situação', c('sem')) : ''}</div></div>
    <div class="card"><h2>1 · Como está a frota</h2><div class="pf-gr">${quadro}</div>${fora.length ? `<p class="note" style="margin-top:10px">Fora de operação: ${fora.map(v => esc(v.nome)).join(', ')}</p>` : ''}</div>
    <div class="card"><h2>2 · O que fazer agora</h2>${A.length ? `<div class="pf-ag">${lista(U, 'u', 'Urgente')}${lista(W, 'w', 'Esta semana')}${U.length > MX || W.length > MX ? '<button class="mbtn sm" data-pfmais>Mostrar todas</button>' : ''}</div>` : '<p class="note pf-ok">✓ Nada pendente agora.</p>'}</div></div></div>`;
 }
@@ -9434,9 +9434,9 @@ document.addEventListener('click', e => { if (VIEW !== 'rotina') return;
 .pf-k b{font-size:30px;line-height:1}.pf-k span{font-size:13.5px;color:#3C4043;font-weight:600}
 .pf-k.lib{border-left-color:#188038}.pf-k.lib b{color:#188038}.pf-k.res{border-left-color:#E3A008}.pf-k.res b{color:#B06000}.pf-k.blo{border-left-color:#D93025}.pf-k.blo b{color:#C5221F}.pf-k.via{border-left-color:#1967D2}.pf-k.via b{color:#1967D2}.pf-k.sem{border-left-color:#9AA0A6}.pf-k.sem b{color:#5F6368}
 .pf-gr{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
-.pf-q{background:#fff;border:1px solid #E3E6EA;border-top:6px solid;border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:box-shadow .15s}
+.pf-q{background:#fff;border:1.5px solid #E3E6EA;border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:box-shadow .15s}
 .pf-q:hover{box-shadow:0 4px 14px rgba(0,0,0,.10)}
-.pf-q.lib{border-top-color:#188038}.pf-q.res{border-top-color:#E3A008;background:#FFFCF2}.pf-q.blo{border-top-color:#D93025;background:#FFF8F7}.pf-q.via{border-top-color:#1967D2}.pf-q.sem{border-top-color:#9AA0A6;background:#F8F9FA}
+.pf-q.lib{border-color:#188038}.pf-q.res{border-color:#E3A008}.pf-q.blo{border-color:#D93025}.pf-q.via{border-color:#1967D2}.pf-q.sem{border-color:#9AA0A6}
 .pf-h{display:flex;align-items:center;gap:8px}.pf-h b{font-size:17px}.pf-h a.f2-nm{border-bottom:0}
 .pf-st{margin-left:auto;font-size:11.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 8px;border-radius:5px;color:#fff}
 .lib .pf-st{background:#188038}.res .pf-st{background:#E3A008}.blo .pf-st{background:#D93025}.via .pf-st{background:#1967D2}.sem .pf-st{background:#80868B}
