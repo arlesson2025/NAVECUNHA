@@ -7742,7 +7742,9 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
   ICO.cond2 = ICO.compr || ICO.oleo || ICO.cond; }
 // o número de empurradores acompanha o cadastro da frota · subtítulo (s.sub) em letra pequena dentro do item do menu
 { const n0 = renderNav; renderNav = function () { const h = SECOES.find(s => s.id === 'hoje'); if (h && S.cfg && S.cfg.frota) h.nome = 'Frota ' + S.cfg.frota.length + ' Empurradores';
-  const x = n0.apply(this, arguments), A = [...document.querySelectorAll('#nav > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
+  const solta = !SECOES.some(s => s.views.some(v => v[0] === VIEW) || (s.extra || []).includes(VIEW)) && VIEW !== 'om', u0 = h ? ULT[h.id] : null;   /* tela fora de todas as seções: secDe cai na 1ª seção e gravaria esta tela como a última da Frota */
+  const x = n0.apply(this, arguments); if (solta && h) { ULT[h.id] = u0; const a1 = document.querySelector('#nav > a'); if (a1) { a1.setAttribute('href', '#' + (u0 || h.views[0][0])); a1.classList.remove('on'); } }
+  const A = [...document.querySelectorAll('#nav > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
   L.forEach((s, i) => { const sp = A[i] && A[i].querySelector('span'); if (s.sub && sp && !sp.querySelector('.nav-sub')) sp.insertAdjacentHTML('beforeend', `<small class="nav-sub">${esc(s.sub)}</small>`); }); return x; }; }
 { const st = document.createElement('style'); st.textContent = `#nav .nav-sub{display:block;font-size:10.5px;font-weight:400;line-height:1.15;opacity:.75;margin-top:1px}`; document.head.appendChild(st); }
 /* menu na ordem do trabalho (pedido do Supervisor, 21/10/2026): Frota (chegou · saiu · em viagem) → Fazer preventiva → OMs (Sankhya) → Conferir e encerrar;
@@ -7750,6 +7752,7 @@ if (VX.controle) { const c3 = VX.controle; VX.controle = function () {
 { const by = id => SECOES.find(s => s.id === id), om = by('omsv2');
   const prev = { id: 'prev2', nome: 'Fazer preventiva', sub: 'o que vence na janela', views: [['emitir', 'Programação da janela']] };
   const conf = { id: 'conf2', nome: 'Conferir e encerrar', sub: 'OMs lançadas', views: [['omconf', 'Conferir e encerrar']] };
+  { const c = by('cond2'); if (c) c.extra = [...new Set((c.extra || []).concat(['plano', 'lubcons']))]; }   // Plano de lubrificação (aberto pela Biblioteca) e Consumo e OLUC: telas do óleo
   if (om) { om.extra = (om.extra || []).filter(x => x !== 'emitir'); om.sub = 'lançar o que foi feito'; SECOES.splice(SECOES.indexOf(om), 0, prev); SECOES.splice(SECOES.indexOf(om) + 1, 0, conf); }
   ['crono', 'cond2', 'graf', 'apoio2', 'adm'].forEach(id => { const s = by(id); if (s) s.cfg = true; });
   ICO.prev2 = ICO.crono || ICO.oms || ICO.hoje; ICO.conf2 = ICO.adm || ICO.omsv2 || ICO.oms; }
