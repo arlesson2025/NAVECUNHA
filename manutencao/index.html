@@ -9418,11 +9418,10 @@ function vPainel() {
   const A = f2Agora(), U = A.filter(a => a.p === 1), W = A.filter(a => a.p !== 1), MX = 8;
   const lista = (L, cls, tit) => L.length ? `<div class="pf-g"><h3 class="${cls}">${tit} · ${L.length}</h3>${L.map((a, i) => `<div class="pf-l${i >= MX ? ' pf-x' : ''}"${i >= MX ? ' hidden' : ''}><span class="pf-d ${cls}"></span><span class="pf-lt">${a.txt}</span><span class="pf-lb">${a.btn || ''}</span></div>`).join('')}</div>` : '';
   const dia = hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
-  return `<div class="pf"><div class="vh"><div><h1>Frota</h1><p>${esc(dia)} · ${op.length} empurradores em operação · clique num quadro para abrir a ficha</p></div></div>
-   <div class="pf-ks">${k('lib', 'Liberados', c('lib'))}${k('res', 'Com restrição', c('res'))}${k('blo', 'Bloqueados', c('blo'))}${k('via', 'Em viagem', c('via'))}${c('sem') ? k('sem', 'Sem situação', c('sem')) : ''}</div>
-   <h2 class="pf-t">1 · Como está a frota</h2><div class="pf-gr">${quadro}</div>
-   <h2 class="pf-t">2 · O que fazer agora</h2>${A.length ? `<div class="pf-ag">${lista(U, 'u', 'Urgente')}${lista(W, 'w', 'Esta semana')}${U.length > MX || W.length > MX ? '<button class="mbtn sm" data-pfmais>Mostrar todas</button>' : ''}</div>` : '<p class="note pf-ok">✓ Nada pendente agora.</p>'}
-   ${fora.length ? `<p class="note" style="margin-top:14px">Fora de operação: ${fora.map(v => esc(v.nome)).join(', ')}</p>` : ''}</div>`;
+  return `<div class="cm-v pf"><div class="vh"><div><h1>Frota</h1><p>${esc(dia)} · ${op.length} empurradores em operação · clique num quadro para abrir a ficha</p></div><span class="sp"></span><button class="mbtn" data-f2reset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
+   <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="pf-ks">${k('lib', 'Liberados', c('lib'))}${k('res', 'Com restrição', c('res'))}${k('blo', 'Bloqueados', c('blo'))}${k('via', 'Em viagem', c('via'))}${c('sem') ? k('sem', 'Sem situação', c('sem')) : ''}</div></div>
+   <div class="card"><h2>1 · Como está a frota</h2><div class="pf-gr">${quadro}</div>${fora.length ? `<p class="note" style="margin-top:10px">Fora de operação: ${fora.map(v => esc(v.nome)).join(', ')}</p>` : ''}</div>
+   <div class="card"><h2>2 · O que fazer agora</h2>${A.length ? `<div class="pf-ag">${lista(U, 'u', 'Urgente')}${lista(W, 'w', 'Esta semana')}${U.length > MX || W.length > MX ? '<button class="mbtn sm" data-pfmais>Mostrar todas</button>' : ''}</div>` : '<p class="note pf-ok">✓ Nada pendente agora.</p>'}</div></div></div>`;
 }
 { const r0 = VX.rotina; VX.rotina = function () { return typeof ehOperador === 'function' && ehOperador() ? r0.apply(this, arguments) : vPainel(); }; }
 document.addEventListener('click', e => { if (VIEW !== 'rotina') return;
@@ -9444,7 +9443,7 @@ document.addEventListener('click', e => { if (VIEW !== 'rotina') return;
 .pf-o{font-size:12.5px;color:#5F6368}.pf-p{font-size:14px;font-weight:600;color:#202124;min-height:38px}.pf-p small{display:block;font-size:11px;font-weight:500;color:#80868B;text-transform:uppercase;letter-spacing:.3px}
 .pf-a{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pf-n{font-size:12px;color:#B06000;font-weight:600}.pf-n.u{color:#C5221F}
 .pf-m{position:relative}.pf-m>summary{list-style:none}.pf-m>summary::-webkit-details-marker{display:none}.pf-m>div{position:absolute;left:0;top:calc(100% + 4px);background:#fff;border:1px solid #DADCE0;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:30;box-shadow:0 4px 14px rgba(0,0,0,.12)}
-.pf-ag{background:#fff;border:1px solid #E3E6EA;border-radius:10px;padding:6px 16px 12px}
+.pf-ag{padding:0}
 .pf-g h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;margin:12px 0 4px}.pf-g h3.u{color:#C5221F}.pf-g h3.w{color:#B06000}
 .pf-l{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F1F3F4;font-size:13.5px}.pf-lt{flex:1}.pf-lb{white-space:nowrap}
 .pf-d{width:9px;height:9px;border-radius:50%;flex:none}.pf-d.u{background:#D93025}.pf-d.w{background:#E3A008}
@@ -9667,6 +9666,18 @@ document.addEventListener('click', async e => { const a = e.target.closest('[dat
     const cA = [...t.querySelectorAll('.card')].find(c => /^Corretivas em andamento/.test((c.querySelector('h2') || {}).textContent || '')); if (cA) cA.querySelectorAll('a[href^="#om/"]').forEach(a => { const o = S.recs.get(decodeURIComponent(a.getAttribute('href').slice(4))); if (!o || !ehEletr(o)) return; const tr = a.closest('tr'), td = tr && tr.cells[5]; if (td && !td.querySelector('.ti-p')) td.insertAdjacentHTML('beforeend', o.ti && o.ti.res === 'ti' ? ' <span class="pill p-inf ti-p">com o TI</span>' : o.ti ? ' <span class="pill p-mut ti-p">alimentação</span>' : ' <span class="pill p-warn ti-p">NP 5.12: verificar alimentação</span>'); });
     return t.innerHTML; }; }
 { const st = document.createElement('style'); st.textContent = `.ti-c{border-left:5px solid #E3A008}.ti-c.ok{border-left-color:#188038}.ti-c.ti{border-left-color:#1967D2}`; document.head.appendChild(st); }
+</script>
+<script>
+/* ===== Padrão das telas também na Frota e nas telas que estavam fixas (pedido do Supervisor, 22/10/2026: "essa aqui tá no meio, não tá como as outras no lado esquerdo e podendo mover as janelas") =====
+   Painel da frota em janelas livres (Resumo · Como está a frota · O que fazer agora; as posições antigas da Frota são zeradas uma vez) e padTela nas telas da Biblioteca e no registro de horímetros. */
+'use strict';
+try { if (!localStorage.getItem('smf_painel_v1')) { JLAY('smf_frota_lay').S({}); localStorage.setItem('smf_painel_v1', '1'); } } catch (e) { }
+padTela('bib', { titulo: 'Biblioteca · Documentos', desc: 'NP, formulários, normas e fluxos' });
+padTela('pecas', { titulo: 'Peças e estoque mínimo', desc: 'Kits do mês seguinte e peças críticas do Anexo III' });
+padTela('terc', { titulo: 'Prestadores de serviço', desc: 'Cadastro de terceiros e validade dos documentos' });
+padTela('trein', { titulo: 'Treinamento', desc: 'Situação por colaborador e reciclagem anual' });
+padTela('lubcons', { titulo: 'Óleo e resíduos', desc: 'Consumo de lubrificantes e geração de OLUC' });
+padTela('hor', { titulo: 'Registro de horímetros', desc: 'Lançamentos de horímetro por empurrador e motor' });
 </script>
 </body>
 </html>
