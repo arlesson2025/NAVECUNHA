@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600&display=swap">
 <script>
-const NUVEM_PADRAO = 'https://script.google.com/macros/s/AKfycbw9GV1TYtyXXCHfeMX2cAaJqkSwoP76lthNvYPpnFbvBuwb3d0lGNNd0nVgIYf9QBNj/exec';   // planilha CTLE_MAN: todo aparelho novo já abre ligado à nuvem
+const NUVEM_PADRAO = 'https://script.google.com/macros/s/AKfycbwXXNSYq-wClpZQrOR0LasSxyr_56gdFIK8wEAyeD-Vbh8rfJ0lhNZZlbT29hJ8enKA/exec';   // planilha CTLE_MAN: todo aparelho novo já abre ligado à nuvem
 /* bibliotecas de PDF (html2canvas 1.4.1, jsPDF 2.5.1) ficam em lib/ e só carregam ao gerar um PDF; o sw.js guarda as duas para funcionar sem internet */
 let LIBS_PDF = null;
 function carregarLibsPdf() {
@@ -3022,7 +3022,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
   try {
     const all = MEM ? [] : await DB.all(); all.forEach(r => S.recs.set(r.id, r));
     S.cfg = normFrota(Object.assign(cfgPadrao(), (await kvGet('cfg')) || {}));
-    { const u0 = await kvGet('url'); S.url = u0 == null ? NUVEM_PADRAO : u0; if (u0 == null && NUVEM_PADRAO) await kvSet('url', NUVEM_PADRAO); } S.session = (await kvGet('session')) || null;
+    { let u0 = await kvGet('url'); if (u0 === 'https://script.google.com/macros/s/AKfycbw9GV1TYtyXXCHfeMX2cAaJqkSwoP76lthNvYPpnFbvBuwb3d0lGNNd0nVgIYf9QBNj/exec') { u0 = NUVEM_PADRAO; await kvSet('url', u0); } /* endereço antigo (servidor parado na versão 7, troca em 21/10/2026): passa sozinho para o atual */ S.url = u0 == null ? NUVEM_PADRAO : u0; if (u0 == null && NUVEM_PADRAO) await kvSet('url', NUVEM_PADRAO); } S.session = (await kvGet('session')) || null;
     S.pending = new Set((await kvGet('pending')) || []); S.pdfPend = (await kvGet('pdfPend')) || {}; S.lastSync = (await kvGet('lastSync')) || 0;
     if (!(await kvGet('seeded')) && !S.recs.size) { await carregarExemplo(); await kvSet('frotaV', 2); }
     else if ((await kvGet('frotaV')) !== 2) {
