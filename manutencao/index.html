@@ -2763,6 +2763,7 @@ function vKpi() {
 
 /* ---------- administração ---------- */
 const ADM = { q: '' };
+/* Administração num bloco só (24/10/2026): os cartões Fora de operação e Marco zero vêm de admForaHTML/admMarcoHTML em vez de camadas por cima */
 function vAdmin() {
   const a = can.admin();
   return `<div class="vh"><div><h1>Administração</h1><p>Nuvem, senhas, cadastro da frota e intervalos. Alterações da frota e dos intervalos valem para todos os aparelhos depois de sincronizar.</p></div></div>
@@ -2790,7 +2791,7 @@ function vAdmin() {
     ${temExemplo() ? `<button class="mbtn bad" data-act="limparEx" ${a ? '' : 'disabled'}>Limpar dados de exemplo</button>` : `<button class="mbtn" data-act="carregarEx" ${a ? '' : 'disabled'}>Carregar dados de exemplo</button>`}
     <button class="mbtn" data-act="exportar">⬇ Cópia de segurança (JSON)</button><label class="mbtn" style="position:relative" ${a ? '' : 'onclick="toast(\'Entre como Supervisor (botão Entrar, embaixo à esquerda) para importar.\')"'}>⬆ Importar / restaurar (JSON)<input type="file" id="adImp" accept=".json,application/json,text/plain,*/*" style="position:absolute;inset:0;opacity:0" ${a ? '' : 'disabled'}></label>
     <button class="mbtn" data-act="instalar" id="btnInstall" ${window._bip ? '' : 'hidden'}>📲 Instalar app</button></div>
-    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>`;
+    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML();   /* fora de operação e marco zero ficam nos blocos deles */
 }
 AFTER.admin = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'adQ') { ADM.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#adQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 350); } };
@@ -4556,9 +4557,9 @@ overDados = _semFora(overDados); calibDados = _semFora(calibDados); lubDados = _
 { const m0 = frotaMatriz; frotaMatriz = function () { return m0().map(x => { if (foraOp(x.v)) { x.sit = -1; x.fora = foraOp(x.v); } return x; }).sort((a, b) => (a.fora ? 1 : 0) - (b.fora ? 1 : 0)); }; }
 // aviso no topo do painel e cadastro em Administração
 { const g0 = vGeral; vGeral = function () { const F = S.cfg.frota.filter(v => foraOp(v)); const h = g0(); if (!F.length) return h; const av = `<div class="banner"><span><b>Fora de operação:</b> ${F.map(v => `<button class="vlink" data-vessel="${v.id}">${esc(v.nome)}</button> (${esc(foraOp(v).motivo)})`).join(' · ')}. Não entram nos vencimentos nem nos alertas até voltarem a operar. Altere em Administração.</span></div>`; return av.replace('class="banner"', 'class="banner fora"') + h; }; }
-{ const a0 = vAdmin; vAdmin = function () { const a = can.admin(); return a0() + `<div class="card"><div class="row"><h2>Embarcações fora de operação</h2><span class="sp"></span><span class="note">Em reforma ou ainda não liberada: não gera vencimentos, alertas de horímetro nem bloqueio de saída.</span></div>
+function admForaHTML() { const a = can.admin(); return `<div class="card"><div class="row"><h2>Embarcações fora de operação</h2><span class="sp"></span><span class="note">Em reforma ou ainda não liberada: não gera vencimentos, alertas de horímetro nem bloqueio de saída.</span></div>
    <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Situação</th><th>Motivo</th><th>Observação</th><th>Desde</th></tr></thead><tbody>${S.cfg.frota.map(v => { const f = v.foraOp || {}; return `<tr><td><b>${esc(v.nome)}</b></td><td><select data-fo="${v.id}" data-k="on" ${a ? '' : 'disabled'}><option value="">Em operação</option><option value="1"${f.motivo ? ' selected' : ''}>Fora de operação</option></select></td>
-     <td><select data-fo="${v.id}" data-k="motivo" ${a && f.motivo ? '' : 'disabled'}>${f.motivo ? '' : '<option>—</option>'}${FORA_MOT.map(m => `<option${f.motivo === m ? ' selected' : ''}>${m}</option>`).join('')}</select></td><td><input data-fo="${v.id}" data-k="obs" value="${esc(f.obs || '')}" ${a && f.motivo ? '' : 'disabled'}></td><td><input type="date" data-fo="${v.id}" data-k="desde" value="${esc(f.desde || '')}" ${a && f.motivo ? '' : 'disabled'}></td></tr>`; }).join('')}</tbody></table></div></div>`; }; }
+     <td><select data-fo="${v.id}" data-k="motivo" ${a && f.motivo ? '' : 'disabled'}>${f.motivo ? '' : '<option>—</option>'}${FORA_MOT.map(m => `<option${f.motivo === m ? ' selected' : ''}>${m}</option>`).join('')}</select></td><td><input data-fo="${v.id}" data-k="obs" value="${esc(f.obs || '')}" ${a && f.motivo ? '' : 'disabled'}></td><td><input type="date" data-fo="${v.id}" data-k="desde" value="${esc(f.desde || '')}" ${a && f.motivo ? '' : 'disabled'}></td></tr>`; }).join('')}</tbody></table></div></div>`; }
 document.addEventListener('change', async e => { const el = e.target.closest('[data-fo]'); if (!el || !can.admin()) return; const v = vessel(el.dataset.fo); if (!v) return;
   if (el.dataset.k === 'on') v.foraOp = el.value ? { motivo: FORA_MOT[0], obs: '', desde: isoD(hoje()) } : null; else { v.foraOp = v.foraOp || { motivo: FORA_MOT[0] }; v.foraOp[el.dataset.k] = el.value; }
   S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg);
@@ -4621,12 +4622,12 @@ async function aplicarMarco(date, ids) {
   if (S.url) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } else toast('A planilha não aceitou: ' + j.error); } catch (e) { } }
   return n;
 }
-{ const a0 = vAdmin; vAdmin = function () { const a = can.admin(), F = S.cfg.frota, sem = F.filter(v => !v.marco && !foraOp(v));
-  return a0() + `<div class="card" id="cardMarco"><div class="row"><h2>Marco zero da implantação</h2><span class="sp"></span><span class="note">${F.filter(v => v.marco).length} de ${F.length} embarcações com marco</span></div>
+function admMarcoHTML() { const a = can.admin(), F = S.cfg.frota, sem = F.filter(v => !v.marco && !foraOp(v));
+  return `<div class="card" id="cardMarco"><div class="row"><h2>Marco zero da implantação</h2><span class="sp"></span><span class="note">${F.filter(v => v.marco).length} de ${F.length} embarcações com marco</span></div>
    <p class="note">Os itens do Anexo I que ainda não têm último serviço registrado passam a contar a partir desta data e do horímetro atual de cada motor. Quando uma OM for encerrada ou um último serviço real for lançado, ele substitui o marco automaticamente. Embarcações fora de operação ficam de fora.</p>
    <div class="row"><label class="f" style="max-width:200px">Data do marco<input type="date" id="mzD" value="${isoD(hoje())}" ${a ? '' : 'disabled'}></label>
     <button class="mbtn pri" id="mzB" ${a && sem.length ? '' : 'disabled'}>Aplicar marco zero em ${sem.length} embarcação(ões)</button></div>
-   <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Marco</th><th>Horímetros no marco</th><th></th></tr></thead><tbody>${F.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td>${v.marco ? brD(v.marco.date) : foraOp(v) ? '<span class="note">fora de operação</span>' : '<span class="note">sem marco</span>'}</td><td class="mono">${v.marco ? Object.entries(v.marco.h || {}).map(([p, h]) => (MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p) + ' ' + nf(h)).join(' · ') || '—' : ''}</td><td>${v.marco && a ? `<button class="mbtn sm" data-mzdel="${v.id}">Remover</button>` : !v.marco && foraOp(v) && a ? `<button class="mbtn sm" data-mzone="${v.id}">Aplicar</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }; }
+   <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Marco</th><th>Horímetros no marco</th><th></th></tr></thead><tbody>${F.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td>${v.marco ? brD(v.marco.date) : foraOp(v) ? '<span class="note">fora de operação</span>' : '<span class="note">sem marco</span>'}</td><td class="mono">${v.marco ? Object.entries(v.marco.h || {}).map(([p, h]) => (MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p) + ' ' + nf(h)).join(' · ') || '—' : ''}</td><td>${v.marco && a ? `<button class="mbtn sm" data-mzdel="${v.id}">Remover</button>` : !v.marco && foraOp(v) && a ? `<button class="mbtn sm" data-mzone="${v.id}">Aplicar</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }
 document.addEventListener('click', async e => {
   const b = e.target.closest('#mzB,[data-mzdel],[data-mzone]'); if (!b || !can.admin()) return;
   if (b.id === 'mzB') { const d = $('#mzD').value; if (!d) return toast('Informe a data.'); const ids = S.cfg.frota.filter(v => !v.marco && !foraOp(v)).map(v => v.id);
