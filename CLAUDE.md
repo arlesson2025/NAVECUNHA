@@ -96,6 +96,14 @@ Consequência prática: para saber o que realmente aparece numa tela, procure a 
 - Service worker é *network-first* (com sinal sempre pega a versão nova). Ao mudar arquivos pré-cacheados ou ícones, incremente `CACHE` em `manutencao/sw.js` (`ctle-man-vN`) e o `?v=` dos ícones/manifest.
 - O `sw.js` separa **`ESSENCIAIS`** (sem eles o SMF não abre, o FR 049_B de óleo não abre/salva ou o FR 027_L de chegada/saída não abre: `index.html`, `dados/anexo1.js`, `forms/FR_049_B.html`, `forms/FR_027_L.html`, `lib/*` — salvar o FR 049_B gera o PDF) de **`OPCIONAIS`** (manifest, ícones, FR 016_E). Cada arquivo tem 3 tentativas; essencial que falha cancela a instalação (o aparelho segue com a versão anterior inteira); opcional que falha usa a cópia da versão anterior. Arquivo novo que o app precisa para abrir ou para o formulário de óleo vai em `ESSENCIAIS`; o resto em `OPCIONAIS`.
 
+## SMF enxuto (`manutencao/enxuto.js`, proposta do Supervisor em 24/10/2026)
+
+Modo simples **em teste**, ligado por `?simples` (fica gravado no aparelho em `localStorage 'smf_modo'`; `?completo` ou o link “↩ SMF completo” no menu volta). Sem o modo ligado o arquivo não muda nada. Carregado por `<script src>` no fim do `index.html`; tudo fica dentro de `if (SP_MODO) { … }`, então os nomes são do bloco (só `SP_MODO` é global). Reaproveita os cálculos, os registros (`om`, `hor`, `lub`), o `docIIB`/`docIIA`, o `gerarPDF` e o FR 049_B oficial (`lubAbrirForm`) do SMF completo; troca `SECOES`, `renderNav` e `abasHtml`.
+- Menu: **Operação** = Preventiva (`sp_prev`), Corretiva (`sp_corr`), Cronograma (`cxr` + `matriz`), Troca de óleo (`sp_oleo`) · **Acompanhamento** = Condição dos motores, Calibração e docagem, Indicadores (telas existentes) · **Suporte** = Administração. Telas antigas da operação (`rotina`, `emitir`, `oms`, `omconf`, `falhas2`…) redirecionam (`SP_TROCA`). O Analista (`role !== 'admin'`) só vê a Troca de óleo.
+- Preventiva: empurrador → itens vencidos e que vencem no mês (`emGrp` = `venc`/`mes`, sem `foraJanela`, sem OM aberta) já marcados → nº da OM do Sankhya → grupo de OMs (uma por posição, `grupo` = nº) e PDF do Anexo II-B → “Lançar realizado” (data, horímetro por motor, quem executou, quem recebeu, **foto do II-B assinado**; item desmarcado vai para `naoExec` e continua pendente) → encerrada, PDF final com a foto (parte sem item feito fica fora do PDF).
+- Corretiva: nova com o nº da OM do Sankhya → Anexo II-A → “Lançar realizado” (término, serviço, executor, recebedor, foto do II-A assinado, serviços do Anexo I refeitos em `itensRefeitos`).
+- FR 027_L, falhas sem OM, painel da frota e o ciclo 1 → 4 ficam fora do modo enxuto.
+
 ## Situação e pendências
 
 O SMF está **em construção**: o Supervisor ainda define telas e funcionalidades e **não há dados reais** (só dados de exemplo). Não trate riscos de produção como urgentes enquanto isso.
