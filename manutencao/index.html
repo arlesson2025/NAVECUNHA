@@ -2310,8 +2310,9 @@ function vEmitir() {
   if (EM.draft && EM.draft.emb) EM.passo = 3;
   const P = painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && !x.om), gr = x => emGrp(v, x), fj = x => typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos);
   const entra = P.filter(x => ['venc', 'mes', 'emb'].includes(gr(x)) && !fj(x)), adi = P.filter(x => gr(x) === 'adi' && !fj(x));
-  /* sem empurrador no endereço, o formulário (empurrador, rota, óleo, texto da OM) é o do primeiro da frota, como antes */
-  const vid = ARG || S.cfg.frota[0].id, v0 = vessel(vid);
+  /* um empurrador só na tela inteira (antes, sem empurrador no endereço, o passo a passo mostrava o último aberto e o formulário o primeiro da frota,
+     e a OM podia sair para o empurrador errado) */
+  const vid = v.id, v0 = v;
   if (EM.vid !== vid) { EM.sel.clear(); EM.draft = null; EM.vid = vid; EM.viag = null; }
   const vh = EM.viag ?? viagemDe(v0);
   if (!EM.pvIni && !EM.sel.size) { entra.forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.pvIni = true; }
