@@ -32,12 +32,12 @@ Não há build, lint, testes nem gerenciador de pacotes. Publicação: GitHub Pa
 
 - Topo (~linha 22): `NUVEM_PADRAO` e `carregarLibsPdf()`. As bibliotecas de PDF (html2canvas, jsPDF) ficam em `manutencao/lib/` e só carregam quando `gerarPDF`, `lubMakePdf` ou `apPdf` são chamadas; não edite os `.min.js`.
 - Linhas ~32–1217: CSS principal.
-- `const LOGOS=` (~1234) é uma linha gigante (logos base64). Outras: `AP_FOTO`, `MOTOR_IMG` (imagens base64).
+- `LOGOS` aponta para `img/logo-nav.png` e `img/logo-vda.png` (antes eram base64 dentro do arquivo); estão em `ESSENCIAIS` no `sw.js`.
 - **Anexo I (`A1`) fica em `manutencao/dados/anexo1.js`**, um item por linha, carregado por `<script src>` logo antes do núcleo (precisa estar disponível de forma síncrona: dezenas de blocos usam `A1` na carga). Para consultar um item, Grep em `dados/anexo1.js` por `"id":"1\.1\.1"`. Ao editar, mantenha cada linha um objeto JSON válido.
 - Formulários oficiais FR 049_B, FR 027_L e FR 016_E ficam em `manutencao/forms/`, carregados por `lubFormTxt()` e postos no iframe via `srcdoc`. O FR 049_B recebe trocas de texto exatas em `lubAbrirForm` — se editar o formulário, mantenha esses trechos idênticos. `.gitattributes` (`-text`) guarda esses arquivos byte a byte (LF); não reformate nem converta quebras de linha.
 - No PowerShell, leia com `-Encoding UTF8`; sem isso os acentos saem corrompidos.
 
-### Núcleo (bloco `<script>` que começa em `const LOGOS=`, até antes de “LUBRIFICAÇÃO · módulo”)
+### Núcleo (bloco `<script>` que começa em `const LOGOS`, até antes de “LUBRIFICAÇÃO · módulo”)
 
 - **Dados de domínio**: `A1` (itens do plano — Anexo I; `A1M` indexado por id), `EQN` (equipamentos), `FROTA_MATRIZ`/`FROTA_PADRAO` (cadastro dos empurradores CJA…), `CLASSES` (criticidade corretiva), `ETAPAS_P`/`ETAPAS_C` (fluxo das OMs).
 - **Utilidades**: `$`, `$$`, `esc` (sempre escapar ao montar HTML), `nf`, `pD`/`isoD`/`brD` (datas locais ao meio-dia), `uid`, `toast`, `modal`.
@@ -97,7 +97,7 @@ Consequência prática: para saber o que realmente aparece numa tela, procure a 
 - Análise de óleo do MCP (Anexo I 1.1.29): amostra de **cada MCP a cada 1.000 h ou 12 meses**, na troca de óleo mais próxima, junto com os bicos e a compressão (1.1.12); coleta extra quando o laudo anterior tem alerta. Substituiu o rodízio de 1 MCP por semestre (que dava 1 laudo por motor a cada ~7 anos, sem tendência); o fabricante recomenda a cada troca (O&M 6-2). Limites do laudo em `LAUDO_P`; TBN relativo ao óleo novo (`TBN_NOVO` = 10 mg KOH/g, valor típico a confirmar na ficha do óleo): atenção < 60%, crítico < 50%. Ao mudar, atualize o item 1.1.29 em `dados/anexo1.js` e em `docs/Anexo_I_NP_055_visual_matriz.html`.
 - Referências normativas aparecem no código e na UI (NP 055 itens, Anexo I/II-A/II-B, FR 049_B, FR 016_E, ISO 9001/14001/45001/14224). Mantenha-as ao mexer em formulários.
 - Service worker é *network-first* (com sinal sempre pega a versão nova). Ao mudar arquivos pré-cacheados ou ícones, incremente `CACHE` em `manutencao/sw.js` (`ctle-man-vN`) e o `?v=` dos ícones/manifest.
-- O `sw.js` separa **`ESSENCIAIS`** (sem eles o SMF não abre, o FR 049_B de óleo não abre/salva ou o FR 027_L de chegada/saída não abre: `index.html`, `dados/anexo1.js`, `forms/FR_049_B.html`, `forms/FR_027_L.html`, `lib/*` — salvar o FR 049_B gera o PDF) de **`OPCIONAIS`** (manifest, ícones, FR 016_E). Cada arquivo tem 3 tentativas; essencial que falha cancela a instalação (o aparelho segue com a versão anterior inteira); opcional que falha usa a cópia da versão anterior. Arquivo novo que o app precisa para abrir ou para o formulário de óleo vai em `ESSENCIAIS`; o resto em `OPCIONAIS`.
+- O `sw.js` separa **`ESSENCIAIS`** (sem eles o SMF não abre, o FR 049_B de óleo não abre/salva ou o FR 027_L de chegada/saída não abre: `index.html`, `dados/anexo1.js`, `forms/FR_049_B.html`, `forms/FR_027_L.html`, `lib/*` — salvar o FR 049_B gera o PDF —, `img/logo-*.png` — tela de acesso e cabeçalho dos PDFs) de **`OPCIONAIS`** (manifest, ícones, FR 016_E). Cada arquivo tem 3 tentativas; essencial que falha cancela a instalação (o aparelho segue com a versão anterior inteira); opcional que falha usa a cópia da versão anterior. Arquivo novo que o app precisa para abrir ou para o formulário de óleo vai em `ESSENCIAIS`; o resto em `OPCIONAIS`.
 
 ## Situação e pendências
 
