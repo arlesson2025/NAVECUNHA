@@ -9699,6 +9699,22 @@ padTela('hor', { titulo: 'Registro de horímetros', desc: 'Lançamentos de horí
    · Na OM em grupo, só a parte 1 gera o PDF (o documento já tem a OM inteira); as outras partes encerram sem PDF repetido.
    · Na tela de lançamento da OM o número do item também sai (só CSS). */
 'use strict';
+/* fotos em miniatura (9 por folha) e o anexo inteiro com no máximo 5 folhas (pedido do Supervisor, 24/10/2026: "como vou gerar 20 páginas de uma preventiva? · máximo 5 folhas");
+   o que não couber fica na OM e no Drive, com aviso na última folha */
+const ANX_MAX = 5, ANX_FPP = 9;
+function anxFotos(o) { const ord = { 'FORMULÁRIO ASSINADO': 0, 'RELATÓRIO DO FORNECEDOR': 1, ANTES: 2, DURANTE: 3, DEPOIS: 4 };
+  return (o.fotos || []).filter(x => x.src).slice().sort((a, b) => (ord[a.tipo] ?? 5) - (ord[b.tipo] ?? 5) || (a.at || 0) - (b.at || 0)); }
+function anxFolhasFotos(o, L, ini, tot, sobra) {
+  const out = [], nF = Math.ceil(L.length / ANX_FPP);
+  for (let k = 0; k < nF; k++) { const ch = L.slice(k * ANX_FPP, (k + 1) * ANX_FPP), ult = k === nF - 1;
+    out.push(`<div class="sheet">${HDR()}<div class="body"><div class="fbar"><div><small>Registro fotográfico · item 5.8</small><h3>Fotos da OM ${esc(o.num)} · ${esc(vName(o.vessel))}</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>
+     <div class="ph9">${ch.map((x, j) => `<figure><div class="im"><img src="${x.src}" alt=""></div><figcaption><b>${ini + k * ANX_FPP + j + 1} · ${esc(x.tipo === 'FORMULÁRIO ASSINADO' ? 'FORMULÁRIO' : x.tipo)}</b>${x.leg ? ' · ' + esc(x.leg) : ''}</figcaption></figure>`).join('')}</div>
+     ${ult && sobra ? `<div class="note" style="margin-top:6px">Mais ${sobra} foto${sobra > 1 ? 's' : ''} ${sobra > 1 ? 'ficam' : 'fica'} na OM no SMF e no Google Drive (o anexo tem no máximo ${ANX_MAX} folhas).</div>` : ''}</div>${FOOT('@K')}</div>`); }
+  return out; }
+function anxMax5(paginas, o) {
+  const L = anxFotos(o), livres = Math.max(0, ANX_MAX - paginas.length), cabe = Math.min(L.length, livres * ANX_FPP);
+  return numerar(paginas.concat(anxFolhasFotos(o, L.slice(0, cabe), 0, 0, L.length - cabe)));
+}
 function docIIBOM(P) {
   P = P.slice().sort((a, b) => (a.parte || 0) - (b.parte || 0));
   const o1 = P[0], v = vessel(o1.vessel) || { nome: o1.vessel, mca: {} }, fechada = P.every(o => o.status === 'encerrada'), lancada = P.some(o => o.passosFicha || o.dreal);
@@ -9714,9 +9730,12 @@ function docIIBOM(P) {
   P.forEach(o => {
     const ids = o.itensProg || o.items || [], feitos = new Set(o.items || []), nao = {}; (o.naoExec || []).forEach(x => { nao[x.id] = x.motivo || ''; });
     const L = ids.map(id => A1M[id]).filter(Boolean).sort((a, b) => (EQN[a.eq] || a.eq).localeCompare(EQN[b.eq] || b.eq, 'pt-BR'));
-    B.push(sx([posCurtoE(v, o.pos), L.length + (L.length === 1 ? ' serviço' : ' serviços'), tbl(['Equipamento', 'Serviço', 'A cada', 'Feito', 'Não feito', 'Observação'],
-      L.map(t => { const f = lancada && feitos.has(t.id), n = lancada && !f; return [{ h: `<span style="color:#3C4043">${esc(EQN[t.eq] || t.eq)}</span>` }, { h: `<b>${esc(t.chk || t.item)}</b>` }, ivEmb(t, v, o.pos), { h: box(f), c: 'c' + (f ? ' ok' : '') }, { h: box(n), c: 'c' + (n ? ' bad' : '') }, n ? nao[t.id] || '' : '']; }),
-      ['20%', '42%', '10%', '6%', '7%', '15%'])]));
+    /* uma linha por serviço e o equipamento como subtítulo: cabe ~50 serviços por folha */
+    let eq0 = '', lin = '';
+    L.forEach(t => { const e = EQN[t.eq] || t.eq, f = lancada && feitos.has(t.id), n = lancada && !f;
+      if (e !== eq0) { eq0 = e; lin += `<tr class="eqh"><td colspan="5">${esc(e)}</td></tr>`; }
+      lin += `<tr><td>${esc(t.chk || t.item)}</td><td class="ac">${esc(ivEmb(t, v, o.pos))}</td><td class="c${f ? ' ok' : ''}">${box(f)}</td><td class="c${n ? ' bad' : ''}">${box(n)}</td><td>${n ? esc(nao[t.id] || '') : ''}</td></tr>`; });
+    B.push(sx([posCurtoE(v, o.pos), L.length + (L.length === 1 ? ' serviço' : ' serviços'), `<table class="lst"><tr><th style="width:58%">Serviço</th><th style="width:11%">A cada</th><th style="width:6%">Feito</th><th style="width:7%">Não feito</th><th>Observação</th></tr>${lin}</table>`]));
   });
   B.push(sx(['Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], (o1.mats || []).length ? o1.mats.map(m => [m[0], m[1], m[2]]) : [['', '', ''], ['', '', ''], ['', '', '']], ['60%', '12%', '28%'])]));
   B.push(sx(['Observações', 'o que encontrou, o que não deu para fazer e por quê', `<div class="v" style="min-height:46px">${esc(o1.obsGeral || '')}&nbsp;</div>`]));
@@ -9724,9 +9743,31 @@ function docIIBOM(P) {
   B.push(sx(['Fotos', 'item 5.8', `<div>${F.length ? `${na} foto${na === 1 ? '' : 's'} de antes e ${nd} de depois nas folhas seguintes.` : 'Tirar fotos <b>antes</b> e <b>depois</b> de cada serviço principal.'}</div>`]));
   const ap = fechada ? `<span class="stamp">✓ Conferido e encerrado no SMF · ${esc(o1.aprovBy || '')}</span>` : '';
   B.push(sx(['Assinaturas', '', tbl(['Função', 'Nome', 'Assinatura', 'Data'], [['Executou (equipe de manutenção ou terceiro)', lancada ? (o1.ass || {}).exec || o1.execn || '' : '', '', ''], ['Recebeu a bordo (Comandante ou Coordenador de Operações)', lancada ? (o1.ass || {}).cmd || '' : '', '', ''], ['Supervisor de Manutenção (conferiu e encerrou)', fechada ? o1.aprovBy || '' : '', { h: ap }, fechada ? brD(String(o1.aprovAt || '').slice(0, 10)) : '']], ['40%', '24%', '22%', '14%'])]));
-  return numerar(paginar(fbar, B).concat(paginasFotos(o1, 'Fotos da OM ' + o1.num)));
+  return anxMax5(paginar(fbar, B), o1);
 }
 docIIB = function (o) { return docIIBOM(o.grupo ? omGrupo(o.grupo) : [o]); };
+/* Anexo II-A enxuto: o que quebrou, o que foi feito e os serviços do cronograma que a corretiva refez (são eles que alimentam o cronograma da preventiva), sem número do Anexo I */
+docIIA = function (o) {
+  const v = vessel(o.vessel) || { nome: o.vessel, mca: {} }, crit = o.classe === 'Crítica', fechada = o.status === 'encerrada', sx = s => blk('', s[0], s[1], s[2]).replace('<code></code>', '');
+  const fbar = `<div class="fbar"><div><small>Corretiva · o que quebrou, o que foi feito e o que volta a contar no cronograma</small><h3>Formulário II-A — Manutenção Corretiva</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
+  const B = [];
+  B.push(sx(['Identificação', '', grid('1fr 1.2fr 1fr 1fr', dv('Nº da OM (Sankhya)', o.num) + dv('Empurrador', v.nome) + dv('Aberta em', brDT(o.abertura)) + dv('Classe', o.classe || '')
+    + dv('Onde', o.pos === 'UN' ? 'Embarcação' : posCurtoE(v, o.pos)) + dv('Equipamento', o.equip || '') + dv('Sistema', o.sistema || '') + dv('Local', o.local || '')
+    + (crit || o.classe === 'Alta' ? dv('Nº da RNC', o.rnc || '') : '') + (crit ? dv('Interditado em', brDT(o.interdDT)) : ''))]));
+  B.push(sx(['O que aconteceu', '', `<div class="v" style="min-height:40px">${esc(o.descricao || '')}&nbsp;</div>`]));
+  B.push(sx(['O que foi feito', '', `<div class="v" style="min-height:52px">${esc(o.servicos || '')}&nbsp;</div>` + grid('1fr 1fr 1.6fr', dv('Início', brDT(o.inicio)) + dv('Término', brDT(o.termino)) + dv('Executado por', o.execn || o.exec || ''))
+    + (o.causa ? dv('Causa provável', o.causa) : '')]));
+  const R = (o.itensRefeitos || []).map(k => { const [pos, id] = k.split('|'), t = A1M[id]; return t ? [pos === 'UN' ? 'Embarcação' : posCurtoE(v, pos), { h: `<b>${esc(t.chk || t.item)}</b> <span style="color:#5F6368">· ${esc(EQN[t.eq] || t.eq)}</span>` }, ivEmb(t, v, pos)] : null; }).filter(Boolean);
+  B.push(sx(['Serviços do cronograma refeitos nesta corretiva', 'o próximo vencimento conta da data de término', R.length ? tbl(['Onde', 'Serviço', 'A cada'], R, ['18%', '67%', '15%']) : '<div class="note">Nenhum.</div>']));
+  if ((o.mats || []).length) B.push(sx(['Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], o.mats.map(m => [m[0], m[1], m[2]]), ['60%', '12%', '28%'])]));
+  const F = anxFotos(o);
+  B.push(sx(['Fotos', 'item 5.8', `<div>${F.length ? F.length + ' foto' + (F.length > 1 ? 's' : '') + ' nas folhas seguintes.' : 'Tirar fotos <b>antes</b> e <b>depois</b> do conserto.'}</div>`]));
+  const ap = fechada ? `<span class="stamp">✓ Conferido e encerrado no SMF · ${esc(o.aprovBy || '')}</span>` : '';
+  const rows = [['Executou (equipe de manutenção ou terceiro)', (o.ass || {}).exec || o.execn || '', '', ''], ['Recebeu a bordo (Comandante ou Coordenador de Operações)', (o.ass || {}).cmd || '', '', ''], ['Supervisor de Manutenção (conferiu e encerrou)', fechada ? o.aprovBy || '' : '', { h: ap }, fechada ? brD(String(o.aprovAt || '').slice(0, 10)) : '']];
+  if (crit) rows.push(['Coordenador de Operações (liberação após falha Crítica)', (o.ass || {}).coord || '', '', '']);
+  B.push(sx(['Assinaturas', '', tbl(['Função', 'Nome', 'Assinatura', 'Data'], rows, ['40%', '24%', '22%', '14%'])]));
+  return anxMax5(paginar(fbar, B), o);
+};
 docFichaEmb = function (g) { return docIIBOM(omGrupo(g)); };
 { const f0 = fichaModal; fichaModal = function (o) {
   if (!o || o.tipo === 'C') return f0(o);
@@ -9743,7 +9784,7 @@ docFichaEmb = function (g) { return docIIBOM(omGrupo(g)); };
   o.status = 'encerrada'; o.fechadoAt = Date.now(); o.aprovBy = S.session.name; o.aprovAt = isoDT(hoje()); o.devolvida = '';
   (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: 'Aprovada e encerrada (PDF do Anexo II-B na parte 1)' });
   await saveRec(o); }; }
-{ const st = document.createElement('style'); st.textContent = `.rg-it>.mono{display:none}.sheet td.ok{color:#137333;font-weight:700}.sheet td.bad{color:#C5221F;font-weight:700}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = `.sheet .ph9{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:8px;min-height:0}.sheet .ph9 figure{margin:0;border:.6px solid #B9C5D1;background:#fff;display:flex;flex-direction:column;min-height:0}.sheet .ph9 .im{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#F4F7FA}.sheet .ph9 img{max-width:100%;max-height:100%;object-fit:contain}.sheet .ph9 figcaption{font-size:8.6px;padding:3px 5px;line-height:1.25;max-height:34px;overflow:hidden}.sheet table.lst td{padding:1.5px 5px;font-size:9.2px;line-height:1.25}.sheet table.lst th{padding:2px 5px;font-size:8.6px}.sheet table.lst tr.eqh td{background:#EEF3F8;font-weight:700;color:#16244A;font-size:9px;padding:2px 5px}.sheet table.lst td.ac{white-space:nowrap;color:#3C4043}.rg-it>.mono{display:none}.sheet td.ok{color:#137333;font-weight:700}.sheet td.bad{color:#C5221F;font-weight:700}`; document.head.appendChild(st); }
 </script>
 </body>
 </html>
