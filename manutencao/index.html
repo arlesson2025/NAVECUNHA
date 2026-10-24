@@ -9691,5 +9691,59 @@ padTela('trein', { titulo: 'Treinamento', desc: 'Situação por colaborador e re
 padTela('lubcons', { titulo: 'Óleo e resíduos', desc: 'Consumo de lubrificantes e geração de OLUC' });
 padTela('hor', { titulo: 'Registro de horímetros', desc: 'Lançamentos de horímetro por empurrador e motor' });
 </script>
+<script>
+/* ===== Anexo II-B pela lista do cronograma (pedido do Supervisor, 24/10/2026: "na preventiva sai a lista do cronograma no anexo, eu realizo,
+   anexo fotos antes e depois e pronto · quem vai querer saber de número do Anexo I?") =====
+   · Um Anexo II-B por OM (a OM inteira, todas as partes juntas), sem número de item do Anexo I: equipamento, serviço em palavras, a cada quanto, Feito / Não feito, observação.
+   · É o mesmo documento na emissão (imprimir e entregar à equipe, no lugar da ficha) e no encerramento (com o que foi feito, as fotos antes e depois e o carimbo do Supervisor).
+   · Na OM em grupo, só a parte 1 gera o PDF (o documento já tem a OM inteira); as outras partes encerram sem PDF repetido.
+   · Na tela de lançamento da OM o número do item também sai (só CSS). */
+'use strict';
+function docIIBOM(P) {
+  P = P.slice().sort((a, b) => (a.parte || 0) - (b.parte || 0));
+  const o1 = P[0], v = vessel(o1.vessel) || { nome: o1.vessel, mca: {} }, fechada = P.every(o => o.status === 'encerrada'), lancada = P.some(o => o.passosFicha || o.dreal);
+  const sx = s => blk('', s[0], s[1], s[2]).replace('<code></code>', '');
+  const dl = P.map(o => o.alvoD).filter(Boolean).sort()[0];
+  const fbar = `<div class="fbar"><div><small>Serviços do cronograma preventivo · marque o que fez e tire fotos antes e depois</small><h3>Formulário II-B — Manutenção Preventiva</h3></div><div class="om">Nº da OM<br><b>${esc(o1.num)}</b></div></div>`;
+  const B = [];
+  B.push(sx(['Identificação', '', grid('1fr 1.2fr 1fr 1fr', dv('Nº da OM (Sankhya)', o1.num) + dv('Empurrador', v.nome) + dv('Aberta em', brD(o1.emitAt)) + dv('Fazer até', dl ? brD(dl) : '—')
+    + dv('Data da execução', lancada ? brD(o1.dreal) : '') + dv('Executado por', lancada ? o1.execn || o1.exec || '' : '', 2) + dv('Empurrador parado (h)', lancada ? o1.indispH || '0' : ''))]));
+  const mot = P.filter(o => o.pos !== 'UN');
+  if (mot.length) B.push(sx(['Horímetros', 'anotar antes de começar', tbl(['Motor', 'Na abertura da OM', 'Previsto para', 'Na execução'], mot.map(o => [posCurtoE(v, o.pos), o.hEmit ? nf(o.hEmit) + ' h' : '—', o.alvoH ? nf(o.alvoH) + ' h' : '—', lancada && o.hreal ? nf(o.hreal) + ' h' : '']), ['34%', '22%', '22%', '22%'])]));
+  const box = on => on ? '☒' : '☐';
+  P.forEach(o => {
+    const ids = o.itensProg || o.items || [], feitos = new Set(o.items || []), nao = {}; (o.naoExec || []).forEach(x => { nao[x.id] = x.motivo || ''; });
+    const L = ids.map(id => A1M[id]).filter(Boolean).sort((a, b) => (EQN[a.eq] || a.eq).localeCompare(EQN[b.eq] || b.eq, 'pt-BR'));
+    B.push(sx([posCurtoE(v, o.pos), L.length + (L.length === 1 ? ' serviço' : ' serviços'), tbl(['Equipamento', 'Serviço', 'A cada', 'Feito', 'Não feito', 'Observação'],
+      L.map(t => { const f = lancada && feitos.has(t.id), n = lancada && !f; return [{ h: `<span style="color:#3C4043">${esc(EQN[t.eq] || t.eq)}</span>` }, { h: `<b>${esc(t.chk || t.item)}</b>` }, ivEmb(t, v, o.pos), { h: box(f), c: 'c' + (f ? ' ok' : '') }, { h: box(n), c: 'c' + (n ? ' bad' : '') }, n ? nao[t.id] || '' : '']; }),
+      ['20%', '42%', '10%', '6%', '7%', '15%'])]));
+  });
+  B.push(sx(['Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], (o1.mats || []).length ? o1.mats.map(m => [m[0], m[1], m[2]]) : [['', '', ''], ['', '', ''], ['', '', '']], ['60%', '12%', '28%'])]));
+  B.push(sx(['Observações', 'o que encontrou, o que não deu para fazer e por quê', `<div class="v" style="min-height:46px">${esc(o1.obsGeral || '')}&nbsp;</div>`]));
+  const F = (o1.fotos || []), na = F.filter(x => x.tipo === 'ANTES').length, nd = F.filter(x => x.tipo === 'DEPOIS').length;
+  B.push(sx(['Fotos', 'item 5.8', `<div>${F.length ? `${na} foto${na === 1 ? '' : 's'} de antes e ${nd} de depois nas folhas seguintes.` : 'Tirar fotos <b>antes</b> e <b>depois</b> de cada serviço principal.'}</div>`]));
+  const ap = fechada ? `<span class="stamp">✓ Conferido e encerrado no SMF · ${esc(o1.aprovBy || '')}</span>` : '';
+  B.push(sx(['Assinaturas', '', tbl(['Função', 'Nome', 'Assinatura', 'Data'], [['Executou (equipe de manutenção ou terceiro)', lancada ? (o1.ass || {}).exec || o1.execn || '' : '', '', ''], ['Recebeu a bordo (Comandante ou Coordenador de Operações)', lancada ? (o1.ass || {}).cmd || '' : '', '', ''], ['Supervisor de Manutenção (conferiu e encerrou)', fechada ? o1.aprovBy || '' : '', { h: ap }, fechada ? brD(String(o1.aprovAt || '').slice(0, 10)) : '']], ['40%', '24%', '22%', '14%'])]));
+  return numerar(paginar(fbar, B).concat(paginasFotos(o1, 'Fotos da OM ' + o1.num)));
+}
+docIIB = function (o) { return docIIBOM(o.grupo ? omGrupo(o.grupo) : [o]); };
+docFichaEmb = function (g) { return docIIBOM(omGrupo(g)); };
+{ const f0 = fichaModal; fichaModal = function (o) {
+  if (!o || o.tipo === 'C') return f0(o);
+  const P = o.grupo ? omGrupo(o.grupo) : [o], docs = docIIBOM(P), nm = `Anexo_II-B_OM${o.num}_${vName(o.vessel).replace(/\s+/g, '_')}.pdf`;
+  modal(`<div class="row"><h2>Anexo II-B · OM ${esc(o.num)} · ${esc(vName(o.vessel))}</h2><span class="sp"></span><button class="mbtn pri" data-act="pdfIIB">⬇ Baixar PDF para imprimir</button><button class="mbtn" data-close>Fechar</button></div>
+   <p class="note">Imprima e entregue à equipe. Ela marca Feito ou Não feito em cada serviço, tira fotos antes e depois e assina. Na volta, lance as fotos e o que foi feito na OM.</p><div class="pdfwrap" id="fichaPrev"></div>`, true);
+  previewPages($('#fichaPrev'), docs, 560);
+  $('#modal').addEventListener('click', async e => { if (e.target.closest('[data-act="pdfIIB"]')) await baixarPDF(docs, nm); });
+}; }
+/* OM em grupo: o II-B já é a OM inteira; só a parte 1 gera e guarda o PDF */
+{ const a0 = aprovarOM; aprovarOM = async function (o) {
+  if (!(o && o.tipo === 'P' && o.grupo && (o.parte || 1) > 1)) return a0.apply(this, arguments);
+  const g = gateIIB(o); if (!g.every(x => x[1])) return toast('Ainda há itens pendentes na conferência.');
+  o.status = 'encerrada'; o.fechadoAt = Date.now(); o.aprovBy = S.session.name; o.aprovAt = isoDT(hoje()); o.devolvida = '';
+  (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: 'Aprovada e encerrada (PDF do Anexo II-B na parte 1)' });
+  await saveRec(o); }; }
+{ const st = document.createElement('style'); st.textContent = `.rg-it>.mono{display:none}.sheet td.ok{color:#137333;font-weight:700}.sheet td.bad{color:#C5221F;font-weight:700}`; document.head.appendChild(st); }
+</script>
 </body>
 </html>
