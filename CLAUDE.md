@@ -23,6 +23,7 @@ Não há build, lint, testes nem gerenciador de pacotes. Publicação: GitHub Pa
 
 - Rodar: servir a raiz do repositório por HTTP (ex.: `python -m http.server 8765 --bind 127.0.0.1`) e abrir `/manutencao/`. O app só registra o service worker em `https:`; o comportamento offline real se testa no celular, pelo GitHub Pages. Ao mudar arquivos pré-cacheados, confira que todos baixam (`caches.open(...).addAll(ARQ)` no console).
 - Dados de exemplo: o app gera uma frota simulada (`gerarExemplo` / `carregarExemplo`); o banner “Dados de exemplo” aparece enquanto existirem.
+- **Teste das telas**: `python testes/telas.py` (precisa de playwright + Chromium) abre a versão desta pasta e a da `main` com a mesma data e os mesmos dados de exemplo e compara o HTML de cada tela, os Anexos II gerados e o código final de `VX`/`AFTER`. Rode antes de cada push; numa limpeza tem de dar tudo IGUAL. Saída em `testes/saida/` (fora do git).
 - Servidor: o código é colado manualmente no editor do Apps Script e implantado como App da Web; a URL `/exec` vai em Administração → Nuvem.
 
 ## Como ler `manutencao/index.html` (~1,3 MB, ~7.960 linhas)
@@ -103,6 +104,7 @@ Consequência prática: para saber o que realmente aparece numa tela, procure a 
 O SMF está **em construção**: o Supervisor ainda define telas e funcionalidades e **não há dados reais** (só dados de exemplo). Não trate riscos de produção como urgentes enquanto isso.
 
 **Durante a construção** (custo de agora):
+- Limpeza de 24/10/2026: saíram as versões de telas, botões e documentos que eram trocadas sem uso (as funções que viraram `function nome() {}` vazias ficam só para manter o nome, porque um bloco posterior as reatribui) e as funções sem uso (1.406 → 1.282 KB). O que sobra são cadeias de embrulhos vivos (cada bloco usa o anterior): reduzir isso é reescrever a tela num bloco só.
 - Ao criar uma tela ou fazer mudança grande numa existente, consolidar aquela tela num bloco só, eliminando os patches antigos dela (hoje são ~2 versões por tela, 33 funções reembrulhadas e 10 injeções de HTML por `indexOf`).
 - Levar para o repositório um teste das telas (comparar o HTML de cada tela com a versão da `main`) e rodá-lo antes de cada push.
 
