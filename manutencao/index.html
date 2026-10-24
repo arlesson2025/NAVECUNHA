@@ -4442,25 +4442,7 @@ function horMcpCard() {}
 document.addEventListener('click', e => { const b = e.target.closest('[data-hmv]'); if (b) { HMV = b.dataset.hmv; render(); } });
 
 /* ---------- 13 · "Rio do ciclo de óleo": cada MCP é um empurrador navegando até a próxima troca ---------- */
-const BOAT = '<svg viewBox="0 0 44 24" aria-hidden="true"><path d="M3 15h34l-4 6H7z" fill="currentColor"/><rect x="18" y="7" width="12" height="8" rx="1.5" fill="currentColor" opacity=".85"/><rect x="21" y="2" width="6" height="5.5" rx="1" fill="currentColor" opacity=".7"/><rect x="20" y="9" width="2.4" height="2.4" rx=".5" fill="#fff" opacity=".9"/><rect x="24" y="9" width="2.4" height="2.4" rx=".5" fill="#fff" opacity=".9"/><path d="M37 15h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-function rioCard() {
-  const t11 = A1M['1.1.1']; if (!t11) return '';
-  const L = []; S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => { const s = situacao(v, pos, t11), iv = intervalo(t11, v, pos), h = horAtual(v.id, pos); if (!s || s.rest == null || !iv.h) return;
-    L.push({ v, pos, nome: v.nome + (v.mcp === 'mono' ? '' : ' · ' + pos), iv: iv.h, feito: iv.h - s.rest, rest: s.rest, acum: h ? h.h : null, hd: horasDia(v.id), om: omAberta(v.id, pos, '1.1.1') }); }));
-  L.sort((a, b) => a.rest - b.rest);
-  const MAX = 1.15, pct = x => Math.max(0, Math.min(MAX, x.feito / x.iv)) / MAX * 100, Z1 = 1 / MAX * 100, ZA = (1 - 50 / 350) / MAX * 100;
-  const st = x => x.rest < 0 ? 'v' : x.rest <= 50 ? 'a' : 'o';
-  const venc = L.filter(x => x.rest < 0).length, prox = L.filter(x => x.rest >= 0 && x.rest <= 50).length;
-  const linha = (x, i) => { const p = pct(x), s = st(x), dias = x.rest > 0 ? Math.round(x.rest / x.hd) : 0;
-    return `<div class="rio-l ${s}" data-tip="${esc(x.nome)} · ${nf(Math.max(0, x.feito))} de ${nf(x.iv)} h no óleo atual · ${x.rest < 0 ? 'vencida há ' + nf(-x.rest) + ' h' : 'faltam ' + nf(x.rest) + ' h (≈ ' + dias + ' dias a ' + nf(x.hd, 1) + ' h/dia)'}${x.om ? ' · OM aberta' : ''}">
-      <div class="rio-n"><b>${esc(x.v.nome)}</b>${x.v.mcp === 'mono' ? '' : `<span class="rio-p">${x.pos}</span>`}</div>
-      <div class="rio-t"><i class="rio-w" style="--w:${p}%;transition-delay:${i * 45}ms"></i><span class="rio-z" style="left:${ZA}%"></span><span class="rio-x" style="left:${Z1}%"></span><span class="rio-b" style="--x:max(${p}%, 44px);transition-delay:${i * 45}ms">${BOAT}</span></div>
-      <div class="rio-r"><b>${x.rest < 0 ? '−' + nf(-x.rest) : nf(x.rest)} h</b><small>${x.rest < 0 ? 'vencida' : dias <= 1 ? 'troca agora' : '≈ ' + dias + ' dias'}${x.om ? ' · OM' : ''}</small></div></div>`; };
-  return `<div class="card rio"><div class="row"><div><h2>Ciclo de óleo do MCP · onde cada motor está</h2><div class="note">Cada empurrador navega do último FR 049_B (à esquerda) até a troca em ${nf(L[0] ? L[0].iv : 350)} h (linha vermelha). Ordenado por urgência; passe o mouse para ver horas e dias pelo ritmo de cada embarcação.</div></div><span class="sp"></span>
-    <div class="rio-k"><span class="v"><b>${venc}</b> vencida${venc === 1 ? '' : 's'}</span><span class="a"><b>${prox}</b> até 50 h</span><span class="o"><b>${L.length - venc - prox}</b> navegando</span></div></div>
-   <div class="rio-esc"><span style="left:0">0 h</span><span style="left:${ZA}%">${nf(L[0] ? L[0].iv - 50 : 300)} h</span><span style="left:${Z1}%">troca</span></div>
-   <div class="rio-ls">${L.map(linha).join('')}</div></div>`;
-}
+function rioCard() {}
 { const r0 = render; render = function () { r0(); if (VIEW === 'hor') requestAnimationFrame(() => setTimeout(() => $$('.rio-ls').forEach(e => e.classList.add('on')), 60)); }; }
 
 </script>
@@ -5385,74 +5367,7 @@ function cxLinha(v, pos, t, ano) {
   }
   return { v, pos, t, iv, marks };
 }
-function cxDados(ano, filtroV, sis) {
-  CXI = cxIndice(); const L = []; S.cfg.frota.forEach(v => { if (foraOp(v) || (filtroV && v.id !== filtroV)) return;
-    posicoes(v).forEach(pos => itensDe(v, pos).forEach(t => { if (t.kind !== 'prog' || (typeof CRONO_FORA !== 'undefined' && CRONO_FORA.includes(t.id)) || !aplica(v, pos, t)) return; if (sis && parseInt(t.id) !== +sis) return; const r = cxLinha(v, pos, t, ano); if (r) L.push(r); })); });
-  const ordV = r => S.cfg.frota.indexOf(r.v), ordP = r => posicoes(r.v).indexOf(r.pos), idn = id => id.split('.').map(n => String(+n).padStart(3, '0')).join('.');
-  L.sort((a, b) => ordV(a) - ordV(b) || parseInt(a.t.id) - parseInt(b.t.id) || ordP(a) - ordP(b) || (idn(a.t.id) < idn(b.t.id) ? -1 : 1));
-  return L;
-}
-function cxConta(L, mes) {
-  const M = L.flatMap(r => r.marks.filter(m => m.k !== 'pl' && (mes == null || m.d.getMonth() === mes)));
-  const ok = M.filter(m => m.k === 'ok').length, late = M.filter(m => m.k === 'late').length, miss = M.filter(m => m.k === 'miss').length, plan = M.filter(m => m.k === 'plan').length;
-  const den = ok + late + miss; return { ok, late, miss, plan, den, ad: den ? ok / den * 100 : null };
-}
-function cxCel(ms) {
-  if (!ms.length) return '<td></td>';
-  const tip = ms.map(m => m.k === 'ok' ? `Realizado ${brD(isoD(m.d))} · ${m.ev.src}${m.due ? ' · vencia ' + brD(isoD(m.due)) : ''}` : m.k === 'late' ? `Realizado com ${m.atr} d de atraso em ${brD(isoD(m.d))} · ${m.ev.src} · vencia ${brD(isoD(m.due))}` : m.k === 'miss' ? `Programado ${brD(isoD(m.d))} · NÃO realizado` : m.k === 'pl' ? `Programado ${brD(isoD(m.d))} · feito depois (${m.ev.src})` : `Programado ${brD(isoD(m.d))}`).join('\n');
-  const sm = { ok: 'R', late: 'R', miss: 'P', plan: 'P', pl: 'P' };
-  const k = ['miss', 'late', 'ok', 'pl', 'plan'].find(x => ms.some(m => m.k === x));
-  const lab = ms.filter(m => m.k === k).length > 1 ? sm[k] + '×' + ms.filter(m => m.k === k).length : sm[k];
-  const om = ms.find(m => m.ev && m.ev.num && (m.k === 'ok' || m.k === 'late'));
-  return `<td><span class="cx-c ${k}" title="${esc(tip)}">${lab}${om ? `<small>${esc(String(om.ev.num))}</small>` : ''}</span></td>`;
-}
-function cxCarga(L) {   // OMs por mês: o SMF abre uma OM por posição (BB, BE, MCA, embarcação) em cada janela de manutenção
-  const M = Array.from({ length: 12 }, () => ({ it: 0, pos: new Set(), ves: new Set() }));
-  L.forEach(r => r.marks.forEach(k => { if (k.k === 'pl') return; const m = M[k.d.getMonth()]; m.it++; m.pos.add(r.v.id + '|' + r.pos); m.ves.add(r.v.id); }));
-  return M.map(m => ({ it: m.it, om: m.pos.size, omV: m.ves.size }));
-}
-function cxCargaCard(L, ano) {
-  const C = cxCarga(L), MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'], mx = Math.max(1, ...C.map(c => c.om)), hm = hoje().getFullYear() === +ano ? hoje().getMonth() : -1;
-  const fut = C.filter((_, i) => hm < 0 || i >= hm), med = k => fut.length ? Math.round(fut.reduce((a, c) => a + c[k], 0) / fut.length) : 0, du = 22;
-  return `<div class="card"><div class="row"><h2>Carga de OMs prevista · ${ano}${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota toda'}</h2><span class="sp"></span><span class="note">quantos itens vencem e quantas OMs isso gera</span></div>
-   <div class="cx-kpi" style="margin:4px 0 10px"><div><b>${med('it')}</b><span>itens vencendo por mês</span><small>média ${hm >= 0 ? 'de ' + MES[hm] + ' a dez' : 'do ano'}</small></div><div><b style="color:#1967D2">${med('om')}</b><span>OMs por mês</span><small>uma por posição (BB, BE, MCA, embarcação) · ~${(med('om') / du).toFixed(1).replace('.', ',')} por dia útil</small></div><div><b style="color:#188038">${med('omV')}</b><span>OMs por mês se juntar</span><small>uma por embarcação em cada janela</small></div><div><b>${med('it') && med('om') ? Math.round(med('it') / med('om')) : '—'}</b><span>itens por OM</span><small>em média</small></div></div>
-   <div class="tw"><table class="t cx-cg"><thead><tr><th style="text-align:left">Mês</th>${MES.map((m, i) => `<th${i === hm ? ' class="cx-hj"' : ''}>${m}</th>`).join('')}</tr></thead><tbody>
-    <tr><td style="text-align:left">Itens vencendo</td>${C.map(c => `<td>${c.it || '—'}</td>`).join('')}</tr>
-    <tr><td style="text-align:left"><b>OMs (uma por posição)</b></td>${C.map(c => `<td><div class="cx-bar"><i style="height:${Math.round(c.om / mx * 34)}px"></i></div><b>${c.om || '—'}</b></td>`).join('')}</tr>
-    <tr><td style="text-align:left">OMs (uma por embarcação)</td>${C.map(c => `<td>${c.omV || '—'}</td>`).join('')}</tr></tbody></table></div>
-   <p class="note">Uma OM não é um item: os itens que vencem na mesma janela entram juntos na OM da posição (Planejamento → Programação da janela → "Marcar os que vencem" → "Abrir OM"). Os meses até a implantação (out/2026) usam o histórico de exemplo/importado.</p></div>`;
-}
-function cxTabela(L, ano) {
-  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-  const rows = (CX.so ? L.filter(r => r.marks.length) : L);
-  let html = '', vAnt = '', sAnt = '', pAnt = '';
-  const varios = new Set(rows.map(r => r.v)).size > 1, adTx = c => c.ad == null ? `${c.plan} programados` : `aderência ${nf(c.ad, 0)}% (${c.ok} de ${c.den})`;
-  rows.forEach(r => { const sn = parseInt(r.t.id), sk = r.v.id + '|' + sn, pk = sk + '|' + r.pos;
-    if (varios && r.v.id !== vAnt) { vAnt = r.v.id; html += `<tr class="cx-v"><td colspan="15">${esc(r.v.nome)}</td></tr>`; }
-    if (sk !== sAnt) { sAnt = sk; pAnt = ''; const c = cxConta(rows.filter(x => x.v === r.v && parseInt(x.t.id) === sn)); html += `<tr class="cx-g"><td colspan="15">${esc(SISTEMAS[sn - 1] || sn + '.0')}<span>${adTx(c)}</span></td></tr>`; }
-    const nP = new Set(rows.filter(x => x.v === r.v && parseInt(x.t.id) === sn).map(x => x.pos)).size;
-    if (pk !== pAnt) { pAnt = pk; if (r.pos !== 'UN' && (nP > 1 || sn === 1 || sn === 3)) html += `<tr class="cx-s"><td colspan="15">${esc(posNome(r.v, r.pos))}</td></tr>`; }
-    html += `<tr><td class="cx-id">${r.t.id}</td><td class="cx-it">${esc(r.t.chk)}</td><td class="cx-iv">${[r.iv.h ? nf(r.iv.h) + ' h' : '', r.iv.m ? r.iv.m + ' m' : ''].filter(Boolean).join(' / ')}</td>${MES.map((_, i) => cxCel(r.marks.filter(m => m.d.getMonth() === i))).join('')}</tr>`; });
-  const tot = MES.map((_, i) => cxConta(rows, i));
-  const foot = `<tr class="cx-f"><td colspan="3">Aderência no mês (feitos no prazo ÷ vencidos até hoje)</td>${tot.map(c => `<td>${c.ad == null ? (c.plan ? `<small>${c.plan} prog.</small>` : '—') : `<b style="color:${c.ad >= 90 ? '#188038' : c.ad >= 75 ? '#E37400' : '#D93025'}">${nf(c.ad, 0)}%</b><small>${c.ok}/${c.den}</small>`}</td>`).join('')}</tr>`;
-  return `<table class="cx-t"><thead><tr><th>Nº</th><th>Item do Anexo I</th><th>Intervalo</th>${MES.map(m => `<th>${m}/${String(ano).slice(2)}</th>`).join('')}</tr></thead><tbody>${html || '<tr><td colspan="15" class="note">Nada programado nem realizado neste filtro.</td></tr>'}</tbody><tfoot>${foot}</tfoot></table>`;
-}
-function vCxr() {
-  const ano = CX.ano, L = cxDados(ano, CX.v, CX.sis), T = cxConta(L), all = CX.v ? cxDados(ano, '', CX.sis) : L;
-  const porV = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, c: cxConta(all.filter(r => r.v === v)) }));
-  const anos = []; for (let y = 2025; y <= hoje().getFullYear() + 1; y++) anos.push(y);
-  const sel = (k, ops, val) => `<select data-cx="${k}">${ops.map(([a, b]) => `<option value="${a}"${String(a) === String(val) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
-  const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#D93025';
-  return `<div class="vh"><div><h1>Cronograma × Realizado · ${ano}</h1><p>Preventivas do Plano de Manutenção (Anexo I, NP 055) por embarcação e mês: o que estava programado (P) e o que foi realizado (R), com o nº da OM. Programado = último serviço + intervalo (horas OU meses, o que vier primeiro).</p></div><span class="sp"></span><button class="mbtn pri" data-cxpdf>⬇ PDF para auditoria (A4 deitado)</button></div>
-   <div class="card"><div class="g"><label class="f s2">Ano${sel('ano', anos.map(y => [y, y]), ano)}</label><label class="f s2">Embarcação${sel('v', [['', 'Frota toda']].concat(S.cfg.frota.filter(v => !foraOp(v)).map(v => [v.id, v.nome])), CX.v)}</label><label class="f s2">Sistema${sel('sis', [['', 'Todos']].concat(SISTEMAS.map((s, i) => [i + 1, s])), CX.sis)}</label><label class="f s2" style="flex-direction:row;align-items:center;gap:8px;align-self:end"><input type="checkbox" data-cx="so" ${CX.so ? 'checked' : ''}> só itens com P ou R no ano</label></div></div>
-   <div class="cx-kpi"><div><b style="color:${adC(T.ad)}">${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b><span>aderência ao plano</span><small>${T.ok} de ${T.den} vencidos até hoje feitos no prazo</small></div><div><b style="color:#188038">${T.ok}</b><span>realizados no prazo</span></div><div><b style="color:#E37400">${T.late}</b><span>realizados com atraso</span></div><div><b style="color:#D93025">${T.miss}</b><span>vencidos e não realizados</span></div><div><b style="color:#5F6368">${T.plan}</b><span>programados até dezembro</span></div></div>
-   ${cxCargaCard(L, ano)}
-   <div class="card"><div class="row"><h2>Aderência por embarcação · ${ano}</h2><span class="sp"></span><span class="note">clique na embarcação para ver o cronograma dela</span></div>
-    <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr class="click" data-cxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${x.c.ok}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table></div></div>
-   <div class="card"><div class="row"><h2>Cronograma × Realizado${CX.v ? ' · ' + esc(vName(CX.v)) : ' · frota toda'}</h2><span class="sp"></span><div class="cx-leg"><span><i class="cx-c ok">R</i>feito no prazo</span><span><i class="cx-c late">R</i>feito com atraso</span><span><i class="cx-c miss">P</i>venceu e não foi feito</span><span><i class="cx-c pl">P</i>vencimento (feito depois)</span><span><i class="cx-c plan">P</i>programado</span></div></div>
-    ${!CX.v && L.length > 400 ? '<p class="note">A frota toda gera uma tabela muito grande: escolha uma embarcação para ver o detalhe.</p>' : `<div class="tw cx-w">${cxTabela(L, ano)}</div>`}
-    <p class="note">Passe o mouse numa célula para ver a data, a OM ou o FR 049_B. Aderência = realizados no prazo ÷ (no prazo + com atraso + vencidos não realizados). Os registros começam em outubro de 2026 (implantação do SMF); o histórico anterior pode ser importado.</p></div>`;
-}
+function vCxr() {}
 document.addEventListener('change', e => { const s = e.target.closest('[data-cx]'); if (!s || VIEW !== 'cxr') return; const k = s.dataset.cx; CX[k] = k === 'so' ? s.checked : k === 'ano' ? +s.value : s.value; render(); });
 document.addEventListener('click', e => { if (VIEW !== 'cxr') return; const r = e.target.closest('[data-cxv]'); if (r) { CX.v = r.dataset.cxv; render(); setTimeout(() => { const t = document.querySelector('.cx-w'); if (t) t.scrollIntoView({ behavior: 'smooth' }); }, 300); return; } const sx = e.target.closest('[data-cxs]'); if (sx) { CX.sis = String(CX.sis) === sx.dataset.cxs ? '' : sx.dataset.cxs; render(); return; } if (e.target.closest('[data-cxpdf]')) cxPDF(); });
 function cxPDF() {}
@@ -5905,33 +5820,6 @@ function cronoFrota(ano, vid) {
   });
   return out.sort((a, b) => S.cfg.frota.indexOf(a.v) - S.cfg.frota.indexOf(b.v) || a.ord - b.ord);
 }
-const CR3 = { v: '', crit: '', ano: hoje().getMonth() >= 9 ? hoje().getFullYear() + 1 : hoje().getFullYear() };
-function cr3Tabela(L, ano, pdf) {
-  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'], hm = !pdf && hoje().getFullYear() === ano ? hoje().getMonth() : -1;
-  const pc = { 'Crítica': 'cr', 'Alta': 'al', 'Média': 'me', 'Baixa': 'ba' };
-  const cel = (e, i) => { const m = e.M[i], pb = e.base ? e.base[i] || 0 : null, pl = pb != null ? pb : m.plan + m.miss, tip = esc(MES[i] + '/' + String(ano).slice(2) + '\n' + m.tx.join('\n'));
-    let h = ''; if (m.ok || m.late) h += `<i class="k3 ${m.late ? 'late' : 'ok'}">R</i>`; if (m.miss) h += '<i class="k3 miss">P</i>'; else if (pl && !(m.ok || m.late) || (pl > (m.ok + m.late) && i >= hm && hm >= 0)) h += `<i class="k3 plan">P</i>`;
-    return `<td${i === hm ? ' class="hj"' : ''} title="${tip}">${h}</td>`; };
-  let vAnt = '';
-  const rows = L.map(e => { const tot = e.M.reduce((a, m) => ({ r: a.r + m.ok + m.late, p: a.p + (e.base ? 0 : m.plan + m.miss + m.ok + m.late) }), { r: 0, p: 0 }); if (e.base) tot.p = e.base.reduce((a, x) => a + x, 0);
-    const g = e.v.id !== vAnt ? `<tr class="k3-v"><td colspan="17">${esc(e.v.nome)}${cronoBase(ano, e.v.id) ? ` <span>cronograma aprovado · rev. ${cronoBase(ano, e.v.id).rev} · ${esc(cronoBase(ano, e.v.id).aprovBy)} · ${brD(cronoBase(ano, e.v.id).aprovAt)}</span>` : ' <span>cronograma ainda não aprovado</span>'}</td></tr>` : ''; vAnt = e.v.id;
-    return g + `<tr><td class="k3-e"><b>${esc(e.nome.n)}</b>${e.nome.m ? `<small>${esc(e.nome.m)}</small>` : ''}</td><td><span class="k3-c ${pc[e.crit]}">${e.crit}</span></td><td class="k3-s">${e.servs.map(esc).join(' · ')}</td>${MES.map((_, i) => cel(e, i)).join('')}<td class="k3-t">${tot.r}/${tot.p}</td></tr>`; }).join('');
-  return `<table class="k3"><thead><tr><th>Equipamento</th><th>Criticidade</th><th>Serviços</th>${MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>R / P</th></tr></thead><tbody>${rows || '<tr><td colspan="16" class="note">Nada neste filtro.</td></tr>'}</tbody></table>`;
-}
-function cr3Conta(L, hm) { const c = { ok: 0, late: 0, miss: 0, plan: 0 }; L.forEach(e => e.M.forEach(m => { c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.plan += m.plan; })); c.den = c.ok + c.late + c.miss; c.ad = c.den ? c.ok / c.den * 100 : null; return c; }
-function cr3PDF() {
-  const ano = +CR3.ano, L0 = cronoFrota(ano, CR3.v), L = CR3.crit ? L0.filter(e => CR3.crit === 'CA' ? ['Crítica', 'Alta'].includes(e.crit) : e.crit === CR3.crit) : L0, T = cr3Conta(L);
-  const css = `@page{size:A4 landscape;margin:8mm}body{font-family:Arial,sans-serif;font-size:9px;color:#202124;margin:0}.hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:6px}.hd img{height:34px}.hd h1{font-size:14px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368}
-   .k{display:flex;gap:8px;margin:4px 0 8px}.k div{border:1px solid #DADCE0;border-radius:4px;padding:4px 9px}.k b{display:block;font-size:14px}.lg span{margin-right:12px}
-   ${K3CSS}.k3 th{font-size:8.5px}.k3 td{padding:2px 3px}.ass{display:flex;gap:60px;margin-top:24px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{page-break-inside:avoid}thead{display:table-header-group}`;
-  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para gerar o PDF.');
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma ${ano}</title><style>${css}</style></head><body>
-   <div class="hd"><img src="${LOGOS.nav}" alt=""><img src="${LOGOS.vda}" alt=""><div><h1>Cronograma de manutenção · planejado × realizado · ${ano}</h1><p>${CR3.v ? esc(vName(CR3.v)) : 'Frota em operação'} · serviços tirados do Anexo I da NP Navecunha 055 · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SMF</p></div></div>
-   <div class="k"><div><b>${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b>aderência (${T.ok} de ${T.den} serviços vencidos)</div><div><b style="color:#188038">${T.ok}</b>no prazo</div><div><b style="color:#E37400">${T.late}</b>com atraso</div><div><b style="color:#D93025">${T.miss}</b>não feitos</div></div>
-   <p class="lg"><span><i class="k3 plan">P</i> planejado</span><span><i class="k3 ok">R</i> realizado no prazo</span><span><i class="k3 late">R</i> realizado com atraso</span><span><i class="k3 miss">P</i> venceu e não foi feito</span></p>
-   ${[...new Set(L.map(e => e.v))].map((v, i) => `<div${i ? ' style="page-break-before:always"' : ''}>${cr3Tabela(L.filter(e => e.v === v), ano, true)}</div>`).join('')}
-   <div class="ass"><div>Supervisor de Manutenção · aprovação</div><div>Data</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
-}
 const K3CSS = `.k3{width:100%;border-collapse:collapse}.k3 th{background:#16244A;color:#fff;padding:6px 4px;font-weight:600;position:sticky;top:0;z-index:1}.k3 th.hj{background:#1967D2}.k3 td{border-bottom:1px solid #E8EAED;text-align:center;padding:4px 3px;vertical-align:middle}.k3 td.hj{background:#F1F6FE}
  .k3 td.k3-e{text-align:left;min-width:170px}.k3 td.k3-e small{display:block;color:#5F6368;font-size:.85em}.k3 td.k3-s{text-align:left;color:#3C4043;font-size:.85em;min-width:180px;max-width:260px;line-height:1.3}.k3 td.k3-t{font-weight:700;white-space:nowrap}
  .k3 tr.k3-v td{background:#E8F0FE;color:#16244A;font-weight:700;text-align:left;padding:7px 8px;font-size:1.05em}.k3 tr.k3-v td span{font-weight:400;color:#5F6368;font-size:.85em;margin-left:8px}
@@ -5940,14 +5828,7 @@ const K3CSS = `.k3{width:100%;border-collapse:collapse}.k3 th{background:#16244A
 { const st = document.createElement('style'); st.textContent = K3CSS + '.k3-w{max-height:72vh;overflow:auto}.k3-leg{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin:0 0 10px;font-size:13px}.k3-leg>span{display:inline-flex;align-items:center;gap:4px}'; document.head.appendChild(st); }
 async function cr3Aprovar(vs, ano) {}
 
-const after3 = function () { const m = $('#main');
-  m.onchange = async e => { const t = e.target; if (t.dataset.k3) { CR3[t.dataset.k3] = t.value; render(); } if (t.dataset.cic) { S.cfg.ciclo = Object.assign({}, S.cfg.ciclo || {}, { [t.dataset.cic]: Math.max(0, +t.value || 0) }); await kvSet('cfg', S.cfg); render(); } };
-  m.onclick = async e => { const t = e.target.closest('button,a'); if (!t) return;
-    if ('k3pdf' in t.dataset) return cr3PDF();
-    if (t.dataset.k3apr) { e.preventDefault(); if (!precisa(true)) return; const vs = t.dataset.k3apr === 'frota' ? S.cfg.frota.filter(v => !foraOp(v)) : [vessel(t.dataset.k3apr)];
-      await cr3Aprovar(vs, +CR3.ano); toast('Cronograma ' + CR3.ano + ' aprovado' + (vs.length > 1 ? ' para ' + vs.length + ' embarcações.' : '.')); render(); } }; };
- AFTER.cxr = after3;
-{ const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'cxr'); if (i >= 0) s.views.splice(i, 1); const c = s.views.find(x => x[0] === 'crono'); if (c) c[1] = 'Cronograma (planejado × realizado)'; s.extra = (s.extra || []).concat(['cxr']); } }
+ { const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'cxr'); if (i >= 0) s.views.splice(i, 1); const c = s.views.find(x => x[0] === 'crono'); if (c) c[1] = 'Cronograma (planejado × realizado)'; s.extra = (s.extra || []).concat(['cxr']); } }
 
 </script>
 <script>
@@ -5992,32 +5873,7 @@ const OL_ALERTA_H = 50, OL_ALERTA_D = 3;
 const eqNomeC = (v, e) => !e ? '' : e.key === 'inc' ? 'Motobomba de incêndio' : e.g === 'mca' && v ? posCurtoE(v, e.pos) : e.nome;
 function olStatus(x) { if (x.s.st === 'sem' || x.horas == null) return 'sem'; if (x.horas < 0) return 'venc'; if (x.horas <= OL_ALERTA_H || (x.porData && x.dias != null && x.dias <= OL_ALERTA_D)) return 'aten'; return 'ok'; }
 function olValor(x) { if (x.horas == null) return '—'; if (x.porData && x.dias != null) { const d = Math.round(x.dias); return d < 0 ? 'vencido há ' + (-d) + ' d' : d === 0 ? 'vence hoje' : d + ' d'; } return x.horas < 0 ? nf(-x.horas) + ' h vencido' : nf(x.horas) + ' h'; }
-function olRotulo(v, e) {
-  if (e.g === 'mcp') return mcpPos(v).length > 1 ? e.pos : 'MCP';
-  if (e.g === 'crp') return mcpPos(v).length > 1 ? e.pos : 'Reversor';
-  if (e.key === 'inc') return 'Motobomba';
-  if (e.g === 'mca') { const n = posCurtoE(v, e.pos), m = n.match(/\(([^)]*)\)/); return m ? m[1].replace(/Linha de centro/i, 'Centro') : n.replace(/^MCA\s*/, '') || n; }
-  if (e.g === 'hid') return 'Governo';
-  return e.nome;
-}
-const OL_COLS = [['mcp', 'MCP'], ['crp', 'Reversor'], ['mca', 'MCA'], ['hid', 'Governo (hidráulico)']];
-const olCol = e => e.key === 'inc' ? 'inc' : e.g;
-function vOleo() {
-  const LD = lubDados().filter(x => !x.saida && !foraOp(x.v)), V = S.cfg.frota.filter(v => !foraOp(v));
-  const st = LD.map(x => Object.assign(x, { st2: olStatus(x) })), cnt = k => st.filter(x => x.st2 === k).length;
-  const cor = { venc: '#C5221F', aten: '#E37400', ok: '#188038', sem: '#9AA0A6' };
-  const pill = x => `<button class="ol-p ${x.st2}" data-frv="${x.v.id}" title="${esc(x.v.nome + ' · ' + x.e.nome + ' · ' + (x.s.txt || ''))} · clique para lançar a troca"><b>${esc(olRotulo(x.v, x.e))}</b><span>${olValor(x)}</span></button>`;
-  const linhas = V.map(v => { const L = st.filter(x => x.v === v); const pior = ['venc', 'aten', 'ok', 'sem'].find(k => L.some(x => x.st2 === k)) || 'sem'; const s = situDe(v);
-    return `<tr><td class="ol-v"><span class="ol-dot" style="background:${cor[pior]}"></span><b>${esc(v.nome)}</b><small>${s ? (s.st === 'porto' ? '⚓ no porto' : '⛴ em viagem') : ''}</small></td>${OL_COLS.map(([c]) => `<td>${L.filter(x => olCol(x.e) === c).map(pill).join('') || '<span class="note">—</span>'}</td>`).join('')}</tr>`; }).join('');
-  const agora = st.filter(x => x.st2 === 'venc' || x.st2 === 'aten').sort((a, b) => (a.horas ?? 0) - (b.horas ?? 0));
-  const lanc = recs('lub').filter(r => r.tipo === 'fr049').sort((a, b) => (b.date || '') < (a.date || '') ? -1 : 1).slice(0, 8);
-  return `<div class="vh"><div><h1>Óleo da frota</h1><p>Troca de óleo, filtros e caixa de mar. Em viagem quem troca é o MFM, você acompanha pela câmera. No porto, a equipe de manutenção com o CTF/MFM. Clique num motor para lançar a troca.</p></div><span class="sp"></span><button class="mbtn pri" data-frv="">🛢 Lançar troca de óleo</button></div>
-   <div class="ol-k"><div class="venc"><b>${cnt('venc')}</b><span>vencidas</span></div><div class="aten"><b>${cnt('aten')}</b><span>vencendo (até ${OL_ALERTA_H} h)</span></div><div class="ok"><b>${cnt('ok')}</b><span>em dia</span></div>${cnt('sem') ? `<div class="sem"><b>${cnt('sem')}</b><span>sem histórico</span></div>` : ''}</div>
-   <div class="card"><div class="tw"><table class="ol-t"><thead><tr><th>Embarcação</th>${OL_COLS.map(([, n]) => `<th>${n}</th>`).join('')}</tr></thead><tbody>${linhas}</tbody></table></div>
-    <p class="note">Número = horas que faltam para a troca (ou dias, quando vence por data). <b style="color:#C5221F">Vermelho</b> vencido · <b style="color:#E37400">laranja</b> até ${OL_ALERTA_H} h · <b style="color:#188038">verde</b> em dia.</p></div>
-   ${agora.length ? `<div class="card"><h2>Agora</h2><div class="tw"><table class="t"><tbody>${agora.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${esc(eqNomeC(x.v, x.e))}</td><td style="color:${cor[x.st2]};font-weight:600">${olValor(x)}</td><td class="note">${situDe(x.v) ? (situDe(x.v).st === 'porto' ? 'no porto: trocar antes de sair' : 'em viagem: acompanhar pela câmera') : ''}</td><td class="rt-b"><button class="mbtn sm pri" data-frv="${x.v.id}">Lançar troca</button></td></tr>`).join('')}</tbody></table></div></div>` : ''}
-   <div class="card"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver todas</a></div><div class="tw"><table class="t"><tbody>${lanc.map(r => `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(vName(r.vessel) || r.vNome || '')}</b></td><td>${(r.eq || []).filter(q => q.status === 'T').map(q => { const vv = vessel(r.vessel), e = lubEq(vv, q.key); return esc(e ? eqNomeC(vv, e) : q.key); }).join(', ')}</td><td class="note">O.M. ${esc(r.om || '')}</td></tr>`).join('') || '<tr><td class="note">Nenhuma troca lançada ainda.</td></tr>'}</tbody></table></div></div>`;
-}
+function vOleo() {}
 
 /* ---------- Barco: tudo de uma embarcação numa página ---------- */
 const BR = { v: '' };
