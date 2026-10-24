@@ -7348,6 +7348,7 @@ function situRecalc() {
     if (u.ts > atual) v.situ = { st: u.st, at: u.date || isoD(new Date(u.ts)), by: u.by, ts: u.ts }; }); }
 { const s0 = situSalvar; situSalvar = async function (vid, st) { await s0(vid, st); const v = vessel(vid); if (v && v.situ) { v.situ.ts = Date.now(); await kvSet('cfg', S.cfg); } }; }
 // tela do operador
+/* Tela do Operador num bloco só (24/10/2026): boia/cais (situBoiaHTML) e Avaria em viagem entram direto no cartão (antes eram 2 camadas por cima) */
 function vOperador() {
   const V = S.cfg.frota.filter(v => !foraOp(v));
   const linha = v => { const s = situDe(v), r = fr27s(v.id).pop(), P = fr27Pend(v.id);
@@ -7356,7 +7357,7 @@ function vOperador() {
     return `<div class="op-c"><div class="op-h"><b>${esc(v.nome)}</b><span class="note">${!s ? 'situação não informada' : s.st === 'porto' ? '⚓ no porto' : '⛴ em viagem'}</span></div>
       <div class="note">${r ? 'Último FR 027_L: ' + (r.mov === 'saida' ? 'saída' : 'chegada') + ' em ' + brD(r.date) + ' ' + esc(r.hora || '') : 'Nenhum FR 027_L ainda'}</div>
       ${P.length ? `<div class="rt2-l bad"><span>⚠ ${P.length} NO sem OM${P.some(x => x.c === 'Crítica') ? ' · <b>Crítica</b>' : ''}</span><span class="sp"></span><button class="mbtn sm" data-fr27pend="${P[0].rec}">Informar OM</button></div>` : ''}
-      <div class="op-b">${bt}</div></div>`; };
+      ${situBoiaHTML(v) || ''}<div class="op-b">${bt}${!s || s.st !== 'porto' ? `<button class="mbtn" data-avaria="${v.id}">⚠ Avaria em viagem</button>` : ''}</div></div>`; };
   return `<div class="vh"><div><h1>Chegada e saída · FR 027_L</h1><p>Você preenche e assina o check-list do empurrador na chegada e na saída do terminal (NP 055, itens 4.4 e 5.5.1). Todo item NO precisa de criticidade e do nº da OM aberta no Sankhya. O Supervisor de Manutenção confere depois.</p></div><span class="sp"></span><span class="note">${esc(S.session.name)} · Operador</span></div>
     <div class="op-g">${V.map(linha).join('')}</div>`;
 }
@@ -7451,7 +7452,6 @@ document.addEventListener('click', e => { const a = e.target.closest('[data-hoff
 function situBoiaHTML(v) { const s = situDe(v); if (!s || s.st !== 'porto') return ''; const st = situLocal(v.id) === 'boia' ? 'boia' : 'cais';
   return `<div class="rt2-l"><span>${SITU_TX[st]}</span><span class="sp"></span><button class="mbtn sm" data-sitboia="${v.id}|${st === 'boia' ? 'cais' : 'boia'}">${st === 'boia' ? '⚓ Voltou ao cais' : '🛟 Foi para a boia'}</button></div>`; }
 { const f0 = fr27Linha; fr27Linha = function (v) { return situBoiaHTML(v) + f0(v); }; }
-{ const o0 = vOperador; vOperador = function () { const t = document.createElement('div'); t.innerHTML = o0(); t.querySelectorAll('.op-c').forEach(c => { const b = c.querySelector('[data-situ]'); const vid = b && b.dataset.situ.split('|')[0], v = vessel(vid); if (!v) return; const h = situBoiaHTML(v); if (h) c.querySelector('.op-b').insertAdjacentHTML('beforebegin', h); }); return t.innerHTML; }; }
 // "O que precisa de você agora": MCA sem leitura há 2 semanas (horímetro danificado?) sem estimativa
 { const a0 = agoraLista; agoraLista = function () { const L = a0();
   S.cfg.frota.filter(v => !foraOp(v)).forEach(v => MCAS.filter(p => (v.mca || {})[p]).forEach(p => { if (horEst(v, p)) return; const r = horAtual(v.id, p); if (!r) return;
@@ -7537,7 +7537,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-avar
 // Hoje · em viagem: botão de avaria e falhas pendentes
 { const t0 = saidaTag; saidaTag = function (v) { const P = fr27Pend(v.id), cr = P.some(x => x.c === 'Crítica');
   return t0(v) + (P.length ? ` <span class="fs-p ${cr ? 'v' : 'a'}" title="${esc(P.map(x => x.orig + ': ' + x.lab).join('\n'))}">${P.length} falha${P.length > 1 ? 's' : ''} sem OM</span>` : '') + ` <button class="mbtn sm" data-avaria="${v.id}" title="O MFM avisou uma avaria">⚠ Avaria</button>`; }; }
-{ const o0 = vOperador; vOperador = function () { const t = document.createElement('div'); t.innerHTML = o0(); t.querySelectorAll('.op-c').forEach(c => { const b = c.querySelector('[data-situ$="|porto"]'); if (!b) return; const vid = b.dataset.situ.split('|')[0]; c.querySelector('.op-b').insertAdjacentHTML('beforeend', `<button class="mbtn" data-avaria="${vid}">⚠ Avaria em viagem</button>`); }); return t.innerHTML; }; }
 </script>
 <script>
 /* ===== Rotas: a próxima viagem tem destino e duração real (máxima) =====
