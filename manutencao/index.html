@@ -2298,7 +2298,8 @@ function vEmitir() {
      <b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Número gerado pelo Sankhya</b>
      <div class="row"><input id="omNum" inputmode="numeric" placeholder="Ex.: 48231" style="width:160px"><button class="mbtn pri" data-act="emitirEmb">Emitir OM e imprimir ficha</button><button class="mbtn" data-act="cancDraft">Cancelar</button><span class="note" id="emE" style="color:var(--badt)"></span></div></div>`)).firstElementChild.outerHTML; }
   const passos = ['Empurrador e rota', 'O que entra', 'Abrir a OM'].map((t, i) => `<div class="gu-p${i + 1 < EM.passo ? ' feito' : i + 1 === EM.passo ? ' atual' : ''}" data-pvpasso="${i + 1}" style="cursor:pointer"><i>${i + 1 < EM.passo ? '✓' : i + 1}</i><span>${t}</span></div>`).join('<div class="gu-l"></div>');
-  const nSel = EM.sel.size, cor = { venc: 'p-bad', mes: 'p-warn', emb: 'p-inf', adi: 'p-mut' }, rot = { venc: 'Vencido', mes: 'Vence no mês', emb: 'Embarcada · CTF/MFM', adi: 'Adiantar?' };
+  const nSel = EM.sel.size, cor = { venc: 'p-bad', mes: 'p-warn', emb: 'p-inf', adi: 'p-mut', ok: 'p-mut' }, rot = { venc: 'Vencido', mes: 'Vence no mês', emb: 'Embarcada · CTF/MFM', adi: 'Adiantar?', ok: 'Em dia · adiantar' };
+  const doCx = EM.doCx && EM.vid === vid ? P.filter(x => EM.doCx.has(x.pos + '|' + x.t.id) && !entra.includes(x) && !adi.includes(x)) : [];   // vieram do clique no mês do cronograma
   const linha = x => { const k = x.pos + '|' + x.t.id, g = gr(x); return `<tr><td style="width:28px"><input type="checkbox" data-sel="${k}"${EM.sel.has(k) ? ' checked' : ''}></td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}</td><td><span class="pill ${cor[g]}">${rot[g]}</span><div class="note">${esc(x.s.txt || '')}</div></td></tr>`; };
   const porPos = L => { const pos = [...new Set(L.map(x => x.pos))]; return pos.map(p => { const I = L.filter(x => x.pos === p), m = I.filter(x => EM.sel.has(x.pos + '|' + x.t.id)).length, c = g => I.filter(x => gr(x) === g).length;
     const res = [['venc', 'vencidos'], ['mes', 'do mês'], ['emb', 'embarcados'], ['adi', 'adiantar?']].filter(([g]) => c(g)).map(([g, l]) => c(g) + ' ' + l).join(' · ');
@@ -2308,6 +2309,7 @@ function vEmitir() {
   else if (EM.passo === 2) corpo = `<div><div class="row"><h2>② O que entra na OM · ${esc(v.nome)}</h2><span class="sp"></span><span class="pill ${nSel ? 'p-ok' : 'p-mut'}">${nSel} ite${nSel === 1 ? 'm' : 'ns'} marcado${nSel === 1 ? '' : 's'}</span></div>
      <p class="note">Já vem marcado o que tem de entrar: vencidos, do mês e embarcados (o CTF/MFM faz a bordo na hora-alvo). Abra um motor para ver ou desmarcar itens.</p>
      ${entra.length ? porPos(entra) : '<p class="note">Nada vencido, do mês ou embarcado neste empurrador.</p>'}
+     ${doCx.length ? `<details class="pv-d" open><summary><b>Do cronograma</b><span class="note"> · ${doCx.length} itens previstos para depois deste mês, escolhidos no cronograma (adiantar)</span></summary>${porPos(doCx)}</details>` : ''}
      ${adi.length ? `<details class="pv-d pv-adi"><summary><b>Adiantar?</b><span class="note"> · ${adi.length} itens vencem antes de voltar (ficam fora da OM; marque se quiser adiantar)</span></summary>${porPos(adi)}</details>` : ''}
      ${bo ? `<details class="pv-d"><summary><b>Óleo e filtros a bordo</b><span class="note"> · para esta viagem (FR 049_B, pelo CTF/MFM)</span></summary>${oleo.replace(/<h2[\s\S]*?<\/h2>/, '')}</details>` : ''}
      <div class="row end" style="margin-top:10px"><button class="mbtn" data-pvpasso="1">← Voltar</button><button class="mbtn pri" data-pvpasso="3" ${nSel ? '' : 'disabled'}>Próximo: abrir a OM com ${nSel} ite${nSel === 1 ? 'm' : 'ns'} →</button></div></div>`;
@@ -5393,6 +5395,22 @@ function prFrota(ano, pdf) {
 const PR_MESL = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const prMesesSel = () => PRV.ms && PRV.ms.length ? PRV.ms.slice().sort((a, b) => a - b) : Array.from({ length: 12 }, (_, i) => i);
 const cfCorr = n => n ? `<span class="cf-cor" title="${n} serviço${n > 1 ? 's' : ''} refeito${n > 1 ? 's' : ''} em corretiva · reinicia o vencimento, não conta como realizado">+${n} corr.</span>` : '';   // marca roxa: item do Anexo I refeito numa corretiva encerrada
+function cxMesItens(v, ano, i) {   // serviços do cronograma no mês i ainda por fazer (previsto ou vencido), com os itens do Anexo I de cada um
+  return prLinhas(v, ano).filter(g => g.M[i].plan + g.M[i].miss > 0).map(g => ({ g }));
+}
+function prMesModal(vid, i) {
+  const v = vessel(vid), ano = +PRV.ano, L = cxMesItens(v, ano, i), sel = new Set(), fora = [];
+  L.forEach(({ g }) => g.its.forEach(x => { const k = x.pos + '|' + x.t.id; if (typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos)) fora.push(k); else if (!omAberta(v.id, x.pos, x.t.id)) sel.add(k); }));
+  const lin = L.map(({ g }) => { const m = g.M[i], ja = g.its.some(x => omAberta(v.id, x.pos, x.t.id)), bordo = g.its.every(x => fora.includes(x.pos + '|' + x.t.id));
+    return `<tr><td>${esc(g.eq.n)}</td><td><b>${esc(g.sv.nome)}</b><div class="note">${esc(g.its.map(x => x.t.chk || x.t.item).join(' · '))}</div></td><td>${esc(g.sv.freq || '')}</td><td><span class="cf-cr2 ${PR_CRIT[g.crit] || 'bx'}">${esc(g.crit)}</span></td><td>${m.miss ? '<span class="pill p-bad">vencido</span>' : '<span class="pill p-mut">previsto</span>'}${ja ? ' <span class="pill p-inf">já tem OM</span>' : ''}${bordo ? ' <span class="note">troca de óleo · FR 049_B</span>' : ''}</td></tr>`; }).join('');
+  modal(`<h2>${esc(v.nome)} · ${MESES[i]} de ${ano} · ${L.length} serviço${L.length === 1 ? '' : 's'} do cronograma</h2>
+   <p class="note">O que o cronograma prevê para o mês e ainda não foi feito. “Programar” abre a Programar preventiva deste empurrador com esses itens marcados: lá você confere, digita o nº da OM do Sankhya e emite; o Anexo II-B sai para imprimir.${fora.length ? ' Troca de óleo e o que vai junto não entram na OM (são do FR 049_B).' : ''}</p>
+   <div class="tw" style="max-height:55vh;overflow:auto"><table class="t"><thead><tr><th>Equipamento</th><th>Serviço</th><th>A cada</th><th>Criticidade</th><th>Situação</th></tr></thead><tbody>${lin || '<tr><td colspan="5" class="note">Nada pendente neste mês.</td></tr>'}</tbody></table></div>
+   <div class="row end" style="margin-top:10px"><button class="mbtn" data-close>Fechar</button>${sel.size && can.edit() ? `<button class="mbtn pri" id="pmProg">Programar estes serviços (${sel.size} ite${sel.size === 1 ? 'm' : 'ns'})</button>` : ''}</div>`, true);
+  const b = $('#pmProg'); if (b) b.onclick = () => {   // abre a Programar preventiva direto no passo ② com os itens marcados
+    EM.vid = v.id; EM.sel = sel; EM.draft = null; EM.viag = null; EM.pvVid = null; EM.pvJump = 2; EM.doCx = new Set(sel); closeModal(); location.hash = '#emitir/' + v.id; };
+}
+document.addEventListener('click', e => { const c = e.target.closest('[data-prmes]'); if (!c || VIEW !== 'cxr') return; e.preventDefault(); e.stopPropagation(); const [vid, i] = c.dataset.prmes.split('|'); prMesModal(vid, +i); }, true);
 function prResumo(v, ano, hm, sel) {   // mesmos números da tabela clássica (prFrota), somados só nos meses marcados
   const L = prLinhas(v, ano), P = Array(12).fill(0), R = Array(12).fill(0), Ok = Array(12).fill(0), Lt = Array(12).fill(0), Ms = Array(12).fill(0), C = Array(12).fill(0);
   L.forEach(g => g.M.forEach((m, i) => { P[i] += g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late; R[i] += m.ok + m.late; Ok[i] += m.ok; Lt[i] += m.late; Ms[i] += m.miss; C[i] += m.corr; }));
@@ -5411,7 +5429,8 @@ function prFrotaV2(ano) {
   F.ad = F.den ? Math.round(F.ok / F.den * 100) : null;
   const mxF = Math.max(1, ...D.flatMap(d => sel.filter(i => i > hm).map(i => d.P[i])));
   const corAd = a => a == null ? '#5F6368' : a >= 90 ? '#188038' : a >= 75 ? '#B06000' : '#C5221F';
-  const cel = (d, i, tot) => { const h = cel0(d, i, tot), n = d.C[i]; return n ? h.replace('<span class="cf-z">—</span>', '').replace(/<\/td>$/, cfCorr(n) + '</td>') : h; };
+  const cel = (d, i, tot) => { let h = cel0(d, i, tot); const n = d.C[i]; if (n) h = h.replace('<span class="cf-z">—</span>', '').replace(/<\/td>$/, cfCorr(n) + '</td>');
+    return !tot && i >= hm && d.P[i] ? h.replace('<td class="cf-c', `<td data-prmes="${d.v.id}|${i}" style="cursor:pointer" class="cf-c`).replace(/title="([^"]*)"/, 'title="$1 · clique para ver os serviços e programar"') : h; };
   const cel0 = (d, i, tot) => {
     const p = d.P[i], r = d.R[i], ms = d.Ms[i], lt = d.Lt[i];
     if (i === hm) { const pend = Math.max(0, p - r - ms), w = x => p ? Math.min(100, Math.round(x / p * 100)) : 0;
