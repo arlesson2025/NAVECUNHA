@@ -2287,7 +2287,7 @@ function fichaModal(o) {
    ===================================================================== */
 const AC = { tipo: 'todas' };
 function vAcomp() {}
-AFTER.acomp = () => { $('#main').onclick = async e => { const t = e.target.closest('button'); if (!t) return;
+AFTER.acomp = () => { $('#main').onclick = async e => { const ga = e.target.closest('button[data-gadv]'); if (ga) { if (!precisa(false)) return; const [g, st] = ga.dataset.gadv.split('|'); await grpAvancar(g, st); if (st === 'conferencia') go('omg/' + encodeURIComponent(g)); else render(); return; } const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.ac) { AC.tipo = t.dataset.ac; render(); }
   if (t.dataset.ficha) fichaModal(S.recs.get(t.dataset.ficha));
   if (t.dataset.adv) { if (!precisa(false)) return; const [id, st] = t.dataset.adv.split('|'); const o = S.recs.get(id); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'execucao' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); if (st === 'conferencia') go('om/' + id); else render(); } }; };
@@ -2529,7 +2529,9 @@ AFTER.om = () => {
   m.onchange = async e => { const t = e.target;
     if (t.id === 'addFoto') { for (const f of t.files) { const src = await comprimir(f); o.fotos = o.fotos || []; o.fotos.push({ src, tipo: o.fotos.some(x => x.tipo === 'ANTES') ? 'DEPOIS' : 'ANTES', leg: '', at: Date.now() }); } redraw(); autosave(); return; }
     if (t.type === 'checkbox' || t.type === 'radio' || t.tagName === 'SELECT') { setFrom(t); if (t.dataset.k && /^(exec|relTerc)$/.test(t.dataset.k) || (t.dataset.k || '').includes('steps')) redraw(); else refresh(); autosave(); } };
-  m.onclick = async e => { const b = e.target.closest('button'); if (!b) return;
+  m.onclick = async e => {
+  const ef = e.target.closest('[data-ef]'); if (ef) { const o = S.recs.get(ARG); if (!precisa(true)) return; const r = $('#efR').value; if (!r) return toast('Escolha o resultado.'); o.efRes = r; o.efData = $('#efD').value || isoD(hoje()); o.efObs = $('#efO').value.trim(); o.efBy = S.session.name; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: 'Eficácia: ' + r }); await saveRec(o); toast('Verificação registrada.'); render(); return; }
+     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.addrow) { const [k, n] = b.dataset.addrow.split('|'); const r = getPath(o, k) || []; r.push(Array(+n).fill('')); setPath(o, k, r); redraw(); autosave(); }
     if (b.dataset.delrow) { const p = b.dataset.delrow.split('|'), i = +p.pop(), k = p.join('|'); const r = getPath(o, k) || []; r.splice(i, 1); setPath(o, k, r); redraw(); autosave(); }
     if (b.dataset.addextra !== undefined) { (o.extras = o.extras || []).push({ sis: '', eq: '', desc: '', mat: '' }); redraw(); autosave(); }
@@ -3668,9 +3670,6 @@ function omEficaciaHTML(o) {   /* verificação de eficácia da corretiva Críti
    ${can.admin() ? `<div class="g"><label class="f s2">Resultado<select id="efR"><option value="">Escolha…</option>${['Eficaz', 'Não eficaz'].map(x => `<option${o.efRes === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label><label class="f s2">Data<input id="efD" type="date" value="${esc(o.efData || isoD(hoje()))}"></label><label class="f s4">Observação<input id="efO" value="${esc(o.efObs || '')}" placeholder="ex.: 4 meses sem reincidência; não eficaz → nova OM 48xxx"></label></div><div class="row"><button class="mbtn pri" data-ef="salvar">Registrar verificação</button></div>` : '<p class="note">Somente o Supervisor registra a verificação.</p>'}</div>`;
   return card;
 }
-{ const a0 = AFTER.om; AFTER.om = () => { a0(); const m = $('#main'), c0 = m.onclick; m.onclick = async e => {
-  const b = e.target.closest('[data-ef]'); if (b) { const o = S.recs.get(ARG); if (!precisa(true)) return; const r = $('#efR').value; if (!r) return toast('Escolha o resultado.'); o.efRes = r; o.efData = $('#efD').value || isoD(hoje()); o.efObs = $('#efO').value.trim(); o.efBy = S.session.name; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: 'Eficácia: ' + r }); await saveRec(o); toast('Verificação registrada.'); render(); return; }
-  return c0 && c0(e); }; }; }
 
 { const l0 = lubAcoesRel; lubAcoesRel = () => { const a = l0(), n = efPend().length; if (n) a.unshift('Verificar a eficácia de ' + n + ' corretiva(s) Crítica/Alta encerrada(s) (ISO 9001 10.2).'); return a; }; }
 
@@ -5205,8 +5204,6 @@ async function grpAvancar(g, st) {
   const P = omGrupo(g), i = grpOrd.indexOf(st);
   for (const o of P) if (grpOrd.indexOf(o.status) < i) { o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); }
 }
-{ const a0 = AFTER.acomp; AFTER.acomp = function () { a0(); const m = $('#main'), c0 = m.onclick;
-  m.onclick = async e => { const t = e.target.closest('button[data-gadv]'); if (!t) return c0(e); if (!precisa(false)) return; const [g, st] = t.dataset.gadv.split('|'); await grpAvancar(g, st); if (st === 'conferencia') go('omg/' + encodeURIComponent(g)); else render(); }; }; }
 
 /* ---------- 4 · Lançamento rápido da ficha (OM inteira numa tela) ---------- */
 const RG = { t: null };
@@ -5566,7 +5563,14 @@ AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { cons
   if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
   if (t.dataset.frv) { if (!precisa(false)) return; return lubAbrirForm(t.dataset.frv); }
   if (t.dataset.situ) { if (!precisa(false)) return; const [vid, st] = t.dataset.situ.split('|'); await situSalvar(vid, st); toast(vName(vid) + (st === 'porto' ? ' no porto de Manaus.' : ' saiu de viagem.')); render(); return; }
-  if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); } render(); } }; };
+  if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); } render(); } }; 
+  /* janelas livres e nome do empurrador que abre a ficha (antes eram dois embrulhos no fim do arquivo) */
+  const ws = document.querySelector('#main .cm-ws'); if (ws && !(typeof ehOperador === 'function' && ehOperador())) janelasLivres(ws, 'smf_frota_lay', '[data-f2reset]');
+  if (S.session && S.session.role === 'opr') return;
+  const N = new Map(S.cfg.frota.map(v => [v.nome, v.id]));
+  document.querySelectorAll('#main b').forEach(b => { const id = N.get(b.textContent.trim()); if (!id || b.closest('a,button,select,label')) return;
+    const a = document.createElement('a'); a.href = '#barco/' + id; a.className = 'f2-nm'; a.title = 'Abrir a ficha do empurrador'; b.replaceWith(a); a.appendChild(b); });
+};
 { const st = document.createElement('style'); st.textContent = `.rt2-t{display:flex;align-items:center;gap:8px;font-size:17px;margin:18px 0 8px;color:#16244A}.rt2-t span{background:#E8F0FE;color:#1967D2;border-radius:10px;padding:0 9px;font-size:13px}
  .rt2-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px}.rt2-c{background:#fff;border:1px solid var(--line,#DADCE0);border-radius:10px;padding:10px 14px}
  .rt2-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}.rt2-h b{font-size:16px}.rt2-l{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #F1F3F4;font-size:14px;line-height:1.35}.rt2-l .mbtn{white-space:nowrap}
@@ -5609,11 +5613,12 @@ function vBarco() {
 }
 AFTER.barco = function () { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'brV') go('barco/' + e.target.value); };
-  m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
+  m.onclick = async e => { const it = e.target.closest('[data-prit]'); if (it) CRV.v = it.dataset.prit; const t = e.target.closest('button'); if (!t) return;
     if ('frv' in t.dataset) { if (!precisa(false)) return; return lubAbrirForm(t.dataset.frv); }
     if (t.dataset.situ) { if (!precisa(false)) return; const [vid, st] = t.dataset.situ.split('|'); await situSalvar(vid, st); render(); return; }
     if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
-    if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; await saveRec(o); } render(); } }; };
+    if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; await saveRec(o); } render(); } };   const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_barco2_lay', '[data-brreset]');
+};
 
 /* ---------- menu simples ---------- */
 { const old = SECOES.slice(), ja = new Set(), todas = [];
@@ -6041,9 +6046,29 @@ function vPR() {
 VX.cxr = vPR;
 AFTER.cxr = function () { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'prV') { PRV.v = e.target.value; render(); } if (e.target.id === 'prA') { PRV.ano = +e.target.value; render(); } };
-  m.onclick = async e => { const it = e.target.closest('[data-prit]'); if (it) { CRV.v = it.dataset.prit; return; } const a = e.target.closest('[data-prv]'); if (a) { e.preventDefault(); PRV.v = a.dataset.prv; render(); window.scrollTo(0, 0); return; } const b = e.target.closest('button'); if (!b) return;
+  m.onclick = async e => { const o = e.target.closest('[data-prord]'); if (o) { PRV.ord = o.dataset.prord; render(); return; }
+    const gm = e.target.closest('[data-cfg]'); if (gm) { PRV.gm = gm.dataset.cfg; try { localStorage.setItem('smf_cf_gm', PRV.gm); } catch (er) { } render(); return; }
+    const sv = e.target.closest('[data-cfsv]'); if (sv) { const pop = document.getElementById('cfPop'); if (pop && !pop.hidden && pop.dataset.i === sv.dataset.cfsv) prPopFecha(); else prPopAbre(sv); return; }
+    const mb = e.target.closest('[data-cfm]'); if (mb) { const k = mb.dataset.cfm, hm = hoje().getMonth();
+      if (k === 'todos') PRV.ms = null; else if (k === 'ate') PRV.ms = Array.from({ length: hm + 1 }, (_, i) => i);
+      else { const i = +k, cur = new Set(PRV.ms || []);
+        if (e.shiftKey && PRV.ultMes != null) { const a = Math.min(PRV.ultMes, i), b = Math.max(PRV.ultMes, i); for (let j = a; j <= b; j++) cur.add(j); }
+        else cur.has(i) ? cur.delete(i) : cur.add(i);
+        PRV.ultMes = i; PRV.ms = cur.size && cur.size < 12 ? [...cur] : null; }
+      render(); return; }
+     const it = e.target.closest('[data-prit]'); if (it) { CRV.v = it.dataset.prit; return; } const a = e.target.closest('[data-prv]'); if (a) { e.preventDefault(); PRV.v = a.dataset.prv; render(); window.scrollTo(0, 0); return; } const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.prpdf) { const all = S.cfg.frota.filter(v => !foraOp(v)); return prPDF(b.dataset.prpdf === 'um' ? [vessel(PRV.v)] : b.dataset.prpdf === 'resumo' ? [] : all, +PRV.ano, b.dataset.prpdf !== 'um'); }
-    if ('prapr' in b.dataset) { if (!precisa(true)) return; b.disabled = true; await prAprovar(S.cfg.frota.filter(v => !foraOp(v)), +PRV.ano); toast('Previsto de ' + PRV.ano + ' aprovado para a frota.'); render(); } }; };
+    if ('prapr' in b.dataset) { if (!precisa(true)) return; b.disabled = true; await prAprovar(S.cfg.frota.filter(v => !foraOp(v)), +PRV.ano); toast('Previsto de ' + PRV.ano + ' aprovado para a frota.'); render(); } };
+  if (!document.querySelector('#main .cm-ws')) return;
+  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_cf_lay', '[data-cfreset]');
+  const rb = document.querySelector('[data-cfreset]'); if (rb) { const r0 = rb.onclick; rb.onclick = e => { JLAY('smf_cf_cols').S({}); JLAY('smf_cfd_cols').S({}); r0(e); }; }
+  prColunas(PRV.v === 'frota' ? 'smf_cf_cols' : 'smf_cfd_cols');
+  prPopFecha(); if (matchMedia('(hover: hover)').matches) { m.onmouseover = e => { const sv = e.target.closest('[data-cfsv]'); if (sv) prPopAbre(sv); }; m.onmouseout = e => { const sv = e.target.closest('[data-cfsv]'); if (sv && !sv.contains(e.relatedTarget)) prPopFecha(); }; }
+  // gráfico na largura real do bloco (texto sempre do mesmo tamanho); redesenha quando o bloco muda de tamanho
+  const gb = document.getElementById('cfGraf'); if (gb && PRV._T) { const T = PRV._T, card = gb.closest('.card');
+    const draw = () => { const w = Math.max(320, gb.clientWidth - 24), h = card.style.height ? Math.max(180, card.clientHeight - 110) : 260; gb.innerHTML = prGrafico(T.F, T.hm, T.sel, w, h); };
+    draw(); let t0; new ResizeObserver(() => { clearTimeout(t0); t0 = setTimeout(() => { if (gb.isConnected) draw(); }, 150); }).observe(card); } 
+};
 function prPDF(vs, ano, resumo) {
   const css = [...document.querySelectorAll('style')].map(x => x.textContent).filter(x => x.includes('.pr-t{')).join('\n');
   const pg = vs.map((v, i0) => { const i = i0 + (resumo ? 1 : 0); const B = cronoBase(ano, v.id); return `<section${i ? ' style="page-break-before:always"' : ''}><div class="hd"><img src="${LOGOS.nav}" alt=""><img src="${LOGOS.vda}" alt=""><div><h1>Cronograma de manutenção preventiva · previsto × realizado · ${ano}</h1><p><b>${esc(v.nome)}</b> · plano: Anexo I da NP Navecunha 055 · ${B ? 'previsto aprovado por ' + esc(B.aprovBy) + ' em ' + brD(B.aprovAt) + ' (rev. ' + B.rev + ')' : 'previsto não aprovado'} · emitido em ${hoje().toLocaleDateString('pt-BR')}</p></div></div>
@@ -6061,27 +6086,6 @@ async function prAprovar(vs, ano) {   // congela o previsto (linha de base) de c
     await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasPR, linhasEq }); }
 }
 cr3Aprovar = prAprovar;
-{ const a0 = AFTER.cxr; AFTER.cxr = function () { a0(); const m = $('#main'), c0 = m.onclick;
-  m.onclick = e => { const o = e.target.closest('[data-prord]'); if (o) { PRV.ord = o.dataset.prord; render(); return; }
-    const gm = e.target.closest('[data-cfg]'); if (gm) { PRV.gm = gm.dataset.cfg; try { localStorage.setItem('smf_cf_gm', PRV.gm); } catch (er) { } render(); return; }
-    const sv = e.target.closest('[data-cfsv]'); if (sv) { const pop = document.getElementById('cfPop'); if (pop && !pop.hidden && pop.dataset.i === sv.dataset.cfsv) prPopFecha(); else prPopAbre(sv); return; }
-    const mb = e.target.closest('[data-cfm]'); if (mb) { const k = mb.dataset.cfm, hm = hoje().getMonth();
-      if (k === 'todos') PRV.ms = null; else if (k === 'ate') PRV.ms = Array.from({ length: hm + 1 }, (_, i) => i);
-      else { const i = +k, cur = new Set(PRV.ms || []);
-        if (e.shiftKey && PRV.ultMes != null) { const a = Math.min(PRV.ultMes, i), b = Math.max(PRV.ultMes, i); for (let j = a; j <= b; j++) cur.add(j); }
-        else cur.has(i) ? cur.delete(i) : cur.add(i);
-        PRV.ultMes = i; PRV.ms = cur.size && cur.size < 12 ? [...cur] : null; }
-      render(); return; }
-    return c0 && c0(e); };
-  if (!document.querySelector('#main .cm-ws')) return;
-  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_cf_lay', '[data-cfreset]');
-  const rb = document.querySelector('[data-cfreset]'); if (rb) { const r0 = rb.onclick; rb.onclick = e => { JLAY('smf_cf_cols').S({}); JLAY('smf_cfd_cols').S({}); r0(e); }; }
-  prColunas(PRV.v === 'frota' ? 'smf_cf_cols' : 'smf_cfd_cols');
-  prPopFecha(); if (matchMedia('(hover: hover)').matches) { m.onmouseover = e => { const sv = e.target.closest('[data-cfsv]'); if (sv) prPopAbre(sv); }; m.onmouseout = e => { const sv = e.target.closest('[data-cfsv]'); if (sv && !sv.contains(e.relatedTarget)) prPopFecha(); }; }
-  // gráfico na largura real do bloco (texto sempre do mesmo tamanho); redesenha quando o bloco muda de tamanho
-  const gb = document.getElementById('cfGraf'); if (gb && PRV._T) { const T = PRV._T, card = gb.closest('.card');
-    const draw = () => { const w = Math.max(320, gb.clientWidth - 24), h = card.style.height ? Math.max(180, card.clientHeight - 110) : 260; gb.innerHTML = prGrafico(T.F, T.hm, T.sel, w, h); };
-    draw(); let t0; new ResizeObserver(() => { clearTimeout(t0); t0 = setTimeout(() => { if (gb.isConnected) draw(); }, 150); }).observe(card); } }; }
 { const st = document.createElement('style'); st.textContent = `.cf-ks{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}.cf-k{border:1px solid #DADCE0;background:#fff;border-radius:999px;padding:3px 11px;font-size:12.5px;color:#5F6368}.cf-k b{font-size:14px;font-weight:600}
  .cf-bt{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}.cf-fl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 6px;font-size:12.5px;color:#5F6368}.cf-fl select{width:auto;min-width:0;font-size:12.5px;padding:3px 6px;margin-left:4px}
  .cf-seg{display:inline-flex;background:#F1F3F4;border-radius:7px;padding:2px}.cf-seg button{border:0;background:transparent;padding:3px 10px;border-radius:5px;cursor:pointer;font:inherit;color:#5F6368}.cf-seg button.on{background:#fff;color:#202124;box-shadow:0 1px 2px rgba(0,0,0,.12)}
@@ -6678,7 +6682,8 @@ AFTER.compr = () => { const m = $('#main');
     const pe = t.closest('[data-cmper]'); if (pe) { CF.per = +pe.dataset.cmper; render(); return; }
     const hv = t.closest('[data-cmhv]'); if (hv) { CF.hv = CF.hv === hv.dataset.cmhv ? '' : hv.dataset.cmhv; render(); return; }
     const s = t.closest('[data-cmsel]'); if (s && !t.closest('a')) { CF.sel = s.dataset.cmsel; render(); const d = $('#cmSel'); if (d) d.closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
-  m.onchange = e => { if (e.target.id === 'cmSel') { CF.sel = e.target.value; render(); } if (e.target.id === 'cmHv') { CF.hv = e.target.value; render(); } }; };
+  m.onchange = e => { if (e.target.id === 'cmSel') { CF.sel = e.target.value; render(); } if (e.target.id === 'cmHv') { CF.hv = e.target.value; render(); } };   cmpJanelas();
+};
 // blocos como janelas (igual ao Óleo): alça para qualquer tamanho, minimizar e tela cheia para apresentação; tamanhos salvos neste aparelho
 // usado pela Compressão e pelo Cronograma: cada tela guarda o seu arranjo numa chave própria
 const JLAY = k => ({ G() { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { return {}; } }, S(v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } });
@@ -6724,7 +6729,6 @@ function janelasLivres(ws, chave, resetSel) {
   });
 }
 function cmpJanelas() { janelasLivres(document.querySelector('#main .cm-ws'), 'smf_cmp_lay', '[data-cmreset]'); }
-{ const a0 = AFTER.compr; AFTER.compr = () => { a0(); cmpJanelas(); }; }
 // menu: logo depois de Óleo
 { const i = SECOES.findIndex(s => s.id === 'oleo'); SECOES.splice(i < 0 ? 1 : i + 1, 0, { id: 'compr', nome: 'Compressão MCP', views: [['compr', 'Compressão do MCP']] });
   ICO.compr = '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4"/><path d="M9 3h6"/>'; }
@@ -8023,7 +8027,7 @@ function f2Agora() { const L = agoraLista(), G = new Map();
   return [...G.values()].map(g => { if (g.itens.length < 2 || !g.itens[0].nome) return { p: g.p, txt: g.txt, btn: g.btn };
     const tipo = g.resto.replace(/<[^>]+>/g, '').replace(/\s+há \d+ dias/, ' há mais de 14 dias').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
     return { p: g.p, txt: `${esc(tipo)} · <b>${g.itens.length} empurradores</b> <span class="note">(${g.itens.map(i => esc(i.nome)).join(', ')})</span>`, btn: g.btn }; }).sort((a, b) => a.p - b.p); }
-{ const a0 = AFTER.rotina; AFTER.rotina = function () { a0 && a0.apply(this, arguments); const ws = document.querySelector('#main .cm-ws'); if (ws && !(typeof ehOperador === 'function' && ehOperador())) janelasLivres(ws, 'smf_frota_lay', '[data-f2reset]'); }; }   /* janelas livres, como Compressão e Óleo */
+   /* janelas livres, como Compressão e Óleo */
 document.addEventListener('click', e => { const b = e.target.closest('[data-f2mais]'); if (!b) return; document.querySelectorAll('#main tr.f2-x').forEach(r => r.hidden = false); b.remove(); }, true);
 { const st = document.createElement('style'); st.textContent = `.f2-ks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}.f2-k{background:#fff;border:1px solid #E3E6EA;border-radius:10px;padding:12px 14px}.f2-k span{display:block;font-size:12px;color:#5F6368}.f2-k b{font-size:22px;font-weight:600;white-space:nowrap}.f2-k .f2-r{font-style:normal;color:var(--badt)}.cm-v .f2-ks{margin:4px 0 0}
 #main .f2-t td{vertical-align:middle}.f2-bar{display:inline-block;width:90px;height:8px;border-radius:4px;background:#F4C7C3;vertical-align:middle;overflow:hidden;margin-right:6px}.f2-bar i{display:block;height:100%;background:#34A853}.f2-ac{text-align:right;white-space:nowrap}.f2-ac .mbtn{margin-left:6px}.f2-m{display:inline-block;position:relative}.f2-m summary{list-style:none;cursor:pointer;margin-left:6px}.f2-m summary::-webkit-details-marker{display:none}.f2-m>div{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:#fff;border:1px solid #DADCE0;border-radius:8px;box-shadow:0 6px 18px rgba(60,64,67,.18);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:190px}.f2-m>div .mbtn{margin:0;text-align:left}
@@ -8195,12 +8199,6 @@ function vBarco2() {   /* ficha compacta (22/10/2026): situação no cabeçalho,
    <div class="cm-ws">${resumo}${eq}${omsH}</div></div>`;
 }
 VX.barco = vBarco2;
-{ const a0 = AFTER.barco; AFTER.barco = function () { a0 && a0.apply(this, arguments); const m = $('#main'), c0 = m.onclick; m.onclick = e => { const it = e.target.closest('[data-prit]'); if (it) CRV.v = it.dataset.prit; return c0 && c0(e); };
-  const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_barco2_lay', '[data-brreset]'); }; }
-{ const a0 = AFTER.rotina; AFTER.rotina = function () { a0 && a0.apply(this, arguments); if (S.session && S.session.role === 'opr') return;
-  const N = new Map(S.cfg.frota.map(v => [v.nome, v.id]));
-  document.querySelectorAll('#main b').forEach(b => { const id = N.get(b.textContent.trim()); if (!id || b.closest('a,button,select,label')) return;
-    const a = document.createElement('a'); a.href = '#barco/' + id; a.className = 'f2-nm'; a.title = 'Abrir a ficha do empurrador'; b.replaceWith(a); a.appendChild(b); }); }; }
 /* (Saldo para a troca: voltou o gráfico original a pedido do Supervisor) */
 { const st = document.createElement('style'); st.textContent = `.sb-r{display:flex;align-items:center;gap:10px}.sb-t{flex:1;min-width:80px;height:10px;background:#EEF2F6;border-radius:5px;overflow:hidden}.sb-t i{display:block;height:100%;border-radius:5px}
 .sb-green{background:#1967D2}.sb-amber{background:#E3A008}.sb-red{background:#D93025}.sb-sem{background:#BDC1C6}.sb-x{min-width:118px;font-size:13px;white-space:nowrap}.sb-greent{color:#1967D2}.sb-ambert{color:#B06000}.sb-redt{color:#C5221F}.sb-semt{color:#5F6368}
