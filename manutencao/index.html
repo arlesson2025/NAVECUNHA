@@ -6188,7 +6188,6 @@ function prTelaFrota(ativos, ano, nAp, anos) {
    <div class="cm-ws">
     <div class="card cf-card"><div class="cf-hd"><b>Cronograma preventivo · previsto × realizado</b></div><div class="tw">${T.html}</div>
      <p class="cf-lg"><b>0 / 24</b> = realizado / previsto · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <i class="cg"></i>carga prevista · aderência "—" = nada venceu ainda · clique no nome para ver serviço por serviço · arraste a borda do cabeçalho para ajustar a largura da coluna</p></div>
-    <div class="card cf-card"><div class="cf-hd"><b>Carga e execução por mês</b><span class="cf-seg"><button data-cfg="mensal" class="${PRV.gm !== 'acum' ? 'on' : ''}">Mensal</button><button data-cfg="acum" class="${PRV.gm === 'acum' ? 'on' : ''}">Acumulado</button></span></div><div id="cfGraf" style="padding:0 12px 4px;display:flex;flex-direction:column;flex:1;min-height:0">${prGrafico(T.F, hm, sel)}</div></div>
    </div></div>`;
 }
 function prPopAbre(td) {   // cartão com os itens do Anexo I do serviço, ao lado do nome
@@ -6254,15 +6253,21 @@ function prTelaEmp(v, ativos, ano, B, anos) {
    <div class="cm-ws">
     <div class="card cf-card"><div class="cf-hd"><b>Cronograma preventivo · previsto × realizado · ${esc(v.nome)}</b></div><div class="tw">${prEmpTabela(v, ano, hm, sel)}</div>
      <p class="cf-lg"><b>0 / 2</b> = realizado / previsto no mês · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <i class="cg"></i>carga prevista · passe o mouse na célula para ver a OM ou o FR 049_B · o PDF sai no formato oficial (P e R)</p></div>
-    <div class="card cf-card"><div class="cf-hd"><b>Carga e execução por mês · ${esc(v.nome)}</b><span class="cf-seg"><button data-cfg="mensal" class="${PRV.gm !== 'acum' ? 'on' : ''}">Mensal</button><button data-cfg="acum" class="${PRV.gm === 'acum' ? 'on' : ''}">Acumulado</button></span></div><div id="cfGraf" style="padding:0 12px 4px;display:flex;flex-direction:column;flex:1;min-height:0">${prGrafico(F, hm, sel)}</div></div>
    </div></div>`;
 }
 function vPR() {
   const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (PRV.v !== 'frota' && !ativos.some(v => v.id === PRV.v)) PRV.v = 'frota';
   const v = PRV.v === 'frota' ? null : vessel(PRV.v), ano = +PRV.ano, B = v && cronoBase(ano, v.id), nAp = ativos.filter(a => cronoBase(ano, a.id)).length;
   const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
-  if (!v) return prTelaFrota(ativos, ano, nAp, anos);   // frota toda: layout de uma linha por empurrador
-  return prTelaEmp(v, ativos, ano, B, anos);            // um empurrador: uma linha por serviço (o PDF continua no formato P/R)
+  const t = document.createElement('div');
+  t.innerHTML = !v ? prTelaFrota(ativos, ano, nAp, anos)   // frota toda: uma linha por empurrador
+    : prTelaEmp(v, ativos, ano, B, anos);                   // um empurrador: uma linha por serviço (o PDF continua no formato P/R)
+  /* acabamento (antes era uma camada à parte): subtítulo, Resumo como primeiro bloco e "Empurrador" no lugar de "Embarcação" */
+  const vh = t.querySelector('.vh'), ws = t.querySelector('.cm-ws'); if (!vh || !ws) return t.innerHTML;
+  const d = vh.querySelector(':scope > div'); if (d && !d.querySelector('p')) d.insertAdjacentHTML('beforeend', '<p>Previsto × realizado por empurrador e mês · plano do Anexo I da NP 055</p>');
+  const ks = t.querySelector('.cf-ks'); if (ks) { ks.remove(); ws.insertAdjacentHTML('afterbegin', `<div class="card cf-card"><h2>Resumo</h2>${ks.outerHTML}</div>`); }
+  t.querySelectorAll('label, th').forEach(x => x.childNodes.forEach(n => { if (n.nodeType === 3 && /Embarcação/.test(n.textContent)) n.textContent = n.textContent.replace('Embarcação', 'Empurrador'); }));
+  return t.innerHTML;
 }
 VX.cxr = vPR;
 AFTER.cxr = function () { const m = $('#main');
@@ -8349,13 +8354,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-omsf
    Cronograma preventivo: linha de explicação, Resumo (os números do prKpis) numa janela, "Empurrador" no lugar de "Embarcação"; o gráfico "Carga e execução por mês" sai daqui e vai para Indicadores.
    Anexo I: sai o quadro de contagens antigo (o Resumo do padTela explica 164 = 157 no cronograma + 7 fora), filtros, legenda e lista numa janela só "Itens do plano", só "Imprimir" no topo (PDF completo no ⋯). */
 'use strict';
-{ const v0 = VX.cxr; VX.cxr = function () { const t = document.createElement('div'); t.innerHTML = v0.apply(this, arguments);
-  const vh = t.querySelector('.vh'), ws = t.querySelector('.cm-ws'); if (!vh || !ws) return t.innerHTML;
-  const d = vh.querySelector(':scope > div'); if (d && !d.querySelector('p')) d.insertAdjacentHTML('beforeend', '<p>Previsto × realizado por empurrador e mês · plano do Anexo I da NP 055</p>');
-  const ks = t.querySelector('.cf-ks'); if (ks) { ks.remove(); ws.insertAdjacentHTML('afterbegin', `<div class="card cf-card"><h2>Resumo</h2>${ks.outerHTML}</div>`); }
-  [...ws.querySelectorAll(':scope > .card')].forEach(c => { if (c.querySelector('#cfGraf')) c.remove(); });
-  t.querySelectorAll('label, th').forEach(x => x.childNodes.forEach(n => { if (n.nodeType === 3 && /Embarcação/.test(n.textContent)) n.textContent = n.textContent.replace('Embarcação', 'Empurrador'); }));
-  return t.innerHTML; }; }
 function kpiCronoCard() { try { const ms = PRV.ms; PRV.ms = null; const T = prFrotaV2(hoje().getFullYear()); PRV.ms = ms;
     return `<div class="card"><h2>Cronograma preventivo · carga e execução por mês · frota ${hoje().getFullYear()}</h2>${prGrafico(T.F, T.hm, T.sel)}</div>`; } catch (e) { return ''; } }
 { const v0 = VX.matriz; VX.matriz = function () { const t = document.createElement('div'); t.innerHTML = v0.apply(this, arguments);

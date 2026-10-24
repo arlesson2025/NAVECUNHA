@@ -45,7 +45,13 @@ async def fotografar(b, url):
     await pg.route(re.compile(r'^https://(script|fonts)\.google'), lambda r: r.abort())
     await pg.goto(url + '/manutencao/?completo')
     await pg.wait_for_function('typeof S !== "undefined" && S.cfg && S.recs.size > 100', timeout=60000)
-    await pg.wait_for_timeout(3000)   # o SMF ainda grava registros de exemplo e de situação logo depois de abrir
+    # o SMF ainda grava registros de exemplo e de situação logo depois de abrir: espera o número de registros parar de mudar
+    n0, iguais = -1, 0
+    while iguais < 3:
+        await pg.wait_for_timeout(1000)
+        n = await pg.evaluate('S.recs.size')
+        iguais = iguais + 1 if n == n0 else 0
+        n0 = n
     await pg.evaluate("async () => { S.url = ''; S.session = { name: 'Teste', role: 'admin', token: null }; await kvSet('session', S.session); }")
     fotos = {}
     alvos = TELAS + await pg.evaluate("""() => { const P = oms().filter(o => o.tipo === 'P' && o.grupo).sort((a, b) => a.id < b.id ? -1 : 1)[0], C = oms().filter(o => o.tipo === 'C').sort((a, b) => a.id < b.id ? -1 : 1)[0];
@@ -56,12 +62,13 @@ async def fotografar(b, url):
     await pg.wait_for_timeout(1500)
     for t in alvos:
         v, _, a = t.partition('/')
-        html = await pg.evaluate("""async ([v, a]) => { try { history.replaceState(null, '', '#' + v + (a ? '/' + a : '')); VIEW = v; ARG = a; render(); await new Promise(r => setTimeout(r, 500)); VIEW = v; ARG = a; render(); } catch (e) { return 'ERRO: ' + e.message; }
+        html = await pg.evaluate("""async ([v, a]) => { if (v === 'emitir') { EM.sel.clear(); EM.draft = null; EM.vid = null; EM.pvVid = null; EM.pvIni = false; EM.passo = 1; }   // estado da tela de programação parte do zero
+          try { history.replaceState(null, '', '#' + v + (a ? '/' + a : '')); VIEW = v; ARG = a; render(); await new Promise(r => setTimeout(r, 500)); VIEW = v; ARG = a; render(); } catch (e) { return 'ERRO: ' + e.message; }
           await new Promise(r => setTimeout(r, 500)); return document.getElementById('nav').innerHTML + '\\n=====\\n' + document.getElementById('main').innerHTML; }""", [v, a])
         fotos[t] = html
     # Programar preventiva nos passos 2 (o que entra) e 3 (abrir a OM)
     for nome, js in (('emitir/v3 passo 2', "EM.passo = 2; EM.draft = null;"), ('emitir/v3 passo 3', "EM.draft = { emb: true };")):
-        fotos[nome] = await pg.evaluate("async () => { VIEW = 'emitir'; ARG = 'v3'; render(); " + js + " render(); await new Promise(r => setTimeout(r, 400)); const h = document.getElementById('main').innerHTML; EM.draft = null; EM.passo = 1; return h; }")
+        fotos[nome] = await pg.evaluate("async () => { EM.sel.clear(); EM.draft = null; EM.vid = null; EM.pvVid = null; EM.pvIni = false; EM.passo = 1; VIEW = 'emitir'; ARG = 'v3'; render(); " + js + " render(); await new Promise(r => setTimeout(r, 400)); const h = document.getElementById('main').innerHTML; EM.draft = null; EM.passo = 1; return h; }")
     docs = await pg.evaluate("""() => { const out = {}; const P = oms().filter(o => o.tipo === 'P').sort((a, b) => a.id < b.id ? -1 : 1).slice(0, 3), C = oms().filter(o => o.tipo === 'C').sort((a, b) => a.id < b.id ? -1 : 1).slice(0, 3);
       P.forEach(o => { try { out['doc II-B ' + o.num] = docIIB(o).join('\\n'); } catch (e) { out['doc II-B ' + o.num] = 'ERRO: ' + e.message; } });
       C.forEach(o => { try { out['doc II-A ' + o.num] = docIIA(o).join('\\n'); } catch (e) { out['doc II-A ' + o.num] = 'ERRO: ' + e.message; } }); return out; }""")
