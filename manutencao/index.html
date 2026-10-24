@@ -1924,39 +1924,12 @@ function docaVessel(v) {
   if (due) { const ate = addM(due, DOCA.janela); DOCA.junto.forEach(id => { const ti = A1M[id]; if (!ti) return; posicoes(v).forEach(pos => { if (!aplica(v, pos, ti)) return; const s = situacao(v, pos, ti); const alvo = s.alvoD || null; const perto = (due - hoje()) / 864e5 <= DOCA.planejarMeses * 30.4; if ((perto && (s.st === 'venc' || s.st === 'sem')) || (alvo && alvo >= addM(due, -DOCA.planejarMeses) && alvo <= ate)) junto.push({ id, pos, nm: ti.chk, s }); }); }); }
   return { v, L, lim, due, dias, st, fonte, junto, om: omAberta(v.id, 'UN', DOCA.item) };
 }
+/* Docagem num bloco só (24/10/2026): aparece dentro de Calibração e docagem e mostra só o cronograma (docaCrono); antes a tela montava contadores,
+   cronograma antigo e escopo, e duas camadas trocavam e apagavam */
 function vDoca() {
-  const D = S.cfg.frota.map(docaVessel), n = { venc: 0, viag: 0, ok: 0, sem: 0 }; D.forEach(x => n[x.st]++);
-  const SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
-  D.sort((a, b) => SO[a.st] - SO[b.st] || (a.due && b.due ? a.due - b.due : 0));
-  const y0 = hoje().getFullYear() - 1, y1 = hoje().getFullYear() + 5, t0 = new Date(y0, 0, 1), t1 = new Date(y1 + 1, 0, 1);
-  const X = d => Math.max(0, Math.min(100, (d - t0) / (t1 - t0) * 100));
-  const anos = []; for (let y = y0; y <= y1; y++) anos.push(y);
-  const porAno = Object.fromEntries(anos.map(y => [y, D.filter(x => x.due && x.due.getFullYear() === y).length]));
-  const hj = X(hoje());
-  const linhas = D.map(x => {
-    const tag = x.st === 'venc' ? '<span class="pill p-bad">vencida</span>' : x.st === 'viag' ? '<span class="pill p-warn">planejar</span>' : x.st === 'sem' ? '<span class="pill p-mut">sem registro</span>' : '';
-    const info = x.due ? (x.dias < 0 ? (m => m <= 1 ? 'vencida há ' + (-x.dias) + ' dias' : 'vencida há ' + m + ' meses')(Math.round(-x.dias / 30.4)) : 'faltam ' + (x.dias < 62 ? x.dias + ' dias' : Math.round(x.dias / 30.4) + ' meses')) + ' · limite ' + brD(isoD(x.due)) + ' (' + x.fonte + ')' : 'registre a última docagem ou a data-limite do CSN';
-    const c = CORST[x.st];
-    const tl = x.due ? `${x.L ? `<i class="dcbar" style="left:${X(pD(x.L.date))}%;width:${X(x.due) - X(pD(x.L.date))}%"></i><i class="dcl" style="left:${X(pD(x.L.date))}%" data-tip="Última docagem: ${brD(x.L.date)}"></i>` : ''}<i class="dcwin" style="left:${X(addM(x.due, -DOCA.planejarMeses))}%;width:${X(x.due) - X(addM(x.due, -DOCA.planejarMeses))}%"></i><i class="dcd" style="left:${X(x.due)}%;background:${c}" data-tip="Limite: ${brD(isoD(x.due))} (${x.fonte})"></i>` : '';
-    return `<div class="rkrow" data-doca="${x.v.id}"><div class="rklb"><b>${esc(x.v.nome)}</b> ${tag}${x.om ? ` <span class="pill p-inf">OM ${esc(x.om.num)}</span>` : ''}${x.junto.length ? ` <span class="pill p-mut">+${x.junto.length} ${x.junto.length > 1 ? 'itens' : 'item'} para levar</span>` : ''}<div class="note">${info}</div></div><div class="dctr">${anos.map(y => `<i class="dcy" style="left:${X(new Date(y, 0, 1))}%"></i>`).join('')}<i class="dchj" style="left:${hj}%"></i>${tl}</div></div>`;
-  }).join('');
-  const prox = D.filter(x => x.st === 'venc' || x.st === 'viag');
+  const D = S.cfg.frota.map(docaVessel);
   return `<div class="vh"><div><h1>Docagem</h1><p>Anexo I, item 9.1.5: docagem a cada ${intervalo(A1M[DOCA.item]).m / 12} anos (jateamento, medição de espessura por ultrassom e repintura). Quando o certificado do empurrador (CSN) tiver uma data-limite de vistoria em seco anterior, ela prevalece. "Planejar" = vence nos próximos ${DOCA.planejarMeses} meses.</p></div><span class="sp"></span></div>
-  <div class="kgrid six">
-   <div class="card mini ${n.venc ? 'bad' : 'ok'}"><b>${n.venc}</b><span>docagens vencidas</span></div>
-   <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>vencem em até ${DOCA.planejarMeses} meses · planejar estaleiro</span></div>
-   <div class="card mini ok"><b>${n.ok}</b><span>em dia</span></div>
-   <div class="card mini"><b>${n.sem}</b><span>sem registro</span></div>
-   <div class="card mini"><b>${porAno[hoje().getFullYear() + 1] || 0}</b><span>docagens previstas em ${hoje().getFullYear() + 1}</span></div>
-   <div class="card mini"><b>${Math.max(...anos.slice(1).map(y => porAno[y]))}</b><span>maior nº de docagens num mesmo ano</span></div>
-  </div>
-  <div class="card"><div class="row"><h2>A · Cronograma de docagem</h2><span class="sp"></span><span class="note">Clique num empurrador para registrar a última docagem ou a data-limite do CSN.</span></div>
-   <div class="clegend note"><span><i style="background:var(--line2);border-radius:50%"></i>última docagem</span><span><i style="background:var(--warnb)"></i>janela de planejamento (${DOCA.planejarMeses} meses)</span><span><i style="background:var(--bad);transform:rotate(45deg)"></i>limite</span><span><i style="background:var(--acc);width:2px"></i>hoje</span></div>
-   <div class="rk dcrk">${linhas}
-    <div class="rkrow rkax"><span></span><div class="dctr ax">${anos.map(y => `<span style="left:${(X(new Date(y, 0, 1)) + X(new Date(y + 1, 0, 1))) / 2}%">${y}${porAno[y] ? ` <b>· ${porAno[y]}</b>` : ''}</span>`).join('')}</div></div></div>
-   <p class="note">O número ao lado do ano é quantas docagens vencem naquele ano. Se dois ou mais empurradores caírem no mesmo período, dá para antecipar um deles e não parar dois de uma vez.</p></div>
-  <div class="card"><div class="row"><h2>B · Escopo de serviços da docagem</h2><span class="sp"></span><span class="note">Itens que precisam do empurrador fora d'água (hoje: ${DOCA.junto.join(', ')}) e vencem até ${DOCA.janela} meses depois da docagem: fazer junto.</span></div>
-   ${prox.length ? `<div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Limite da docagem</th><th>Itens para fazer junto</th><th></th></tr></thead><tbody>${prox.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${brD(isoD(x.due))}${x.st === 'venc' ? ' <span class="pill p-bad">vencida</span>' : ''}</td><td>${x.junto.length ? x.junto.map(j => `<span class="pd ${j.s.st === 'venc' ? 'venc' : 'viag'}" data-tip="${esc(j.s.txt || '')}">${j.id} ${esc(j.nm)}${j.pos !== 'UN' ? ' ' + j.pos : ''}</span>`).join('') : '<span class="mut">nenhum</span>'}</td><td><a class="mbtn sm pri" href="#emitir/${x.v.id}">Emitir OM</a></td></tr>`).join('')}</tbody></table></div>` : '<div class="note">Nenhuma docagem nos próximos 12 meses.</div>'}</div>`;
+  ` + docaCrono(D);
 }
 function docaModal(vid) {
   const x = docaVessel(vessel(vid));
@@ -4494,10 +4467,7 @@ function docaReg(vid, rid) {
     closeModal(); toast('Docagem salva.'); render(); };
   const x = $('#dgX'); if (x) x.onclick = () => confirmar('Excluir esta docagem do histórico?', async () => { await saveRec(Object.assign({}, r, { deleted: true, excluido: true })); S.recs.delete(r.id); try { await DB.del(r.id); } catch (er) { } closeModal(); toast('Docagem excluída.'); render(); });
 }
-{ const v0 = vDoca; vDoca = function () { const html = v0(); const t = document.createElement('div'); t.innerHTML = html;
-    const h = [...t.querySelectorAll('h2')].find(e => /^A · Cronograma de docagem/.test(e.textContent)); if (!h) return html;
-    const D = S.cfg.frota.map(docaVessel), SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
-    const n = document.createElement('div'); n.innerHTML = docaCrono(D); h.closest('.card').replaceWith(n.firstElementChild); return t.innerHTML; }; VX.doca = vDoca; }
+VX.doca = vDoca;
 document.addEventListener('click', e => { if (VIEW !== 'doca' && VIEW !== 'controle') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
   if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);
 
