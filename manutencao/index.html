@@ -9791,6 +9791,37 @@ docFichaEmb = function (g) { return docIIBOM(omGrupo(g)); };
    preventiva da equipe de terra (Programar preventiva, Anexo II-B e cronograma da janela) */
 compDe = function () { return null; };
 { const c0 = cronoLinhas; cronoLinhas = function () { return c0.apply(this, arguments).map(l => l.tr === 'bordo' && typeof l.nome === 'string' ? Object.assign({}, l, { nome: l.nome.replace(' + itens de 250 h', '') }) : l); }; }
+/* Conferência da preventiva simples (pedido do Supervisor, 24/10/2026: "não sei o que é isso nem onde resolvo"): para encerrar basta
+   data, horímetro, quem executou, cada serviço marcado (feito ou não feito) e foto de antes e de depois. Sai a cobrança de passo a passo,
+   medição, registros e legenda por item do Anexo I. A OM preventiva solta (sem grupo) abre na mesma tela de lançamento da OM em grupo. */
+const fotosPrev = o => ((o.grupo && omGrupo(o.grupo)[0]) || o).fotos || [];
+gateIIB = function (o) {
+  const g = [], F = fotosPrev(o);
+  g.push(['Data da execução', !!o.dreal]);
+  if (o.pos !== 'UN') g.push(['Horímetro na execução', !!o.hreal]);
+  g.push(['Quem executou', !!(o.execn || '').trim()]);
+  g.push(['Foto de antes', F.some(x => x.tipo === 'ANTES')]);
+  g.push(['Foto de depois', F.some(x => x.tipo === 'DEPOIS')]);
+  return g;
+};
+rgPend = function (P) {
+  const R = rgDados(P), v = vessel(P[0].vessel), out = [], F = P[0].fotos || [];
+  if (!R.dreal) out.push('Data da execução');
+  if (!(R.execn || '').trim()) out.push('Quem executou');
+  P.filter(o => o.pos !== 'UN').forEach(o => { if (!R.hr[o.pos]) out.push('Horímetro · ' + posCurtoE(v, o.pos)); });
+  let sem = 0; P.forEach(o => (o.itensProg || o.items || []).forEach(id => { if (!R.res[o.pos + '|' + id]) sem++; }));
+  if (sem) out.push(sem + (sem === 1 ? ' serviço sem marcar (feito ou não feito)' : ' serviços sem marcar (feito ou não feito)'));
+  if (!F.some(x => x.tipo === 'ANTES')) out.push('Foto de antes');
+  if (!F.some(x => x.tipo === 'DEPOIS')) out.push('Foto de depois');
+  return out;
+};
+{ const g0 = guiaOM; guiaOM = function () { return g0.apply(this, arguments).replace('lançar o formulário que voltou assinado (foto + OK/NOK)', 'marcar o que foi feito e anexar as fotos de antes e depois').replace('>Lançar o formulário<', '>Lançar o realizado<'); }; }
+{ const r0 = render; render = function () {
+  if (VIEW === 'om' && ARG) { const o = S.recs.get(ARG);
+    if (o && o.kind === 'om' && o.tipo === 'P' && !o.grupo && o.status !== 'encerrada' && o.num && !oms().some(x => x.grupo === o.num && x.id !== o.id)) {
+      o.grupo = o.num; o.parte = 1; o.partes = 1; o.itensProg = o.itensProg || (o.items || []).slice(); saveRec(o);
+      VIEW = 'omg'; ARG = o.num; try { history.replaceState(null, '', '#omg/' + encodeURIComponent(o.num)); } catch (e) { } } }
+  return r0.apply(this, arguments); }; }
 { const st = document.createElement('style'); st.textContent = `.sheet .ph9{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:8px;min-height:0}.sheet .ph9 figure{margin:0;border:.6px solid #B9C5D1;background:#fff;display:flex;flex-direction:column;min-height:0}.sheet .ph9 .im{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#F4F7FA}.sheet .ph9 img{max-width:100%;max-height:100%;object-fit:contain}.sheet .ph9 figcaption{font-size:8.6px;padding:3px 5px;line-height:1.25;max-height:34px;overflow:hidden}.sheet table.lst td{padding:1.5px 5px;font-size:9.2px;line-height:1.25}.sheet table.lst th{padding:2px 5px;font-size:8.6px}.sheet table.lst tr.eqh td{background:#EEF3F8;font-weight:700;color:#16244A;font-size:9px;padding:2px 5px}.sheet table.lst td.ac{white-space:nowrap;color:#3C4043}.rg-it>.mono{display:none}/* Anexo I: barras dos sistemas coladas, sem espaço branco entre uma e outra (pedido do Supervisor, 24/10/2026) */.a1-lista{gap:0!important}.a1-lista>.a1-sis{border-radius:0!important;box-shadow:none!important;border-color:#1A73E8!important;border-top-width:0!important}.a1-lista>.a1-sis:first-child{border-top-width:1px!important;border-radius:10px 10px 0 0!important}.a1-lista>.a1-sis:last-child{border-radius:0 0 10px 10px!important}.a1-lista>.a1-sis>header{border-radius:0!important;border-bottom:1px solid rgba(255,255,255,.25)}.a1-lista>.a1-sis.ab{border-color:#DADCE0!important}.sheet td.ok{color:#137333;font-weight:700}.sheet td.bad{color:#C5221F;font-weight:700}`; document.head.appendChild(st); }
 </script>
 </body>
