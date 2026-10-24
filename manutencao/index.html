@@ -4670,7 +4670,7 @@ function cxLinha(v, pos, t, ano) {
   const E = cxServicos(v.id, pos, t.id), marks = [];
   let cur = E.filter(e => e.date < iniS).pop() || null;
   if (!cur && v.marco && v.marco.date && t.id !== DOCA.item) cur = { date: v.marco.date, h: v.marco.h && v.marco.h[hp] != null ? v.marco.h[hp] : null, src: 'Marco zero' };
-  if (!cur) { const f = E.find(e => e.date >= iniS && e.date < fimS); if (f) { if (!f.reset) marks.push({ k: 'ok', d: pD(f.date), ev: f, semPrazo: true }); cur = f; } }
+  if (!cur) { const f = E.find(e => e.date >= iniS && e.date < fimS); if (f) { marks.push(f.reset ? { k: 'corr', d: pD(f.date), ev: f } : { k: 'ok', d: pD(f.date), ev: f, semPrazo: true }); cur = f; } }
   if (!cur) return { v, pos, t, iv, marks };
   let n = 0;
   while (n++ < 80) {
@@ -4678,7 +4678,7 @@ function cxLinha(v, pos, t, ano) {
     if (iv.h) { const d = cur.h != null ? cxDataHoras(v.id, hp, cur.h + iv.h, cur.date, rate) : null; c.push(d || new Date(pD(cur.date).getTime() + iv.h / rate * 864e5)); }
     const due = new Date(Math.min(...c.filter(Boolean).map(d => d.getTime()))); if (isNaN(due)) break;
     const e = E.find(x => x.date > cur.date);
-    if (e && e.reset) { const de = pD(e.date); if (due < de && due >= ini && due < fim && due < hj) marks.push({ k: 'miss', d: due, due }); cur = e; if (de >= fim) break; continue; }   // corretiva: reinicia sem contar como realizado; a preventiva já vencida antes dela segue como não feita
+    if (e && e.reset) { const de = pD(e.date); if (due < de && due >= ini && due < fim && due < hj) marks.push({ k: 'miss', d: due, due }); if (de >= ini && de < fim) marks.push({ k: 'corr', d: de, ev: e }); cur = e; if (de >= fim) break; continue; }   // corretiva: reinicia sem contar como realizado; a preventiva já vencida antes dela segue como não feita
     if (e) { const de = pD(e.date), atr = Math.round((de - due) / 864e5);
       if (de >= ini && de < fim) marks.push({ k: atr <= 0 ? 'ok' : 'late', d: de, due, ev: e, atr });
       if (atr > 0 && due >= ini && due < fim && due.getMonth() !== de.getMonth()) marks.push({ k: 'pl', d: due, due, ev: e, ref: true });
@@ -4922,6 +4922,7 @@ function cronoMarcas(v, ano) {   // por PACOTE: uma execução programada por ve
     l.its.forEach(({ t, pos }) => { const r = cxLinha(v, pos, t, ano); if (!r) return; r.marks.forEach(m => { const c = M[m.d.getMonth()];
       if (m.k === 'ok' || m.k === 'late') { feitos[m.d.getMonth()].add((m.ev && m.ev.num) || m.d.toISOString().slice(0, 10)); c[m.k === 'late' ? 'late' : 'ok'] = 1; c.its.push(t.id + ' · ' + (m.ev && m.ev.src ? m.ev.src : 'feito') + (m.k === 'late' ? ' (atraso)' : '')); }
       if (m.k === 'miss') { c.miss = 1; c.its.push(t.id + ' venceu e não foi feito'); }
+      if (m.k === 'corr') { c.corr = 1; c.its.push(t.id + ' · ' + (m.ev && m.ev.src || 'corretiva')); }
       if ((m.k === 'plan' || m.k === 'miss') && (!prox || m.d < prox)) prox = m.d; }); });
     const cap = Math.max(1, Math.round(30.44 / passoD)); M.forEach((c, i) => { if (c.ok || c.late) { const n = Math.min(cap, feitos[i].size || 1); c.ok = c.late ? 0 : n; c.late = c.late ? n : 0; } });   // uma execução do pacote por mês (mais só se o intervalo for menor que um mês)
     // programados: do primeiro vencimento do pacote em diante, no passo do pacote
@@ -5338,9 +5339,9 @@ function prServ(v, l) {   // nome do serviço, frequência e ordem
 function prLinhas(v, ano) {
   const R = cronoMarcas(v, ano), B = cronoBase(ano, v.id), G = {};
   R.forEach(l => { const sv = prServ(v, l), k = l.eqKey + '|' + sv.nome;
-    const g = G[k] = G[k] || { k, v, eqKey: l.eqKey, sv, its: [], M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, tx: [] })), sis: 99 };
+    const g = G[k] = G[k] || { k, v, eqKey: l.eqKey, sv, its: [], M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, corr: 0, tx: [] })), sis: 99 };
     g.its.push(...l.its); l.its.forEach(x => { g.sis = Math.min(g.sis, parseInt(x.t.id)); });
-    l.M.forEach((m, i) => { const c = g.M[i]; c.plan += m.plan; c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.tx.push(...m.its.filter(s => /OM|FR|feito|venceu/.test(s))); }); });
+    l.M.forEach((m, i) => { const c = g.M[i]; c.plan += m.plan; c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.corr += m.corr || 0; c.tx.push(...m.its.filter(s => /OM|FR|feito|venceu/.test(s))); }); });
   const L = Object.values(G).map(g => { g.eq = eqNome(v, g.eqKey); g.base = B && B.linhasPR ? B.linhasPR[g.k] : null; g.crit = g.its.reduce((a, x) => PRIO_ORD[x.t.prio] < PRIO_ORD[a] ? x.t.prio : a, 'Baixa'); return g; });
   const EQO = ['MCP', 'REV', 'EIXO', 'HELICE', 'CXMAR', 'FAE80', 'ALTPE', 'RACOR', 'MCA', 'FAE50', 'BAMB30'];
   return L.sort((a, b) => a.sis - b.sis || ((EQO.indexOf(a.eqKey.split('|')[0]) + 1 || 50) - (EQO.indexOf(b.eqKey.split('|')[0]) + 1 || 50)) || a.eqKey.localeCompare(b.eqKey) || a.sv.o - b.sv.o);
@@ -5391,25 +5392,27 @@ function prFrota(ano, pdf) {
 // filtro de meses cumulativo (PRV.ms: lista de meses marcados; vazio = ano todo) · blocos como janelas · colunas com largura ajustável
 const PR_MESL = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const prMesesSel = () => PRV.ms && PRV.ms.length ? PRV.ms.slice().sort((a, b) => a - b) : Array.from({ length: 12 }, (_, i) => i);
+const cfCorr = n => n ? `<span class="cf-cor" title="${n} serviço${n > 1 ? 's' : ''} refeito${n > 1 ? 's' : ''} em corretiva · reinicia o vencimento, não conta como realizado">+${n} corr.</span>` : '';   // marca roxa: item do Anexo I refeito numa corretiva encerrada
 function prResumo(v, ano, hm, sel) {   // mesmos números da tabela clássica (prFrota), somados só nos meses marcados
-  const L = prLinhas(v, ano), P = Array(12).fill(0), R = Array(12).fill(0), Ok = Array(12).fill(0), Lt = Array(12).fill(0), Ms = Array(12).fill(0);
-  L.forEach(g => g.M.forEach((m, i) => { P[i] += g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late; R[i] += m.ok + m.late; Ok[i] += m.ok; Lt[i] += m.late; Ms[i] += m.miss; }));
+  const L = prLinhas(v, ano), P = Array(12).fill(0), R = Array(12).fill(0), Ok = Array(12).fill(0), Lt = Array(12).fill(0), Ms = Array(12).fill(0), C = Array(12).fill(0);
+  L.forEach(g => g.M.forEach((m, i) => { P[i] += g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late; R[i] += m.ok + m.late; Ok[i] += m.ok; Lt[i] += m.late; Ms[i] += m.miss; C[i] += m.corr; }));
   const s = (A, f) => sel.filter(f || (() => true)).reduce((a, i) => a + A[i], 0), passou = i => i <= hm;
   const ok = s(Ok, passou), den = ok + s(Lt, passou) + s(Ms, passou);
   // realizado do previsto: em cada mês conta no máximo o que estava previsto (o que foi feito fora do previsto aparece só na célula do mês)
-  return { v, P, R, Ok, Lt, Ms, venc: s(Ms), mesFalta: sel.includes(hm) ? Math.max(0, P[hm] - R[hm] - Ms[hm]) : 0, ok, den, ad: den ? Math.round(ok / den * 100) : null, tP: s(P), tR: sel.reduce((a, i) => a + Math.min(P[i], R[i]), 0) };
+  return { v, P, R, Ok, Lt, Ms, C, venc: s(Ms), mesFalta: sel.includes(hm) ? Math.max(0, P[hm] - R[hm] - Ms[hm]) : 0, ok, den, ad: den ? Math.round(ok / den * 100) : null, tP: s(P), tR: sel.reduce((a, i) => a + Math.min(P[i], R[i]), 0) };
 }
 function prFrotaV2(ano) {
   const V = S.cfg.frota.filter(v => !foraOp(v)), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1, sel = prMesesSel();
   const D = V.map(v => prResumo(v, ano, hm, sel));
   if (PRV.ord === 'nome') D.sort((a, b) => a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
   else D.sort((a, b) => b.venc - a.venc || b.mesFalta - a.mesFalta || (a.ad == null ? 101 : a.ad) - (b.ad == null ? 101 : b.ad) || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
-  const F = { v: { nome: 'Consolidado da frota' }, P: Array(12).fill(0), R: Array(12).fill(0), Ok: Array(12).fill(0), Lt: Array(12).fill(0), Ms: Array(12).fill(0), venc: 0, mesFalta: 0, ok: 0, den: 0, tP: 0, tR: 0 };
-  D.forEach(d => { for (let i = 0; i < 12; i++) ['P', 'R', 'Ok', 'Lt', 'Ms'].forEach(k => F[k][i] += d[k][i]); ['venc', 'mesFalta', 'ok', 'den', 'tP', 'tR'].forEach(k => F[k] += d[k]); });
+  const F = { v: { nome: 'Consolidado da frota' }, P: Array(12).fill(0), R: Array(12).fill(0), Ok: Array(12).fill(0), Lt: Array(12).fill(0), Ms: Array(12).fill(0), C: Array(12).fill(0), venc: 0, mesFalta: 0, ok: 0, den: 0, tP: 0, tR: 0 };
+  D.forEach(d => { for (let i = 0; i < 12; i++) ['P', 'R', 'Ok', 'Lt', 'Ms', 'C'].forEach(k => F[k][i] += d[k][i]); ['venc', 'mesFalta', 'ok', 'den', 'tP', 'tR'].forEach(k => F[k] += d[k]); });
   F.ad = F.den ? Math.round(F.ok / F.den * 100) : null;
   const mxF = Math.max(1, ...D.flatMap(d => sel.filter(i => i > hm).map(i => d.P[i])));
   const corAd = a => a == null ? '#5F6368' : a >= 90 ? '#188038' : a >= 75 ? '#B06000' : '#C5221F';
-  const cel = (d, i, tot) => {
+  const cel = (d, i, tot) => { const h = cel0(d, i, tot), n = d.C[i]; return n ? h.replace('<span class="cf-z">—</span>', '').replace(/<\/td>$/, cfCorr(n) + '</td>') : h; };
+  const cel0 = (d, i, tot) => {
     const p = d.P[i], r = d.R[i], ms = d.Ms[i], lt = d.Lt[i];
     if (i === hm) { const pend = Math.max(0, p - r - ms), w = x => p ? Math.min(100, Math.round(x / p * 100)) : 0;
       return `<td class="cf-c cf-hj" title="${r} realizados · ${ms} vencidos · ${pend} ainda neste mês">${p ? `<span class="cf-fr"><b>${r}</b> / ${p}</span><span class="cf-bar"><i class="ok" style="width:${w(Math.min(r, p))}%"></i><i class="ms" style="width:${w(ms)}%"></i></span>` : '<span class="cf-z">—</span>'}</td>`; }
@@ -5479,7 +5482,7 @@ function prTelaFrota(ativos, ano, nAp, anos) {
     <span class="cf-seg"><button data-prord="crit" class="${PRV.ord !== 'nome' ? 'on' : ''}">Criticidade</button><button data-prord="nome" class="${PRV.ord === 'nome' ? 'on' : ''}">Nome</button></span><span class="cf-p ${nAp === ativos.length ? 'ok' : 'lt'}">${nAp}/${ativos.length} aprovados</span></div>${chips}
    <div class="cm-ws">
     <div class="card cf-card"><div class="cf-hd"><b>Cronograma preventivo · previsto × realizado</b></div><div class="tw">${T.html}</div>
-     <p class="cf-lg"><b>0 / 24</b> = realizado / previsto · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <i class="cg"></i>carga prevista · aderência "—" = nada venceu ainda · clique no nome para ver serviço por serviço · arraste a borda do cabeçalho para ajustar a largura da coluna</p></div>
+     <p class="cf-lg"><b>0 / 24</b> = realizado / previsto · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <span class="cf-cor">+1 corr.</span> refeito em corretiva (não conta como realizado) · <i class="cg"></i>carga prevista · aderência "—" = nada venceu ainda · clique no nome para ver serviço por serviço · arraste a borda do cabeçalho para ajustar a largura da coluna</p></div>
    </div></div>`;
 }
 function prPopAbre(td) {   // cartão com os itens do Anexo I do serviço, ao lado do nome
@@ -5505,6 +5508,7 @@ function prColunas(chave) {   // largura das colunas da tabela ajustável à mã
     h.addEventListener('dblclick', e => { e.stopPropagation(); delete W[th.dataset.ck]; LS.S(W); render(); }); });
 }
 // ---- detalhe do empurrador no mesmo padrão da frota: uma linha por serviço, agrupada por sistema › equipamento ----
+{ const st = document.createElement('style'); st.textContent = `.cf-cor{display:inline-block;margin-left:4px;padding:0 6px;border-radius:9px;background:#F3E8FD;color:#7B1FA2;font-size:10.5px;font-weight:600;white-space:nowrap;vertical-align:middle}`; document.head.appendChild(st); }
 const PR_CRIT = { 'Crítica': 'ms', 'Alta': 'lt', 'Média': 'md', 'Baixa': 'bx' };
 function prEmpTabela(v, ano, hm, sel) {
   const G = prLinhas(v, ano), mxF = Math.max(1, ...G.flatMap(g => sel.filter(i => i > hm).map(i => g.base ? (g.base[i] || 0) : g.M[i].plan + g.M[i].miss + g.M[i].ok + g.M[i].late)));
@@ -5518,7 +5522,8 @@ function prEmpTabela(v, ano, hm, sel) {
     if (ke !== eqA) { eqA = ke; rows += `<tr class="cf-ge"><td colspan="${ncol + 1}"><span class="cf-gl">${esc(g.eq.n)}${g.eq.m ? ` <small>${esc(g.eq.m)}</small>` : ''}</span></td></tr>`; }
     const P = g.M.map((m, i) => g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late), R = g.M.map(m => m.ok + m.late), Ms = g.M.map(m => m.miss), Lt = g.M.map(m => m.late);
     const tip = i => esc(g.M[i].tx.join('\n'));
-    const cel = i => { const p = P[i], r = R[i], ms = Ms[i], lt = Lt[i];
+    const cel = i => { const h = cel0(i), n = g.M[i].corr; return n ? h.replace('<span class="cf-z">—</span>', '').replace(/<\/td>$/, cfCorr(n) + '</td>') : h; };
+    const cel0 = i => { const p = P[i], r = R[i], ms = Ms[i], lt = Lt[i];
       if (i === hm) { const w = x => p ? Math.min(100, Math.round(x / p * 100)) : 0;
         return `<td class="cf-c cf-hj" title="${tip(i) || (r + ' realizados · ' + ms + ' vencidos')}">${p || r ? `<span class="cf-fr ${ms ? 'ms' : r >= p && p ? 'ok' : ''}"><b>${r}</b> / ${p || '—'}</span>${p ? `<span class="cf-bar"><i class="ok" style="width:${w(Math.min(r, p))}%"></i><i class="ms" style="width:${w(ms)}%"></i></span>` : ''}` : '<span class="cf-z">—</span>'}</td>`; }
       if (i < hm) { if (!p && !r) return '<td class="cf-c"><span class="cf-z">—</span></td>';
@@ -5544,7 +5549,7 @@ function prTelaEmp(v, ativos, ano, B, anos) {
     ${B ? `<span class="cf-p ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : '<span class="cf-p lt">Previsto ainda não aprovado</span>'}</div>${chips}
    <div class="cm-ws">
     <div class="card cf-card"><div class="cf-hd"><b>Cronograma preventivo · previsto × realizado · ${esc(v.nome)}</b></div><div class="tw">${prEmpTabela(v, ano, hm, sel)}</div>
-     <p class="cf-lg"><b>0 / 2</b> = realizado / previsto no mês · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <i class="cg"></i>carga prevista · passe o mouse na célula para ver a OM ou o FR 049_B · o PDF sai no formato oficial (P e R)</p></div>
+     <p class="cf-lg"><b>0 / 2</b> = realizado / previsto no mês · <i class="ok"></i>feito · <i class="lt"></i>feito com atraso · <i class="ms"></i>vencido · <span class="cf-cor">+1 corr.</span> refeito em corretiva (não conta como realizado) · <i class="cg"></i>carga prevista · passe o mouse na célula para ver a OM ou o FR 049_B · o PDF sai no formato oficial (P e R)</p></div>
    </div></div>`;
 }
 function vPR() {
