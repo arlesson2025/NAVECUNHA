@@ -9729,7 +9729,8 @@ function docIIBOM(P) {
   const box = on => on ? '☒' : '☐';
   P.forEach(o => {
     const ids = o.itensProg || o.items || [], feitos = new Set(o.items || []), nao = {}; (o.naoExec || []).forEach(x => { nao[x.id] = x.motivo || ''; });
-    const L = ids.map(id => A1M[id]).filter(Boolean).sort((a, b) => (EQN[a.eq] || a.eq).localeCompare(EQN[b.eq] || b.eq, 'pt-BR'));
+    /* troca de óleo (e o que se faz junto com ela) é do FR 049_B, que já dá baixa no cronograma: não sai no II-B (pedido do Supervisor, 24/10/2026) */
+    const L = ids.map(id => A1M[id]).filter(t => t && !(typeof trilha === 'function' && trilha(v, o.pos, t) === 'bordo')).sort((a, b) => (EQN[a.eq] || a.eq).localeCompare(EQN[b.eq] || b.eq, 'pt-BR'));
     /* uma linha por serviço e o equipamento como subtítulo: cabe ~50 serviços por folha */
     let eq0 = '', lin = '';
     L.forEach(t => { const e = EQN[t.eq] || t.eq, f = lancada && feitos.has(t.id), n = lancada && !f;
@@ -9737,6 +9738,7 @@ function docIIBOM(P) {
       lin += `<tr><td>${esc(t.chk || t.item)}</td><td class="ac">${esc(ivEmb(t, v, o.pos))}</td><td class="c${f ? ' ok' : ''}">${box(f)}</td><td class="c${n ? ' bad' : ''}">${box(n)}</td><td>${n ? esc(nao[t.id] || '') : ''}</td></tr>`; });
     B.push(sx([posCurtoE(v, o.pos), L.length + (L.length === 1 ? ' serviço' : ' serviços'), `<table class="lst"><tr><th style="width:58%">Serviço</th><th style="width:11%">A cada</th><th style="width:6%">Feito</th><th style="width:7%">Não feito</th><th>Observação</th></tr>${lin}</table>`]));
   });
+  if (P.some(o => (o.itensProg || o.items || []).some(id => A1M[id] && typeof trilha === 'function' && trilha(v, o.pos, A1M[id]) === 'bordo'))) B.push(`<div class="note" style="margin:0 0 4px">Troca de óleo e filtros desta OM: registrar no <b>FR 049_B</b>. É ele que dá baixa no cronograma.</div>`);
   B.push(sx(['Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], (o1.mats || []).length ? o1.mats.map(m => [m[0], m[1], m[2]]) : [['', '', ''], ['', '', ''], ['', '', '']], ['60%', '12%', '28%'])]));
   B.push(sx(['Observações', 'o que encontrou, o que não deu para fazer e por quê', `<div class="v" style="min-height:46px">${esc(o1.obsGeral || '')}&nbsp;</div>`]));
   const F = (o1.fotos || []), na = F.filter(x => x.tipo === 'ANTES').length, nd = F.filter(x => x.tipo === 'DEPOIS').length;
