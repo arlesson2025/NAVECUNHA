@@ -2492,7 +2492,20 @@ function novaCorretiva() {
 
 /* ---------- tela da OM ---------- */
 let OMV = { id: null, prevT: null };
+/* OM num bloco só (24/10/2026): faixa-guia · eletrônicos de navegação (corretiva) · origem · OM (com a verificação de eficácia) · histórico.
+   Antes eram 4 camadas por cima do corpo da OM. */
 function vOM() {
+  const o = S.recs.get(ARG); let h = omCorpo();
+  if (!o) return h;
+  const ef = omEficaciaHTML(o); if (ef) h = h.replace('<div class="work">', ef + '<div class="work">');
+  h = omOrigemHTML(o) + h + omHistHTML(o);
+  if (o.kind !== 'om') return h;
+  h = guiaOM(o, o.grupo ? omGrupo(o.grupo) : [o]) + h;
+  const c = o.tipo === 'C' && typeof tiCard === 'function' ? tiCard(o) : '';
+  if (c) { const t = document.createElement('div'); t.innerHTML = h; const gu = t.querySelector('.card.gu'); if (gu) gu.insertAdjacentHTML('afterend', c); else t.insertAdjacentHTML('afterbegin', c); h = t.innerHTML; }
+  return h;
+}
+function omCorpo() {
   const o = S.recs.get(ARG); if (!o) return '<div class="empty">OM não encontrada. Talvez ainda não tenha sincronizado.</div>';
   OMV.id = o.id;
   const fechada = o.status === 'encerrada';
@@ -3811,16 +3824,15 @@ gateIIA = function (o) {
   return g;
 };
 // verificação da eficácia: fica editável depois de encerrada (fora do formulário bloqueado)
-{ const v0 = vOM; vOM = function () {
-  const h = v0(), o = S.recs.get(ARG);
-  if (!o || o.tipo !== 'C' || o.status !== 'encerrada' || !ehCA(o)) return h;
+function omEficaciaHTML(o) {   /* verificação de eficácia da corretiva Crítica/Alta encerrada (ISO 9001 10.2.1 d) */
+  if (!o || o.tipo !== 'C' || o.status !== 'encerrada' || !ehCA(o)) return '';
   const pv = efPrev(o), venc = !o.efRes && pv && pv <= isoD(hoje()), reinc = typeof falhasDados === 'function' && falhasDados(24).some(f => f.id !== o.id && f.vessel === o.vessel && f._comp && (f._comp || '').toLowerCase() === String(o.equip || '').toLowerCase() && pD(f.abertura) > pD(o.liberacao || o.abertura));
   const card = `<div class="card cblk ef">${blkH('✓', 'Verificação da eficácia', 'ISO 9001 10.2.1 d · a ação funcionou?')}
    ${reinc ? '<div class="banner bad">Atenção: houve nova falha do mesmo componente neste empurrador depois desta corretiva.</div>' : ''}
    ${o.efRes ? `<p>${o.efRes === 'Eficaz' ? '<span class="pill p-ok">Eficaz</span>' : '<span class="pill p-bad">Não eficaz</span>'} verificada em ${brD(o.efData)} por ${esc(o.efBy || '')}${o.efObs ? ' · ' + esc(o.efObs) : ''}</p>` : `<p class="note">${venc ? '<b style="color:var(--badt)">Verificação vencida</b> desde ' + brD(pv) : 'Verificar a partir de ' + brD(pv)} (${EF_DIAS} dias depois da liberação ou do prazo da medida). Confira se a falha voltou, se a medida foi aplicada e se precisa mudar o Anexo I.</p>`}
    ${can.admin() ? `<div class="g"><label class="f s2">Resultado<select id="efR"><option value="">Escolha…</option>${['Eficaz', 'Não eficaz'].map(x => `<option${o.efRes === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label><label class="f s2">Data<input id="efD" type="date" value="${esc(o.efData || isoD(hoje()))}"></label><label class="f s4">Observação<input id="efO" value="${esc(o.efObs || '')}" placeholder="ex.: 4 meses sem reincidência; não eficaz → nova OM 48xxx"></label></div><div class="row"><button class="mbtn pri" data-ef="salvar">Registrar verificação</button></div>` : '<p class="note">Somente o Supervisor registra a verificação.</p>'}</div>`;
-  return h.replace('<div class="work">', card + '<div class="work">');
-}; }
+  return card;
+}
 { const a0 = AFTER.om; AFTER.om = () => { a0(); const m = $('#main'), c0 = m.onclick; m.onclick = async e => {
   const b = e.target.closest('[data-ef]'); if (b) { const o = S.recs.get(ARG); if (!precisa(true)) return; const r = $('#efR').value; if (!r) return toast('Escolha o resultado.'); o.efRes = r; o.efData = $('#efD').value || isoD(hoje()); o.efObs = $('#efO').value.trim(); o.efBy = S.session.name; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: 'Eficácia: ' + r }); await saveRec(o); toast('Verificação registrada.'); render(); return; }
   return c0 && c0(e); }; }; }
@@ -7540,7 +7552,6 @@ function omHistHTML(o) {
 }
 function omOrigemHTML(o) { if (!o || !o.fr027) return ''; const r = S.recs.get(o.fr027); if (!r) return '';
   return `<div class="banner info">Aberta pelo <b>FR 027_L de ${r.mov === 'saida' ? 'saída' : 'chegada'}</b> de ${brD(r.date)} ${esc(r.hora || '')} · ${esc(((r.ass || [])[0] || {}).nome || '')}${((r.ass || [])[1] || {}).nome ? ' · CTF ' + esc(r.ass[1].nome) : ''}<span class="sp"></span>${drivePdf(r.pdfFileId, '📄 Abrir o FR 027_L')}</div>`; }
-{ const v0 = vOM; vOM = function () { const h = v0.apply(this, arguments), o = S.recs.get(ARG); return o ? omOrigemHTML(o) + h + omHistHTML(o) : h; }; }
 // 6 · Hoje: o que precisa de você agora
 function agoraLista() {
   const out = [], add = (p, txt, btn) => out.push({ p, txt, btn }), FM = frotaMatriz();
@@ -8287,7 +8298,6 @@ function guiaOM(o, P) {
     <div class="gu-a"><span><b>AGORA:</b> ${agora[0]}</span><span class="sp"></span>${agora[1] ? `<button class="mbtn pri" data-guia="${destino}" data-gg="${esc(o.grupo || '')}">${agora[1]}</button>` : ''}</div>
     ${falta.length && idx < (prev ? 2 : 3) ? `<div class="gu-f"><b>Falta para aprovar:</b> ${falta.slice(0, 6).map(esc).join(' · ')}${falta.length > 6 ? ' · +' + (falta.length - 6) : ''}</div>` : ''}</div>`;
 }
-{ const v0 = VX.om || (typeof vOM === 'function' ? function () { return vOM.apply(this, arguments); } : null); if (v0) VX.om = function () { const h = v0.apply(this, arguments), o = S.recs.get(ARG); return o && o.kind === 'om' ? guiaOM(o, o.grupo ? omGrupo(o.grupo) : [o]) + h : h; }; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-guia]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const d = b.dataset.guia;
   if (d === 'sankhya') { location.hash = '#omconf'; return; }
   if (d === 'lancar') { location.hash = '#omg/' + encodeURIComponent(b.dataset.gg); return; }
@@ -8790,8 +8800,6 @@ function tiModal(o) { if (!precisa(false)) return;
     o.ti = { res: r.value, data: $('#tiD').value || isoD(hoje()), quem: q, obs: $('#tiO').value.trim(), at: Date.now() }; o.eletr = true;
     (o.hist = o.hist || []).push({ at: Date.now(), by: S.session ? S.session.name : '', ev: 'NP 5.12 · ' + (r.value === 'ti' ? 'alimentação normal: direcionada ao TI' : 'causa na alimentação elétrica') });
     await saveRec(o); closeModal(); toast(r.value === 'ti' ? 'OM direcionada ao TI.' : 'Registrado: causa na alimentação elétrica.'); render(); }; }
-{ const v0 = VX.om; if (v0) VX.om = function () { const h = v0.apply(this, arguments), o = S.recs.get(ARG); if (!o || o.kind !== 'om' || o.tipo !== 'C') return h; const c = tiCard(o); if (!c) return h;
-    const t = document.createElement('div'); t.innerHTML = h; const gu = t.querySelector('.card.gu'); if (gu) gu.insertAdjacentHTML('afterend', c); else t.insertAdjacentHTML('afterbegin', c); return t.innerHTML; }; }
 document.addEventListener('click', async e => { const a = e.target.closest('[data-timodal]'), b = e.target.closest('[data-tieletr]'); if (!a && !b) return; e.preventDefault(); e.stopPropagation();
   if (a) { const o = S.recs.get(a.dataset.timodal); if (o) tiModal(o); return; }
   if (!precisa(false)) return; const [id, s] = b.dataset.tieletr.split('|'), o = S.recs.get(id); if (!o) return; o.eletr = s === '1'; await saveRec(o); render(); }, true);
