@@ -1674,7 +1674,7 @@ function badge(k) {
   if (k === 'acomp') { const n = ab.filter(omAtrasada).length; return n ? `<span class="n">${n}</span>` : ''; }
   return '';
 }
-function renderNav() { $('#nav').innerHTML = NAV.map(([g, l]) => `<div class="grp-t">${g}</div>` + l.map(([k, t]) => `<a href="#${k}" class="${VIEW === k || (VIEW === 'om' && ((k === 'prev' && omTipo() === 'P') || (k === 'corr' && omTipo() === 'C'))) ? 'on' : ''}">${t}${badge(k)}</a>`).join('')).join(''); }
+function renderNav() {}
 function omTipo() { const o = S.recs.get(ARG); return o ? o.tipo : ''; }
 function renderUser() {
   const s = S.session;
@@ -1724,29 +1724,8 @@ function precisa(adm) { if (!S.session) { loginModal(); return false; } if (adm 
 
 /* ---------- gráficos (SVG) ---------- */
 const fmtv = (v, d) => v === null || v === undefined || isNaN(v) ? '—' : nf(v, d);
-function lineChart(vals, labels, meta, unit, dec, opt = {}) {
-  const W = 320, H = opt.h || 130, L = 34, R = 12, T = 12, B = 22, vv = vals.filter(v => v !== null && v !== undefined && !isNaN(v));
-  if (!vv.length) return `<div class="note" style="height:${H * .6}px;display:flex;align-items:center;justify-content:center">Sem dados no período</div>`;
-  const lo = Math.min(...vv, meta); let mn = lo, mx = Math.max(...vv, meta); const p = (mx - mn) * .18 || Math.abs(mx) * .1 || 1; mn -= p; mx += p; if (lo >= 0 && mn < 0) mn = 0;
-  const x = i => L + i * (W - L - R) / Math.max(1, vals.length - 1), y = v => T + (mx - v) / (mx - mn) * (H - T - B);
-  const tk = [mn + p * .5, (mn + mx) / 2, mx - p * .5];
-  let g = tk.map(t => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text x="${L - 4}" y="${y(t) + 3}" text-anchor="end">${nf(t, dec)}</text>`).join('');
-  g += `<line class="metaL" x1="${L}" x2="${W - R}" y1="${y(meta)}" y2="${y(meta)}"/><text class="mt" x="${W - R}" y="${y(meta) - 4}" text-anchor="end">meta ${nf(meta, dec)}${unit}</text>`;
-  const pts = vals.map((v, i) => v === null || v === undefined || isNaN(v) ? null : [x(i), y(v)]).filter(Boolean);
-  const d = pts.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ');
-  const area = pts.length > 1 ? `<path class="area" d="${d} L${pts[pts.length - 1][0]},${H - B} L${pts[0][0]},${H - B} Z"/>` : '';
-  const lab = labels.map((l, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${l}</text>`).join('');
-  const lastI = vals.map((v, i) => v === null || v === undefined || isNaN(v) ? -1 : i).filter(i => i >= 0).pop();
-  const dots = vals.map((v, i) => v === null || v === undefined || isNaN(v) ? '' : `<circle class="dot" cx="${x(i)}" cy="${y(v)}" r="${i === lastI ? 4.5 : 3}"/><rect class="hit" x="${x(i) - 14}" y="${T}" width="28" height="${H - T - B}" data-tip="${labels[i]}: ${nf(v, dec)}${unit}"/>`).join('');
-  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${labels.map((l, i) => l + ' ' + fmtv(vals[i], dec)).join(', ')}">${g}${area}<path class="ln" d="${d}"/>${dots}<text class="lbl" x="${x(lastI) - 6}" y="${y(vals[lastI]) - 9}" text-anchor="end">${nf(vals[lastI], dec)}${unit}</text>${lab}</svg>`;
-}
-function hbar(rows, unit, meta, dec = 0) {
-  if (!rows.length) return '<div class="note">Sem dados no período</div>';
-  const W = 520, rh = 24, L = 130, R = 52, H = rows.length * rh + (meta != null ? 16 : 4), mx = Math.max(...rows.map(r => r[1]), meta || 0, 1) * 1.05, x = v => L + v / mx * (W - L - R);
-  let s = rows.map((r, i) => { const yy = i * rh + 4; return `<text x="${L - 6}" y="${yy + 12}" text-anchor="end" style="fill:var(--ink)">${esc(r[0])}</text><rect class="bar" x="${L}" y="${yy}" width="${Math.max(2, x(r[1]) - L)}" height="15" rx="3"/><text class="lbl" x="${x(r[1]) + 5}" y="${yy + 11.5}">${nf(r[1], dec)}${unit}</text><rect class="hit" x="0" y="${yy - 3}" width="${W}" height="${rh}" data-tip="${esc(r[0])}: ${nf(r[1], dec)}${unit}"/>`; }).join('');
-  if (meta != null) s += `<line class="metaL" x1="${x(meta)}" x2="${x(meta)}" y1="0" y2="${H - 14}"/><text class="mt" x="${x(meta)}" y="${H - 3}" text-anchor="middle">meta ${nf(meta)}${unit}</text>`;
-  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${rows.map(r => r[0] + ' ' + nf(r[1], dec) + unit).join(', ')}">${s}</svg>`;
-}
+function lineChart(vals, labels, meta, unit, dec, opt = {}) {}
+function hbar(rows, unit, meta, dec = 0) {}
 document.addEventListener('mouseover', e => { const t = $('#tip'), h = e.target.closest && e.target.closest('[data-tip]'); if (!h) { t.hidden = true; return; } t.textContent = h.dataset.tip; t.hidden = false; });
 document.addEventListener('mousemove', e => { const t = $('#tip'); if (t.hidden) return; t.style.left = Math.min(e.clientX + 12, innerWidth - t.offsetWidth - 8) + 'px'; t.style.top = (e.clientY - 34) + 'px'; });
 
@@ -1756,48 +1735,12 @@ const pillSt = st => `<span class="pill ${PST[st][0]}">${PST[st][1]}</span>`;
 const posTag = p => `<span class="pos ${p}">${p === 'UN' ? 'UN' : p}</span>`;
 const omStatusTxt = o => ((o.tipo === 'C' ? ETAPAS_C : ETAPAS_P).find(x => x[0] === o.status) || ['', o.status])[1];
 const tipoPill = o => o.tipo === 'C' ? `<span class="pill p-bad">Corretiva · ${esc(o.classe || '?')}</span>` : `<span class="pill p-inf">${(o.items || []).every(i => A1M[i] && A1M[i].pred) ? 'Preditiva' : 'Preventiva'}</span>`;
-function kpiCard(nome, val, unit, metaTxt, ok, chart, formula, freq, dec = 1) {
-  const st = val === null || val === undefined || isNaN(val) ? '<span class="pill p-mut">Sem dados</span>' : ok ? '<span class="pill p-ok">✓ Atende</span>' : '<span class="pill p-bad">✕ Fora da meta</span>';
-  return `<div class="card kc"><div class="top"><div><h3>${nome}</h3><div class="meta">Meta ${metaTxt} · ${freq}</div></div>${st}</div><div class="val">${fmtv(val, dec)}<small>${unit}</small></div>${chart}<div class="formula">${formula}</div></div>`;
-}
+function kpiCard(nome, val, unit, metaTxt, ok, chart, formula, freq, dec = 1) {}
 
 /* =====================================================================
    VISÃO GERAL
    ===================================================================== */
-function vGeral() {
-  const K = kpis(); let venc = 0, viag = 0, crit = 0;
-  const bloq = [], inter = [];
-  S.cfg.frota.forEach(v => { const p = painelVessel(v); venc += p.filter(x => x.s.st === 'venc' && !x.om).length; viag += p.filter(x => x.s.st === 'viag' && !x.om).length; const b = p.filter(x => x.s.st === 'venc' && x.t.prio === 'Crítica' && !x.om); if (b.length) bloq.push([v, b]); const i = interditada(v.id); if (i) inter.push([v, i]); crit += b.length; });
-  const ab = oms().filter(o => o.status !== 'encerrada'), corrAb = ab.filter(o => o.tipo === 'C');
-  const conf = ab.filter(o => o.tipo === 'P' && ['executada', 'conferencia'].includes(o.status));
-  const di = K.disp[5], mtbf = K.mtbfNow.v, mttr = K.mttr[5];
-  return `<div class="vh"><div><h1>Painel de gestão da manutenção</h1><p>Frota de ${S.cfg.frota.length} empurradores · NP Navecunha 055 · ${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</p></div><span class="sp"></span>
-   <button class="mbtn" onclick="go('emitir')">＋ Programar janela</button><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>
-  <div class="kgrid six">
-   <div class="card mini ${venc ? 'bad' : 'ok'}"><b>${venc}</b><span>preventivas vencidas sem OM</span></div>
-   <div class="card mini ${viag ? 'warn' : 'ok'}"><b>${viag}</b><span>vencem na próxima viagem de cada embarcação</span></div>
-   <div class="card mini ${crit ? 'bad' : 'ok'}"><b>${bloq.length}</b><span>embarcações com saída bloqueada (Crítica vencida)</span></div>
-   <div class="card mini ${inter.length ? 'bad' : 'ok'}"><b>${inter.length}</b><span>interditadas por falha Crítica</span></div>
-   <div class="card mini ${corrAb.length ? 'warn' : 'ok'}"><b>${corrAb.length}</b><span>corretivas em aberto</span></div>
-   <div class="card mini"><b>${conf.length}</b><span>OMs aguardando sua conferência</span></div>
-  </div>
-  <div class="kgrid">
-   ${kpiCard('Disponibilidade da frota', di, '%', '≥ 95%', di >= 95, lineChart(K.disp, K.ms.map(x => x.lab), 95, '%', 1), '(h calendário − h indisponíveis) ÷ h calendário × 100', 'Mensal')}
-   ${kpiCard('MTBF', mtbf, ' h', '≥ 500 h', mtbf >= 500, lineChart(K.mtbf, K.ms.map(x => x.lab), 500, ' h', 0), 'h de operação 12 meses ÷ falhas Crítica/Alta 12 meses', 'Mensal · janela de 12 meses', 0)}
-   ${kpiCard('Backlog', K.bk.v, '%', '≤ 5%', K.bk.v <= 5, lineChart(K.snaps.map(s => s.v).concat([K.bk.v]), K.snaps.map(s => brD(s.date).slice(0, 5)).concat(['hoje']), 5, '%', 1, { menor: 1 }), `${K.bk.n} de ${K.bk.t} OMs abertas com início vencido`, 'Semanal')}
-  </div>
-  <div class="two">
-   <div class="card"><div class="row"><h2>Pendências críticas</h2><span class="sp"></span><a class="mbtn sm" href="#frota">Ver frota</a></div>
-    ${inter.map(([v, o]) => `<div class="banner bad"><b>${esc(v.nome)}</b> interditada · OM ${esc(o.num)} · ${esc(o.descricao || '')}<span class="sp"></span><a class="mbtn sm" href="#om/${o.id}">Abrir</a></div>`).join('')}
-    ${bloq.map(([v, b]) => `<div class="banner bad"><b>${esc(v.nome)}</b> saída bloqueada: ${b.map(x => x.t.id).join(', ')} (Crítica vencida)<span class="sp"></span><a class="mbtn sm" href="#emitir/${v.id}">Emitir</a></div>`).join('')}
-    ${ab.filter(omAtrasada).map(o => `<div class="banner ex"><b>OM ${esc(o.num)}</b> ${esc(vName(o.vessel))} · início em atraso (backlog)<span class="sp"></span><a class="mbtn sm" href="#om/${o.id}">Abrir</a></div>`).join('')}
-    ${!inter.length && !bloq.length && !ab.some(omAtrasada) ? '<div class="note">Nenhuma pendência crítica.</div>' : ''}
-   </div>
-   <div class="card"><div class="row"><h2>Aguardando conferência</h2><span class="sp"></span><a class="mbtn sm" href="#prev">Ver todas</a></div>
-    ${conf.length ? `<div class="tw"><table class="t"><thead><tr><th>OM</th><th>Embarcação</th><th>Itens</th><th></th></tr></thead><tbody>${conf.map(o => `<tr class="click" data-open="${o.id}"><td class="mono">${esc(o.num)}</td><td>${esc(vName(o.vessel))} ${posTag(o.pos)}</td><td class="mono">${(o.items || []).join(' · ')}</td><td><span class="pill p-inf">${omStatusTxt(o)}</span></td></tr>`).join('')}</tbody></table></div>` : '<div class="note">Nenhuma OM executada aguardando conferência.</div>'}
-   </div>
-  </div>`;
-}
+function vGeral() {}
 
 /* =====================================================================
    FROTA E VENCIMENTOS
@@ -2340,22 +2283,7 @@ function baseModal(vid, pos, item) {
    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="bOk">Salvar</button></div>`);
   $('#bOk').onclick = async () => { const hv = $('#bH').value.trim(), dv = $('#bD').value; if (!dv) return toast('Informe a data.'); await saveRec({ id: uid('base'), kind: 'base', vessel: vid, pos, item, h: hv === '' ? null : +hv.replace(/\D/g, ''), date: dv, by: S.session.name }); closeModal(); toast('Último serviço registrado.'); vesselModal(vid, 'todos'); };
 }
-function horModal(vid) {
-  if (!precisa(false)) return;
-  const v0 = vid || S.cfg.frota[0].id;
-  const draw = vid2 => { const v = vessel(vid2); return `<label class="f">Embarcação<select id="hV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid2 ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
-   <label class="f">Data da leitura<input id="hD" type="date" value="${isoD(hoje())}"></label>
-   <div class="g">${posicoes(v).filter(p => p !== 'UN').map(p => { const h = horAtual(v.id, p); return `<label class="f s3">${p === 'POPA' ? 'Motor de popa' : posNome(v, p) + (MCAS.includes(p) ? ' · ' + mcaNome(v, p) : '')} · último ${h ? nf(h.h) : '—'}<input data-h="${p}" inputmode="numeric" placeholder="horímetro (h)"></label>`; }).join('')}</div>`; };
-  modal(`<h2>Registrar horímetros</h2><p class="note">Normalmente os do FR 027_L (chegada/saída no terminal). Deixe em branco o que não leu.</p><div id="hBody">${draw(v0)}</div><div class="note" id="hE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="hOk">Salvar leituras</button></div>`);
-  $('#modal').addEventListener('change', e => { if (e.target.id === 'hV') $('#hBody').innerHTML = draw(e.target.value); });
-  $('#hOk').onclick = async () => {
-    const vid2 = $('#hV').value, d = $('#hD').value; let n = 0, err = '';
-    for (const i of $$('[data-h]')) { const val = i.value.replace(/\D/g, ''); if (!val) continue; const p = i.dataset.h, ant = horAtual(vid2, p); if (ant && +val < ant.h && d >= ant.date) { err = `${p}: ${val} h é menor que a última leitura (${nf(ant.h)} h).`; break; } }
-    if (err) { $('#hE').textContent = err; return; }
-    for (const i of $$('[data-h]')) { const val = i.value.replace(/\D/g, ''); if (!val) continue; await saveRec({ id: uid('hor'), kind: 'hor', vessel: vid2, pos: i.dataset.h, h: +val, date: d, by: S.session.name }); n++; }
-    closeModal(); toast(n ? n + ' leitura(s) salva(s).' : 'Nada lançado.'); render();
-  };
-}
+function horModal(vid) {}
 
 /* =====================================================================
    PROGRAMAÇÃO DA JANELA DE MANUTENÇÃO
@@ -2450,24 +2378,7 @@ function fichaModal(o) {
    ACOMPANHAR (quadro)
    ===================================================================== */
 const AC = { tipo: 'todas' };
-function vAcomp() {
-  const ab = oms().filter(o => o.status !== 'encerrada' || (o.fechadoAt && Date.now() - o.fechadoAt < 7 * 864e5));
-  const flt = ab.filter(o => AC.tipo === 'todas' || o.tipo === AC.tipo);
-  const cols = AC.tipo === 'C' ? ETAPAS_C : ETAPAS_P;
-  const colOf = o => o.tipo === 'C' ? { aberta: 'emitida', execucao: 'abordo', conferencia: 'conferencia', encerrada: 'encerrada' }[o.status] : o.status;
-  const colsUse = AC.tipo === 'C' ? cols.map(c => [c[0], c[1]]) : cols;
-  const card = o => { const late = omAtrasada(o), c = o.pos === 'BB' ? 'var(--bb)' : o.pos === 'BE' ? 'var(--be)' : o.pos === 'CE' ? 'var(--navy)' : 'var(--acc)';
-    const next = o.tipo === 'C' ? { aberta: ['execucao', 'Iniciar execução'], execucao: ['conferencia', 'Conferir'] }[o.status] : { emitida: ['abordo', 'Embarcou'], abordo: ['executada', 'Executada (Autotrac)'], executada: ['conferencia', 'Conferir'] }[o.status];
-    return `<div class="omc" style="--c:${c}"><div class="h"><b class="num">OM ${esc(o.num)}</b>${posTag(o.pos)}</div><div>${esc(vName(o.vessel))}</div>${tipoPill(o)}
-      <div class="note">${o.tipo === 'C' ? esc(o.descricao || '') : (o.items || []).join(' · ')}</div>
-      <div class="note mono">${o.tipo === 'C' ? 'aberta ' + brDT(o.abertura) : (o.alvoH ? 'alvo ' + nf(o.alvoH) + ' h' : '') + (o.alvoD ? ' · até ' + brD(o.alvoD) : '')}</div>
-      ${late ? '<span class="pill p-bad">Início em atraso</span>' : ''}${o.devolvida ? `<span class="pill p-warn">Devolvida: ${esc(o.devolvida)}</span>` : ''}
-      <div class="acts">${next && o.status !== 'encerrada' ? `<button class="mbtn sm ${next[0] === 'conferencia' ? 'pri' : ''}" data-adv="${o.id}|${next[0]}">${next[1]}</button>` : ''}<a class="mbtn sm" href="#om/${o.id}">Abrir</a>${o.tipo === 'P' ? `<button class="mbtn sm" data-ficha="${o.id}">Ficha</button>` : ''}</div></div>`; };
-  const colsH = (AC.tipo === 'todas' ? ETAPAS_P : colsUse).map(([k, l]) => { const l2 = flt.filter(o => (AC.tipo === 'todas' ? colOf(o) : AC.tipo === 'C' ? o.status : o.status) === k); return `<div class="col"><h4>${AC.tipo === 'todas' && k === 'emitida' ? 'Emitida / aberta' : AC.tipo === 'todas' && k === 'abordo' ? 'A bordo / em execução' : l}<span class="mono">${l2.length}</span></h4>${l2.map(card).join('') || '<div class="note">Nenhuma</div>'}</div>`; }).join('');
-  return `<div class="vh"><div><h1>Controle de OMs em execução</h1><p>Mova a OM quando o Comandante comunicar pelo Autotrac. Passou da hora-alvo (preventiva) ou do prazo de início da classe (corretiva) sem início, a OM entra no backlog.</p></div><span class="sp"></span>
-   <div class="seg">${[['todas', 'Todas'], ['P', 'Preventivas'], ['C', 'Corretivas']].map(([k, l]) => `<button data-ac="${k}" class="${AC.tipo === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
-   <div class="kan" style="grid-template-columns:repeat(${(AC.tipo === 'C' ? 4 : 5)},minmax(210px,1fr))">${colsH}</div><p class="note">Encerradas aparecem por 7 dias.</p>`;
-}
+function vAcomp() {}
 AFTER.acomp = () => { $('#main').onclick = async e => { const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.ac) { AC.tipo = t.dataset.ac; render(); }
   if (t.dataset.ficha) fichaModal(S.recs.get(t.dataset.ficha));
@@ -2506,16 +2417,7 @@ async function abrirPdfNuvem(o) {
    MATRIZ ANEXO I (consulta)
    ===================================================================== */
 const MX = { q: '', sis: '', open: '' };
-function vMatriz() {
-  const q = MX.q.toLowerCase();
-  const l = A1.filter(t => t.kind !== 'sup' && (!MX.sis || t.sis.startsWith(MX.sis)) && (!q || [t.id, t.eqn, t.item, t.chk, t.desc, t.norm].join(' ').toLowerCase().includes(q)));
-  return `<div class="vh"><div><h1>Plano de manutenção · Anexo I</h1><p>${A1.length} itens da Matriz de Manutenção Preventiva (NP 055 item 7.2). Os intervalos com ajuste do Supervisor aparecem marcados.</p></div></div>
-   <div class="card row"><input id="mxQ" placeholder="Buscar nº, equipamento, item, norma…" value="${esc(MX.q)}" style="max-width:340px"><select id="mxS" style="max-width:300px"><option value="">Todos os sistemas</option>${SISTEMAS.map(s => `<option value="${s.split(' ')[0].replace('.0', '.')}"${MX.sis === s.split(' ')[0].replace('.0', '.') ? ' selected' : ''}>${s}</option>`).join('')}</select><span class="sp"></span><span class="pill p-mut">${l.length} itens</span></div>
-   <div class="card"><div class="tw"><table class="t"><thead><tr><th>Nº</th><th>Equipamento</th><th>Item</th><th>Frequência</th><th>Prior.</th><th>Registros</th></tr></thead><tbody>
-   ${l.map(t => { const ov = (S.cfg.intervalos || {})[t.id]; return `<tr class="click" data-mx="${t.id}"><td class="mono">${t.id}</td><td>${esc(EQN[t.eq])}</td><td><b>${esc(t.item)}</b><div class="note">${esc(t.chk)}</div></td><td>${esc(t.freq)}${ov ? `<div><span class="pill p-warn">ajustado: ${[intervalo(t).h ? nf(intervalo(t).h) + ' h' : '', intervalo(t).m ? intervalo(t).m + ' m' : ''].filter(Boolean).join(' ou ')}</span></div>` : ''}</td><td>${t.prio}</td><td class="note">${t.regs.map(r => r.toUpperCase()).join(' · ')}</td></tr>
-     ${MX.open === t.id ? `<tr><td colspan="6" style="background:var(--ice)"><div class="g"><div class="s3"><b>Descrição / ação</b><p style="margin:4px 0;white-space:pre-line">${esc(t.desc)}</p><b>Página do manual</b><p style="margin:4px 0">${esc(t.pag)}</p><b>Normas</b><p class="note" style="margin:4px 0">${esc(t.norm)}</p></div><div class="s3"><b>Método executivo</b><ol style="margin:4px 0;padding-left:18px">${t.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol><b>Registro NP 055</b><p class="note" style="margin:4px 0">${esc(t.reg)}</p></div></div></td></tr>` : ''}`; }).join('')}
-   </tbody></table></div></div>`;
-}
+function vMatriz() {}
 AFTER.matriz = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'mxQ') { MX.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#mxQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); } };
   m.onchange = e => { if (e.target.id === 'mxS') { MX.sis = e.target.value; render(); } };
@@ -2692,53 +2594,8 @@ function aprovacaoHtml(o) {
 }
 
 /* ---------- II-A ---------- */
-function formIIA(o) {
-  const terc = o.exec === 'Terceiro', crit = o.classe === 'Crítica', ca = crit || o.classe === 'Alta';
-  return `<div class="card">${sec('A1', 'Identificação')}<div class="g">
-    <label class="f s2">Nº da OM (Sankhya)<input value="${esc(o.num)}" readonly></label><label class="f s2">Embarcação<input value="${esc(vName(o.vessel))}" readonly></label>${fDT(o, 'abertura', 'Abertura da OM', 's2')}
-    ${fSel(o, 'sistema', 'Sistema (lista fixa 7.1)', SISTEMAS, 's3')}${fIn(o, 'equip', 'Equipamento / componente', 's3')}
-    <label class="f s2">Posição<input value="${POSN[o.pos]}" readonly></label>${fRad(o, 'local', 'Local', ['Terminal', 'Em viagem'], 's2')}${fIn(o, 'trecho', 'Trecho (se em viagem)', 's2')}
-    ${fIn(o, 'horimetro', 'Horímetro (h)', 's2', 'inputmode="numeric"')}<label class="f s2">Classe<input value="${esc(o.classe)}" readonly></label>${fIn(o, 'rnc', 'Nº da RNC' + (ca ? ' (obrigatório)' : ''), 's2')}
-    ${fSel(o, 'origem', 'Origem', ['FR 027_L', 'Pré-operacional', 'Em viagem (Autotrac)', 'SESMT', 'Outra'], 's3')}</div></div>
-   <div class="card">${sec('A2', 'Falha detectada (“antes”)')}<div class="g">${fTA(o, 'descricao', 'Descrição da falha', 's6', 3)}</div>
-    <div class="sec-h">Parâmetros observados</div><div class="g">${[['oleo', 'Pressão de óleo'], ['tagua', 'Temp. da água'], ['toleo', 'Temp. do óleo'], ['rpm', 'RPM'], ['bat', 'Tensão da bateria'], ['outro', 'Outro']].map(([k, l]) => fIn(o, 'par|' + k, l, 's1')).join('')}
-    ${fDT(o, 'deteccao', 'Detecção', 's2')}${fDT(o, 'comunicacao', 'Comunicação', 's2')}${fRad(o, 'meio', 'Meio', ['Autotrac', 'Telefone', 'Presencial'], 's2')}
-    ${fMul(o, 'comunicado', 'Comunicado a', ['Coordenação de Operações', 'Supervisão de Manutenção'], 's6')}</div>${ca ? '<div class="note">Crítica e Alta: comunicação imediata à Coordenação de Operações e à Supervisão de Manutenção (5.4.1).</div>' : ''}</div>
-   <div class="card">${sec('A3', 'Interdição', 'item 5.5.1')}<div class="g">${fRad(o, 'interd', 'Interdição da embarcação', ['Sim', 'N/A'], 's2')}${fDT(o, 'interdDT', 'Data e hora', 's2')}${fIn(o, 'interdPor', 'Determinada por', 's2')}</div>${crit ? '<div class="banner bad">Falha Crítica: a embarcação só volta a operar com a liberação formal do Coordenador de Operações e do Supervisor de Manutenção (A10).</div>' : ''}</div>
-   <div class="card">${sec('A4', 'Liberações prévias', 'item 5.11')}<div class="g">${fIn(o, 'sesmt', 'Liberação SESMT — responsável', 's3')}${fDT(o, 'sesmtDT', 'Data e hora', 's3')}${fIn(o, 'pt', 'Nº da PT', 's2', 'placeholder="ou N/A"')}${fRad(o, 'terceiroAut', 'Serviço de terceiro', ['Não', 'Sim — autorização da Gerência/Diretoria'], 's4')}${fIn(o, 'scoc', 'Nº SC / OC', 's2')}</div></div>
-   <div class="card">${sec('A5', 'Execução')}<div class="g">
-    ${fRad(o, 'exec', 'Executor', ['Equipe própria', 'Terceiro'], 's2')}${fIn(o, 'execn', 'Nome / função ou empresa / responsável técnico', 's4')}
-    ${terc ? fRad(o, 'relTerc', 'Relatório de terceiro (5.8)', ['Relatório do fornecedor anexo', 'Fornecedor não emitiu — Supervisor preenche'], 's4') + fIn(o, 'relNum', 'Nº do relatório', 's2') : ''}
-    ${fIn(o, 'rms', 'Nº das RMs', 's2')}${fDT(o, 'inicio', 'Início da intervenção', 's2')}${fDT(o, 'termino', 'Término da intervenção', 's2')}
-    ${fTA(o, 'servicos', 'Serviços executados e procedimento aplicado — consultar o Anexo I antes da intervenção (7.2)', 's6', 4)}</div>
-    ${tabelaLivre(o, 'medsC', 'Medições', ['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Unidade'])}
-    ${tabelaLivre(o, 'mats', 'Materiais e peças aplicados', ['Descrição', 'Qtd.', 'Nº da RM / NF', 'Lote (lubrificantes)', 'Validade'])}</div>
-   <div class="card">${sec('A6', 'Resíduos', 'item 5.7')}<div class="g">${fRad(o, 'resid', 'Gerou resíduo?', ['Não', 'Sim'], 's2')}${fMul(o, 'residT', 'Tipos', ['Óleo usado', 'Filtros', 'Estopas/panos', 'Metais', 'Outros'], 's4')}${fIn(o, 'fr016', 'Nº FR 016_E', 's2')}</div></div>
-   <div class="card">${sec('A7', 'Condição final (“depois”)')}<div class="g">${fTA(o, 'teste', 'Teste funcional realizado', 's6', 2)}${fIn(o, 'criterio', 'Critério de aceitação', 's4')}${fRad(o, 'resultado', 'Resultado', ['Conforme', 'Não conforme'], 's2')}${fIn(o, 'inspecao', 'Nova inspeção de segurança (5.4.1) — responsável', 's6')}</div></div>
-   <div class="card">${sec('A8', 'Registro fotográfico', 'item 5.8 · 4 fotos por folha no PDF')}${fotosHtml(o)}</div>
-   <div class="card">${sec('A9', 'Análise', 'itens 5.2 e 10.3')}<div class="g">${fTA(o, 'causa', 'Causa raiz resumida (detalhamento obrigatório na RNC)', 's6', 3)}${fRad(o, 'revPlano', 'Revisão do plano preventivo', ['Não', 'Sim'], 's2')}${fIn(o, 'itemRev', 'Item do Anexo I a revisar', 's2')}${fTA(o, 'mitig', 'Medida de mitigação — o que será feito para a falha não se repetir' + (ca ? ' (obrigatório)' : ''), 's6', 2)}${fIn(o, 'mitigResp', 'Responsável pela medida', 's2')}${fDT(o, 'mitigPrazo', 'Prazo da medida', 's2', 'date')}${fSel(o, 'mitigSt', 'Situação da medida', ['Pendente', 'Em andamento', 'Concluída'], 's2')}${fDT(o, 'trPrev', 'Treinamento pós-falha (2 h) — previsto', 's1', 'date')}${fDT(o, 'trReal', 'Realizado', 's1', 'date')}</div></div>
-   <div class="card">${sec('A10', 'Liberação e assinaturas')}<div class="g">${fIn(o, 'ass|exec', 'Executor (nome)', 's3')}${fIn(o, 'ass|cmd', 'Recebido a bordo — Comandante ou Coordenador de Operações (4.7)', 's3')}${crit ? fIn(o, 'ass|coord', 'Coordenador de Operações — liberação pós-falha Crítica', 's6') : ''}${fDT(o, 'liberacao', 'Liberação à Operação', 's3')}${fIn(o, 'conferencia', 'Conferência documental (Analista) — nome e data', 's3')}</div>
-    ${crit ? '<div class="note">Na falha Crítica, a liberação exige a assinatura do Coordenador de Operações e a do Supervisor de Manutenção. Sem as duas, a embarcação permanece impedida de operar.</div>' : ''}${aprovacaoHtml(o)}</div>`;
-}
-function gateIIA(o) {
-  const g = [], crit = o.classe === 'Crítica', ca = crit || o.classe === 'Alta', anexo = tercAnexo(o);
-  g.push(['Sistema e descrição da falha', !!o.sistema && !!(o.descricao || '').trim()]);
-  if (ca) g.push(['Nº da RNC (obrigatório em Crítica e Alta)', !!(o.rnc || '').trim()]);
-  if (ca) g.push(['Comunicado à Coordenação e à Supervisão', (o.comunicado || []).length === 2]);
-  if (crit) g.push(['Interdição registrada (data e hora)', o.interd === 'Sim' && !!o.interdDT]);
-  g.push(['Executor informado', !!o.exec && !!(o.execn || '').trim()]);
-  g.push(['Início e término da intervenção', !!o.inicio && !!o.termino]);
-  if (!anexo) g.push(['Serviços executados descritos', !!(o.servicos || '').trim()]);
-  g.push(['Resíduos informados (A6)', o.resid === 'Não' || (o.resid === 'Sim' && !!(o.fr016 || '').trim())]);
-  g.push(['Resultado do teste: Conforme', o.resultado === 'Conforme']);
-  g.push(['Nova inspeção de segurança — responsável', !!(o.inspecao || '').trim()]);
-  if (ca) g.push(['Causa raiz resumida (A9)', !!(o.causa || '').trim()]);
-  if (ca) g.push(['Medida de mitigação definida (A9)', !!(o.mitig || '').trim()]);
-  if (crit) g.push(['Coordenador de Operações assinou a liberação', !!((o.ass || {}).coord || '').trim()]);
-  g.push(['Data e hora da liberação à operação', !!o.liberacao]);
-  fotosGate(o, g);
-  return g;
-}
+function formIIA(o) {}
+function gateIIA(o) {}
 
 /* ---------- ligação do formulário ---------- */
 AFTER.om = () => {
@@ -2794,7 +2651,6 @@ async function aprovarOM(o) {
 const HDR = () => `<div class="hdr"><div><img class="ln" src="${LOGOS.nav}" alt=""></div><div class="c"><b>ANEXO II – REGISTRO DE MANUTENÇÃO</b><span>Empurradores Fluviais</span><span class="np">NP Navecunha 055 · Anexo II · Rev. 00</span></div><div><img class="lv" src="${LOGOS.vda}" alt=""></div></div>`;
 const FOOT = n => `<div class="sf"><span>Documento controlado pelo SGI · gerado pelo SMF ${VERSAO_APP}</span><span>Página <b>${n}</b> de <b>@N</b></span></div>`;
 const dv = (lab, v, span) => `<div${span ? ` style="grid-column:span ${span}"` : ''}><span class="fl">${lab}</span><div class="v">${esc(v == null ? '' : v) || '&nbsp;'}</div></div>`;
-const xo = (cur, opts) => opts.map(x => (cur === x ? '☒ ' : '☐ ') + x).join('  ');
 const blk = (code, t, r, inner) => `<div class="fs"><h4><code>${code}</code>${t}${r ? `<span class="r">${r}</span>` : ''}</h4>${inner}</div>`;
 const grid = (cols, cells) => `<div class="row" style="grid-template-columns:${cols}">${cells}</div>`;
 function tbl(cols, rows, w) { return `<table><tr>${cols.map((c, i) => `<th${w && w[i] ? ` style="width:${w[i]}"` : ''}>${c}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => typeof c === 'object' && c ? `<td class="${c.c || ''}">${c.h !== undefined ? c.h : esc(c.t)}</td>` : `<td>${esc(c == null ? '' : c)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" style="color:#8A98A8">N/A</td></tr>`}</table>`; }
@@ -2829,63 +2685,14 @@ function paginar(fbarHtml, blocks, hdrHtml) {
   blocks.forEach(b => { const w = document.createElement('div'); w.innerHTML = b; colocar(w.firstElementChild); });
   const out = pages.map(p => p.outerHTML); pages.forEach(p => p.remove()); return out;
 }
-function paginasFotos(o, titulo) {
-  const f = (o.fotos || []).filter(x => x.src || x.leg), out = [];
-  for (let i = 0; i < f.length; i += 4) { const ch = f.slice(i, i + 4), k = i / 4;
-    out.push(`<div class="sheet">${HDR()}<div class="body"><div class="fbar"><div><small>Registro fotográfico · item 5.8</small><h3>${titulo} · folha ${k + 1} de ${Math.ceil(f.length / 4)}</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>
-     <div class="ph4">${[0, 1, 2, 3].map(j => { const x = ch[j]; if (!x) return '<figure><div class="im"></div><figcaption>&nbsp;</figcaption></figure>'; return `<figure><div class="im">${x.src ? `<img src="${x.src}" alt="">` : 'Foto guardada no PDF original'}</div><figcaption><b>Foto ${i + j + 1} · ${esc(x.tipo)}</b><span>${esc(x.leg || '')}</span><span>${esc(vName(o.vessel))} · ${POSN[o.pos]} · ${x.at ? new Date(x.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''} · ${esc(o.execn || '')}</span></figcaption></figure>`; }).join('')}</div></div>${FOOT('@K' + k)}</div>`); }
-  return out;
-}
 function numerar(pages) { const N = pages.length; return pages.map((p, i) => p.replace(/@N/g, N).replace(/Página <b>[^<]*<\/b>/, 'Página <b>' + (i + 1) + '</b>')); }
 function assinaturas(o, extra) {
   const ap = o.status === 'encerrada' ? `<span class="stamp">✓ Conferido e aprovado no SMF · ${esc(o.aprovBy || '')}</span>` : '';
   const rows = [['Executor', (o.ass || {}).exec || o.execn || '', '', ''], ['Supervisor de Manutenção — inspeção final e entrega do equipamento testado (5.8)', '', { h: ap }, o.status === 'encerrada' ? brDT(o.aprovAt) : ''], ['Recebido a bordo — Comandante ou Coordenador de Operações (4.7)', (o.ass || {}).cmd || '', '', '']].concat(extra || []);
   return tbl(['Função', 'Nome', 'Assinatura', 'Data e hora'], rows, ['40%', '22%', '22%', '16%']);
 }
-function docIIB(o) {
-  const v = vessel(o.vessel) || { nome: o.vessel }, regs = regsDe(o), pred = ehPred(o), anexo = tercAnexo(o);
-  const sis = [...new Set((o.items || []).map(id => A1M[id].sis))].join(' / '), eq = [...new Set((o.items || []).map(id => EQN[A1M[id].eq]))].join(' / ');
-  const ivs = [...new Set((o.items || []).map(id => { const iv = intervalo(A1M[id]); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' meses' : ''].filter(Boolean).join(' ou '); }))].join(' / ');
-  const crit = [...new Set((o.items || []).map(id => { const iv = intervalo(A1M[id]); return iv.h && iv.m ? 'Horas / Tempo' : iv.h ? 'Horas' : 'Tempo'; }))].join(', ');
-  const fbar = `<div class="fbar"><div><small>Toda preventiva sistemática e preditiva</small><h3>Formulário II-B — Manutenção ${pred ? 'Preditiva' : 'Preventiva'}</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
-  const B = [];
-  B.push(blk('B1', 'Identificação', '', grid('1fr 1.3fr 1.2fr', dv('Nº da OM (Sankhya)', o.num) + dv('Embarcação', v.nome) + dv('Abertura da OM', brD(o.emitAt)) + dv('Sistema (item 7.1)', sis, 2) + dv('Posição', xo(isMcp(o.pos) ? o.pos : 'N/A', ['BB', 'BE', 'CE', 'N/A']) + (MCAS.includes(o.pos) ? ' (' + posNome(v, o.pos) + ' · ' + mcaNome(v, o.pos) + ')' : '')) + dv('Equipamento / componente', eq, 2) + dv('Tipo', xo(pred ? 'Preditiva' : 'Preventiva', ['Preventiva', 'Preditiva'])) + dv('Item(ns) do Anexo I', (o.items || []).join(', ')) + dv('Origem', o.origem || 'Plano (ClickUp)', 2))));
-  const fora = o.alvoH && o.hreal ? +o.hreal > o.alvoH : false;
-  B.push(blk('B2', 'Programação', '', grid('1fr 1fr 1fr 1fr', dv('Critério', crit) + dv('Intervalo do plano', ivs, 3) + dv('Horímetro previsto', o.alvoH ? nf(o.alvoH) + ' h' : 'N/A') + dv('Horímetro realizado', o.hreal ? nf(o.hreal) + ' h' : '') + dv('Data prevista', o.alvoD ? brD(o.alvoD) : 'N/A') + dv('Data realizada', brD(o.dreal)) + dv('Dentro do prazo?', o.hreal ? (fora ? '☐ Sim  ☒ Não' : '☒ Sim  ☐ Não') : '') + dv('Justificativa (se fora do prazo)', fora ? o.justif : 'N/A', 2) + dv('Indisponível (h)', o.indispH || '0'))));
-  B.push(blk('B3', 'Condição encontrada (“antes”)', '', dv('Descrição da condição encontrada', o.condEnc)));
-  B.push(blk('B4', 'Liberações prévias', 'item 5.11', grid('1.4fr 1fr 1fr', dv('Liberação de segurança do SESMT — responsável', o.sesmt || 'N/A (rotina com APR padrão – 5.11.1)') + dv('Data e hora', brDT(o.sesmtDT)) + dv('Nº da PT', o.pt || 'N/A') + dv('Serviço de terceiro', xo(o.terceiroAut || 'Não', ['Não', 'Sim — autorização da Gerência/Diretoria']), 2) + dv('Nº SC / OC', o.scoc || 'N/A'))));
-  B.push(blk('B5', 'Execução', '', grid('1fr 1.6fr', dv('Executor', o.exec) + dv('Nome / função ou empresa / responsável técnico', o.execn)) + grid('2fr 1fr', dv('Relatório de terceiro (5.8)', o.exec === 'Terceiro' ? o.relTerc : 'N/A (equipe própria)') + dv('Nº do relatório', o.relNum || 'N/A')) + grid('1fr 1fr 1fr', dv('Nº das RMs', o.rms || 'N/A') + dv('Início da intervenção', brDT(o.inicio)) + dv('Término da intervenção', brDT(o.termino)))));
-  (o.items || []).forEach(id => { const t = A1M[id], c = (o.conf || {})[id] || {}, st = c.steps || [], md = c.meds || [];
-    B.push(`<div class="fs"><h4><code>B5</code>${esc(id)} · ${esc(t.chk)}<span class="r">${esc(EQN[t.eq])} · ${esc(t.pag)}</span></h4>${tbl(['Procedimento aplicado (Anexo I)', 'Feito'], t.steps.map((s, i) => [s, { h: st[i] ? '☒' : anexo ? 'rel.' : o.passosFicha ? 'form.' : '☐', c: st[i] ? 'ok' : '' }]), ['90%', '10%'])}${t.meds.length ? tbl(['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Un.'], t.meds.map((m, i) => [m[0], m[1], (md[i] || {}).enc || '', { t: (md[i] || {}).dei || '', c: medFora(m, (md[i] || {}).dei) ? 'bad' : '' }, m[2]])) : ''}</div>`); });
-  if ((o.medsX || []).length) B.push(blk('B5', 'Outras medições', '', tbl(['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Unidade'], o.medsX)));
-  const regRows = regs.filter(r => ['lote', 'fr049', 'instr', 'end', 'cert'].includes(r)).map(r => [REGN[r], (o.reg || {})[r] || '']);
-  B.push(blk('B5', 'Materiais e peças aplicados', '', tbl(['Descrição', 'Qtd.', 'Nº da RM / NF', 'Lote (lubrificantes)', 'Validade'], o.mats || []) + (regRows.length ? tbl(['Registro exigido (Anexo I)', 'Valor'], regRows, ['55%', '45%']) : '')));
-  if ((o.extras || []).length) B.push(blk('B5', 'Serviços adicionais (além do Anexo I)', 'sistema da lista fixa 7.1', tbl(['Sistema', 'Equipamento / local', 'O que foi feito', 'Material / RM'], o.extras.map(x => [x.sis, x.eq, x.desc, x.mat]), ['22%', '18%', '40%', '20%'])));
-  B.push(blk('B6', 'Resíduos', 'item 5.7', grid('1fr 2fr 1fr', dv('Gerou resíduo?', xo(o.resid, ['Não', 'Sim'])) + dv('Tipos', ['Óleo usado', 'Filtros', 'Estopas/panos', 'Metais', 'Outros'].map(x => ((o.residT || []).includes(x) ? '☒ ' : '☐ ') + x).join('  ')) + dv('Nº FR 016_E', o.fr016 || 'N/A'))));
-  B.push(blk('B7', 'Condição final (“depois”)', '', dv('Teste funcional realizado', o.teste) + grid('2fr 1fr', dv('Critério de aceitação', o.criterio) + dv('Resultado', xo(o.resultado, ['Conforme', 'Não conforme']))) + grid('2fr 1fr', dv('Anomalia que configure falha?', xo(o.anomalia || 'Não', ['Não', 'Sim — abrir OM corretiva'])) + dv('Nº da OM corretiva', o.omCorr || 'N/A'))));
-  B.push(blk('B8', 'Manutenção preditiva', pred ? 'itens 1.1.29 / 1.1.30' : 'somente na preditiva · na preventiva, N/A', pred ? tbl(['Parâmetro monitorado', 'Valor atual', 'Valor anterior', 'Limite de alerta', 'Tendência'], o.predRows || []) + grid('1fr 1fr 1fr 1fr', dv('Próxima medição — data', brD(o.predProxD)) + dv('ou horímetro', o.predProxH ? o.predProxH + ' h' : '') + dv('Gera intervenção?', xo(o.predGera, ['Não', 'Sim'])) + dv('Nº da nova OM / laudo', [o.predOM, o.laudo].filter(Boolean).join(' · '))) : '<div class="note">N/A</div>'));
-  B.push(blk('B9', 'Liberação e assinaturas', '', assinaturas(o) + grid('1fr 1.4fr', dv('Liberação à Operação', brDT(o.liberacao)) + dv('Conferência documental (capa × formulário) e anexação à OM (Analista)', o.conferencia))));
-  B.push(blk('B10', 'Registro fotográfico obrigatório', 'item 5.8', `<div>${(o.fotos || []).length} foto(s) nas folhas seguintes, 4 por folha (${['ANTES', 'DURANTE', 'DEPOIS'].map(t => (o.fotos || []).filter(x => x.tipo === t).length + ' ' + t.toLowerCase()).join(' · ')}).</div>`));
-  return numerar(paginar(fbar, B).concat(paginasFotos(o, 'Fotos da OM ' + o.num)));
-}
-function docIIA(o) {
-  const v = vessel(o.vessel) || { nome: o.vessel }, crit = o.classe === 'Crítica', p = o.par || {};
-  const fbar = `<div class="fbar"><div><small>Falhas classificadas como Crítica ou Alta</small><h3>Formulário II-A — Manutenção Corretiva</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
-  const B = [];
-  B.push(blk('A1', 'Identificação', '', grid('1fr 1.3fr 1.2fr', dv('Nº da OM (Sankhya)', o.num) + dv('Embarcação', v.nome) + dv('Abertura da OM', brDT(o.abertura)) + dv('Sistema (item 7.1)', o.sistema) + dv('Equipamento / componente', o.equip) + dv('Posição', xo(isMcp(o.pos) ? o.pos : 'N/A', ['BB', 'BE', 'CE', 'N/A']) + (MCAS.includes(o.pos) ? ' (' + posNome(v, o.pos) + ' · ' + mcaNome(v, o.pos) + ')' : '')) + dv('Local', xo(o.local, ['Terminal', 'Em viagem'])) + dv('Trecho (se em viagem)', o.trecho || 'N/A') + dv('Horímetro', o.horimetro ? nf(o.horimetro) + ' h' : '') + dv('Classe', xo(o.classe, ['Crítica', 'Alta', 'Média', 'Baixa'])) + dv('Nº da RNC', o.rnc || (crit || o.classe === 'Alta' ? '' : 'N/A')) + dv('Origem', o.origem))));
-  B.push(blk('A2', 'Falha detectada (“antes”)', '', dv('Descrição da falha', o.descricao) + `<div class="fl" style="margin-top:2px">Parâmetros observados</div>` + grid('repeat(6,1fr)', dv('Pressão de óleo', p.oleo) + dv('Temp. da água', p.tagua) + dv('Temp. do óleo', p.toleo) + dv('RPM', p.rpm) + dv('Tensão da bateria', p.bat) + dv('Outro', p.outro)) + grid('1fr 1fr 1fr', dv('Detecção', brDT(o.deteccao)) + dv('Comunicação', brDT(o.comunicacao)) + dv('Meio', xo(o.meio, ['Autotrac', 'Telefone', 'Presencial']))) + dv('Comunicado a', ['Coordenação de Operações', 'Supervisão de Manutenção'].map(x => ((o.comunicado || []).includes(x) ? '☒ ' : '☐ ') + x).join('   ')) + `<div class="note">Crítica e Alta: comunicação imediata à Coordenação de Operações e à Supervisão de Manutenção (item 5.4.1).</div>`));
-  B.push(blk('A3', 'Interdição', 'item 5.5.1', grid('1fr 1fr 1fr', dv('Interdição da embarcação', xo(o.interd, ['Sim', 'N/A']) + (o.interd === 'Sim' ? ' (Crítica)' : '')) + dv('Data e hora', brDT(o.interdDT)) + dv('Determinada por', o.interdPor))));
-  B.push(blk('A4', 'Liberações prévias', 'item 5.11', grid('1.4fr 1fr 1fr', dv('Liberação de segurança do SESMT — responsável', o.sesmt) + dv('Data e hora', brDT(o.sesmtDT)) + dv('Nº da PT', o.pt || 'N/A') + dv('Serviço de terceiro', xo(o.terceiroAut || 'Não', ['Não', 'Sim — autorização da Gerência/Diretoria']), 2) + dv('Nº SC / OC', o.scoc || 'N/A'))));
-  B.push(blk('A5', 'Execução', '', grid('1fr 1.6fr', dv('Executor', o.exec) + dv('Nome / função ou empresa / responsável técnico', o.execn)) + grid('2fr 1fr', dv('Relatório de terceiro (5.8)', o.exec === 'Terceiro' ? o.relTerc : 'N/A (equipe própria)') + dv('Nº do relatório', o.relNum || 'N/A')) + grid('1fr 1fr 1fr', dv('Nº das RMs', o.rms || 'N/A') + dv('Início da intervenção', brDT(o.inicio)) + dv('Término da intervenção', brDT(o.termino))) + dv('Serviços executados e procedimento aplicado', o.servicos)));
-  B.push(blk('A5', 'Medições', '', tbl(['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Unidade'], o.medsC || [])));
-  B.push(blk('A5', 'Materiais e peças aplicados', '', tbl(['Descrição', 'Qtd.', 'Nº da RM / NF', 'Lote (lubrificantes)', 'Validade'], o.mats || [])));
-  B.push(blk('A6', 'Resíduos', 'item 5.7', grid('1fr 2fr 1fr', dv('Gerou resíduo?', xo(o.resid, ['Não', 'Sim'])) + dv('Tipos', ['Óleo usado', 'Filtros', 'Estopas/panos', 'Metais', 'Outros'].map(x => ((o.residT || []).includes(x) ? '☒ ' : '☐ ') + x).join('  ')) + dv('Nº FR 016_E', o.fr016 || 'N/A'))));
-  B.push(blk('A7', 'Condição final (“depois”)', '', dv('Teste funcional realizado', o.teste) + grid('2fr 1fr', dv('Critério de aceitação', o.criterio) + dv('Resultado', xo(o.resultado, ['Conforme', 'Não conforme']))) + dv('Nova inspeção de segurança (item 5.4.1) — responsável', o.inspecao)));
-  B.push(blk('A8', 'Registro fotográfico obrigatório', 'item 5.8', `<div>${(o.fotos || []).length} foto(s) nas folhas seguintes, 4 por folha.</div>`));
-  B.push(blk('A9', 'Análise', 'itens 5.2 e 10.3', dv('Causa raiz resumida (detalhamento obrigatório na RNC)', o.causa) + grid('1fr 1fr 1fr 1fr', dv('Revisão do plano preventivo', xo(o.revPlano, ['Não', 'Sim'])) + dv('Item do Anexo I a revisar', o.itemRev || 'N/A') + dv('Treinamento (2 h) — previsto', brD(o.trPrev)) + dv('Realizado', brD(o.trReal))) + dv('Medida de mitigação', o.mitig || '—') + grid('1fr 1fr 1fr', dv('Responsável', o.mitigResp || '—') + dv('Prazo', o.mitigPrazo ? brD(o.mitigPrazo) : '—') + dv('Situação da medida', o.mitigSt || '—'))));
-  B.push(blk('A10', 'Liberação e assinaturas', '', assinaturas(o, [['Coordenador de Operações — liberação formal pós-falha Crítica (5.5.1)' + (crit ? '' : ' · N/A se Alta'), crit ? (o.ass || {}).coord || '' : 'N/A', '', '']]) + grid('1fr 1.4fr', dv('Liberação à Operação', brDT(o.liberacao)) + dv('Conferência documental e anexação à OM (Analista)', o.conferencia)) + (crit ? '<div class="note">Na falha Crítica, a liberação formal exige a assinatura do Coordenador de Operações e a do Supervisor de Manutenção.</div>' : '')));
-  return numerar(paginar(fbar, B).concat(paginasFotos(o, 'Fotos da OM ' + o.num)));
-}
+function docIIB(o) {}
+function docIIA(o) {}
 function docFicha(o) {
   const v = vessel(o.vessel) || { nome: o.vessel };
   const fbar = `<div class="fbar"><div><small>Acompanha a OM · marcar cada passo ao executar</small><h3>Ficha de Execução · Anexo I</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
@@ -4014,22 +3821,6 @@ gateIIA = function (o) {
   g.push(['5 · Data e hora da liberação', !!o.liberacao]);
   return g;
 };
-docIIA = function (o) {
-  const v = vessel(o.vessel) || { nome: o.vessel }, crit = o.classe === 'Crítica', ca = ehCA(o), p = o.par || {};
-  const fbar = `<div class="fbar"><div><small>Não conformidade e ação corretiva · ISO 9001 10.2</small><h3>Formulário II-A — Manutenção Corretiva</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
-  const B = [], marca = (L, x) => L.map(i => ((x || []).includes(i) ? '☒ ' : '☐ ') + i).join('   ');
-  B.push(blk('1', 'Descrição da falha', 'falha (“antes”)', grid('1fr 1.3fr 1fr 1fr', dv('Nº da OM (Sankhya)', o.num) + dv('Embarcação', v.nome) + dv('Classe', o.classe) + dv('Nº da RNC', o.rnc || (ca ? '' : 'N/A')) + dv('Sistema (7.1)', o.sistema, 2) + dv('Equipamento / componente', o.equip, 2) + dv('Posição', POSN[o.pos] + (MCAS.includes(o.pos) ? ' · ' + mcaNome(v, o.pos) : '')) + dv('Horímetro', o.horimetro ? nf(o.horimetro) + ' h' : '') + dv('Local', (o.local || '') + (o.trecho ? ' · ' + o.trecho : '')) + dv('Origem', o.origem)) + dv('Descrição da falha', o.descricao) + grid('1fr 1fr', dv('Modo de falha (ISO 14224)', o.modo || '—') + dv('Tipo de causa', o.causaCat || '—'))
-    + grid('1fr 1fr 1fr', dv('Abertura da OM', brDT(o.abertura)) + dv('Comunicado a (5.4.1)', ca ? marca(['Coordenação de Operações', 'Supervisão de Manutenção'], o.comunicado) : 'N/A') + dv('Interdição (5.5.1)', crit ? 'Sim · desde ' + brDT(o.interdDT) + (o.interdPor ? ' · ' + o.interdPor : '') : 'N/A'))
-    + ((p.oleo || p.tagua || p.toleo || p.rpm || p.bat || p.outro) ? grid('repeat(6,1fr)', dv('Pressão de óleo', p.oleo) + dv('Temp. da água', p.tagua) + dv('Temp. do óleo', p.toleo) + dv('RPM', p.rpm) + dv('Bateria', p.bat) + dv('Outro', p.outro)) : '')));
-  B.push(blk('2', 'Ação de contenção', 'ISO 9001 10.2.1 · ISO 14001 · ISO 45001', dv('A falha afetou', marca(IMPACTOS, o.impacto)) + dv('O que foi feito na hora', o.contencao || (ca ? '' : 'N/A')) + grid('1fr 1fr', dv('Nº da PT do SESMT (5.11.2)', o.pt || 'N/A') + dv('Liberação do SESMT', o.sesmt || 'N/A'))));
-  B.push(blk('3', 'Reparo e restabelecimento', 'execução e condição final (“depois”)', grid('1fr 2fr', dv('Quem executou', o.exec) + dv(o.exec === 'Terceiro' ? 'Empresa e responsável técnico' : 'Nome e função', o.execn)) + (o.exec === 'Terceiro' ? grid('1.4fr 1fr 1.4fr', dv('Autorização da Gerência (5.11.3)', o.terceiroAut) + dv('Nº SC / OC', o.scoc || '—') + dv('Relatório do fornecedor (5.8)', o.relTerc)) : '') + grid('1fr 1fr 1fr', dv('Início', brDT(o.inicio)) + dv('Término', brDT(o.termino)) + dv('Nº das RMs', o.rms || 'N/A')) + grid('1fr 1fr 1fr', dv('Horas-homem', o.hh ? o.hh + ' HH' : '—') + dv('Peças e materiais', o.custoMat ? 'R$ ' + o.custoMat : '—') + dv('Serviço de terceiro', o.custoServ ? 'R$ ' + o.custoServ : '—')) + dv('O que foi feito', o.servicos)
-    + ((o.mats || []).length ? tbl(['Peças e materiais', 'Qtd.', 'Nº da RM / NF', 'Lote', 'Validade'], o.mats) : '') + ((o.medsC || []).length ? tbl(['Medição', 'Especificado', 'Como encontrado', 'Como deixado', 'Unidade'], o.medsC) : '')
-    + grid('1fr 2fr 1fr', dv('Resíduo (5.7)', o.resid === 'Sim' ? (o.residT || []).join(', ') || 'Sim' : 'Não') + dv('Teste para liberar', o.teste) + dv('Resultado', o.resultado)) + grid('2fr 1fr', dv('Nova inspeção de segurança (5.4.1)', o.inspecao) + dv('Nº FR 016_E', o.fr016 || 'N/A')) + `<div class="note">${(o.fotos || []).length} foto(s) antes e depois nas folhas seguintes (5.8).</div>`));
-  B.push(blk('4', 'Análise de causa e ação corretiva', ca ? 'detalhamento na RNC' : 'opcional em Média e Baixa', dv('Análise de causa raiz', o.causa || (ca ? '' : 'N/A')) + dv('Ação corretiva (eliminação da causa raiz)', o.mitig || (ca ? '' : 'N/A')) + grid('1fr 1fr 1fr 1fr', dv('Responsável', o.mitigResp || '—') + dv('Prazo', o.mitigPrazo ? brD(o.mitigPrazo) : '—') + dv('Situação', o.mitigSt || '—') + dv('Revisar Anexo I', o.revPlano === 'Sim' ? 'Sim · ' + (o.itemRev || '') : 'Não')) + dv('Serviços do Anexo I refeitos', (o.itensRefeitos || []).map(k => k.replace('|', ' ')).join(', ') || 'Nenhum') + (ca ? dv('Treinamento pós-falha (10.3)', o.trPrev ? 'previsto ' + brD(o.trPrev) : '—') : '')));
-  B.push(blk('5', 'Liberação e eficácia', '', assinaturas(o, [['Coordenador de Operações — liberação pós-falha Crítica (5.5.1)' + (crit ? '' : ' · N/A'), crit ? (o.ass || {}).coord || '' : 'N/A', '', '']]) + grid('1fr 1.4fr', dv('Liberação à operação', brDT(o.liberacao)) + dv('Conferência documental', o.conferencia))
-    + (ca ? grid('1fr 1fr 2fr', dv('Verificação da eficácia prevista', brD(efPrev(o))) + dv('Resultado', o.efRes ? o.efRes + (o.efData ? ' · ' + brD(o.efData) : '') : 'pendente') + dv('Observação', o.efObs || '')) : '')));
-  return numerar(paginar(fbar, B).concat(paginasFotos(o, 'Fotos da OM ' + o.num)));
-};
 // verificação da eficácia: fica editável depois de encerrada (fora do formulário bloqueado)
 { const v0 = vOM; vOM = function () {
   const h = v0(), o = S.recs.get(ARG);
@@ -4057,32 +3848,7 @@ docIIA = function (o) {
 const NAVY = ['#1967D2', '#1A73E8', '#4285F4', '#669DF6', '#8AB4F8', '#AECBFA', '#C6DAFC', '#D2E3FC'];
 const tomRank = (v, mx) => NAVY[Math.min(NAVY.length - 1, Math.round((1 - (mx ? v / mx : 0)) * (NAVY.length - 1)))];
 // linha (indicadores): ponto com valor, último destacado, meta tracejada
-lineChart = function (vals, labels, meta, unit, dec, opt = {}) {
-  const W = 320, H = opt.h || 140, L = 14, R = 16, T = 22, B = 22, vv = vals.filter(v => v !== null && v !== undefined && !isNaN(v));
-  if (!vv.length) return `<div class="note" style="height:${H * .6}px;display:flex;align-items:center;justify-content:center">Sem dados no período</div>`;
-  let mn = Math.min(...vv, meta), mx = Math.max(...vv, meta); const p = (mx - mn) * .22 || Math.abs(mx) * .1 || 1; mn -= p; mx += p * .6; if (Math.min(...vv, meta) >= 0 && mn < 0) mn = 0;
-  const x = i => L + i * (W - L - R) / Math.max(1, vals.length - 1), y = v => T + (mx - v) / (mx - mn) * (H - T - B);
-  const pts = vals.map((v, i) => v === null || v === undefined || isNaN(v) ? null : [x(i), y(v), v, i]).filter(Boolean), last = pts[pts.length - 1];
-  const d = pts.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ');
-  let g = `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="#D3DCE5" stroke-width="1"/>`;
-  g += `<line x1="${L}" x2="${W - R}" y1="${y(meta)}" y2="${y(meta)}" stroke="#F9AB00" stroke-width="1.3" stroke-dasharray="5 4"/><text x="${L + 2}" y="${y(meta) + (y(meta) > H - B - 14 ? -5 : 12)}" style="fill:#B06000;font:600 9.5px Arial,sans-serif">meta ${nf(meta, dec)}${unit}</text>`;
-  if (pts.length > 1) g += `<path d="${d} L${last[0]},${H - B} L${pts[0][0]},${H - B} Z" fill="#1A73E8" opacity=".09"/><path d="${d}" fill="none" stroke="#1A73E8" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
-  pts.forEach(q => { const lst = q === last; g += `<circle cx="${q[0]}" cy="${q[1]}" r="${lst ? 5 : 3.4}" fill="${lst ? '#0B2A4F' : '#fff'}" stroke="#1A73E8" stroke-width="2"/>`;
-    if (!lst) g += `<text x="${q[0]}" y="${q[1] - 8}" text-anchor="middle" style="fill:#6B7A8D;font:9.5px Arial,sans-serif">${nf(q[2], dec)}</text>`; });
-  g += `<text x="${Math.min(last[0], W - 30)}" y="${last[1] - 10}" text-anchor="middle" style="fill:#0B2A4F;font:700 12px Arial,sans-serif">${nf(last[2], dec)}${unit}</text>`;
-  g += labels.map((l, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" style="fill:#6B7A8D;font:10px Arial,sans-serif">${l}</text>`).join('');
-  g += vals.map((v, i) => v === null || v === undefined || isNaN(v) ? '' : `<rect class="hit" x="${x(i) - 14}" y="${T}" width="28" height="${H - T - B}" data-tip="${labels[i]}: ${nf(v, dec)}${unit}"/>`).join('');
-  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${labels.map((l, i) => l + ' ' + fmtv(vals[i], dec)).join(', ')}">${g}</svg>`;
-};
 // barras horizontais: tom mais escuro = maior valor, valor no fim da barra
-hbar = function (rows, unit, meta, dec = 0) {
-  if (!rows.length) return '<div class="note">Sem dados no período</div>';
-  const W = 560, rh = 30, L = 150, R = 70, H = rows.length * rh + (meta != null ? 18 : 6), mx = Math.max(...rows.map(r => r[1]), meta || 0, 1), x = v => L + v / mx * (W - L - R);
-  let s = rows.map((r, i) => { const yy = i * rh + 6, w = Math.max(3, x(r[1]) - L);
-    return `<text x="${L - 10}" y="${yy + 13}" text-anchor="end" style="fill:#41536A;font:12px Arial,sans-serif">${esc(String(r[0]).length > 22 ? String(r[0]).slice(0, 21) + '…' : r[0])}</text><rect x="${L}" y="${yy}" width="${w}" height="18" rx="4" fill="${tomRank(r[1], mx)}"/><text x="${L + w + 7}" y="${yy + 13}" style="fill:#0B2A4F;font:700 12px Arial,sans-serif">${nf(r[1], dec)}${unit}</text><rect class="hit" x="0" y="${yy - 4}" width="${W}" height="${rh}" data-tip="${esc(r[0])}: ${nf(r[1], dec)}${unit}"/>`; }).join('');
-  if (meta != null) s += `<line x1="${x(meta)}" x2="${x(meta)}" y1="0" y2="${H - 16}" stroke="#F9AB00" stroke-width="1.3" stroke-dasharray="5 4"/><text x="${x(meta)}" y="${H - 3}" text-anchor="middle" style="fill:#B06000;font:600 10px Arial,sans-serif">meta ${nf(meta)}${unit}</text>`;
-  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${rows.map(r => r[0] + ' ' + nf(r[1], dec) + unit).join(', ')}">${s}</svg>`;
-};
 // colunas empilhadas (óleo por mês): cantos arredondados, total em negrito
 if (typeof stackChart === 'function') stackChart = function (labels, series, unit) {
   const W = 640, H = 240, L = 10, R = 10, T = 24, B = 26, n = labels.length;
@@ -4587,26 +4353,6 @@ function frotaMatrizHtml() {
 /* ---------- 8 · cronograma de manutenção (projetado do Anexo I) ---------- */
 const CRONO_FORA = ['11.1.2', '11.3.2'];   // motor de popa e motobomba 5 HP: troca a cada saída, fora do cronograma
 let CR = { v: '', prio: '', sis: '' };
-function cronoEventos(meses) {
-  meses = meses || 12; const h0 = hoje(), ini = mesIni(h0.getFullYear(), h0.getMonth()), fim = mesIni(h0.getFullYear(), h0.getMonth() + meses), ev = [], sem = [];
-  S.cfg.frota.forEach(v => painelVessel(v).forEach(x => {
-    if (x.s.st === 'cond' || CRONO_FORA.includes(x.t.id)) return;
-    if (x.s.st === 'sem') { sem.push(x); return; }
-    const iv = intervalo(x.t, v, x.pos), hd = (typeof horasDiaPos === 'function' && x.s.hp ? horasDiaPos(v.id, x.s.hp) : 0) || horasDia(v.id);
-    const cand = []; if (x.s.rest != null) cand.push({ d: new Date(h0.getTime() + x.s.rest / hd * 864e5), b: 'h' }); if (x.s.alvoD) cand.push({ d: x.s.alvoD, b: 'd' });
-    if (!cand.length) return; cand.sort((a, b) => a.d - b.d);
-    let d = cand[0].d, base = cand[0].b; const per = Math.min(iv.h ? iv.h / hd : 1e9, iv.m ? iv.m * 30.4 : 1e9) * 864e5; let n = 0;
-    while (d < fim && n < 60) { const venc = d < h0; ev.push({ v, pos: x.pos, t: x.t, d: venc ? h0 : d, dReal: d, venc, base, om: n === 0 ? x.om : null, prox: n > 0 }); if (!isFinite(per) || per <= 0) break; d = new Date(Math.max(d.getTime(), h0.getTime()) + per); base = iv.h && iv.h / hd * 864e5 <= (iv.m || 1e9) * 30.4 * 864e5 ? 'h' : 'd'; n++; }
-  }));
-  return { ev, sem, ini, fim, meses };
-}
-const cronoMes = (d, ini) => (d.getFullYear() - ini.getFullYear()) * 12 + d.getMonth() - ini.getMonth();
-function cronoFiltra(E) { return E.filter(e => (!CR.v || e.v.id === CR.v) && (!CR.prio || (CR.prio === 'CA' ? ['Crítica', 'Alta'].includes(e.t.prio) : e.t.prio === CR.prio)) && (!CR.sis || parseInt(e.t.id) === +CR.sis)); }
-AFTER.crono = () => {
-  $$('[data-cr]').forEach(s => s.onchange = () => { CR[s.dataset.cr] = s.value; render(); });
-  $('#main').onclick = e => { const c = e.target.closest('[data-crcel]'); if (!c) return; const [vid, i] = c.dataset.crcel.split('|'); const C = cronoEventos(12), L = cronoFiltra(C.ev).filter(x => x.v.id === vid && cronoMes(x.d, C.ini) === +i).sort((a, b) => a.d - b.d), d = new Date(C.ini.getFullYear(), C.ini.getMonth() + +i, 1);
-    modal(`<div class="row"><h2>${esc(vName(vid))} · ${MESESL[d.getMonth()]} de ${d.getFullYear()}</h2><span class="sp"></span><button class="mbtn" data-close>Fechar</button></div><div class="tw" style="max-height:62vh"><table class="t"><thead><tr><th>Data</th><th>Pos.</th><th>Item</th><th>Serviço (Anexo I)</th><th>Intervalo</th><th>Prioridade</th></tr></thead><tbody>${L.map(e => `<tr><td class="mono">${e.venc ? '<b style="color:var(--badt)">vencido</b>' : brD(isoD(e.d))}</td><td>${posTag(e.pos)}</td><td class="mono">${e.t.id}</td><td>${esc(e.t.chk || e.t.item)}<div class="note">${esc(e.t.eqn || e.t.eq || '')}</div></td><td>${ivTxt(e.t)}</td><td>${esc(e.t.prio)}${e.om ? ' <span class="pill p-inf">OM aberta</span>' : ''}</td></tr>`).join('')}</tbody></table></div><div class="row end"><button class="mbtn pri" onclick="location.hash='emitir'">Programar janela de manutenção</button></div>`, true); };
-};
 
 
 /* ---------- 9 · menu na ordem do ciclo de gestão (PDCA) ---------- */
@@ -4645,7 +4391,6 @@ vMatriz = function () {
      ${g.eqs.map(e => `<div class="a1-eq"><div class="a1-eqh"><span class="a1-code">${esc(e.eq)}</span><div><b>${esc(e.eqn)}</b>${e.eqd ? `<div class="note">${esc(e.eqd)}</div>` : ''}</div></div>
       <table class="a1-t"><thead><tr><th style="width:70px">Nº</th><th style="width:170px">Frequência</th><th>Item · checklist</th><th style="width:96px">Prioridade</th><th style="width:170px">Registros</th><th style="width:28px"></th></tr></thead><tbody>${e.itens.map(linha).join('')}</tbody></table></div>`).join('')}`}</section>`; }).join('') : '<div class="card note">Nenhum item com esse filtro.</div>'}</div>`;
 };
-VX.matriz = vMatriz;
 { const a0 = AFTER.matriz; AFTER.matriz = () => { a0(); const m = $('#main'), c0 = m.onchange, k0 = m.onclick; m.onchange = e => { if (e.target.id === 'mxP') { MX.prio = e.target.value; render(); return; } return c0 && c0(e); };
   m.onclick = e => { const h = e.target.closest('[data-a1s]'); if (h) { const n = +h.dataset.a1s; if (q0()) return; MX.ab.has(n) ? MX.ab.delete(n) : MX.ab.add(n); render(); return; } const a = e.target.closest('[data-a1all]'); if (a) { MX.ab = a.dataset.a1all === '1' ? new Set(SISTEMAS.map((_, i) => i + 1)) : new Set(); render(); return; } return k0 && k0(e); };
   m.onkeydown = e => { const h = e.target.closest && e.target.closest('[data-a1s]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); h.click(); } }; }; }
@@ -4692,22 +4437,7 @@ ${corpo}
 
 /* ---------- 12 · Horímetro do MCP por embarcação: colunas vitrificadas com 3 visões ---------- */
 let HMV = 'acum';
-function horMcpCard() {
-  const h0 = hoje(), ini = isoD(new Date(h0.getFullYear(), h0.getMonth(), 1)), t11 = A1M['1.1.1'];
-  const L = []; S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => { const h = horAtual(v.id, pos); if (!h) return;
-    const a = horEm(v.id, pos, ini), mes = a ? Math.max(0, h.h - a.h) : null, s = t11 ? situacao(v, pos, t11) : null;
-    L.push({ nome: v.nome.replace('CJA ', ''), full: v.nome + (v.mcp === 'mono' ? '' : ' ' + pos), pos, mono: v.mcp === 'mono', acum: h.h, mes, troca: s && s.rest != null ? s.rest : null, dt: h.date }); }));
-  const V = { acum: ['Horímetro acumulado', 'h', x => x.acum, 'última leitura do FR 027_L'], mes: ['Horas no mês', 'h', x => x.mes, 'operação desde o dia 1º'], troca: ['Até a troca de óleo do MCP', 'h', x => x.troca, 'item 1.1.1 · 350 h ou 6 meses'] }[HMV];
-  const vals = L.map(V[2]).filter(x => x != null), mx = Math.max(1, ...vals.map(x => Math.abs(x)));
-  const med = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-  const cor = x => HMV === 'troca' ? (x < 0 ? '217,48,37' : x <= 50 ? '249,171,0' : '26,115,232') : '26,115,232';
-  const col = x => { const v = V[2](x); if (v == null) return `<div class="hm-c"><div class="hm-b z"></div><em>${x.nome}<small>${x.mono ? '' : x.pos}</small></em></div>`;
-    const c = cor(v), hgt = Math.max(3, Math.abs(v) / mx * 100);
-    return `<div class="hm-c" data-tip="${esc(x.full)}: ${nf(v)} h${HMV === 'acum' ? ' · leitura ' + brD(x.dt) : ''}"><span class="hm-v">${nf(v)}</span><div class="hm-b" style="height:${hgt}%;background:linear-gradient(180deg,rgba(${c},.45),rgba(${c},.15));box-shadow:inset 0 0 0 1.5px rgba(${c},.85),inset 0 1px 0 rgba(255,255,255,.6)"></div><em>${x.nome}<small>${x.mono ? '' : x.pos}</small></em></div>`; };
-  return `<div class="card hm"><div class="row"><h2>Horímetro do MCP por embarcação</h2><span class="sp"></span><div class="seg">${[['acum', 'Acumulado'], ['mes', 'Horas no mês'], ['troca', 'Até a troca de óleo']].map(([k, l]) => `<button data-hmv="${k}" class="${HMV === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
-   <div class="note">${V[0]} · ${V[3]} · média da frota <b>${nf(med)} h</b>${HMV === 'troca' ? ' · vermelho = vencida, âmbar = até 50 h' : ''}</div>
-   <div class="hm-a"><div class="hm-med" style="bottom:${Math.abs(med) / mx * 100}%"><span>média ${nf(med)} h</span></div>${L.map(col).join('')}</div></div>`;
-}
+function horMcpCard() {}
 { const v0 = vHor; vHor = function () { const h = v0(), i = h.indexOf('<div class="card">'); return i > 0 ? h.slice(0, i) + horMcpCard() + h.slice(i) : h + horMcpCard(); }; VX.hor = vHor; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-hmv]'); if (b) { HMV = b.dataset.hmv; render(); } });
 
@@ -4731,7 +4461,6 @@ function rioCard() {
    <div class="rio-esc"><span style="left:0">0 h</span><span style="left:${ZA}%">${nf(L[0] ? L[0].iv - 50 : 300)} h</span><span style="left:${Z1}%">troca</span></div>
    <div class="rio-ls">${L.map(linha).join('')}</div></div>`;
 }
-horMcpCard = rioCard;
 { const r0 = render; render = function () { r0(); if (VIEW === 'hor') requestAnimationFrame(() => setTimeout(() => $$('.rio-ls').forEach(e => e.classList.add('on')), 60)); }; }
 
 </script>
@@ -5258,15 +4987,7 @@ horModal = function (vid) {
 };
 
 /* ---------- MCA sem horímetro: estimativa ---------- */
-function estModal(vid, p) {
-  if (!can.admin()) return toast('Somente o Supervisor configura.');
-  const v = vessel(vid), e = horEst(v, p) || {}, r = horAtual(vid, p);
-  modal(`<h2>${esc(v.nome)} · ${esc(posNome(v, p))} sem horímetro</h2><p class="note">Para motor que não tem horímetro (ou está quebrado), o SMF estima as horas: parte de um valor que você informa e soma as horas por dia. Ele não cobra leitura desse motor. Quando instalar o horímetro, clique em "Voltar a ler".</p>
-   <div class="g"><label class="f s3">Horas estimadas hoje<input id="eH" inputmode="decimal" value="${r ? Math.round(r.h) : ''}"></label><label class="f s3">Horas por dia (média)<input id="eD" inputmode="decimal" value="${e.hd || 8}"></label></div>
-   <div class="row end">${e.hd ? '<button class="mbtn bad" id="eX">Voltar a ler</button><span class="sp"></span>' : ''}<button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="eOk">Salvar estimativa</button></div>`);
-  $('#eOk').onclick = async () => { const h = horNum($('#eH').value), hd = horNum($('#eD').value); if (h == null || !hd || hd > 24) return toast('Informe as horas de hoje e as horas por dia (até 24).'); v.horEst = v.horEst || {}; v.horEst[p] = { h0: h, d0: isoD(hoje()), hd }; await salvarFrotaCfg(); closeModal(); toast('Estimativa salva.'); horModal(vid); };
-  const x = $('#eX'); if (x) x.onclick = async () => { delete v.horEst[p]; await salvarFrotaCfg(); closeModal(); toast('Este motor volta a ser lido no horímetro.'); horModal(vid); };
-}
+function estModal(vid, p) {}
 
 /* ---------- confirmação do Supervisor ---------- */
 function horPendCard() {
@@ -5359,12 +5080,7 @@ function prevRealCard() {
 document.addEventListener('click', e => { const b = e.target.closest('[data-prm]'); if (!b) return; e.stopPropagation(); PRM = +b.dataset.prm; render(); }, true);
 
 /* ---------- painel: alertas logo depois do cabeçalho; previsto × realizado depois dos indicadores ---------- */
-{ const g0 = vGeral; vGeral = function () { const t = document.createElement('div'); t.innerHTML = g0();
-    const vh = t.querySelector(':scope > .vh'); const al = document.createElement('div'); al.innerHTML = alertasCard();
-    if (vh) vh.appendChild(al.firstElementChild); else t.prepend(al.firstElementChild);
-    const pr = document.createElement('div'); pr.innerHTML = prevRealCard(); const k = t.querySelector(':scope > .dzk') || t.querySelector('.dzk');
-    if (k && k.parentElement === t) k.after(pr.firstElementChild); else t.appendChild(pr.firstElementChild);
-    return t.innerHTML; }; }
+{ const g0 = vGeral;  }
 
 /* ---------- 4) docagem: parada média e pontualidade ---------- */
 function docaStats() { const H = S.cfg.frota.flatMap(v => docaHist(v)); const par = H.filter(x => x.parada != null).map(x => x.parada), pont = H.filter(x => x.atraso != null);
@@ -5377,27 +5093,8 @@ function docaStats() { const H = S.cfg.frota.flatMap(v => docaHist(v)); const pa
 <script>
 /* ===== Relatório mensal: "o que foi feito" e "o que mais quebrou" em uma página, com gráficos ===== */
 'use strict';
-function svgColunas(labels, series, o = {}) {
-  const W = o.w || 680, H = o.h || 210, L = 30, B = 26, T = 18, R = 8, n = labels.length, gw = (W - L - R) / Math.max(1, n), bw = Math.min(22, (gw - 8) / series.length);
-  const mx = Math.max(1, ...series.flatMap(s => s.vals)), top = Math.ceil(mx * 1.15), Y = v => T + (H - T - B) * (1 - v / top);
-  const ticks = [...new Set([0, Math.round(top / 2), top])];
-  let g = ticks.map(t => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E8EAED"/><text x="${L - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${t}</text>`).join('');
-  labels.forEach((l, i) => { const x0 = L + i * gw + (gw - bw * series.length) / 2;
-    series.forEach((s, j) => { const v = s.vals[i] || 0, x = x0 + j * bw; if (v) g += `<rect x="${x}" y="${Y(v)}" width="${bw - 1}" height="${Y(0) - Y(v)}" fill="${s.cor}" rx="2"/><text x="${x + (bw - 1) / 2}" y="${Y(v) - 3}" text-anchor="middle" font-size="9" fill="#202124">${v}</text>`; });
-    g += `<text x="${L + i * gw + gw / 2}" y="${H - 10}" text-anchor="middle" font-size="9.5" fill="#3C4043">${esc(l)}</text>`; });
-  const leg = series.map((s, j) => `<rect x="${L + j * 190}" y="2" width="10" height="10" rx="2" fill="${s.cor}"/><text x="${L + 14 + j * 190}" y="11" font-size="10" fill="#3C4043">${esc(s.nome)}</text>`).join('');
-  return `<svg viewBox="0 0 ${W} ${H + 14}" width="100%" style="display:block"><g transform="translate(0,14)">${g}</g>${leg}</svg>`;
-}
-function svgPareto(labels, vals, o = {}) {
-  const W = o.w || 680, H = o.h || 220, L = 30, Rr = 36, B = 30, T = 16, n = labels.length, gw = (W - L - Rr) / Math.max(1, n), bw = Math.min(70, gw * .62);
-  const tot = vals.reduce((a, b) => a + b, 0) || 1, mx = Math.max(1, ...vals), top = Math.ceil(mx * 1.15), Y = v => T + (H - T - B) * (1 - v / top), Yp = p => T + (H - T - B) * (1 - p / 100);
-  let acc = 0; const pts = vals.map((v, i) => { acc += v; return [L + i * gw + gw / 2, acc / tot * 100]; });
-  let g = [0, Math.round(top / 2), top].map(t => `<line x1="${L}" x2="${W - Rr}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E8EAED"/><text x="${L - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${t}</text>`).join('');
-  g += [50, 80, 100].map(p => `<text x="${W - Rr + 6}" y="${Yp(p) + 3}" font-size="9" fill="#B06000">${p}%</text>`).join('') + `<line x1="${L}" x2="${W - Rr}" y1="${Yp(80)}" y2="${Yp(80)}" stroke="#F9AB00" stroke-dasharray="3 3"/>`;
-  vals.forEach((v, i) => { const x = L + i * gw + (gw - bw) / 2; g += `<rect x="${x}" y="${Y(v)}" width="${bw}" height="${Y(0) - Y(v)}" fill="${i === 0 ? '#1967D2' : '#4285F4'}" rx="3"/><text x="${x + bw / 2}" y="${Y(v) - 4}" text-anchor="middle" font-size="10" fill="#202124">${v}</text><text x="${L + i * gw + gw / 2}" y="${H - 12}" text-anchor="middle" font-size="9.5" fill="#3C4043">${esc(labels[i])}</text>`; });
-  g += `<polyline points="${pts.map(p => p[0] + ',' + Yp(p[1])).join(' ')}" fill="none" stroke="#E37400" stroke-width="2"/>` + pts.map(p => `<circle cx="${p[0]}" cy="${Yp(p[1])}" r="3.5" fill="#E37400"/><text x="${p[0] + 6}" y="${Yp(p[1]) - 6}" font-size="9" fill="#B06000">${Math.round(p[1])}%</text>`).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg>`;
-}
+function svgColunas(labels, series, o = {}) {}
+function svgPareto(labels, vals, o = {}) {}
 const sisCurto = s => String(s || 'Não informado').replace(/^\d+\.0 /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração elétrica').replace('Alimentação de Combustível', 'Combustível');
 function relResumoVisual(ini, fim, enc, corr, oo = {}) {
   const V = S.cfg.frota, nP = enc.filter(o => o.tipo === 'P').length, nC = enc.filter(o => o.tipo === 'C').length;
@@ -5756,35 +5453,9 @@ function vCxr() {
     ${!CX.v && L.length > 400 ? '<p class="note">A frota toda gera uma tabela muito grande: escolha uma embarcação para ver o detalhe.</p>' : `<div class="tw cx-w">${cxTabela(L, ano)}</div>`}
     <p class="note">Passe o mouse numa célula para ver a data, a OM ou o FR 049_B. Aderência = realizados no prazo ÷ (no prazo + com atraso + vencidos não realizados). Os registros começam em outubro de 2026 (implantação do SMF); o histórico anterior pode ser importado.</p></div>`;
 }
-VX.cxr = vCxr;
 document.addEventListener('change', e => { const s = e.target.closest('[data-cx]'); if (!s || VIEW !== 'cxr') return; const k = s.dataset.cx; CX[k] = k === 'so' ? s.checked : k === 'ano' ? +s.value : s.value; render(); });
 document.addEventListener('click', e => { if (VIEW !== 'cxr') return; const r = e.target.closest('[data-cxv]'); if (r) { CX.v = r.dataset.cxv; render(); setTimeout(() => { const t = document.querySelector('.cx-w'); if (t) t.scrollIntoView({ behavior: 'smooth' }); }, 300); return; } const sx = e.target.closest('[data-cxs]'); if (sx) { CX.sis = String(CX.sis) === sx.dataset.cxs ? '' : sx.dataset.cxs; render(); return; } if (e.target.closest('[data-cxpdf]')) cxPDF(); });
-function cxPDF() {
-  const ano = CX.ano, vs = CX.v ? [vessel(CX.v)] : S.cfg.frota.filter(v => !foraOp(v)), sisN = CX.sis ? SISTEMAS[CX.sis - 1] : 'todos os sistemas';
-  const all = cxDados(ano, '', CX.sis), T = cxConta(CX.v ? all.filter(r => r.v.id === CX.v) : all);
-  const porV = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, c: cxConta(all.filter(r => r.v === v)) }));
-  const so0 = CX.so; CX.so = true;
-  const blocos = vs.map(v => `<h2>${esc(v.nome)}</h2>${cxTabela(all.filter(r => r.v === v), ano)}`).join('');
-  CX.so = so0;
-  const css = `@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:"Segoe UI",Arial,sans-serif;color:#202124;font-size:9.5px;margin:0}
-   .hd{display:flex;align-items:center;gap:14px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:8px}.hd img{height:38px}.hd h1{font-size:16px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368;font-size:10px}.hd .sp{flex:1}
-   .k{display:flex;gap:10px;margin:6px 0 10px}.k div{border:1px solid #DADCE0;border-radius:4px;padding:5px 10px}.k b{display:block;font-size:16px}
-   table{width:100%;border-collapse:collapse;margin-bottom:8px;page-break-inside:auto}tr{page-break-inside:avoid}thead{display:table-header-group}th,td{border:1px solid #DADCE0;padding:2px 3px;text-align:center}th{background:#16244A;color:#fff;font-weight:600}
-   td.cx-it{text-align:left}td.cx-id,td.cx-iv{white-space:nowrap}tr.cx-v td{background:#16244A;color:#fff;text-align:left;font-weight:700;font-size:10.5px}tr.cx-g td{background:#E8EEF8;text-align:left;font-weight:700;color:#16244A}tr.cx-g td span{float:right;font-weight:400;color:#5F6368}tr.cx-s td{background:#fff;text-align:left;font-style:italic;color:#5F6368;padding-left:10px}tr.cx-f td{background:#F1F3F4;font-size:8.5px}tr.cx-f td:first-child{text-align:left}
-   .cx-c{display:inline-block;min-width:18px;border-radius:3px;color:#fff;font-weight:700;padding:0 3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cx-c small{display:block;font-weight:400;font-size:7px}
-   .ok{background:#188038}.late{background:#E37400}.miss{background:#D93025}.plan{background:#9AA0A6}.pl{background:#fff;color:#E37400;border:1px solid #E37400}
-   h2{font-size:12px;color:#16244A;margin:10px 0 4px}.lg span{margin-right:12px}.ass{display:flex;gap:60px;margin-top:30px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}
-   th,td,.ok,.late,.miss,.plan,tr.cx-g td,tr.cx-v td,tr.cx-f td{-webkit-print-color-adjust:exact;print-color-adjust:exact}small{font-size:8px}`;
-  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma x Realizado ${ano}</title><style>${css}</style></head><body>
-   <div class="hd"><img src="${LOGOS.nav}" alt="Navecunha"><img src="${LOGOS.vda}" alt="VDA"><div><h1>Cronograma × Realizado · Manutenção preventiva · ${ano}</h1><p>Plano de Manutenção (Anexo I · NP Navecunha 055) · ${CX.v ? esc(vName(CX.v)) : 'frota em operação'} · ${esc(sisN)} · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SMF</p></div><span class="sp"></span></div>
-   <div class="k"><div><b>${T.ad == null ? '—' : nf(T.ad, 0) + '%'}</b>aderência ao plano (${T.ok} de ${T.den})</div><div><b style="color:#188038">${T.ok}</b>no prazo</div><div><b style="color:#E37400">${T.late}</b>com atraso</div><div><b style="color:#D93025">${T.miss}</b>não realizados</div><div><b>${T.plan}</b>programados até dez.</div></div>
-   ${!CX.v ? `<h2>Aderência por embarcação</h2><table><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não realizados</th><th>Programados até dez.</th><th>Aderência</th></tr></thead><tbody>${porV.map(x => `<tr><td style="text-align:left">${esc(x.v.nome)}</td><td>${x.c.ok}</td><td>${x.c.late}</td><td>${x.c.miss}</td><td>${x.c.plan}</td><td><b>${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`).join('')}</tbody></table>` : ''}
-   <p class="lg"><span><i class="cx-c ok">R</i> feito no prazo</span><span><i class="cx-c late">R</i> feito com atraso</span><span><i class="cx-c miss">P</i> venceu e não foi feito</span><span><i class="cx-c pl">P</i> vencimento (feito depois)</span><span><i class="cx-c plan">P</i> programado</span> · número sob o R = OM ou FR 049_B · aderência = no prazo ÷ (no prazo + com atraso + não realizados)</p>
-   ${blocos}
-   <div class="ass"><div>Supervisor de Manutenção</div><div>Gerência</div><div>Data</div></div>
-   <script>setTimeout(function(){window.print()},500)<\/script></body></html>`;
-  const w = window.open('', '_blank'); if (!w) { toast('Permita pop-ups para gerar o PDF.'); return; } w.document.open(); w.document.write(html); w.document.close();
-}
+function cxPDF() {}
 // menu: 2 · Planejar
 { const s = SECOES.find(x => x.id === 'plan'); if (s && !s.views.some(x => x[0] === 'cxr')) { const i = s.views.findIndex(x => x[0] === 'crono'); s.views.splice(i < 0 ? s.views.length : i + 1, 0, ['cxr', 'Cronograma × Realizado']); } }
 
@@ -5921,23 +5592,7 @@ async function grpAvancar(g, st) {
 const RG = { t: null };
 function rgDados(P) { const o = P[0]; o.rap = o.rap || { res: {}, obs: {}, med: {}, hr: {}, regs: {} }; ['res', 'obs', 'med', 'hr', 'regs'].forEach(k => o.rap[k] = o.rap[k] || {}); return o.rap; }
 function rgSalvar(P) { clearTimeout(RG.t); RG.t = setTimeout(() => saveRec(P[0]), 700); }
-function rgPend(P) {
-  const R = rgDados(P), v = vessel(P[0].vessel), out = [];
-  if (!R.dreal) out.push('Data da execução');
-  rgExecPend(P[0], R).forEach(x => out.push(x));
-  P.filter(o => o.pos !== 'UN').forEach(o => { if (!R.hr[o.pos]) out.push('Horímetro na execução · ' + posCurtoE(v, o.pos)); });
-  let semR = 0, semObs = 0, medF = 0; P.forEach(o => (o.itensProg || o.items || []).forEach(id => { const k = o.pos + '|' + id, r = R.res[k]; if (!r) semR++; else if (r !== 'ok' && !(R.obs[k] || '').trim()) semObs++;
-    if (r === 'ok') A1M[id].meds.forEach((m, i) => { const d = ((R.med[k] || [])[i] || {}).dei; if (m[5] !== 'info' && (d === undefined || d === '' || medFora(m, d))) medF++; }); }));
-  if (semR) out.push(semR + (semR === 1 ? ' item sem marcação' : ' itens sem marcação') + ' (OK / NOK / NA)');
-  if (semObs) out.push(semObs + ' NOK/NA sem motivo');
-  if (medF && !(R.execTipo === 'terceiro' && R.relTerc === RG_REL[0])) out.push(medF + (medF === 1 ? ' medição faltando ou fora da especificação' : ' medições faltando ou fora da especificação'));   // relatório do fornecedor anexo substitui as medições (NP 5.8)
-  { const L = P.filter(o => o.alvoH && R.hr[o.pos] && +R.hr[o.pos] > o.alvoH); if (L.length && !(R.justif || '').trim()) out.push('Justificativa de atraso (campo no item 1): ' + L.map(o => posCurtoE(v, o.pos) + ' feito com ' + nf(+R.hr[o.pos]) + ' h, devia ser até ' + nf(o.alvoH) + ' h').join(' · ')); }
-  const regs = rgRegs(P); regs.forEach(r => { if (!((R.regs[r] || '').trim())) out.push(REGN[r]); });
-  if (regs.length === 0 && P.some(o => regsDe({ items: o.itensProg || o.items }).includes('pt')) && !(R.pt || '').trim()) out.push('Nº da PT do SESMT');
-  if (R.resid === 'Sim' && !(R.fr016 || '').trim()) out.push('Nº do FR 016_E (resíduos)'); if (!R.resid) out.push('Resíduos: gerou ou não');
-  const f = P[0].fotos || []; if (!f.some(x => x.tipo === 'ANTES')) out.push('Foto ANTES'); if (!f.some(x => x.tipo === 'DEPOIS')) out.push('Foto DEPOIS'); if (f.length && !f.every(x => (x.leg || '').trim())) out.push('Legenda em todas as fotos');
-  return out;
-}
+function rgPend(P) {}
 const rgRegs = P => { const s = new Set(); P.forEach(o => regsDe({ items: o.itensProg || o.items }).forEach(r => s.add(r))); return [...s].filter(r => ['end', 'cert'].includes(r)); };   // lote do lubrificante, FR 049_B e instrumento ficam no formulário de troca de óleo
 function vOmg() {
   const g = ARG, P = omGrupo(g); if (!P.length) return '<div class="empty">OM não encontrada. Talvez ainda não tenha sincronizado.</div>';
@@ -5992,7 +5647,6 @@ async function rgAplicar(P) {
 }
 { const g0 = gateIIB; gateIIB = function (o) { let g = g0(o); if (o.grupo) { const fora = ['lote', 'fr049', 'instr'].map(r => REGN[r]); g = g.filter(x => !fora.includes(x[0])); } if (!o.grupo || o.parte === 1) return g; const L = omGrupo(o.grupo)[0], f = (L && L.fotos) || [];
   return g.filter(x => !/^Pelo menos uma foto|^Todas as fotos/.test(x[0])).concat([['Fotos da OM (na parte 1)', f.some(x => x.tipo === 'ANTES') && f.some(x => x.tipo === 'DEPOIS')]]); }; }
-VX.omg = vOmg;
 AFTER.omg = function () {
   const m = $('#main'), P = omGrupo(ARG); if (!P.length) return; const R = rgDados(P);
   const cnt = () => { let t = 0, a = 0, b = 0, c = 0; m.querySelectorAll('.rg-it').forEach(el => { t++; if (el.classList.contains('ok')) a++; if (el.classList.contains('nok')) b++; if (el.classList.contains('na')) c++; }); const x = $('#rgCnt'); if (x) x.textContent = `${a} OK · ${b} NOK · ${c} NA · ${t - a - b - c} sem marcação`; };
@@ -6043,9 +5697,6 @@ function rotinaPasso(x) {
   if (n) return { n: 1, txt: `${x.venc.length ? `<b style="color:#D93025">${x.venc.length} vencidos</b>` : ''}${x.venc.length && x.viag.length ? ' + ' : ''}${x.viag.length ? x.viag.length + ' vencem na próxima viagem' : ''}: programar a OM`, btn: `<a class="mbtn sm pri" href="#emitir/${x.v.id}">Programar OM</a>` };
   return { n: 6, txt: 'Em dia: nada a programar', btn: '' };
 }
-AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
-  if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); } render(); } }; };
 { const s = SECOES.find(x => x.id === 'inicio'); if (s) { s.nome = '0 · Rotina do dia'; s.views.unshift(['rotina', 'Rotina do dia']); s.views = s.views.slice(0, 1); }
   const pg = { id: 'painel', nome: '1 · Painel de gestão', views: [['geral', 'Painel de gestão']] }; ICO.painel = ICO.inicio; const i = SECOES.findIndex(x => x.id === 'inicio'); SECOES.splice(i + 1, 0, pg);
   ICO.inicio = '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'; }
@@ -6058,12 +5709,7 @@ if (!location.hash) { try { history.replaceState(null, '', '#rotina'); } catch (
 const CICLO0 = { ida: 10, desc: 10, volta: 6, porto: 12, hNav: 24, hDesc: 4 };
 const ciclo = () => Object.assign({}, CICLO0, S.cfg.ciclo || {});
 const hViagem = () => { const c = ciclo(); return (c.ida + c.volta) * c.hNav + c.desc * c.hDesc; };
-function oleoDe(v, pos) { const e = lubEquip(v).find(x => x.pos === pos && (x.g === 'mcp' || x.g === 'mca')); return e ? e.itens[0] : null; }
-function compDe(v, pos, t) {   // item feito junto com a troca de óleo (a bordo): devolve o item de óleo
-  if (isMcp(pos) && ['1.1.2', '1.1.3'].includes(t.id)) return '1.1.1';
-  if (MCAS.includes(pos) && t.scope === 'mca' && t.h && t.h <= 250) { const o = oleoDe(v, pos); return o && o !== t.id ? o : null; }
-  return null;
-}
+function compDe(v, pos, t) {}
 function trilha(v, pos, t) {
   if (t.id === DOCA.item || (DOCA.junto || []).includes(t.id)) return 'doca';
   if (lubEquip(v).some(e => e.pos === pos && e.itens.includes(t.id)) || compDe(v, pos, t)) return 'bordo';
@@ -6169,28 +5815,6 @@ function vCrono2() {
     <div class="tw"><table class="c2-t"><thead><tr><th>Serviço</th>${MES.map((m, i) => `<th${i === mesH ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>R / P</th></tr></thead><tbody>${corpo}</tbody></table></div>
     <p class="note">${B ? 'Os P mostram o cronograma aprovado; o Cronograma × Realizado compara com ele. ' : 'Ao aprovar, os P de cada mês ficam congelados como linha de base do ano. '}Trilhas 1 e 2 são por horímetro: o mês é a previsão pela média de horas do empurrador e acompanha as leituras. Passe o mouse numa célula para ver os itens e o nº da OM ou do FR 049_B.</p></div>`;
 }
-async function cronoAprovar(vs, ano) {
-  for (const v of vs) { const R = cronoMarcas(v, ano), id = 'crono-' + ano + '-' + v.id, B0 = S.recs.get(id), linhas = {};
-    R.forEach(l => { linhas[l.k] = l.M.map(m => m.plan + m.miss + m.ok + m.late); });
-    await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhas, nomes: Object.fromEntries(R.map(l => [l.k, l.nome])) }); }
-}
-function cronoPDF(v, ano) {
-  const h = vCrono2(), i = h.indexOf('<div class="card"><div class="row"><h2>3 ·'), tab = i > 0 ? h.slice(i) : h;
-  const css = `@page{size:A4 landscape;margin:9mm}body{font-family:Arial,sans-serif;font-size:9.5px;color:#202124;margin:0}.hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:8px}.hd img{height:36px}.hd h1{font-size:15px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368}
-   button,.mbtn,select{display:none!important}.pill{font-size:9px;border:1px solid #DADCE0;border-radius:10px;padding:1px 6px}.row{display:flex;gap:8px;align-items:center}.sp{flex:1}h2{font-size:12px;color:#16244A;margin:0}
-   table{width:100%;border-collapse:collapse}th,td{border:1px solid #DADCE0;padding:2px 3px;text-align:center}th{background:#16244A;color:#fff}td.c2-n{text-align:left}td.c2-n small{display:block;color:#5F6368;font-size:7.5px}tr.c2-tr td{background:#E8EEF8;text-align:left}tr.c2-tr span{margin-left:8px;color:#5F6368}
-   .c2{display:inline-block;min-width:16px;border-radius:3px;color:#fff;font-weight:700;padding:0 3px}.c2 small{font-size:7px;margin-left:1px}.plan{background:#80868B}.est{background:#fff;color:#5F6368;border:1px dashed #80868B}.ok{background:#188038}.late{background:#E37400}.miss{background:#D93025}
-   .c2-leg{margin:6px 0}.c2-leg span{margin-right:12px}.note{color:#5F6368}.ass{display:flex;gap:60px;margin-top:26px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{page-break-inside:avoid}thead{display:table-header-group}`;
-  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para gerar o PDF.');
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma ${esc(v.nome)} ${ano}</title><style>${css}</style></head><body><div class="hd"><img src="${LOGOS.nav}" alt=""><img src="${LOGOS.vda}" alt=""><div><h1>Cronograma de manutenção preventiva · ${esc(v.nome)} · ${ano}</h1><p>Tirado do Anexo I da NP Navecunha 055 · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SMF</p></div></div>${tab}<div class="ass"><div>Supervisor de Manutenção · aprovação</div><div>Data</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
-}
-VX.crono = vCrono2;
-AFTER.crono = function () { const m = $('#main');
-  m.onchange = async e => { const t = e.target; if (t.dataset.c2) { CR2[t.dataset.c2] = t.value; render(); } if (t.dataset.cic) { S.cfg.ciclo = Object.assign({}, S.cfg.ciclo || {}, { [t.dataset.cic]: Math.max(0, +t.value || 0) }); await kvSet('cfg', S.cfg); render(); } };
-  m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
-    if ('c2pdf' in t.dataset) return cronoPDF(vessel(CR2.v), +CR2.ano);
-    if (t.dataset.c2apr) { if (!precisa(true)) return; const vs = t.dataset.c2apr === 'frota' ? S.cfg.frota.filter(v => !foraOp(v)) : [vessel(CR2.v)];
-      t.disabled = true; t.textContent = 'Aprovando…'; await cronoAprovar(vs, +CR2.ano); toast('Cronograma ' + CR2.ano + ' aprovado' + (vs.length > 1 ? ' para ' + vs.length + ' embarcações.' : '.')); render(); } }; };
 { const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'crono'); if (i >= 0) s.views[i][1] = 'Cronograma anual'; const m = s.views.findIndex(x => x[0] === 'matriz'); if (m >= 0) s.views[m][1] = 'Anexo I · consulta'; }
   const c = s && s.views.splice(s.views.findIndex(x => x[0] === 'crono'), 1)[0]; if (c) s.views.unshift(c); }
 
@@ -6225,7 +5849,6 @@ vCxr = function () {
     <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>No prazo</th><th>Com atraso</th><th>Não feitos</th><th>Programados até dez.</th><th>Cronograma aprovado</th><th>Aderência</th></tr></thead><tbody>${D.map(x => { const B = cronoBase(ano, x.v.id); return `<tr class="click" data-cxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${x.c.ok}</td><td>${x.c.late || '—'}</td><td>${x.c.miss ? `<b style="color:#D93025">${x.c.miss}</b>` : '—'}</td><td>${x.c.plan}</td><td>${B ? `<span class="pill p-ok">rev. ${B.rev} · ${brD(B.aprovAt)}</span>` : '<span class="pill p-warn">não aprovado</span>'}</td><td><b style="color:${adC(x.c.ad)}">${x.c.ad == null ? '—' : nf(x.c.ad, 0) + '%'}</b></td></tr>`; }).join('')}</tbody></table></div></div>`}
    <p class="note">Os registros começam em outubro de 2026 (implantação do SMF). Meses anteriores aparecem vazios até o histórico ser importado.</p>`;
 };
-VX.cxr = vCxr;
 cxPDF = function () {
   const ano = +CX.ano, D = cx2Dados(ano), vs = CX.v ? D.filter(x => x.v.id === CX.v) : D;
   const T = vs.reduce((a, x) => { ['ok', 'late', 'miss', 'plan'].forEach(k => a[k] += x.c[k]); return a; }, { ok: 0, late: 0, miss: 0, plan: 0 }); T.den = T.ok + T.late + T.miss; T.ad = T.den ? T.ok / T.den * 100 : null;
@@ -6315,11 +5938,7 @@ const K3CSS = `.k3{width:100%;border-collapse:collapse}.k3 th{background:#16244A
  .k3-c{display:inline-block;padding:1px 7px;border-radius:10px;font-size:.85em;font-weight:700}.k3-c.cr{background:#FCE8E6;color:#C5221F}.k3-c.al{background:#FEF7E0;color:#B06000}.k3-c.me{background:#E8F0FE;color:#1967D2}.k3-c.ba{background:#F1F3F4;color:#5F6368}
  i.k3{display:inline-block!important;width:auto!important;min-width:18px;padding:1px 3px;margin:1px;border-radius:4px;color:#fff;font-weight:700;font-style:normal;font-size:.92em}i.k3.plan{background:#80868B}i.k3.ok{background:#188038}i.k3.late{background:#E37400}i.k3.miss{background:#D93025}`;
 { const st = document.createElement('style'); st.textContent = K3CSS + '.k3-w{max-height:72vh;overflow:auto}.k3-leg{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin:0 0 10px;font-size:13px}.k3-leg>span{display:inline-flex;align-items:center;gap:4px}'; document.head.appendChild(st); }
-async function cr3Aprovar(vs, ano) {
-  for (const v of vs) { const L = cronoFrota(ano, v.id), id = 'crono-' + ano + '-' + v.id, B0 = S.recs.get(id), linhasEq = {}, nomes = {};
-    L.forEach(e => { linhasEq[e.k] = e.M.map(m => m.plan + m.miss + m.ok + m.late); nomes[e.k] = e.nome.n + ' · ' + e.servs.join(', ') + ' · ' + e.crit; });
-    await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasEq, nomes }); }
-}
+async function cr3Aprovar(vs, ano) {}
 
 const after3 = function () { const m = $('#main');
   m.onchange = async e => { const t = e.target; if (t.dataset.k3) { CR3[t.dataset.k3] = t.value; render(); } if (t.dataset.cic) { S.cfg.ciclo = Object.assign({}, S.cfg.ciclo || {}, { [t.dataset.cic]: Math.max(0, +t.value || 0) }); await kvSet('cfg', S.cfg); render(); } };
@@ -6327,7 +5946,7 @@ const after3 = function () { const m = $('#main');
     if ('k3pdf' in t.dataset) return cr3PDF();
     if (t.dataset.k3apr) { e.preventDefault(); if (!precisa(true)) return; const vs = t.dataset.k3apr === 'frota' ? S.cfg.frota.filter(v => !foraOp(v)) : [vessel(t.dataset.k3apr)];
       await cr3Aprovar(vs, +CR3.ano); toast('Cronograma ' + CR3.ano + ' aprovado' + (vs.length > 1 ? ' para ' + vs.length + ' embarcações.' : '.')); render(); } }; };
-AFTER.crono = after3; AFTER.cxr = after3;
+ AFTER.cxr = after3;
 { const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'cxr'); if (i >= 0) s.views.splice(i, 1); const c = s.views.find(x => x[0] === 'crono'); if (c) c[1] = 'Cronograma (planejado × realizado)'; s.extra = (s.extra || []).concat(['cxr']); } }
 
 </script>
@@ -6399,8 +6018,6 @@ function vOleo() {
    ${agora.length ? `<div class="card"><h2>Agora</h2><div class="tw"><table class="t"><tbody>${agora.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${esc(eqNomeC(x.v, x.e))}</td><td style="color:${cor[x.st2]};font-weight:600">${olValor(x)}</td><td class="note">${situDe(x.v) ? (situDe(x.v).st === 'porto' ? 'no porto: trocar antes de sair' : 'em viagem: acompanhar pela câmera') : ''}</td><td class="rt-b"><button class="mbtn sm pri" data-frv="${x.v.id}">Lançar troca</button></td></tr>`).join('')}</tbody></table></div></div>` : ''}
    <div class="card"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver todas</a></div><div class="tw"><table class="t"><tbody>${lanc.map(r => `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(vName(r.vessel) || r.vNome || '')}</b></td><td>${(r.eq || []).filter(q => q.status === 'T').map(q => { const vv = vessel(r.vessel), e = lubEq(vv, q.key); return esc(e ? eqNomeC(vv, e) : q.key); }).join(', ')}</td><td class="note">O.M. ${esc(r.om || '')}</td></tr>`).join('') || '<tr><td class="note">Nenhuma troca lançada ainda.</td></tr>'}</tbody></table></div></div>`;
 }
-VX.oleo = vOleo;
-AFTER.oleo = function () { $('#main').onclick = e => { const t = e.target.closest('[data-frv]'); if (!t) return; if (!precisa(false)) return; lubAbrirForm(t.dataset.frv || undefined); }; };
 
 /* ---------- Barco: tudo de uma embarcação numa página ---------- */
 const BR = { v: '' };
@@ -6426,7 +6043,6 @@ function vBarco() {
      ${x.crit ? '<div class="banner bad" style="margin-top:8px">Saída bloqueada: item Crítico vencido sem OM.</div>' : ''}</div>
     <div class="card"><h2>Histórico</h2><div class="tw" style="max-height:300px"><table class="t"><tbody>${hist.slice(0, 15).map(h => `<tr><td class="mono" style="white-space:nowrap">${brD(h.d)}</td><td>${h.t}</td></tr>`).join('') || '<tr><td class="note">Nada registrado ainda.</td></tr>'}</tbody></table></div></div></div>`;
 }
-VX.barco = vBarco;
 AFTER.barco = function () { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'brV') go('barco/' + e.target.value); };
   m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
@@ -6454,9 +6070,7 @@ AFTER.barco = function () { const m = $('#main');
 /* ---------- "ficha" passa a se chamar "formulário" ---------- */
 { const troca = h => h.replace(/(^|[\s>(“"])([Ff])icha(?![\w])/g, (m, a, f) => a + (f === 'F' ? 'Formulário' : 'formulário')).replace(/\b([Aa]) formulário/g, (m, a) => (a === 'A' ? 'O' : 'o') + ' formulário').replace(/\bda formulário/g, 'do formulário').replace(/\bna formulário/g, 'no formulário').replace(/\bpela formulário/g, 'pelo formulário').replace(/\bDa formulário/g, 'Do formulário');
   ['vAcomp', 'vOmg', 'vEmitir', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
-  VX.acomp = window.vAcomp; VX.omg = window.vOmg; VX.barco = window.vBarco;
-  const d0 = docFichaEmb; docFichaEmb = function (g) { return d0(g).map(troca); };
-  const m0 = fichaModal; fichaModal = function (o) { m0(o); const h = $('#modal'); if (h) h.querySelectorAll('h2,p,button').forEach(el => { if (el.children.length === 0 || el.tagName === 'P') el.innerHTML = troca(el.innerHTML); }); }; }
+  VX.acomp = window.vAcomp; VX.omg = window.vOmg;   const d0 = docFichaEmb;   const m0 = fichaModal; fichaModal = function (o) { m0(o); const h = $('#modal'); if (h) h.querySelectorAll('h2,p,button').forEach(el => { if (el.children.length === 0 || el.tagName === 'P') el.innerHTML = troca(el.innerHTML); }); }; }
 { const st = document.createElement('style'); st.textContent = `.ol-k{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 14px}.ol-k>div{flex:1;min-width:150px;background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;align-items:baseline;gap:10px}.ol-k b{font-size:30px}.ol-k .venc b{color:#C5221F}.ol-k .aten b{color:#E37400}.ol-k .ok b{color:#188038}.ol-k .sem b{color:#9AA0A6}
  .ol-t{width:100%;border-collapse:collapse}.ol-t th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5F6368;padding:8px 6px;border-bottom:2px solid #E8EAED}.ol-t td{padding:8px 6px;border-bottom:1px solid #F1F3F4;vertical-align:middle}
  .ol-v{white-space:nowrap}.ol-v b{font-size:15px}.ol-v small{display:block;color:#5F6368;margin-left:18px}.ol-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
@@ -6512,22 +6126,9 @@ VX.crono = vCronoV2;
 AFTER.crono = function () { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'cvV') { CRV.v = e.target.value; render(); } if (e.target.id === 'cvSo') { CRV.so = e.target.checked; render(); } };
   m.onclick = e => { const t = e.target.closest('button'); if (t && 'cvprint' in t.dataset) window.print(); }; };
-AFTER.audit = AFTER.cxr;   // planejado × realizado (auditoria) continua disponível
+   // planejado × realizado (auditoria) continua disponível
 
 /* ---------- OMs: abertas e encerradas, numa lista ---------- */
-function vOMs() {
-  const ab = [], vis = new Set();
-  oms().filter(o => o.status !== 'encerrada').forEach(o => { const g = o.grupo || o.id; if (vis.has(g)) return; vis.add(g); const P = o.grupo ? omGrupo(o.grupo) : [o]; ab.push({ o: P[0], P, g, st: o.grupo ? grpStatus(P) : o.status }); });
-  const enc = []; const vis2 = new Set();
-  oms().filter(o => o.status === 'encerrada').sort((a, b) => (b.fechadoAt || 0) - (a.fechadoAt || 0)).forEach(o => { const g = o.grupo || o.id; if (vis2.has(g)) return; vis2.add(g); enc.push(o); });
-  const passo = x => { const o = x.o; if (o.tipo === 'C') return `<a class="mbtn sm pri" href="#om/${o.id}">Abrir</a>`;
-    if (!o.grupo) return `<a class="mbtn sm pri" href="#om/${o.id}">Abrir</a>`;
-    const nx = grpNext[x.st]; return `<button class="mbtn sm" data-ficha="${o.id}">🖨 Formulário</button>${['emitida', 'abordo', 'executada', 'conferencia'].includes(x.st) ? `<a class="mbtn sm pri" href="#omg/${encodeURIComponent(x.g)}">${x.st === 'conferencia' ? 'Conferir e aprovar' : 'Lançar o formulário'}</a>` : nx ? `<button class="mbtn sm pri" data-gadv="${esc(x.g)}|${nx[0]}">${nx[1]}</button>` : ''}`; };
-  return `<div class="vh"><div><h1>OMs</h1><p>Preventivas da janela (equipe de terra) e corretivas (falhas).</p></div><span class="sp"></span><button class="mbtn pri" data-act="novaCorr">⚠ Registrar falha</button></div>
-   <div class="card"><h2>Em aberto</h2><div class="tw"><table class="t"><tbody>${ab.map(x => `<tr><td class="mono"><b>OM ${esc(x.o.num)}</b></td><td><b>${esc(vName(x.o.vessel))}</b></td><td>${x.o.tipo === 'C' ? '<span class="pill p-bad">Falha</span> ' + esc(x.o.descricao || '') : `Preventiva · ${grpItens(x.P)} itens`}</td><td class="note">${esc(omStatusTxt(Object.assign({}, x.o, { status: x.st })))}</td><td class="rt-b">${passo(x)}</td></tr>`).join('') || '<tr><td class="note">Nenhuma OM em aberto.</td></tr>'}</tbody></table></div></div>
-   <div class="card"><h2>Encerradas</h2><div class="tw" style="max-height:420px"><table class="t"><tbody>${enc.slice(0, 40).map(o => `<tr><td class="mono">${brD(o.dreal || isoD(new Date(o.fechadoAt || 0)))}</td><td class="mono">OM ${esc(o.num)}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${o.tipo === 'C' ? 'Falha · ' + esc(o.descricao || '') : 'Preventiva · ' + (o.grupo ? grpItens(omGrupo(o.grupo)) : (o.items || []).length) + ' itens'}</td><td><a class="mbtn sm" href="${o.grupo ? '#omg/' + encodeURIComponent(o.grupo) : '#om/' + o.id}">Ver</a></td></tr>`).join('') || '<tr><td class="note">Nenhuma ainda.</td></tr>'}</tbody></table></div></div>`;
-}
-VX.oms = vOMs;
 AFTER.oms = function () { $('#main').onclick = async e => { const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
   if (t.dataset.gadv) { if (!precisa(false)) return; const [g, st] = t.dataset.gadv.split('|'); await grpAvancar(g, st); render(); } }; };
@@ -6628,7 +6229,7 @@ AFTER.audit = function () { const m = $('#main');
     if (b.dataset.aumes != null && 'aumes' in b.dataset) { AUD.mes = b.dataset.aumes; render(); return; }
     if ('auapr' in b.dataset) { if (!precisa(true)) return; await cr3Aprovar(S.cfg.frota.filter(v => !foraOp(v)), +AUD.ano); toast('Cronograma ' + AUD.ano + ' aprovado para a frota.'); render(); } }; };
 { const s = SECOES.find(x => x.id === 'crono'); if (s) { s.views = [['crono', 'Cronograma do empurrador'], ['audit', 'Auditoria'], ['cxr', 'Planejado × realizado (detalhe)'], ['rel', 'Relatório do mês']]; s.extra = []; }
-  AFTER.cxr = after3; }
+   }
 { const st = document.createElement('style'); st.textContent = `.au-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 14px}.au-k>div{background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:2px}.au-k span{font-size:12px;font-weight:700;color:#5F6368;text-transform:uppercase;letter-spacing:.03em}.au-k b{font-size:28px}.au-k small{color:#5F6368}
  .au-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;padding:6px 0}.au-b{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border-radius:8px;padding:4px 0}.au-b.sel{background:#E8F0FE}.au-b:hover{background:#F1F3F4}
  .au-bb{height:124px;display:flex;align-items:flex-end;gap:3px}.au-bb i,.au-lg i{display:inline-block;width:14px;border-radius:3px 3px 0 0}.au-bb i.p,.au-lg i.p{background:#C6D4EA}.au-bb i.r,.au-lg i.r{background:#188038}.au-bb i.r.l,.au-lg i.r.l{background:#E37400}.au-lg{font-size:12.5px;color:#3C4043}.au-lg i{height:10px;margin:0 4px 0 10px;border-radius:2px}.au-rs{display:flex;flex-direction:column-reverse;width:14px;border-radius:3px 3px 0 0;overflow:hidden}.au-rs .au-o{flex:1;background:#188038;width:14px}.au-rs .au-l{background:#E37400;width:14px;display:block}.au-b b{font-size:12px}.au-b small{font-size:11px;color:#5F6368}`; document.head.appendChild(st); }
@@ -6988,13 +6589,6 @@ vOleo = function () {
     <div class="card o2-pn"><div class="o2-sg"><button data-o2m="frota" class="${OL2.modo === 'frota' ? 'on' : ''}">Frota inteira</button><label class="${OL2.modo === 'um' ? 'on' : ''}">1 empurrador: <select id="o2V">${V.map(v => `<option value="${v.id}"${v.id === OL2.v ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label></div>${painel}</div></div>
    <div class="card"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver todas</a></div><div class="tw"><table class="t"><tbody>${recs('lub').filter(r => r.tipo === 'fr049').sort((a, b) => (b.date || '') < (a.date || '') ? -1 : 1).slice(0, 6).map(r => `<tr><td class="mono">${brD(r.date)}</td><td><b>${esc(vName(r.vessel) || r.vNome || '')}</b></td><td>${(r.eq || []).filter(q => q.status === 'T').map(q => { const vv = vessel(r.vessel), e = lubEq(vv, q.key); return esc(e ? eqNomeC(vv, e) : q.key); }).join(', ')}</td><td class="note">O.M. ${esc(r.om || '')}</td></tr>`).join('') || '<tr><td class="note">Nenhuma troca lançada ainda.</td></tr>'}</tbody></table></div></div>`;
 };
-VX.oleo = vOleo;
-AFTER.oleo = function () { const m = $('#main');
-  m.onchange = e => { if (e.target.id === 'o2V') { OL2.v = e.target.value; OL2.modo = 'um'; render(); } };
-  m.onclick = e => { const tg = e.target.closest('[data-o2v]'); if (tg) { const id = tg.dataset.o2v; if (OL2.ab.has(id)) OL2.ab.delete(id); else { OL2.ab.add(id); OL2.v = id; OL2.modo = 'um'; } render(); return; }
-    const md = e.target.closest('[data-o2m]'); if (md) { OL2.modo = md.dataset.o2m; render(); return; }
-    if (e.target.closest('label') && e.target.closest('.o2-sg')) { OL2.modo = 'um'; render(); return; }
-    const t = e.target.closest('[data-frv]'); if (!t) return; if (!precisa(false)) return; lubAbrirForm(t.dataset.frv || undefined); }; };
 { const st = document.createElement('style'); st.textContent = `.o2-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 14px}.o2-top h1{margin:0 8px 0 0}.o2-pl{border:1px solid #DADCE0;border-radius:20px;padding:5px 14px;background:#fff;font-size:15px}.o2-pl b{font-size:17px;margin-right:3px}.o2-pl.venc b{color:#C5221F}.o2-pl.aten b{color:#E37400}.o2-pl.ok b{color:#1E8E3E}
  .o2-wrap{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(300px,1fr);gap:16px;align-items:start}@media(max-width:1100px){.o2-wrap{grid-template-columns:1fr}}
  .o2-t{width:100%;border-collapse:collapse;font-size:14px}.o2-t th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#5F6368;padding:7px 8px;text-align:left;border-bottom:1px solid #E8EAED}.o2-t th.num,.o2-t td.num{text-align:right;font-variant-numeric:tabular-nums}.o2-t th.o2-gu{background:#F4F6F9;text-align:center}.o2-t th.o2-gp{background:#E8F0FE;color:#1967D2;text-align:center}
@@ -7128,7 +6722,7 @@ function riscoHTML() {
     </tbody></table></div><div class="note">Até óleo = horas até a troca do MCP mais próxima · Calibração = dias até a próxima calibração · negativo = vencido</div></div>`;
   return cab + `<div class="two">${c1}${c2}</div>` + c3;
 }
-{ const k0 = vKpi; vKpi = function () { const h = k0(), i = h.indexOf('<div class="two">'); return (i < 0 ? h : h.slice(0, i)) + riscoHTML(); }; VX.kpi = vKpi; }
+{ const k0 = vKpi; vKpi = function () { const h = k0(), i = h.indexOf('<div class="two">'); return (i < 0 ? h : h.slice(0, i)) + riscoHTML(); };  }
 
 /* layout da tela Indicadores volta ao padrão uma vez (cards novos + gestão de riscos logo abaixo) */
 { const a0 = layApply; layApply = function () { try { if (typeof LAY !== 'undefined' && LAY && Object.keys(LAY).length && !LAY._kr3) { delete LAY.kpi; LAY._kr1 = LAY._kr2 = LAY._kr3 = 1; kvSet('layout', LAY).catch(() => { }); } } catch (e) { } return a0.apply(this, arguments); }; }
@@ -7170,7 +6764,7 @@ function mitigHTML() {
   </tbody></table></div>` : '<div class="note">Nenhuma falha registrada nos últimos 12 meses.</div>'}
   <div class="note" style="margin-top:8px">Últimos ${FALPER} meses · clique numa linha para abrir a OM · a medida é registrada na própria corretiva (campo A9 · Análise) · reincidência = mesma falha no mesmo empurrador depois da ação.</div></div>`;
 }
-{ const k1 = vKpi; vKpi = function () { return k1() + mitigHTML(); }; VX.kpi = vKpi; }
+{ const k1 = vKpi; vKpi = function () { return k1() + mitigHTML(); };  }
 document.addEventListener('click', e => { const p = e.target.closest('[data-falper]'); if (!p || VIEW !== 'kpi') return; FALPER = +p.dataset.falper; render(); });
 { const st = document.createElement('style'); st.textContent = `
 .card.mg h2{margin:0}.mg-sub{margin:2px 0 10px;color:#334155;font-size:13.5px}
@@ -7661,7 +7255,6 @@ function vOmConf() { const L = [], vis = new Set();
       <td class="r"><a class="mbtn sm pri" href="${o.grupo ? '#omg/' + encodeURIComponent(g) : '#om/' + o.id}">Conferir e encerrar</a></td></tr>`; };
   return `<div class="vh"><div><h1>Conferir e encerrar</h1><p>OMs já lançadas que esperam a conferência do Supervisor. Só você aprova e encerra.</p></div></div>
    <div class="card"><h2>Esperando conferência · ${L.length}</h2>${L.length ? `<div class="tw"><table class="t"><tbody>${L.map(linha).join('')}</tbody></table></div>` : '<p class="note">Nada esperando conferência.</p>'}</div>`; }
-VX.omconf = vOmConf;
 // Calibração e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
 { const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
@@ -7958,21 +7551,6 @@ function rgProvaHTML(o1, R) {
   return `<div class="rg-prova"><p class="note" style="margin:8px 0 6px">Prova da execução: o formulário de execução volta assinado pelo executor e por quem recebeu a bordo. A foto dele fica na OM e no PDF; os passos do Anexo I contam como feitos <b>conforme o formulário assinado</b>, não por marcação na tela.${R.execTipo === 'terceiro' && R.relTerc === RG_REL[1] ? ' Sem relatório do fornecedor: preencha os itens e as medições abaixo a partir do que foi verificado (NP 5.8).' : ''}</p>
    <div class="phgrid">${caixa(RG_PROVA[0], ficha, 'Foto do formulário assinado')}${precisaRel ? caixa(RG_PROVA[1], rel, 'Relatório do fornecedor') : ''}</div></div>`;
 }
-function rgExecPend(o1, R) {
-  const out = [], F = o1.fotos || [];
-  if (!R.execTipo) out.push('Quem executou (equipe de manutenção ou terceiro)');
-  else if (R.execTipo === 'terceiro') {
-    if (!R.terc) out.push('Prestador do cadastro');
-    if (!(R.execn || '').trim()) out.push('Responsável técnico do terceiro');
-    if (!R.relTerc) out.push('Relatório do terceiro (NP 5.8)');
-    else if (R.relTerc === RG_REL[0]) { if (!(R.relNum || '').trim()) out.push('Nº do relatório do fornecedor'); if (!F.some(x => x.tipo === RG_PROVA[1])) out.push('Relatório do fornecedor anexado'); }
-  } else if (!(R.execn || '').trim()) out.push('Equipe de manutenção (nomes)');
-  if (!R.recFunc || !(R.recNome || '').trim()) out.push('Recebido a bordo por (Comandante ou Coordenador de Operações)');
-  if (!F.some(x => x.tipo === RG_PROVA[0])) out.push('Foto do formulário assinado');
-  // itens que exigem Permissão de Trabalho: a conferência final cobra o nº da PT (5.11.2), então a lista de pendências também cobra
-  if (!(R.pt || '').trim() && (o1.grupo ? omGrupo(o1.grupo) : [o1]).some(o => regsDe({ items: o.itensProg || o.items }).includes('pt'))) out.push('Nº da PT do SESMT (5.11.2)');
-  return out;
-}
 function rgExecAplicar(o, R) {
   const terc = R.execTipo === 'terceiro', T = terc ? S.recs.get(R.terc) : null;
   o.exec = terc ? 'Terceiro' : 'Equipe de manutenção';
@@ -7982,13 +7560,7 @@ function rgExecAplicar(o, R) {
   o.ass = Object.assign({}, o.ass || {}, { exec: terc ? (R.execn || '').trim() + (T ? ' (' + T.empresa + ')' : '') : (R.execn || '').trim(), cmd: o.receb.nome ? o.receb.nome + ' (' + o.receb.func + ')' : '' });
 }
 // conferência: no lançamento rápido a prova dos passos é a ficha assinada (não a marcação passo a passo)
-{ const g1 = gateIIB; gateIIB = function (o) { let g = g1(o); if (!o.passosFicha) return g;
-  const F = ((o.grupo && omGrupo(o.grupo)[0]) || o).fotos || [];
-  g = g.filter(x => !/ · todos os passos conferidos$/.test(x[0]));
-  g.push(['Formulário de execução assinado (foto)', F.some(x => x.tipo === RG_PROVA[0])]);
-  g.push(['Recebido a bordo (Comandante ou Coordenador de Operações)', !!(o.receb && o.receb.nome && o.receb.func)]);
-  if (o.exec === 'Terceiro' && tercAnexo(o)) g.push(['Relatório do fornecedor anexado', F.some(x => x.tipo === RG_PROVA[1])]);
-  return g; }; }
+{ const g1 = gateIIB;  }
 { const st = document.createElement('style'); st.textContent = `.rg-prova .addph{min-height:110px}.rg-prova .addph.rg-pok{border-color:var(--okt,#137333);color:var(--okt,#137333)}`; document.head.appendChild(st); }
 </script>
 <script>

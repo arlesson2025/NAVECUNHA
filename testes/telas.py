@@ -63,6 +63,8 @@ async def fotografar(b, url):
       P.forEach(o => { try { out['doc II-B ' + o.num] = docIIB(o).join('\\n'); } catch (e) { out['doc II-B ' + o.num] = 'ERRO: ' + e.message; } });
       C.forEach(o => { try { out['doc II-A ' + o.num] = docIIA(o).join('\\n'); } catch (e) { out['doc II-A ' + o.num] = 'ERRO: ' + e.message; } }); return out; }""")
     fotos.update(docs)
+    # o que roda nos cliques: o código final de cada tela (VX), de cada conjunto de botões (AFTER) e das funções globais
+    fotos['codigo final (VX e AFTER)'] = await pg.evaluate("() => Object.keys(VX).sort().map(k => 'VX.' + k + ' = ' + String(VX[k])).concat(Object.keys(AFTER).sort().map(k => 'AFTER.' + k + ' = ' + String(AFTER[k]))).join('\\n')")
     await pg.evaluate("async () => { S.session = { name: 'Operador', role: 'opr', token: null }; }")
     fotos['rotina (Operador)'] = await pg.evaluate("async () => { VIEW = 'rotina'; ARG = ''; render(); await new Promise(r => setTimeout(r, 400)); return document.getElementById('main').innerHTML; }")
     await ctx.close()
