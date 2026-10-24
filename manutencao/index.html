@@ -2818,6 +2818,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
 
 /* ---------- inicialização ---------- */
 (async function boot() {
+  if (document.readyState === 'loading') await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));   // espera todos os blocos de código: com internet lenta a página chega aos pedaços e a carga corria antes dos últimos blocos
   $$('img[data-logo]').forEach(i => i.src = LOGOS[i.dataset.logo]);
   try { await DB.open(); } catch (e) { MEM = new Map(); }
   try {
