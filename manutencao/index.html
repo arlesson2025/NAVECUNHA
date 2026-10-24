@@ -2300,49 +2300,55 @@ function emGrp(v, x) { const s = x.s; if (s.st === 'venc') return 'venc'; if (s.
   const fimMes = new Date(hoje().getFullYear(), hoje().getMonth() + 1, 0, 23, 59), hp = posHor(x.pos, x.t, v.id), hr = horAtual(v.id, hp), rate = (typeof horasDiaPos === 'function' && horasDiaPos(v.id, hp)) || horasDia(v.id) || 10;
   const dd = s.alvoD ? new Date(s.alvoD) : null, dh = s.alvoH != null && hr ? new Date(Date.now() + Math.max(0, s.alvoH - hr.h) / rate * 864e5) : null, due = [dd, dh].filter(Boolean).sort((a, b) => a - b)[0];
   return due && due <= fimMes ? 'mes' : s.st === 'viag' ? (EMBARCA.includes(x.t.id) ? 'emb' : 'adi') : 'ok'; }
+/* Programar preventiva num bloco só (24/10/2026): antes eram 6 camadas (tela antiga por posição, barra da OM da embarcação, troca de "ficha" por
+   "formulário", rota, padrão das telas e 3 passos), e a última jogava fora quase tudo das anteriores. Agora a tela monta direto o que aparece:
+   cabeçalho · "O que tem para abrir na frota" (pvFrota) · passo a passo ① empurrador e rota ② o que entra ③ abrir a OM. */
+const emTroca = h => h.replace(/(^|[\s>(“"])([Ff])icha(?![\w])/g, (m, a, f) => a + (f === 'F' ? 'Formulário' : 'formulário')).replace(/\b([Aa]) formulário/g, (m, a) => (a === 'A' ? 'O' : 'o') + ' formulário').replace(/\bda formulário/g, 'do formulário').replace(/\bna formulário/g, 'no formulário').replace(/\bpela formulário/g, 'pelo formulário').replace(/\bDa formulário/g, 'Do formulário');
 function vEmitir() {
-  const vid = ARG || S.cfg.frota[0].id, v = vessel(vid); if (!v) return '<div class="empty">Embarcação não encontrada.</div>';
+  const v = vessel(ARG || EM.vid || (S.cfg.frota[0] || {}).id); if (!v) return '<div class="empty">Embarcação não encontrada.</div>';
+  if (EM.pvVid !== v.id) { EM.pvVid = v.id; EM.passo = EM.pvJump || 1; EM.pvJump = null; EM.pvIni = false; }
+  if (EM.draft && EM.draft.emb) EM.passo = 3;
+  const P = painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && !x.om), gr = x => emGrp(v, x), fj = x => typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos);
+  const entra = P.filter(x => ['venc', 'mes', 'emb'].includes(gr(x)) && !fj(x)), adi = P.filter(x => gr(x) === 'adi' && !fj(x));
+  /* sem empurrador no endereço, o formulário (empurrador, rota, óleo, texto da OM) é o do primeiro da frota, como antes */
+  const vid = ARG || S.cfg.frota[0].id, v0 = vessel(vid);
   if (EM.vid !== vid) { EM.sel.clear(); EM.draft = null; EM.vid = vid; EM.viag = null; }
-  const vh = EM.viag ?? viagemDe(v);
-  const P = painelVessel(v, vh);
-  // o que fazer no mês, esteja o empurrador onde estiver (decisão do Supervisor, 21/10/2026): vencido · vence no mês (data, ou horas projetadas no ritmo do motor, a mesma conta do cronograma) · vence antes de voltar = só aviso para adiantar
-  const grp = x => emGrp(v, x);
-  const GRP = { venc: ['Vencidos', 'p-bad', 'Vencido'], mes: ['Vencem neste mês', 'p-warn', 'Vence no mês'], emb: ['OM embarcada · o CTF/MFM executa a bordo na hora-alvo', 'p-inf', 'Embarcada · CTF/MFM'], adi: ['Vence antes de voltar · adiantar?', 'p-inf', 'Vence antes de voltar · adiantar?'], sem: ['Sem histórico', 'p-mut', 'Sem histórico'], ok: ['Em dia', 'p-ok', 'Em dia'] };
-  const bloco = pos => {
-    let rows = P.filter(x => x.pos === pos && x.t.kind === 'prog'); if (!rows.length) return '';
-    rows.forEach(x => { x.g = grp(x); });
-    const pend = rows.filter(x => ['venc', 'mes', 'emb'].includes(x.g) && !x.om && !(typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos)));
-    if (EM.mostrar === 'pend') rows = rows.filter(x => ['venc', 'mes', 'emb', 'adi', 'sem'].includes(x.g) || x.om);
-    const ord = { venc: 0, mes: 1, emb: 2, adi: 3, sem: 4, ok: 5 }; rows.sort((a, b) => ord[a.g] - ord[b.g]);
-    const cnt = [...EM.sel].filter(k => k.startsWith(pos + '|')).length;
-    const hr = horAtual(v.id, pos === 'UN' ? mcpPos(v)[0] : pos);
-    return `<div class="card"><div class="row"><h2>${posTag(pos)} ${posNome(v, pos)}${MCAS.includes(pos) ? ' · ' + mcaNome(v, pos) : isMcp(pos) ? ' · MCP + ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : 'reversor ?') : ''}</h2><span class="mono note">${hr ? nf(hr.h) + ' h · ' + brD(hr.date) : 'sem horímetro'}</span><span class="sp"></span>
-     <button class="mbtn sm" data-pick="${pos}" ${pend.length ? '' : 'disabled'}>Marcar os ${pend.length} vencidos, do mês e embarcados</button><button class="mbtn sm pri" data-mkom="${pos}" ${cnt ? '' : 'disabled'}>Abrir OM com ${cnt} ${cnt === 1 ? 'item' : 'itens'}</button></div>
-     ${EM.draft && EM.draft.pos === pos ? draftHtml(v, P) : ''}
-     <div class="tw"><table class="t"><thead><tr><th></th><th>Nº</th><th>Item do Anexo I</th><th>Prior.</th><th>Intervalo</th><th>Situação</th></tr></thead><tbody>
-     ${rows.map((x, i) => { const k = pos + '|' + x.t.id, iv = intervalo(x.t); return (i === 0 || rows[i - 1].g !== x.g ? `<tr class="em-g"><td colspan="6"><b>${GRP[x.g][0]}</b>${x.g === 'adi' ? ' <span class="note">— não entram no "Marcar"; adiante se quiser, pela próxima viagem</span>' : ''}</td></tr>` : '') + `<tr><td><input type="checkbox" data-sel="${k}" ${EM.sel.has(k) ? 'checked' : ''} ${x.om ? 'disabled' : ''} aria-label="Selecionar ${x.t.id}"></td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}<div class="note">${esc(EQN[x.t.eq])}</div></td><td>${x.t.prio === 'Crítica' ? '<span class="pill p-bad">Crítica</span>' : x.t.prio}</td><td class="mono">${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' ou ')}</td><td>${x.om ? `<a class="pill p-inf" href="#om/${x.om.id}">Já na OM ${esc(x.om.num)}</a>` : `<span class="pill ${GRP[x.g][1]}">${GRP[x.g][2]}</span>`}<div class="note">${esc(x.s.txt || '')}</div></td></tr>`; }).join('') || '<tr><td colspan="6" class="note">Nada vencido nem do mês nesta posição.</td></tr>'}
-     </tbody></table></div></div>`;
-  };
-  return `<div class="vh"><div><h1>Fazer preventiva · o que vence no mês</h1><p>Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.</p></div></div>
-   <div class="card row"><label class="f" style="min-width:200px">Embarcação<select id="emV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
-    <label class="f" style="width:230px">Horas previstas da próxima viagem<input type="number" id="emH" value="${vh}" min="0" step="10"><span class="note" style="font-size:11px">${+v.viagH > 0 ? 'salvo para este empurrador' : 'padrão (' + S.cfg.viagemH + ' h): informe o trecho'} · ~${Math.round(horasDia(v.id))} h/dia</span></label>
-    <div class="seg" style="align-self:flex-end"><button data-mostra="pend" class="${EM.mostrar === 'pend' ? 'on' : ''}">Só vencendo</button><button data-mostra="todos" class="${EM.mostrar === 'todos' ? 'on' : ''}">Todos os itens</button></div>
-    ${interditada(vid) ? '<span class="pill p-bad">Interditada por falha Crítica</span>' : ''}${bloqueioSaida(vid).length ? '<span class="pill p-bad">Saída bloqueada: item Crítico vencido</span>' : ''}</div>
-   ${posicoes(v).map(bloco).join('')}`;
-}
-function draftHtml(v, P) {
-  const d = EM.draft, pos = d.pos;
-  const sits = d.ids.map(id => (P.find(x => x.pos === pos && x.t.id === id) || {}).s || {});
-  const hs = sits.map(s => s.alvoH).filter(x => x), ds = sits.map(s => s.alvoD).filter(x => x);
-  const hr = horAtual(v.id, pos === 'UN' ? mcpPos(v)[0] : pos);
-  d.alvoH = hs.length ? Math.min(...hs) : (hr ? hr.h + (EM.viag ?? viagemDe(v)) : null);
-  d.alvoD = ds.length ? isoD(new Date(Math.min(...ds))) : null;
-  const sisL = [...new Set(d.ids.map(id => A1M[id].sis))].join(' / ');
-  d.txt = `PREVENTIVA – ${v.nome} – ${POSN[pos]}\nSistema: ${sisL}\nItens Anexo I: ${d.ids.join(', ')}\n${d.ids.map(id => { const x = P.find(y => y.pos === pos && y.t.id === id), emb = x && emGrp(v, x) === 'emb'; return '- ' + id + ' ' + A1M[id].chk + (emb ? ' [EMBARCADA · CTF/MFM a bordo' + (x.s.alvoH ? ' · hora-alvo ' + nf(x.s.alvoH) + ' h' : '') + ']' : ''); }).join('\n')}\nHorímetro atual: ${hr ? nf(hr.h) + ' h' : '—'}${d.alvoH ? ' · Hora-alvo: ' + nf(d.alvoH) + ' h' : ''}${d.alvoD ? ' · Data-limite: ' + brD(d.alvoD) : ''}\nRegistro: Anexo II (II-B) + fotos antes/depois – NP 055 7.4`;
-  return `<div class="sk"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">1 · Texto para abrir a OM no Sankhya</b><div class="skt" id="omTxt">${esc(d.txt)}</div>
-   <div class="row"><button class="mbtn sm" data-act="copiarTxt">Copiar texto</button><span class="note" id="cpM"></span></div>
-   <b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">2 · Número gerado pelo Sankhya</b>
-   <div class="row"><input id="omNum" inputmode="numeric" placeholder="Ex.: 48231" style="width:160px"><button class="mbtn pri" data-act="emitirOM">Emitir OM e ficha</button><button class="mbtn" data-act="cancDraft">Cancelar</button><span class="note" id="emE" style="color:var(--badt)"></span></div></div>`;
+  const vh = EM.viag ?? viagemDe(v0);
+  if (!EM.pvIni && !EM.sel.size) { entra.forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.pvIni = true; }
+  const el = h => { const d = document.createElement('div'); d.innerHTML = h; return d; };
+  // ① empurrador, rota e horas da viagem
+  const R = rotas(), r = rotaDe(v0);
+  const rota = `<label class="f" style="min-width:320px">Rota da próxima viagem (planejada pela duração máxima)<select id="emRota"><option value="">Escolha a rota…</option>${R.map(x => `<option value="${x.id}"${r && r.id === x.id ? ' selected' : ''}>${esc(x.nome)} · até ${x.ciclo} d${x.fonte === 'estimado' ? ' (estimada)' : ''}</option>`).join('')}</select>${r ? `<span class="note" style="font-size:11px">${esc(r.obs)}</span>` : ''}</label>`;
+  const emp = el(emTroca(`<label class="f" style="min-width:200px">Embarcação<select id="emV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
+    `) + rota + emTroca(`<label class="f" style="width:230px">Horas previstas da próxima viagem<input type="number" id="emH" value="${vh}" min="0" step="10"><span class="note" style="font-size:11px">${+v0.viagH > 0 ? 'salvo para este empurrador' : 'padrão (' + S.cfg.viagemH + ' h): informe o trecho'} · ~${Math.round(horasDia(v0.id))} h/dia</span></label>
+    
+    ${interditada(vid) ? '<span class="pill p-bad">Interditada por falha Crítica</span>' : ''}${bloqueioSaida(vid).length ? '<span class="pill p-bad">Saída bloqueada: item Crítico vencido</span>' : ''}`)).innerHTML;
+  // óleo e filtros a bordo para a viagem
+  const bo = bordoHTML(v0), oleo = bo ? el(bo).firstElementChild.innerHTML : '';
+  // ③ texto para o Sankhya e nº da OM (só com a OM sendo aberta)
+  let om = '';
+  if (EM.draft && EM.draft.emb) { const pt = embPartes(v0); EM.draft.partes = pt; EM.draft.txt = embTexto(v0, pt);
+    om = el(emTroca(`<div class="sk" style="margin-top:10px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Texto para abrir a OM no Sankhya</b><div class="skt" id="omTxt">${esc(EM.draft.txt)}</div>
+     <div class="row"><button class="mbtn sm" data-act="copiarTxt">Copiar texto</button><span class="note" id="cpM"></span></div>
+     <b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Número gerado pelo Sankhya</b>
+     <div class="row"><input id="omNum" inputmode="numeric" placeholder="Ex.: 48231" style="width:160px"><button class="mbtn pri" data-act="emitirEmb">Emitir OM e imprimir ficha</button><button class="mbtn" data-act="cancDraft">Cancelar</button><span class="note" id="emE" style="color:var(--badt)"></span></div></div>`)).firstElementChild.outerHTML; }
+  const passos = ['Empurrador e rota', 'O que entra', 'Abrir a OM'].map((t, i) => `<div class="gu-p${i + 1 < EM.passo ? ' feito' : i + 1 === EM.passo ? ' atual' : ''}" data-pvpasso="${i + 1}" style="cursor:pointer"><i>${i + 1 < EM.passo ? '✓' : i + 1}</i><span>${t}</span></div>`).join('<div class="gu-l"></div>');
+  const nSel = EM.sel.size, cor = { venc: 'p-bad', mes: 'p-warn', emb: 'p-inf', adi: 'p-mut' }, rot = { venc: 'Vencido', mes: 'Vence no mês', emb: 'Embarcada · CTF/MFM', adi: 'Adiantar?' };
+  const linha = x => { const k = x.pos + '|' + x.t.id, g = gr(x); return `<tr><td style="width:28px"><input type="checkbox" data-sel="${k}"${EM.sel.has(k) ? ' checked' : ''}></td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}</td><td><span class="pill ${cor[g]}">${rot[g]}</span><div class="note">${esc(x.s.txt || '')}</div></td></tr>`; };
+  const porPos = L => { const pos = [...new Set(L.map(x => x.pos))]; return pos.map(p => { const I = L.filter(x => x.pos === p), m = I.filter(x => EM.sel.has(x.pos + '|' + x.t.id)).length, c = g => I.filter(x => gr(x) === g).length;
+    const res = [['venc', 'vencidos'], ['mes', 'do mês'], ['emb', 'embarcados'], ['adi', 'adiantar?']].filter(([g]) => c(g)).map(([g, l]) => c(g) + ' ' + l).join(' · ');
+    return `<details class="pv-d"><summary><b>${p === 'UN' ? 'Embarcação' : esc(posNome(v, p))}</b><span class="note"> · ${I.length} ite${I.length === 1 ? 'm' : 'ns'} (${res})</span><span class="sp"></span><span class="pill ${m ? 'p-ok' : 'p-mut'}">${m} marcado${m === 1 ? '' : 's'}</span></summary><div class="tw"><table class="t">${I.map(linha).join('')}</table></div></details>`; }).join(''); };
+  let corpo;
+  if (EM.passo === 1) corpo = `<div><h2>① Empurrador e rota</h2>${emp}<div class="row end" style="margin-top:10px"><button class="mbtn pri" data-pvpasso="2">Próximo: o que entra →</button></div></div>`;
+  else if (EM.passo === 2) corpo = `<div><div class="row"><h2>② O que entra na OM · ${esc(v.nome)}</h2><span class="sp"></span><span class="pill ${nSel ? 'p-ok' : 'p-mut'}">${nSel} ite${nSel === 1 ? 'm' : 'ns'} marcado${nSel === 1 ? '' : 's'}</span></div>
+     <p class="note">Já vem marcado o que tem de entrar: vencidos, do mês e embarcados (o CTF/MFM faz a bordo na hora-alvo). Abra um motor para ver ou desmarcar itens.</p>
+     ${entra.length ? porPos(entra) : '<p class="note">Nada vencido, do mês ou embarcado neste empurrador.</p>'}
+     ${adi.length ? `<details class="pv-d pv-adi"><summary><b>Adiantar?</b><span class="note"> · ${adi.length} itens vencem antes de voltar (ficam fora da OM; marque se quiser adiantar)</span></summary>${porPos(adi)}</details>` : ''}
+     ${bo ? `<details class="pv-d"><summary><b>Óleo e filtros a bordo</b><span class="note"> · para esta viagem (FR 049_B, pelo CTF/MFM)</span></summary>${oleo.replace(/<h2[\s\S]*?<\/h2>/, '')}</details>` : ''}
+     <div class="row end" style="margin-top:10px"><button class="mbtn" data-pvpasso="1">← Voltar</button><button class="mbtn pri" data-pvpasso="3" ${nSel ? '' : 'disabled'}>Próximo: abrir a OM com ${nSel} ite${nSel === 1 ? 'm' : 'ns'} →</button></div></div>`;
+  else corpo = `<div><h2>③ Abrir a OM · ${esc(v.nome)} · ${nSel} itens</h2>${om || '<p class="note">Volte ao passo 2 e marque os itens.</p>'}<div class="row" style="margin-top:10px"><button class="mbtn" data-pvpasso="2">← Voltar ao que entra</button></div></div>`;
+  return `<div class="cm-v"><div class="vh"><div><h1>Programar preventiva</h1><p>O que tem para abrir na frota · monte a OM de um empurrador em 3 passos e abra no Sankhya</p></div><span class="sp"></span><button class="mbtn" data-pvreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
+   <div class="cm-ws">${pvFrota(v)}<div class="card"><h2>${esc(v.nome)} · passo a passo</h2><div class="gu-ps" style="margin:0 0 8px">${passos}</div>${corpo}</div></div></div>`;
 }
 AFTER.emitir = () => {
   const m = $('#main');
@@ -2350,22 +2356,23 @@ AFTER.emitir = () => {
     if (t.id === 'emV') go('emitir/' + t.value);
     if (t.id === 'emH') { EM.viag = Math.max(0, +t.value || 0); salvarViagem(EM.vid, EM.viag); render(); }
     if (t.dataset.sel) { t.checked ? EM.sel.add(t.dataset.sel) : EM.sel.delete(t.dataset.sel); EM.draft = null; render(); } };
-  m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
-    if (t.dataset.mostra) { EM.mostrar = t.dataset.mostra; render(); }
-    if (t.dataset.pick) { const v = vessel(EM.vid); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, x)) && !x.om).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); }
-    if (t.dataset.mkom) { if (!precisa(true)) return; const pos = t.dataset.mkom; EM.draft = { pos, ids: [...EM.sel].filter(k => k.startsWith(pos + '|')).map(k => k.split('|')[1]) }; render(); setTimeout(() => $('#omNum') && $('#omNum').focus(), 30); }
+  m.onclick = async e => { const t = e.target.closest('button'); if (!t) return; const v = vessel(EM.vid);
+    if (t.dataset.emb) { e.stopImmediatePropagation();
+      if (t.dataset.emb === 'todos') painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, x)) && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)).forEach(x => EM.sel.add(x.pos + '|' + x.t.id));
+      if (t.dataset.emb === 'limpar') EM.sel.clear();
+      EM.draft = null;
+      if (t.dataset.emb === 'abrir') { if (!precisa(true)) return; EM.draft = { emb: true }; }
+      render(); if (EM.draft) setTimeout(() => { const x = $('#omNum'); if (x) { x.focus(); x.scrollIntoView({ block: 'center' }); } }, 40); return; }
     if (t.dataset.act === 'cancDraft') { EM.draft = null; render(); }
     if (t.dataset.act === 'copiarTxt') { try { await navigator.clipboard.writeText(EM.draft.txt); $('#cpM').textContent = 'Copiado.'; } catch (er) { const r = document.createRange(); r.selectNodeContents($('#omTxt')); getSelection().removeAllRanges(); getSelection().addRange(r); $('#cpM').textContent = 'Texto selecionado. Use Ctrl+C.'; } }
-    if (t.dataset.act === 'emitirOM') {
+    if (t.dataset.act === 'emitirEmb') {
       const n = $('#omNum').value.trim();
       if (!/^\d{3,}$/.test(n)) { $('#emE').textContent = 'Digite o número da OM gerado pelo Sankhya (só números).'; return; }
       if (oms().some(o => o.num === n)) { $('#emE').textContent = 'Já existe uma OM com esse número no SMF.'; return; }
-      const d = EM.draft;
-      const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, vessel: EM.vid, pos: d.pos, items: d.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: d.alvoH, alvoD: d.alvoD, conf: {}, extras: [], fotos: [], exec: 'Equipe de manutenção', hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] };
-      await saveRec(o); d.ids.forEach(id => EM.sel.delete(d.pos + '|' + id)); EM.draft = null;
-      toast('OM ' + n + ' emitida.'); fichaModal(o); render();
-    }
-  };
+      const pt = EM.draft.partes || embPartes(v); let i = 0;
+      for (const p of pt) { const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, grupo: n, parte: ++i, partes: pt.length, vessel: v.id, pos: p.pos, items: p.ids.slice(), itensProg: p.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: p.pos === 'UN' ? null : p.alvoH, alvoD: p.alvoD, hEmit: p.hr ? p.hr.h : null, conf: {}, extras: [], fotos: [], exec: 'Equipe de manutenção', execTerra: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] }; await saveRec(o); }
+      EM.sel.clear(); EM.draft = null; toast('OM ' + n + ' emitida para ' + v.nome + '.'); fichaModal(omGrupo(n)[0]); render(); } };
+  const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_prev_lay', '[data-pvreset]');
 };
 function fichaModal(o) {
   modal(`<div class="row"><h2>Ficha de Execução · OM ${esc(o.num)}</h2><span class="sp"></span><button class="mbtn pri" data-act="pdfFicha">⬇ Baixar PDF da ficha</button><button class="mbtn" data-close>Fechar</button></div>
@@ -5370,41 +5377,6 @@ function embTexto(v, partes) {
   return `PREVENTIVA – ${v.nome} – janela de manutenção (equipe de terra)${temEmb ? ' + itens EMBARCADOS (CTF/MFM a bordo, na hora-alvo)' : ''}\n${n} itens do Anexo I (NP 055)${ds[0] ? ' · data-limite ' + brD(ds[0]) : ''}\n` +
     partes.map(p => `\n[${posCurtoE(v, p.pos)}]${p.hr ? ' horímetro ' + nf(p.hr.h) + ' h' : ''}${p.alvoH && p.pos !== 'UN' ? ' · hora-alvo ' + nf(p.alvoH) + ' h' : ''}\n` + p.ids.map(id => { const x = emb(p.pos, id); return '- ' + id + ' ' + A1M[id].chk + (x ? ' [EMBARCADA · CTF/MFM' + (x.s.alvoH ? ' · hora-alvo ' + nf(x.s.alvoH) + ' h' : '') + ']' : ''); }).join('\n')).join('\n');
 }
-{ const v0 = vEmitir; vEmitir = function () {
-  let h = v0(); const v = vessel(ARG || S.cfg.frota[0].id); if (!v) return h;
-  h = h.replace(/<button class="mbtn sm pri" data-mkom="[^"]*"[^>]*>[^<]*<\/button>/g, '')
-    .replace('Uma OM por posição (BB, BE, MCA ou embarcação). Marque os itens, abra a OM no Sankhya com o texto sugerido, digite o número gerado e emita a ficha.', 'Uma OM por embarcação em cada janela. 1) Marque os vencidos, os do mês e os embarcados · 2) abra a OM no Sankhya com o texto pronto · 3) digite o número · 4) imprima a ficha para a equipe de terra.');
-  const P = painelVessel(v, EM.viag ?? viagemDe(v)), pend = P.filter(x => x.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, x)) && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)), n = EM.sel.size;
-  const dr = EM.draft && EM.draft.emb ? (() => { const pt = embPartes(v); EM.draft.partes = pt; EM.draft.txt = embTexto(v, pt); return `<div class="sk" style="margin-top:10px"><b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Texto para abrir a OM no Sankhya</b><div class="skt" id="omTxt">${esc(EM.draft.txt)}</div>
-     <div class="row"><button class="mbtn sm" data-act="copiarTxt">Copiar texto</button><span class="note" id="cpM"></span></div>
-     <b style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy)">Número gerado pelo Sankhya</b>
-     <div class="row"><input id="omNum" inputmode="numeric" placeholder="Ex.: 48231" style="width:160px"><button class="mbtn pri" data-act="emitirEmb">Emitir OM e imprimir ficha</button><button class="mbtn" data-act="cancDraft">Cancelar</button><span class="note" id="emE" style="color:var(--badt)"></span></div></div>`; })() : '';
-  const bar = `<div class="card em-bar"><div class="row"><div><b style="font-size:16px">${n ? n + ' ' + (n === 1 ? 'item marcado' : 'itens marcados') : 'Nenhum item marcado'}</b><div class="note">${pend.length} ite${pend.length === 1 ? 'm' : 'ns'} para programar (vencidos, do mês e embarcados) ainda sem OM</div></div><span class="sp"></span>
-    <button class="mbtn" data-emb="todos" ${pend.length ? '' : 'disabled'}>Marcar os ${pend.length}</button><button class="mbtn" data-emb="limpar" ${n ? '' : 'disabled'}>Limpar</button>
-    <button class="mbtn pri" data-emb="abrir" ${n ? '' : 'disabled'}>Abrir OM da embarcação com ${n} ${n === 1 ? 'item' : 'itens'}</button></div>${dr}</div>`;
-  const i = h.indexOf('<div class="card row">'), j = i >= 0 ? h.indexOf('</div>\n   ', i) : -1;
-  const k = h.indexOf('<div class="card">', i + 10);
-  return k > 0 ? h.slice(0, k) + bar + h.slice(k) : h + bar;
-}; }
-{ const a0 = AFTER.emitir; AFTER.emitir = function () {
-  if (a0) a0(); const m = $('#main'), c0 = m.onclick;
-  m.onclick = async e => { const t = e.target.closest('button'); const v = vessel(EM.vid);
-    if (t && t.dataset.emb) { e.stopImmediatePropagation();
-      if (t.dataset.emb === 'todos') painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, x)) && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)).forEach(x => EM.sel.add(x.pos + '|' + x.t.id));
-      if (t.dataset.emb === 'limpar') EM.sel.clear();
-      EM.draft = null;
-      if (t.dataset.emb === 'abrir') { if (!precisa(true)) return; EM.draft = { emb: true }; }
-      render(); if (EM.draft) setTimeout(() => { const x = $('#omNum'); if (x) { x.focus(); x.scrollIntoView({ block: 'center' }); } }, 40); return; }
-    if (t && t.dataset.pick) { e.stopImmediatePropagation(); painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.pos === t.dataset.pick && x.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, x)) && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)).forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.draft = null; render(); return; }
-    if (t && t.dataset.act === 'emitirEmb') {
-      const n = $('#omNum').value.trim();
-      if (!/^\d{3,}$/.test(n)) { $('#emE').textContent = 'Digite o número da OM gerado pelo Sankhya (só números).'; return; }
-      if (oms().some(o => o.num === n)) { $('#emE').textContent = 'Já existe uma OM com esse número no SMF.'; return; }
-      const pt = EM.draft.partes || embPartes(v); let i = 0;
-      for (const p of pt) { const o = { id: uid('om'), kind: 'om', tipo: 'P', num: n, grupo: n, parte: ++i, partes: pt.length, vessel: v.id, pos: p.pos, items: p.ids.slice(), itensProg: p.ids.slice(), status: 'emitida', emitAt: isoD(hoje()), emitBy: S.session.name, alvoH: p.pos === 'UN' ? null : p.alvoH, alvoD: p.alvoD, hEmit: p.hr ? p.hr.h : null, conf: {}, extras: [], fotos: [], exec: 'Equipe de manutenção', execTerra: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Emitida' }] }; await saveRec(o); }
-      EM.sel.clear(); EM.draft = null; toast('OM ' + n + ' emitida para ' + v.nome + '.'); fichaModal(omGrupo(n)[0]); render(); return; }
-    if (c0) return c0(e); };
-}; }
 
 /* ---------- 2 · Ficha impressa: checklist em poucas folhas ---------- */
 function docFichaEmb(g) {
@@ -5888,7 +5860,7 @@ AFTER.barco = function () { const m = $('#main');
 }
 /* ---------- "ficha" passa a se chamar "formulário" ---------- */
 { const troca = h => h.replace(/(^|[\s>(“"])([Ff])icha(?![\w])/g, (m, a, f) => a + (f === 'F' ? 'Formulário' : 'formulário')).replace(/\b([Aa]) formulário/g, (m, a) => (a === 'A' ? 'O' : 'o') + ' formulário').replace(/\bda formulário/g, 'do formulário').replace(/\bna formulário/g, 'no formulário').replace(/\bpela formulário/g, 'pelo formulário').replace(/\bDa formulário/g, 'Do formulário');
-  ['vAcomp', 'vOmg', 'vEmitir', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
+  ['vAcomp', 'vOmg', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
   VX.acomp = window.vAcomp; VX.omg = window.vOmg;   const d0 = docFichaEmb;   const m0 = fichaModal; fichaModal = function (o) { m0(o); const h = $('#modal'); if (h) h.querySelectorAll('h2,p,button').forEach(el => { if (el.children.length === 0 || el.tagName === 'P') el.innerHTML = troca(el.innerHTML); }); }; }
 { const st = document.createElement('style'); st.textContent = `.ol-k{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 14px}.ol-k>div{flex:1;min-width:150px;background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;align-items:baseline;gap:10px}.ol-k b{font-size:30px}.ol-k .venc b{color:#C5221F}.ol-k .aten b{color:#E37400}.ol-k .ok b{color:#188038}.ol-k .sem b{color:#9AA0A6}
  .ol-t{width:100%;border-collapse:collapse}.ol-t th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5F6368;padding:8px 6px;border-bottom:2px solid #E8EAED}.ol-t td{padding:8px 6px;border-bottom:1px solid #F1F3F4;vertical-align:middle}
@@ -7832,10 +7804,6 @@ function bordoHTML(v) { const r = rotaUso(v); if (!r) return '';
    ${ab.length ? `<div class="tw"><table class="t"><thead><tr><th>Equipamento</th><th class="r">Falta hoje</th><th class="r">Intervalo</th><th class="r">Trocas durante a viagem</th><th class="r">Cárter</th></tr></thead><tbody>${ab.map(x => `<tr><td><b>${esc(x.nome)}</b></td><td class="mono r">${nf(Math.max(0, x.rest))} h</td><td class="mono r">${nf(x.iv)} h</td><td class="mono r"><b>${x.n}</b></td><td class="mono r">${esc(x.cart)}</td></tr>`).join('')}</tbody></table></div>
      <p class="note">Embarcar óleo e filtros para <b>${ab.reduce((a, x) => a + x.n, 0)} troca(s)</b>${litros ? ' · cerca de <b>' + nf(Math.ceil(litros)) + ' L</b> de óleo (pelo volume do cárter da matriz)' : ''}. As trocas a bordo são do CTF/MFM, com FR 049_B.</p>` : '<p class="note">Nenhuma troca de óleo vence durante a viagem.</p>'}</div>`; }
 // programação da janela: escolher a rota; ela define as horas de MCP e de MCA da viagem
-{ const v0 = vEmitir; vEmitir = function () { let h = v0(); const v = vessel(ARG || S.cfg.frota[0].id); if (!v) return h; const R = rotas(), r = rotaDe(v);
-  const sel = `<label class="f" style="min-width:320px">Rota da próxima viagem (planejada pela duração máxima)<select id="emRota"><option value="">Escolha a rota…</option>${R.map(x => `<option value="${x.id}"${r && r.id === x.id ? ' selected' : ''}>${esc(x.nome)} · até ${x.ciclo} d${x.fonte === 'estimado' ? ' (estimada)' : ''}</option>`).join('')}</select>${r ? `<span class="note" style="font-size:11px">${esc(r.obs)}</span>` : ''}</label>`;
-  const i = h.indexOf('<label class="f" style="width:230px">Horas previstas da próxima viagem'); if (i >= 0) h = h.slice(0, i) + sel + h.slice(i);
-  const j = h.indexOf('<div class="card'); const card = bordoHTML(v); return j >= 0 ? h.slice(0, j) + card + h.slice(j) : h + card; }; }
 document.addEventListener('change', e => { if (e.target.id !== 'emH') return; const v = vessel(($('#emV') || {}).value || ARG); if (v) { delete v.rotaProx; delete v.viagHmca; } }, true);   // horas digitadas à mão valem no lugar da rota
 document.addEventListener('change', async e => { if (e.target.id !== 'emRota') return; const vid = ($('#emV') || {}).value || ARG; await salvarRota(vid, e.target.value); render(); }, true);
 // registro de saída guarda a rota
@@ -8290,19 +8258,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-f2ma
    Só apresentação, por cima do vEmitir que vale: cabeçalho padrão + Reorganizar, janela "Resumo" (vencidos · do mês · embarcadas · adiantar?),
    todos os blocos em janelas livres (smf_prev_lay). Sai o campo de horas digitadas à mão (#emH): a rota define as horas da viagem. */
 'use strict';
-{ const v0 = vEmitir; vEmitir = function () { const h = v0.apply(this, arguments), v = vessel(ARG || EM.vid || (S.cfg.frota[0] || {}).id); if (!v) return h;
-  const t = document.createElement('div'); t.innerHTML = h; const old = t.querySelector(':scope > .vh'); if (old) old.remove();
-  const P = painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && !x.om), n = g => P.filter(x => emGrp(v, x) === g).length;
-  const k = (l, val, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${val}</b></div>`;
-  const tit = c => c.querySelector('h2') ? '' : c.querySelector('#emV') ? '<h2>Empurrador e viagem</h2>' : c.querySelector('[data-emb]') || /marcad/i.test(c.textContent) ? '<h2>OM da janela</h2>' : '';
-  const ord = c => c.querySelector('#emV') ? 0 : c.querySelector('[data-emb]') || /marcad/i.test(c.textContent) ? 2 : /Óleo e filtros a bordo/.test(c.textContent) ? 9 : 5;
-  const lista = [...t.children].sort((a, b) => ord(a) - ord(b)), emp = lista.filter(c => ord(c) === 0), resto = lista.filter(c => ord(c) !== 0);
-  const html = c => c.classList.contains('card') ? (tit(c) ? c.outerHTML.replace(/^<div([^>]*)>/, '<div$1>' + tit(c)) : c.outerHTML) : `<div class="card">${c.outerHTML}</div>`;
-  const cardsEmp = emp.map(html).join(''), cards = resto.map(html).join('');
-  return `<div class="cm-v"><div class="vh"><div><h1>Programar preventiva</h1><p>${esc(v.nome)} · o que vence no mês, onde quer que o empurrador esteja · abre a OM no Sankhya e imprime o formulário</p></div><span class="sp"></span><button class="mbtn" data-pvreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
-   <div class="cm-ws">${cardsEmp}<div class="card"><h2>Resumo</h2><div class="f2-ks">${k('Vencidos', n('venc'), n('venc') ? 'var(--badt)' : '')}${k('Vencem no mês', n('mes'), n('mes') ? 'var(--warnt)' : '')}${k('Embarcadas (CTF/MFM)', n('emb'))}${k('Adiantar?', n('adi'))}</div></div>${cards}</div></div>`; };
-  VX.emitir = vEmitir; }
-{ const a0 = AFTER.emitir; AFTER.emitir = function () { a0 && a0.apply(this, arguments); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_prev_lay', '[data-pvreset]'); }; }
+VX.emitir = vEmitir;
 { const st = document.createElement('style'); st.textContent = `#main .cm-v label:has(#emH){display:none}`; document.head.appendChild(st); }
 </script>
 <script>
@@ -8343,34 +8299,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-guia
    ① Empurrador e rota · ② O que entra (já marcado: vencidos, do mês e embarcados; um motor por linha, recolhido; "Adiantar?" à parte) · ③ Abrir a OM (texto para o Sankhya, nº, emitir).
    Só apresentação: usa o mesmo estado (EM.sel, EM.draft) e os mesmos botões/handlers da tela anterior (data-sel, data-emb, data-act, #emV, #emRota). */
 'use strict';
-{ const v0 = VX.emitir; VX.emitir = function () {
-  const v = vessel(ARG || EM.vid || (S.cfg.frota[0] || {}).id); if (!v) return v0.apply(this, arguments);
-  if (EM.pvVid !== v.id) { EM.pvVid = v.id; EM.passo = EM.pvJump || 1; EM.pvJump = null; EM.pvIni = false; }
-  if (EM.draft && EM.draft.emb) EM.passo = 3;
-  const P = painelVessel(v, EM.viag ?? viagemDe(v)).filter(x => x.t.kind === 'prog' && !x.om), gr = x => emGrp(v, x), fj = x => typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos);
-  const entra = P.filter(x => ['venc', 'mes', 'emb'].includes(gr(x)) && !fj(x)), adi = P.filter(x => gr(x) === 'adi' && !fj(x));
-  const base = document.createElement('div'); base.innerHTML = v0.apply(this, arguments);
-  if (!EM.pvIni && !EM.sel.size) { entra.forEach(x => EM.sel.add(x.pos + '|' + x.t.id)); EM.pvIni = true; }
-  const cardDe = f => [...base.querySelectorAll('.cm-ws > .card')].find(f);
-  const cEmp = cardDe(c => c.querySelector('#emV')), cOleo = cardDe(c => /Óleo e filtros a bordo/.test(c.textContent)), cOM = cardDe(c => c.querySelector('.sk'));
-  if (cEmp) { const h = cEmp.querySelector('h2'); if (h) h.remove(); cEmp.querySelectorAll('[data-mostra]').forEach(b => b.closest('.seg') ? b.closest('.seg').remove() : b.remove()); }
-  const passos = ['Empurrador e rota', 'O que entra', 'Abrir a OM'].map((t, i) => `<div class="gu-p${i + 1 < EM.passo ? ' feito' : i + 1 === EM.passo ? ' atual' : ''}" data-pvpasso="${i + 1}" style="cursor:pointer"><i>${i + 1 < EM.passo ? '✓' : i + 1}</i><span>${t}</span></div>`).join('<div class="gu-l"></div>');
-  const nSel = EM.sel.size, cor = { venc: 'p-bad', mes: 'p-warn', emb: 'p-inf', adi: 'p-mut' }, rot = { venc: 'Vencido', mes: 'Vence no mês', emb: 'Embarcada · CTF/MFM', adi: 'Adiantar?' };
-  const linha = x => { const k = x.pos + '|' + x.t.id, g = gr(x); return `<tr><td style="width:28px"><input type="checkbox" data-sel="${k}"${EM.sel.has(k) ? ' checked' : ''}></td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}</td><td><span class="pill ${cor[g]}">${rot[g]}</span><div class="note">${esc(x.s.txt || '')}</div></td></tr>`; };
-  const porPos = L => { const pos = [...new Set(L.map(x => x.pos))]; return pos.map(p => { const I = L.filter(x => x.pos === p), m = I.filter(x => EM.sel.has(x.pos + '|' + x.t.id)).length, c = g => I.filter(x => gr(x) === g).length;
-    const res = [['venc', 'vencidos'], ['mes', 'do mês'], ['emb', 'embarcados'], ['adi', 'adiantar?']].filter(([g]) => c(g)).map(([g, l]) => c(g) + ' ' + l).join(' · ');
-    return `<details class="pv-d"><summary><b>${p === 'UN' ? 'Embarcação' : esc(posNome(v, p))}</b><span class="note"> · ${I.length} ite${I.length === 1 ? 'm' : 'ns'} (${res})</span><span class="sp"></span><span class="pill ${m ? 'p-ok' : 'p-mut'}">${m} marcado${m === 1 ? '' : 's'}</span></summary><div class="tw"><table class="t">${I.map(linha).join('')}</table></div></details>`; }).join(''); };
-  let corpo;
-  if (EM.passo === 1) corpo = `<div class="card"><h2>① Empurrador e rota</h2>${cEmp ? cEmp.innerHTML : ''}<div class="row end" style="margin-top:10px"><button class="mbtn pri" data-pvpasso="2">Próximo: o que entra →</button></div></div>`;
-  else if (EM.passo === 2) corpo = `<div class="card"><div class="row"><h2>② O que entra na OM · ${esc(v.nome)}</h2><span class="sp"></span><span class="pill ${nSel ? 'p-ok' : 'p-mut'}">${nSel} ite${nSel === 1 ? 'm' : 'ns'} marcado${nSel === 1 ? '' : 's'}</span></div>
-     <p class="note">Já vem marcado o que tem de entrar: vencidos, do mês e embarcados (o CTF/MFM faz a bordo na hora-alvo). Abra um motor para ver ou desmarcar itens.</p>
-     ${entra.length ? porPos(entra) : '<p class="note">Nada vencido, do mês ou embarcado neste empurrador.</p>'}
-     ${adi.length ? `<details class="pv-d pv-adi"><summary><b>Adiantar?</b><span class="note"> · ${adi.length} itens vencem antes de voltar (ficam fora da OM; marque se quiser adiantar)</span></summary>${porPos(adi)}</details>` : ''}
-     ${cOleo ? `<details class="pv-d"><summary><b>Óleo e filtros a bordo</b><span class="note"> · para esta viagem (FR 049_B, pelo CTF/MFM)</span></summary>${cOleo.innerHTML.replace(/<h2[\s\S]*?<\/h2>/, '')}</details>` : ''}
-     <div class="row end" style="margin-top:10px"><button class="mbtn" data-pvpasso="1">← Voltar</button><button class="mbtn pri" data-pvpasso="3" ${nSel ? '' : 'disabled'}>Próximo: abrir a OM com ${nSel} ite${nSel === 1 ? 'm' : 'ns'} →</button></div></div>`;
-  else corpo = `<div class="card"><h2>③ Abrir a OM · ${esc(v.nome)} · ${nSel} itens</h2>${cOM ? cOM.querySelector('.sk').outerHTML : '<p class="note">Volte ao passo 2 e marque os itens.</p>'}<div class="row" style="margin-top:10px"><button class="mbtn" data-pvpasso="2">← Voltar ao que entra</button></div></div>`;
-  return `<div class="cm-v"><div class="vh"><div><h1>Programar preventiva</h1><p>O que tem para abrir na frota · monte a OM de um empurrador em 3 passos e abra no Sankhya</p></div><span class="sp"></span><button class="mbtn" data-pvreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
-   <div class="cm-ws">${pvFrota(v)}<div class="card"><h2>${esc(v.nome)} · passo a passo</h2><div class="gu-ps" style="margin:0 0 8px">${passos}</div>${corpo.replace(/^<div class="card">/, '<div>')}</div></div></div>`; }; }
 // visão global: o que tem para abrir em cada empurrador (no porto primeiro)
 function pvFrota(atual) { const L = S.cfg.frota.filter(v => !foraOp(v)).map(v => { const P = painelVessel(v, viagemDe(v)).filter(x => x.t.kind === 'prog' && !x.om && !(typeof foraJanela === 'function' && foraJanela(x.t.id, v, x.pos))), c = g => P.filter(x => emGrp(v, x) === g).length;
     const G = new Set(); oms().filter(o => o.tipo !== 'C' && o.vessel === v.id && !o.excluido && o.status !== 'encerrada').forEach(o => G.add(o.num)); const st = situDe(v) ? v.situ.st : '', d = situDe(v) ? Math.max(0, Math.floor((hoje() - pD(String(v.situ.at).slice(0, 10))) / 864e5)) : null;
