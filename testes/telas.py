@@ -30,7 +30,9 @@ def servir(pasta, porta):
     class Quieto(http.server.SimpleHTTPRequestHandler):
         def log_message(self, *a): pass
     h = functools.partial(Quieto, directory=pasta)
-    s = http.server.ThreadingHTTPServer(('127.0.0.1', porta), h)
+    class Servidor(http.server.ThreadingHTTPServer):
+        request_queue_size = 128   # no Windows a fila padrão (5) derruba conexões quando o navegador pede vários arquivos juntos
+    s = Servidor(('127.0.0.1', porta), h)
     threading.Thread(target=s.serve_forever, daemon=True).start()
     return s
 
