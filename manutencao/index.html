@@ -2602,7 +2602,7 @@ AFTER.om = () => {
   m.oninput = e => { const t = e.target; if (t.type === 'file') return; if (setFrom(t)) { if (t.dataset.mf) { const [id, i] = t.dataset.mf.split('|'); t.closest('tr').classList.toggle('out', medFora(A1M[id].meds[+i], t.value)); } refresh(); autosave(); } };
   m.onchange = async e => { const t = e.target;
     if (t.id === 'addFoto') { for (const f of t.files) { const src = await comprimir(f); o.fotos = o.fotos || []; o.fotos.push({ src, tipo: o.fotos.some(x => x.tipo === 'ANTES') ? 'DEPOIS' : 'ANTES', leg: '', at: Date.now() }); } redraw(); autosave(); return; }
-    if (t.type === 'checkbox' || t.type === 'radio' || t.tagName === 'SELECT') { setFrom(t); if (t.dataset.k && /^(exec|relTerc)$/.test(t.dataset.k) || (t.dataset.k || '').includes('steps')) redraw(); else refresh(); autosave(); } };
+    if (t.type === 'checkbox' || t.type === 'radio' || t.tagName === 'SELECT') { setFrom(t); if (t.dataset.k && /^(exec|relTerc|revPlano)$/.test(t.dataset.k) || (t.dataset.k || '').includes('steps')) redraw(); else refresh(); autosave(); } };
   m.onclick = async e => {
   const ef = e.target.closest('[data-ef]'); if (ef) { const o = S.recs.get(ARG); if (!precisa(true)) return; const r = $('#efR').value; if (!r) return toast('Escolha o resultado.'); o.efRes = r; o.efData = $('#efD').value || isoD(hoje()); o.efObs = $('#efO').value.trim(); o.efBy = S.session.name; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: 'Eficácia: ' + r }); await saveRec(o); toast('Verificação registrada.'); render(); return; }
      const b = e.target.closest('button'); if (!b) return;
@@ -3653,7 +3653,7 @@ function formIIA(o) {
     ${terc ? fRad(o, 'terceiroAut', 'Autorização da Gerência (5.11.3)', ['Sim — autorização da Gerência/Diretoria', 'Não'], 's3') + fIn(o, 'scoc', 'Nº SC / OC', 's1') + fRad(o, 'relTerc', 'Relatório do fornecedor (5.8)', ['Relatório do fornecedor anexo', 'Fornecedor não emitiu — Supervisor preenche'], 's2') : ''}
     ${fDT(o, 'inicio', 'Início do reparo', 's2')}${fDT(o, 'termino', 'Término do reparo', 's2')}${fIn(o, 'rms', 'Nº das RMs', 's2')}
     ${fIn(o, 'hh', 'Horas-homem (HH)', 's2', 'inputmode="decimal"')}${fIn(o, 'custoMat', 'Custo de peças e materiais (R$)', 's2', 'inputmode="decimal"')}${fIn(o, 'custoServ', 'Custo de serviço de terceiro (R$)', 's2', 'inputmode="decimal"')}
-    ${fTA(o, 'servicos', 'Serviço executado (consultar o Anexo I · 7.2)', 's6', 3)}</div>
+    ${fTA(o, 'servicos', 'Serviço executado (consultar o Anexo I · 7.2)', 's6', 3)}${refeitosHTML(o)}</div>
     ${tabelaLivre(o, 'mats', 'Peças e materiais', ['Descrição', 'Qtd.', 'Nº da RM / NF', 'Lote', 'Validade'])}
     <details class="cdet"${(o.medsC || []).length ? ' open' : ''}><summary>Medições (se houver)</summary>${tabelaLivre(o, 'medsC', 'Medições', ['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Unidade'])}</details>
     <div class="g">${fRad(o, 'resid', 'Gerou resíduo? (5.7)', ['Não', 'Sim'], 's2')}${fMul(o, 'residT', 'Quais (se gerou)', ['Óleo usado', 'Filtros', 'Estopas/panos', 'Metais', 'Outros'], 's2')}${fIn(o, 'fr016', 'Nº FR 016_E (se gerou)', 's2')}
@@ -3664,7 +3664,7 @@ function formIIA(o) {
     ${ca ? '' : '<details class="cdet"' + ((o.causa || o.mitig) ? ' open' : '') + '><summary>Registrar causa e ação (opcional)</summary>'}<div class="g">
     ${fSel(o, 'causaCat', 'Causa da falha (ISO 14224)', CAUSAS, 's3')}${fTA(o, 'causa', 'Análise de causa raiz (5 porquês)', 's6', 2)}
     ${fTA(o, 'mitig', 'Ação corretiva (eliminação da causa raiz)', 's6', 2)}${fIn(o, 'mitigResp', 'Responsável', 's2')}${fDT(o, 'mitigPrazo', 'Prazo', 's2', 'date')}${fSel(o, 'mitigSt', 'Situação', ['Pendente', 'Em andamento', 'Concluída'], 's2')}
-    ${fRad(o, 'revPlano', 'Mudar o plano preventivo?', ['Não', 'Sim'], 's2')}${fIn(o, 'itemRev', 'Item do Anexo I a revisar', 's2')}${ca ? fDT(o, 'trPrev', 'Treinamento pós-falha (2 h · 10.3)', 's2', 'date') : ''}${typeof refeitosHTML === 'function' ? refeitosHTML(o) : ''}</div>${ca ? '' : '</details>'}</div>
+    ${fRad(o, 'revPlano', 'A falha mostra que o plano preventivo precisa mudar?', ['Não', 'Sim'], 's4')}${ca ? fDT(o, 'trPrev', 'Treinamento pós-falha (2 h · 10.3)', 's2', 'date') : ''}${o.revPlano === 'Sim' ? revPlanoHTML(o) : ''}</div>${ca ? '' : '</details>'}</div>
 
   <div class="card cblk">${blkH(5, 'Liberação para operação', 'assinaturas e aprovação do Supervisor')}<div class="g">
     ${fIn(o, 'ass|exec', 'Executor', 's2')}${fIn(o, 'ass|cmd', 'Recebido a bordo · Comandante ou Coordenador de Operações (4.7)', 's2')}${crit ? fIn(o, 'ass|coord', 'Coordenador de Operações · liberação', 's2') : ''}${fDT(o, 'liberacao', 'Liberação à operação', 's2')}${fIn(o, 'conferencia', 'Conferência documental · nome', 's2')}</div>
@@ -6931,6 +6931,7 @@ function agoraLista() {
     const ja = sem.find(x => x.txt.startsWith(cab) && x.txt.includes(' sem OM ('));   /* a mesma falha já tem linha: acrescenta o prazo nela (antes eram 3 linhas P1) */
     if (ja) { ja.txt += pz; ja.p = Math.min(ja.p, P.some(x => x.c === 'Crítica' || x.c === 'Alta') ? 1 : 2); return; }
     sem.push({ p: P.some(x => x.c === 'Crítica' || x.c === 'Alta') ? 1 : 2, txt: cab + `${P.length} falha${P.length > 1 ? 's' : ''} sem OM` + pz, btn: `<button class="mbtn sm pri" data-fr27pend="${P[0].rec}">Informar OM</button>` }); });
+  oms().filter(o => o.tipo === 'C' && !o.excluido && o.revPlano === 'Sim' && (o.itensRev || []).length && !o.revFeita).forEach(o => sem.push({ p: 2, txt: `Revisar no Anexo I: ${esc(o.itensRev.map(k => { const t = A1M[k.split('|')[1]]; return t ? t.chk || t.item : k; }).join(', '))} · corretiva OM ${esc(o.num)} · ${esc(vName(o.vessel))}`, btn: `<a class="mbtn sm" href="#om/${o.id}">Ver</a>` }));   // a falha mostrou que o plano precisa mudar
   efPend().forEach(o => sem.push({ p: 2, txt: `Verificação de eficácia da corretiva <b>${esc(o.classe)}</b> OM ${esc(o.num)} · ${esc(vName(o.vessel))} (${EF_DIAS} dias) pendente`, btn: `<a class="mbtn sm" href="#om/${o.id}">Verificar</a>` }));
   // parâmetros do MCP em viagem (bloco "Parâmetros do MCP em viagem")
   pmcDados().forEach(x => { if (!x.ul || x.st === 'ok' || x.dias > PMC_REC_D) return;
@@ -7451,21 +7452,31 @@ function exemploParam() { const out = [], F = S.cfg.frota.filter(v => !foraOp(v)
 'use strict';
 function corrRefeitos(o) { const d = String(o.termino || o.liberacao || (o.fechadoAt ? isoD(new Date(o.fechadoAt)) : '')).slice(0, 10); if (!d) return [];
   return (o.itensRefeitos || []).map(k => { const [pos, id] = k.split('|'), t = A1M[id]; if (!t) return null; const r = horEm(o.vessel, posHor(pos, t, o.vessel), d); return { pos, id, date: d, h: r ? +r.h : null }; }).filter(Boolean); }
-function refeitosHTML(o) { const v = vessel(o.vessel), L = (o.itensRefeitos || []).map(k => { const [pos, id] = k.split('|'), t = A1M[id]; return t ? `<li>${esc(id)} · ${esc(t.item)} — ${esc(t.chk || '')} <span class="note">(${esc(v ? posNome(v, pos) : pos)})</span></li>` : ''; }).join('');
-  return `<div class="f s6"><b style="font-size:13px">Serviços do Anexo I refeitos por completo nesta corretiva</b>${L ? `<ul style="margin:4px 0 6px 18px">${L}</ul>` : '<div class="note">Nenhum. Se a equipe refez um serviço do plano (ex.: trocou a correia junto com a bomba), marque: o próximo vencimento conta da corretiva, sem contar como preventiva realizada.</div>'}<button type="button" class="mbtn sm" data-refeitos="${o.id}">${L ? 'Alterar' : 'Marcar serviços refeitos'}</button></div>`; }
-function refeitosModal(id) { const o = S.recs.get(id); if (!o) return; if (!precisa(o.status === 'encerrada')) return;
-  const v = vessel(o.vessel); if (!v) return; const P = posicoes(v).concat(['UN']); let pos = P.includes(o.pos) ? o.pos : P[0]; const sel = new Set(o.itensRefeitos || []);
+const a1Lista = (o, campo) => { const v = vessel(o.vessel); return (o[campo] || []).map(k => { const [pos, id] = k.split('|'), t = A1M[id]; return t ? `<li>${esc(id)} · ${esc(t.item)} — ${esc(t.chk || '')} <span class="note">(${esc(v ? posNome(v, pos) : pos)})</span></li>` : ''; }).join(''); };
+function refeitosHTML(o) { const L = a1Lista(o, 'itensRefeitos');   // seção 3 da II-A: alimenta o cronograma
+  return `<div class="f s6"><b style="font-size:13px">Itens do Anexo I executados neste reparo</b>${L ? `<ul style="margin:4px 0 6px 18px">${L}</ul>` : '<div class="note">Nenhum. Marque só o serviço do plano feito <b>por completo</b> (ex.: trocou a mangueira, a correia): o próximo vencimento conta da data de término do reparo, sem contar como preventiva realizada.</div>'}<button type="button" class="mbtn sm" data-refeitos="${o.id}">${L ? 'Alterar' : 'Marcar itens do Anexo I'}</button></div>`; }
+function revPlanoHTML(o) { const L = a1Lista(o, 'itensRev'), f = o.revFeita;   // seção 4 da II-A: o plano (intervalo ou tarefa) precisa mudar
+  return `<div class="f s6"><b style="font-size:13px">Item do Anexo I a revisar</b>${L ? `<ul style="margin:4px 0 6px 18px">${L}</ul>` : '<div class="note">Escolha o item cujo intervalo ou tarefa a falha mostrou que precisa mudar. Vira pendência do Supervisor em “O que precisa de você agora”.</div>'}
+    <div class="row" style="gap:6px"><button type="button" class="mbtn sm" data-refeitos="${o.id}" data-campo="itensRev">${L ? 'Alterar' : 'Escolher item do Anexo I'}</button>${L && can.admin() ? (f ? `<span class="note">✓ Anexo I revisado em ${brD(isoD(new Date(f.at)))} por ${esc(f.by || '')}</span> <button type="button" class="mbtn sm" data-revfeita="${o.id}">Desfazer</button>` : `<button type="button" class="mbtn sm" data-revfeita="${o.id}">Anexo I revisado</button>`) : ''}</div></div>`; }
+function refeitosModal(id, campo = 'itensRefeitos') { const o = S.recs.get(id); if (!o) return; if (!precisa(o.status === 'encerrada')) return;
+  const rev = campo === 'itensRev';
+  const v = vessel(o.vessel); if (!v) return; const P = posicoes(v).concat(['UN']); let pos = P.includes(o.pos) ? o.pos : P[0]; const sel = new Set(o[campo] || []);
   const lista = () => { const q = BQ_NORM(($('#rfQ') || {}).value || ''); return A1.filter(t => aplica(v, pos, t) && (!q || BQ_NORM(t.id + ' ' + t.item + ' ' + (t.chk || '') + ' ' + t.eq).includes(q))).map(t => { const k = pos + '|' + t.id;
     return `<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0"><input type="checkbox" data-rfk="${esc(k)}"${sel.has(k) ? ' checked' : ''}><span><b>${esc(t.id)}</b> · ${esc(t.item)} — ${esc(t.chk || '')} <span class="note">${esc(t.freq || '')}</span></span></label>`; }).join('') || '<p class="note">Nenhum item do plano nesta posição.</p>'; };
-  modal(`<h2>Serviços do Anexo I refeitos · OM ${esc(o.num || '')}</h2><p class="note">Marque só o que foi refeito <b>por completo</b> nesta corretiva. Quando a corretiva for encerrada, o próximo vencimento desses itens conta da data de término dela. Não conta como preventiva realizada no cronograma.</p>
+  modal((rev ? `<h2>Item do Anexo I a revisar · OM ${esc(o.num || '')}</h2><p class="note">Marque o item cujo intervalo ou tarefa precisa mudar por causa desta falha. Nada muda no plano agora: fica como pendência do Supervisor até a revisão do Anexo I.</p>`
+    : `<h2>Itens do Anexo I executados · OM ${esc(o.num || '')}</h2><p class="note">Marque só o que foi feito <b>por completo</b> neste reparo. Quando a corretiva for encerrada, o próximo vencimento desses itens conta da data de término dela. Não conta como preventiva realizada no cronograma.</p>`) + `
    <div class="g"><label class="f s2">Equipamento / posição<select id="rfP">${P.map(p => `<option value="${p}"${p === pos ? ' selected' : ''}>${esc(p === 'UN' ? 'Embarcação (geral)' : posNome(v, p))}</option>`).join('')}</select></label><label class="f s4">Buscar<input id="rfQ" placeholder="nº do item, peça, serviço…"></label></div>
    <div id="rfL" style="max-height:50vh;overflow:auto">${lista()}</div><div class="note" id="rfN">${sel.size ? sel.size + ' marcado(s)' : ''}</div>
    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="rfOk">Gravar</button></div>`, true);
   const sync = () => { document.querySelectorAll('#rfL [data-rfk]').forEach(c => c.checked ? sel.add(c.dataset.rfk) : sel.delete(c.dataset.rfk)); $('#rfN').textContent = sel.size ? sel.size + ' marcado(s)' : ''; };
   $('#rfL').onchange = sync; $('#rfP').onchange = () => { sync(); pos = $('#rfP').value; $('#rfL').innerHTML = lista(); }; $('#rfQ').oninput = () => { sync(); $('#rfL').innerHTML = lista(); };
-  $('#rfOk').onclick = async () => { sync(); o.itensRefeitos = [...sel]; o.hist = (o.hist || []).concat([{ at: Date.now(), by: S.session.name, ev: 'Serviços do Anexo I refeitos: ' + (o.itensRefeitos.map(k => k.replace('|', ' ')).join(', ') || 'nenhum') }]); await saveRec(o); closeModal(); toast('Gravado.'); render(); };
+  $('#rfOk').onclick = async () => { sync(); o[campo] = [...sel]; if (rev) delete o.revFeita; o.hist = (o.hist || []).concat([{ at: Date.now(), by: S.session.name, ev: (rev ? 'Item do Anexo I a revisar: ' : 'Itens do Anexo I executados: ') + (o[campo].map(k => k.replace('|', ' ')).join(', ') || 'nenhum') }]); await saveRec(o); closeModal(); toast('Gravado.'); render(); };
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-refeitos]'); if (!b) return; e.preventDefault(); e.stopPropagation(); refeitosModal(b.dataset.refeitos); }, true);
+document.addEventListener('click', async e => { const b = e.target.closest('[data-refeitos],[data-revfeita]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+  if (b.dataset.refeitos) return refeitosModal(b.dataset.refeitos, b.dataset.campo);
+  const o = S.recs.get(b.dataset.revfeita); if (!o || !precisa(true)) return;   // o Supervisor marca quando revisou o Anexo I
+  if (o.revFeita) delete o.revFeita; else o.revFeita = { at: Date.now(), by: S.session.name };
+  o.hist = (o.hist || []).concat([{ at: Date.now(), by: S.session.name, ev: o.revFeita ? 'Anexo I revisado' : 'Revisão do Anexo I desfeita' }]); await saveRec(o); render(); }, true);
 </script>
 <script>
 /* ===== Anexar no Sankhya: OM encerrada no SMF fica pendente até o PDF ser anexado e a OM encerrada no Sankhya =====
