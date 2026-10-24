@@ -6,10 +6,10 @@ Uso (na raiz do repositório):
 
 Precisa de Python com playwright e o Chromium do playwright instalados.
 As duas versões abrem com a mesma data e o mesmo sorteio (dados de exemplo iguais), logadas como Supervisor, em modo local.
-Para cada tela grava o HTML normalizado em testes/saida/<ref|atual>/ e mostra IGUAL ou DIFERENTE.
+Para cada tela grava o HTML normalizado e o estilo calculado de cada elemento em testes/saida/<ref|atual>/ e mostra IGUAL ou DIFERENTE.
 Uma tela DIFERENTE numa limpeza de código quer dizer que a limpeza mudou o que o usuário vê: desfaça ou explique.
 """
-import argparse, asyncio, datetime, difflib, functools, http.server, os, re, shutil, subprocess, sys, tempfile, threading
+import argparse, asyncio, datetime, difflib, mimetypes, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 from playwright.async_api import async_playwright
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,24 +21,32 @@ INICIO = """
 (() => { let s = 20261024; Math.random = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
   try { sessionStorage.setItem('sgmf_ok', '1'); localStorage.clear(); } catch (e) {} })();
 """
+ESTILO = """() => { const h = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); } return (x >>> 0).toString(36); };
+  const um = (el, ps) => { const c = getComputedStyle(el, ps); let s = ''; for (let i = 0; i < c.length; i++) s += c[i] + ':' + c.getPropertyValue(c[i]) + ';'; return s.split(location.origin).join(''); };   // url() vem com a porta do servidor
+  const nome = el => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.classList.length ? '.' + [...el.classList].join('.') : '');
+  return ['nav', 'main'].flatMap(id => [...document.getElementById(id).querySelectorAll('*')].map(el => nome(el) + ' ' + h(um(el, null) + '|' + um(el, '::before') + '|' + um(el, '::after')))).join(String.fromCharCode(10)); }"""   # estilo calculado de cada elemento: pega mudança de CSS que o HTML não mostra
 NORMALIZA = [(re.compile(r'\b(om|r|hor|lub|ap|cmp|base|fr27|situ|saida|param)-[a-z0-9]{6,9}-[a-z0-9]{5}\b'), r'\1-ID'),
              (re.compile(r'\d{1,2}:\d{2}(:\d{2})?'), 'HH:MM'),
              (re.compile(r'Modo local[^<]*'), 'Modo local…'), (re.compile(r'\d+ (aguardando envio|não enviados?)'), 'N \\1')]   # fila de envio muda com o tempo
 
 
-def servir(pasta, porta):
-    class Quieto(http.server.SimpleHTTPRequestHandler):
-        def log_message(self, *a): pass
-    h = functools.partial(Quieto, directory=pasta)
-    class Servidor(http.server.ThreadingHTTPServer):
-        request_queue_size = 128   # no Windows a fila padrão (5) derruba conexões quando o navegador pede vários arquivos juntos
-    s = Servidor(('127.0.0.1', porta), h)
-    threading.Thread(target=s.serve_forever, daemon=True).start()
-    return s
+PASTAS = {}   # endereço → pasta: o Playwright entrega os arquivos direto do disco (o servidor HTTP do Python no Windows cortava conexões no meio)
+
+
+async def entregar(rota, pasta):
+    caminho = urllib.parse.unquote(urllib.parse.urlsplit(rota.request.url).path).lstrip('/')
+    arq = os.path.join(pasta, *caminho.split('/'))
+    if os.path.isdir(arq):
+        arq = os.path.join(arq, 'index.html')
+    if not os.path.isfile(arq):
+        return await rota.fulfill(status=404, body='')
+    tipo = mimetypes.guess_type(arq)[0] or 'application/octet-stream'
+    await rota.fulfill(status=200, body=open(arq, 'rb').read(), headers={'Content-Type': tipo + ('; charset=utf-8' if tipo.startswith('text/') or tipo.endswith('javascript') else '')})
 
 
 async def fotografar(b, url):
     ctx = await b.new_context(viewport={'width': 1366, 'height': 900})
+    await ctx.route(url + '/**', lambda r: entregar(r, PASTAS[url]))
     pg = await ctx.new_page()
     erros = []
     pg.on('pageerror', lambda e: erros.append(str(e)))
@@ -68,6 +76,7 @@ async def fotografar(b, url):
           try { history.replaceState(null, '', '#' + v + (a ? '/' + a : '')); VIEW = v; ARG = a; render(); await new Promise(r => setTimeout(r, 500)); VIEW = v; ARG = a; render(); } catch (e) { return 'ERRO: ' + e.message; }
           await new Promise(r => setTimeout(r, 500)); return document.getElementById('nav').innerHTML + '\\n=====\\n' + document.getElementById('main').innerHTML; }""", [v, a])
         fotos[t] = html
+        fotos['estilo ' + t] = await pg.evaluate(ESTILO)
     # Programar preventiva nos passos 2 (o que entra) e 3 (abrir a OM)
     for nome, js in (('emitir/v3 passo 2', "EM.passo = 2; EM.draft = null;"), ('emitir/v3 passo 3', "EM.draft = { emb: true };")):
         fotos[nome] = await pg.evaluate("async () => { EM.sel.clear(); EM.draft = null; EM.vid = null; EM.pvVid = null; EM.pvIni = false; EM.passo = 1; VIEW = 'emitir'; ARG = 'v3'; render(); " + js + " render(); await new Promise(r => setTimeout(r, 400)); const h = document.getElementById('main').innerHTML; EM.draft = null; EM.passo = 1; return h; }")
@@ -93,13 +102,12 @@ async def principal(ref):
     tmp = tempfile.mkdtemp(prefix='smf-ref-')
     try:
         subprocess.run(['git', '-C', RAIZ, 'worktree', 'add', '--detach', tmp, ref], check=True, capture_output=True)
-        s1, s2 = servir(tmp, 8781), servir(RAIZ, 8782)
+        PASTAS.update({'http://127.0.0.1:8781': tmp, 'http://127.0.0.1:8782': RAIZ})
         async with async_playwright() as p:
             b = await p.chromium.launch()
             base, e1 = await fotografar(b, 'http://127.0.0.1:8781')
             atual, e2 = await fotografar(b, 'http://127.0.0.1:8782')
             await b.close()
-        s1.shutdown(); s2.shutdown()
     finally:
         subprocess.run(['git', '-C', RAIZ, 'worktree', 'remove', '--force', tmp], capture_output=True)
         shutil.rmtree(tmp, ignore_errors=True)
