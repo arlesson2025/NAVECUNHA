@@ -2728,14 +2728,10 @@ async function baixarPDF(pages, nome) { toast('Gerando PDF…', 1800); try { con
    SMF · indicadores, relatório mensal, administração, inicialização
    ===================================================================== */
 function falhasPorSistema(ini, fim) { const c = {}; oms().filter(o => ehFalha(o) && pD(o.abertura) >= ini && pD(o.abertura) < fim).forEach(o => { const s = (o.sistema || '?').replace(/^\d+\.0 /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração').replace('Alimentação de Combustível', 'Combustível').replace('Salvaguarda e Flutuabilidade', 'Salvaguarda').replace('Sinalização e Comunicação', 'Comunicação').replace('Resposta a Emergências', 'Emergências'); c[s] = (c[s] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1]); }
-function emDiaPorSistema() { const c = {}; S.cfg.frota.forEach(v => painelVessel(v).forEach(x => { if (x.s.st === 'cond' || x.s.st === 'sem') return; const s = x.t.sis.replace(/^\d+\. /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração').replace('Alimentação de Combustível', 'Combustível').replace('Salvaguarda e Flutuabilidade', 'Salvaguarda').replace('Sinalização e Comunicação', 'Comunicação').replace('Resposta a Emergências', 'Emergências').replace('Fainas de Amarra e Carga', 'Amarra').replace('Auxílio à Navegação', 'Aux. navegação'); c[s] = c[s] || [0, 0]; c[s][0]++; if (x.s.st !== 'venc' || x.om) c[s][1]++; })); return Object.entries(c).map(([k, [t, ok]]) => [k, ok / t * 100]).sort((a, b) => a[1] - b[1]); }
+/* Indicadores num bloco só (24/10/2026): KPIs da NP 9, riscos, mitigação, resumo do mês e carga do cronograma */
 function vKpi() {
-  const K = kpis(), d = hoje(), m12 = new Date(d); m12.setFullYear(m12.getFullYear() - 1);
+  const K = kpis();
   const labs = K.ms.map(x => x.lab), di = K.disp[5], mtbf = K.mtbfNow, mttr = K.mttr[5], bk = K.bk, pr = K.pred[3], ft = K.fotosSem;
-  const venc = []; S.cfg.frota.forEach(v => painelVessel(v).filter(x => x.s.st === 'venc' && !x.om).forEach(x => venc.push(x)));
-  const pord = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 }; venc.sort((a, b) => pord[a.t.prio] - pord[b.t.prio]);
-  const ab = oms().filter(o => o.status !== 'encerrada');
-  const pred = []; S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => { const t = A1M['1.1.29']; if (!aplica(v, pos, t)) return; const s = situacao(v, pos, t); pred.push({ v, pos, s }); }));
   return `<div class="vh"><div><h1>Indicadores de desempenho (KPI) · NP 055</h1><p>KPIs do item 9, calculados das OMs, dos horímetros e das corretivas registradas no SMF. Passe o mouse nos gráficos para ver os valores.</p></div><span class="sp"></span><a class="mbtn" href="#rel">Relatório mensal</a></div>
   <div class="kgrid">
    ${kpiCard('Disponibilidade da frota', di, '%', '≥ 95%', di >= 95, lineChart(K.disp, labs, 95, '%', 1), '(h calendário − h indisponíveis por manutenção) ÷ h calendário × 100. Indisponível: da interdição à liberação, mais as horas paradas em preventiva.', 'Mensal')}
@@ -2745,18 +2741,7 @@ function vKpi() {
    ${kpiCard('Cumprimento do plano preditivo', pr, '%', '≥ 80%', pr >= 80, lineChart(K.pred, K.qs.map(x => x.lab), 80, '%', 0), 'análises de óleo (1.1.29) e avaliações de tendência (1.1.30) realizadas ÷ programadas no trimestre × 100', 'Trimestral', 0)}
    ${kpiCard('Conformidade de fotos', ft, '%', '100%', ft >= 99.95, lineChart(K.fotos, labs, 100, '%', 0), 'OMs encerradas com foto ANTES e DEPOIS ÷ OMs encerradas × 100. Card: últimos 7 dias; gráfico: por mês.', 'Semanal', 0)}
   </div>
-  <div class="two">
-   <div class="card"><h2>Falhas Crítica/Alta por sistema · 12 meses</h2>${hbar(falhasPorSistema(m12, new Date(d.getTime() + 1)), '', null)}</div>
-  </div>
-  <div class="two">
-   <div class="card"><h2>Aderência ao plano preventivo por sistema</h2>${hbar(emDiaPorSistema(), '%', null)}<div class="note">Em dia = não vencido ou já com OM aberta. Itens sem histórico não entram.</div></div>
-   <div class="card"><h2>OMs abertas · tempo de resposta</h2><div class="tw" style="max-height:330px"><table class="t"><thead><tr><th>OM</th><th>Tipo</th><th>Embarcação</th><th>Situação</th></tr></thead><tbody>
-    ${ab.map(o => `<tr class="click" data-open="${o.id}"><td class="mono">${esc(o.num)}</td><td>${tipoPill(o)}</td><td>${esc(vName(o.vessel))} ${posTag(o.pos)}</td><td>${omAtrasada(o) ? '<span class="pill p-bad">Início em atraso</span>' : '<span class="pill p-ok">No prazo</span>'} <span class="note">${omStatusTxt(o)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="note">Nenhuma OM aberta.</td></tr>'}</tbody></table></div></div>
-  </div>
-  <div class="card"><div class="row"><h2>Preventivas vencidas sem OM</h2><span class="sp"></span><span class="pill ${venc.length ? 'p-bad' : 'p-ok'}">${venc.length} itens</span></div><div class="tw" style="max-height:360px"><table class="t"><thead><tr><th>Embarcação</th><th>Pos.</th><th>Nº</th><th>Item</th><th>Prioridade</th><th>Situação</th></tr></thead><tbody>
-   ${venc.map(x => `<tr class="click" onclick="go('emitir/${x.v.id}')"><td>${esc(x.v.nome)}</td><td>${posTag(x.pos)}</td><td class="mono">${x.t.id}</td><td>${esc(x.t.chk)}</td><td>${x.t.prio === 'Crítica' ? '<span class="pill p-bad">Crítica · bloqueia saída</span>' : x.t.prio}</td><td class="note">${esc(x.s.txt)}</td></tr>`).join('') || '<tr><td colspan="6" class="note">Nenhuma preventiva vencida.</td></tr>'}</tbody></table></div></div>
-  <div class="card"><h2>Preditiva · análise de óleo semestral do MCP (1.1.29)</h2><div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Pos.</th><th>Última coleta</th><th>Situação</th></tr></thead><tbody>
-   ${pred.map(x => `<tr><td>${esc(x.v.nome)}</td><td>${posTag(x.pos)}</td><td class="mono">${x.s.L ? brD(x.s.L.date) : '—'}</td><td>${pillSt(x.s.st)} <span class="note">${esc(x.s.txt || '')}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+  ` + riscoHTML() + mitigHTML() + resumoMesHTML() + kpiCronoCard();
 }
 
 /* ---------- administração ---------- */
@@ -4113,9 +4098,7 @@ document.addEventListener('click', () => setTimeout(() => { try { vidrificar($('
    (Anexo III) e fotos sincronizadas pelo Google Drive
    ===================================================================== */
 'use strict';
-const brl = n => 'R$ ' + nf(n, 0);
 const numv = v => { const x = parseFloat(String(v == null ? '' : v).replace(/\./g, '').replace(',', '.')); return isNaN(x) ? 0 : x; };
-const custoOM = o => numv(o.custoMat) + numv(o.custoServ);
 
 /* ---------- 1 · análise de falhas por modo e causa ---------- */
 function tecFalhas(meses, fim) {
@@ -4214,29 +4197,6 @@ function laudoModal(vid, pos) {
 }
 
 /* ---------- 3 · indicadores técnicos (globais) ---------- */
-function tecKpis(ini, fim) {
-  const noP = (d, a, b) => d && d >= a && d < b;
-  const P = oms().filter(o => o.tipo === 'P' && o.status === 'encerrada' && noP(new Date(o.fechadoAt), ini, fim)), C = oms().filter(o => o.tipo === 'C' && noP(pD(o.abertura), ini, fim));
-  const plan = P.length + C.length ? P.length / (P.length + C.length) * 100 : null;
-  const comAlvo = P.filter(o => o.alvoH && o.hreal), noPrazo = comAlvo.filter(o => +o.hreal <= +o.alvoH).length, prazo = comAlvo.length ? noPrazo / comAlvo.length * 100 : null;
-  const resp = C.filter(o => o.inicio && o.abertura && CLASSES[o.classe]).map(o => { const h = (pD(o.inicio) - pD(o.abertura)) / 36e5, lim = Math.max(1, CLASSES[o.classe].h); return { o, h, ok: h <= lim }; });
-  const respOk = resp.length ? resp.filter(r => r.ok).length / resp.length * 100 : null;
-  const F12 = falhasDados(12).filter(ehFalha), reinc = F12.length ? F12.filter(o => o._reinc).length / F12.length * 100 : null;
-  const ver = oms().filter(o => o.tipo === 'C' && o.efRes), efic = ver.length ? ver.filter(o => o.efRes === 'Eficaz').length / ver.length * 100 : null;
-  const T = P.concat(oms().filter(o => o.tipo === 'C' && o.status === 'encerrada' && noP(new Date(o.fechadoAt), ini, fim)));
-  const hh = T.reduce((a, o) => a + numv(o.hh), 0), custo = T.reduce((a, o) => a + custoOM(o), 0);
-  const porSis = {}; T.forEach(o => { const c = custoOM(o); if (!c) return; const s = o.tipo === 'P' ? 'Preventiva' : String(o.sistema || '?').replace(/^\d+\.0 /, ''); porSis[s] = (porSis[s] || 0) + c; });
-  const porB = {}; T.forEach(o => { const c = custoOM(o); if (c) porB[vName(o.vessel)] = (porB[vName(o.vessel)] || 0) + c; });
-  return { P, C, plan, prazo, comAlvo: comAlvo.length, noPrazo, resp, respOk, reinc, F12: F12.length, efic, ver: ver.length, hh, custo, porSis: Object.entries(porSis).sort((a, b) => b[1] - a[1]), porB: Object.entries(porB).sort((a, b) => b[1] - a[1]) };
-}
-function tecKpiCard(ini, fim, rot) {
-  const K = tecKpis(ini, fim), t = (v, l, meta, ok, sub) => `<div class="card mini ${v == null ? '' : ok ? 'ok' : 'bad'}"><b>${v == null ? '—' : v}</b><span>${l}</span><small class="note">${meta}${sub ? ' · ' + sub : ''}</small></div>`;
-  return `<div class="card tkc" style="display:block"><div class="row"><h2>Indicadores técnicos · ${rot}</h2><span class="sp"></span><span class="note">referências de classe mundial (SMRP / ABRAMAN)</span></div>
-   <div class="kgrid six tkg" style="width:100%">${t(K.plan != null ? nf(K.plan, 0) + '%' : null, 'Índice de trabalho planejado', 'meta ≥ 80%', K.plan >= 80, K.P.length + ' prev. · ' + K.C.length + ' corr.')}${t(K.prazo != null ? nf(K.prazo, 0) + '%' : null, 'Cumprimento da preventiva (PMC)', 'meta ≥ 90%', K.prazo >= 90, K.noPrazo + ' de ' + K.comAlvo)}${t(K.respOk != null ? nf(K.respOk, 0) + '%' : null, 'Tempo de resposta dentro do prazo da classe', 'meta 100% (5.5.1)', K.respOk >= 99.9, K.resp.length + ' corretiva(s)')}
-   ${t(K.reinc != null ? nf(K.reinc, 0) + '%' : null, 'Taxa de reincidência de falhas', 'meta ≤ 10% · 12 meses', K.reinc <= 10, K.F12 + ' falhas')}${t(K.efic != null ? nf(K.efic, 0) + '%' : null, 'Eficácia das ações corretivas', 'meta ≥ 90%', K.efic >= 90, K.ver + ' verificada(s)')}${t(K.hh ? nf(K.hh, 0) + ' HH' : null, 'Horas-homem apropriadas (HH)', K.custo ? brl(K.custo) + ' em peças e serviços' : 'custo não lançado', true, '')}</div>
-   ${K.porSis.length ? `<div class="two" style="margin-top:12px"><div><h3 style="margin:0 0 6px;font-size:14px">Custo por sistema</h3>${hbar(K.porSis.slice(0, 6).map(([k, v]) => [k, Math.round(v)]), 'R$ ')}</div><div><h3 style="margin:0 0 6px;font-size:14px">Custo por embarcação</h3>${hbar(K.porB.slice(0, 6).map(([k, v]) => [k, Math.round(v)]), 'R$ ')}</div></div>` : ''}</div>`;
-}
-{ const v0 = vKpi; vKpi = function () { const d = hoje(); return v0() + tecKpiCard(mesIni(d.getFullYear(), d.getMonth()), mesIni(d.getFullYear(), d.getMonth() + 1), MESESL[d.getMonth()].toLowerCase() + ' até hoje'); }; }
 // horas-homem e custo também na preventiva (II-B)
 { const f0 = formIIB; formIIB = function (o) { return f0(o) + `<div class="card">${sec('HH', 'Horas-homem e custo', 'apropriação de mão de obra e custos (KPI)')}<div class="g">${fIn(o, 'hh', 'Horas-homem (HH)', 's2', 'inputmode="decimal"')}${fIn(o, 'custoMat', 'Peças e materiais (R$)', 's2', 'inputmode="decimal"')}${fIn(o, 'custoServ', 'Serviço de terceiro (R$)', 's2', 'inputmode="decimal"')}</div></div>`; }; }
 
@@ -6581,7 +6541,6 @@ function riscoHTML() {
     </tbody></table></div><div class="note">Até óleo = horas até a troca do MCP mais próxima · Calibração = dias até a próxima calibração · negativo = vencido</div></div>`;
   return cab + `<div class="two">${c1}${c2}</div>` + c3;
 }
-{ const k0 = vKpi; vKpi = function () { const h = k0(), i = h.indexOf('<div class="two">'); return (i < 0 ? h : h.slice(0, i)) + riscoHTML(); };  }
 
 /* layout da tela Indicadores volta ao padrão uma vez (cards novos + gestão de riscos logo abaixo) */
 { const a0 = layApply; layApply = function () { try { if (typeof LAY !== 'undefined' && LAY && Object.keys(LAY).length && !LAY._kr3) { delete LAY.kpi; LAY._kr1 = LAY._kr2 = LAY._kr3 = 1; kvSet('layout', LAY).catch(() => { }); } } catch (e) { } return a0.apply(this, arguments); }; }
@@ -6623,7 +6582,6 @@ function mitigHTML() {
   </tbody></table></div>` : '<div class="note">Nenhuma falha registrada nos últimos 12 meses.</div>'}
   <div class="note" style="margin-top:8px">Últimos ${FALPER} meses · clique numa linha para abrir a OM · a medida é registrada na própria corretiva (campo A9 · Análise) · reincidência = mesma falha no mesmo empurrador depois da ação.</div></div>`;
 }
-{ const k1 = vKpi; vKpi = function () { return k1() + mitigHTML(); };  }
 document.addEventListener('click', e => { const p = e.target.closest('[data-falper]'); if (!p || VIEW !== 'kpi') return; FALPER = +p.dataset.falper; render(); });
 { const st = document.createElement('style'); st.textContent = `
 .card.mg h2{margin:0}.mg-sub{margin:2px 0 10px;color:#334155;font-size:13.5px}
@@ -6682,7 +6640,7 @@ function resumoMesHTML() {
   const c2 = `<div class="card rm" data-lk="Pareto por sistema"><h2>O que mais quebrou · Pareto por sistema</h2><p class="rm-sub">Falhas registradas no período (${fal.length}) e % acumulado</p>${E.length ? rmPareto(E) : '<div class="note" style="padding:30px 0">Nenhuma falha registrada no período.</div>'}</div>`;
   return cab + `<div class="two">${c1}${c2}</div>`;
 }
-{ const k2 = vKpi; vKpi = function () { return k2() + resumoMesHTML(); }; VX.kpi = vKpi; }
+VX.kpi = vKpi;
 document.addEventListener('click', e => { const b = e.target.closest('[data-rmm]'); if (!b) return; RM_SEL = b.dataset.rmm === 'todos' ? 'todos' : +b.dataset.rmm; render(); });
 { const st = document.createElement('style'); st.textContent = `.card.rm h2{margin:0;font-size:15px}.rm-sub{margin:3px 0 8px;color:#334155;font-size:13px}.rm-sec{align-items:center!important;flex-wrap:wrap}`; document.head.appendChild(st); }
 
@@ -8468,9 +8426,8 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-omsf
   [...ws.querySelectorAll(':scope > .card')].forEach(c => { if (c.querySelector('#cfGraf')) c.remove(); });
   t.querySelectorAll('label, th').forEach(x => x.childNodes.forEach(n => { if (n.nodeType === 3 && /Embarcação/.test(n.textContent)) n.textContent = n.textContent.replace('Embarcação', 'Empurrador'); }));
   return t.innerHTML; }; }
-{ const v0 = VX.kpi || vKpi; VX.kpi = function () { let g = ''; try { const ms = PRV.ms; PRV.ms = null; const T = prFrotaV2(hoje().getFullYear()); PRV.ms = ms;
-    g = `<div class="card"><h2>Cronograma preventivo · carga e execução por mês · frota ${hoje().getFullYear()}</h2>${prGrafico(T.F, T.hm, T.sel)}</div>`; } catch (e) { }
-  return v0.apply(this, arguments) + g; }; }
+function kpiCronoCard() { try { const ms = PRV.ms; PRV.ms = null; const T = prFrotaV2(hoje().getFullYear()); PRV.ms = ms;
+    return `<div class="card"><h2>Cronograma preventivo · carga e execução por mês · frota ${hoje().getFullYear()}</h2>${prGrafico(T.F, T.hm, T.sel)}</div>`; } catch (e) { return ''; } }
 { const v0 = VX.matriz; VX.matriz = function () { const t = document.createElement('div'); t.innerHTML = v0.apply(this, arguments);
   const c = t.querySelector('.a1-counts'); if (c) c.remove();
   const pr = t.querySelectorAll('.vh [data-a1pr]'); if (pr[0]) pr[0].textContent = '🖨 Imprimir';
