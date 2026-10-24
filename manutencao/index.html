@@ -7972,9 +7972,40 @@ function anxFolhasFotos(o, L, ini, tot, sobra) {
      <div class="ph9">${ch.map((x, j) => `<figure><div class="im"><img src="${x.src}" alt=""></div><figcaption><b>${ini + k * ANX_FPP + j + 1} · ${esc(x.tipo === 'FORMULÁRIO ASSINADO' ? 'FORMULÁRIO' : x.tipo)}</b>${x.leg ? ' · ' + esc(x.leg) : ''}</figcaption></figure>`).join('')}</div>
      ${ult && sobra ? `<div class="note" style="margin-top:6px">Mais ${sobra} foto${sobra > 1 ? 's' : ''} ${sobra > 1 ? 'ficam' : 'fica'} na OM no SMF e no Google Drive (o anexo tem no máximo ${ANX_MAX} folhas).</div>` : ''}</div>${FOOT('@K')}</div>`); }
   return out; }
-function anxMax5(paginas, o) {
+function anxMax5(paginas, o) {   // capa + até 5 folhas (formulário e fotos) + contracapa; capa e contracapa não contam no limite
   const L = anxFotos(o), livres = Math.max(0, ANX_MAX - paginas.length), cabe = Math.min(L.length, livres * ANX_FPP);
-  return numerar(paginas.concat(anxFolhasFotos(o, L.slice(0, cabe), 0, 0, L.length - cabe)));
+  return numerar([anxCapa(o)].concat(paginas, anxFolhasFotos(o, L.slice(0, cabe), 0, 0, L.length - cabe), [anxContra()]));
+}
+/* capa e contracapa do Anexo II no modelo do documento controlado (Anexo_II_Registro_de_Manutencao_NP055, Rev. 00) */
+const ANX_SGI = { efet: '10/10/2026', valid: '17/04/2028', rev: '00', ed: '00', elab: 'Arlissom Azevedo', verif: 'Samy Lins', aprov: 'Conforme NP Navecunha 055 Rev. 04' };
+const ANX_REFS = [['NP Navecunha 055, item 4.7', 'Aceite técnico do Comandante'], ['NP Navecunha 055, item 4.8', 'Controle documental e retenção por 10 anos'], ['NP Navecunha 055, item 5.2', 'Registro exigido por tipo e classe de manutenção'],
+  ['NP Navecunha 055, item 5.4.1', 'Prazos de comunicação, RNC e nova inspeção de segurança'], ['NP Navecunha 055, item 5.5.1', 'Classificação de criticidade e liberação formal pós-falha Crítica'], ['NP Navecunha 055, item 5.7', 'Gestão de resíduos e comprovante do SGI'],
+  ['NP Navecunha 055, item 5.8', 'Inspeção final, relatório de terceiros e registro fotográfico'], ['NP Navecunha 055, item 5.9', 'Lote e validade de lubrificantes'], ['NP Navecunha 055, item 5.11', 'Liberação de segurança do SESMT e autorização de terceiros'],
+  ['NP Navecunha 055, itens 7.2 e 7.4', 'Uso do Anexo II nas preventivas e preditivas'], ['NP Navecunha 055, item 10.3', 'Treinamento pós-falha Crítica ou Alta'], ['Anexo I – Matriz de Manutenção Preventiva', 'Especificações, intervalos e procedimento executivo'],
+  ['FR 027_L – Check-list dos Empurradores', 'Origem da demanda (inspeção de chegada e saída)'], ['FR 049_B – Troca de óleo e filtros', 'Registro complementar da troca de óleo e filtros'], ['FR 016_E – Entrega de resíduos ao SGI', 'Comprovante de destinação de resíduos'],
+  ['RNC – Relatório de Não Conformidade', 'Análise de causa raiz nas falhas Crítica e Alta'], ['OM e SOLICITA (Sankhya)', 'Ordem de manutenção e solicitação de compra vinculadas']];
+function anxCapa(o) {
+  const c = o.tipo === 'C', B = 'border:1px solid #1F2A44', cel = (lab, v, x) => `<div style="padding:6px 10px;${x || ''}"><div style="font-size:8.5px;letter-spacing:.06em;color:#5F6B7A;text-transform:uppercase">${lab}</div><div style="font-size:12px;font-weight:600;color:#1F2A44">${v}</div></div>`;
+  const ln = (cols, cells) => `<div style="display:grid;grid-template-columns:${cols};border-bottom:1px solid #1F2A44">${cells}</div>`, sep = 'border-left:1px solid #1F2A44';
+  const dado = (lab, v, span) => `<div style="padding:6px 8px;border:1px solid #C7CED8;margin:-1px 0 0 -1px${span ? `;grid-column:span ${span}` : ''}"><div style="font-size:8.5px;color:#5F6B7A;text-transform:uppercase">${lab}</div><div style="font-size:12px;min-height:16px">${esc(v || '') || '&nbsp;'}</div></div>`;
+  const exec = o.exec === 'Terceiro' ? 'Terceiro' : o.exec ? 'Equipe própria' : '', fim = String(c ? o.termino || o.liberacao || '' : o.dreal || '').slice(0, 10);
+  return `<div class="sheet"><div style="${B};height:1050px;margin:0;display:flex;flex-direction:column;background:#fff">
+    ${ln('1.1fr 1.6fr 1.1fr', `<div style="display:flex;gap:14px;align-items:center;justify-content:center;padding:8px"><img src="${LOGOS.vda}" style="height:46px" alt=""><img src="${LOGOS.nav}" style="height:42px" alt=""></div><div style="${sep};display:flex;align-items:center;justify-content:center;font-size:22px;letter-spacing:.3em;font-weight:600;color:#1F2A44">ANEXO</div>${cel('Doc. nº', 'NP Navecunha 055 – Anexo II', sep)}`)}
+    ${ln('2.7fr 1.1fr', cel('Título', 'Registro de Manutenção – Empurradores Fluviais') + cel('Página', '1 de @N', sep))}
+    ${ln('1.35fr 1.35fr .55fr .55fr', cel('Data de efetivação', ANX_SGI.efet) + cel('Data de validade', ANX_SGI.valid, sep) + cel('Rev.', ANX_SGI.rev, sep) + cel('Ed.', ANX_SGI.ed, sep))}
+    ${ln('2.7fr 1.1fr', cel('Origem', 'NBR ISO 9001:2015, ISO 14001:2015 e ISO 45001:2018') + cel('Aplicável à', 'Navegação Cunha Ltda.', sep))}
+    <div style="flex:1;padding:70px 60px 0">
+      <div style="font-size:44px;font-weight:700;color:#1F2A44;line-height:1">Anexo II</div><div style="font-size:21px;color:#1F2A44;margin-top:10px">Registro de Manutenção</div><div style="font-size:13px;color:#5F6B7A;margin-top:8px">Empurradores Fluviais</div>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:60px"><span style="background:#1F2A44;color:#fff;font-weight:700;font-size:11px;padding:4px 10px">${c ? 'II-A' : 'II-B'}</span><div><div style="font-size:14px;color:#1F2A44">${c ? 'Manutenção Corretiva' : 'Manutenção Preventiva e Preditiva'}</div><div style="font-size:10px;color:#5F6B7A">${c ? 'Classe ' + esc(o.classe || '') + (o.rnc ? ' · RNC ' + esc(o.rnc) : '') : 'Preventiva sistemática e preditiva por condição'}</div></div></div>
+      <div style="margin-top:60px;font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#1F2A44">DADOS DO REGISTRO</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 2fr;margin-top:6px;padding:1px 0 0 1px">${dado('Nº da O.M. (Sankhya)', o.num)}${dado('Nº da SC / OC', o.scoc)}${dado('Nº das RMs (requisições de material)', o.rms)}${dado('Embarcação', vName(o.vessel), 2)}${dado('Data de conclusão', fim ? brD(fim) : '')}${dado('Executado por', exec)}${dado('Nome / função ou empresa / responsável técnico', o.execn, 2)}</div>
+      <p style="font-size:9px;color:#5F6B7A;margin-top:60px">Documento controlado pelo SGI. Propriedade da Navegação Cunha Ltda. É proibida a reprodução, a cessão a terceiros ou o uso fora da finalidade a que se destina sem autorização. Cópia impressa não controlada, exceto a distribuída a bordo.</p></div>
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;border-top:1px solid #1F2A44;font-size:11px">
+      <div style="padding:6px 10px"><div style="display:grid;grid-template-columns:50px 90px 1fr;font-size:8.5px;color:#5F6B7A;text-transform:uppercase"><span>Rev.</span><span>Data</span><span>Descrição</span></div><div style="display:grid;grid-template-columns:50px 90px 1fr;margin-top:4px"><span>${ANX_SGI.rev}</span><span>${ANX_SGI.efet}</span><span>Emissão inicial</span></div></div>
+      <div style="${sep}">${cel('Área responsável', 'Manutenção', 'border-bottom:1px solid #1F2A44')}<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #1F2A44">${cel('Elaborado por', ANX_SGI.elab)}${cel('Verificado por', ANX_SGI.verif, sep)}</div>${cel('Aprovação', ANX_SGI.aprov)}</div></div></div>${FOOT(1)}</div>`;
+}
+function anxContra() {
+  return `<div class="sheet">${HDR()}<div class="body"><div style="font-size:18px;color:#1F2A44;margin:6px 0 10px;border-bottom:1px solid #C7CED8;padding-bottom:6px">Referências</div>${tbl(['Documento / item', 'Uso neste anexo'], ANX_REFS, ['42%', '58%'])}</div>${FOOT(0)}</div>`;
 }
 function docIIBOM(P) {
   P = P.slice().sort((a, b) => (a.parte || 0) - (b.parte || 0));
