@@ -2426,10 +2426,6 @@ async function abrirPdfNuvem(o) {
    ===================================================================== */
 const MX = { q: '', sis: '', open: '' };
 function vMatriz() {}
-AFTER.matriz = () => { const m = $('#main');
-  m.oninput = e => { if (e.target.id === 'mxQ') { MX.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#mxQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); } };
-  m.onchange = e => { if (e.target.id === 'mxS') { MX.sis = e.target.value; render(); } };
-  m.onclick = e => { const r = e.target.closest('[data-mx]'); if (r) { MX.open = MX.open === r.dataset.mx ? '' : r.dataset.mx; render(); } }; };
 
 /* =====================================================================
    SMF · Anexo II (II-B preventiva/preditiva e II-A corretiva)
@@ -4343,25 +4339,29 @@ let CR = { v: '', prio: '', sis: '' };
 /* ---------- 10 · Plano de manutenção (Anexo I) no modelo do GitHub: agrupado por sistema e equipamento ---------- */
 MX.prio = MX.prio || ''; MX.ab = MX.ab || new Set();
 const PRIO_C = { 'Crítica': 'cr', 'Alta': 'al', 'Média': 'me', 'Baixa': 'ba' };
+/* Anexo I num bloco só (24/10/2026): cabeçalho com Imprimir e PDF completo, e a lista dentro do cartão "Itens do plano" (antes eram 3 camadas por cima) */
 vMatriz = function () {
   const q = MX.q.toLowerCase();
   const l = A1.filter(t => t.kind !== 'sup' && (!MX.sis || t.sis.startsWith(MX.sis)) && (!MX.prio || t.prio === MX.prio) && (!q || [t.id, t.eqn, t.item, t.chk, t.desc, t.norm].join(' ').toLowerCase().includes(q)));
-  const nAj = Object.keys(S.cfg.intervalos || {}).length, cont = k => A1.filter(t => t.kind !== 'sup' && t.prio === k).length;
   const grupos = []; l.forEach(t => { let g = grupos[grupos.length - 1]; if (!g || g.sis !== t.sis) { g = { sis: t.sis, eqs: [] }; grupos.push(g); } let e = g.eqs[g.eqs.length - 1]; if (!e || e.eqn !== t.eqn) { e = { eq: t.eq, eqn: t.eqn, eqd: t.eqd, itens: [] }; g.eqs.push(e); } e.itens.push(t); });
   const freq = t => { const ov = (S.cfg.intervalos || {})[t.id], iv = intervalo(t); return `<b class="a1-fq">${esc(t.freq)}</b>${ov ? `<div><span class="pill p-warn">ajustado: ${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' meses' : ''].filter(Boolean).join(' ou ')}</span></div>` : ''}`; };
   const linha = t => `<tr class="a1-it${MX.open === t.id ? ' on' : ''}" data-mx="${t.id}"><td class="a1-n">${t.id}</td><td>${freq(t)}</td><td><div class="a1-item">${esc(t.item)}</div><div class="a1-chk">${esc(t.chk)}</div></td><td><span class="a1-p ${PRIO_C[t.prio] || ''}">${esc(t.prio)}</span></td><td class="a1-rg">${t.regs.map(r => `<span>${r.toUpperCase()}</span>`).join('')}</td><td class="a1-x">${MX.open === t.id ? '−' : '+'}</td></tr>
     ${MX.open === t.id ? `<tr class="a1-det"><td colspan="6"><div class="a1-dg"><div><h4>Descrição / ação</h4><p>${esc(t.desc)}</p><h4>Página do manual</h4><p>${esc(t.pag)}</p><h4>Base normativa</h4><p class="note">${esc(t.norm)}</p></div><div><h4>Método executivo</h4><ol>${t.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol><h4>Registro NP 055</h4><p class="note">${esc(t.reg)}</p></div></div></td></tr>` : ''}`;
-  return `<div class="vh"><div><h1>Plano de manutenção · Anexo I</h1><p>Matriz de Manutenção Preventiva da NP 055 (item 7.2): o que fazer, intervalo (horas OU meses, o que ocorrer primeiro), prioridade e registro. Clique num item para ver a descrição, o método executivo e a base normativa. O cronograma é calculado a partir deste plano.</p></div><span class="sp"></span><button class="mbtn" onclick="location.hash='crono'">Ver cronograma</button></div>
-   <div class="a1-counts"><div><b>${A1.filter(t => t.kind !== 'sup').length}</b><span>itens no plano</span></div><div><b>${SISTEMAS.length}</b><span>sistemas</span></div><div><b>${new Set(A1.map(t => t.eqn)).size}</b><span>equipamentos</span></div><div><b class="cr">${cont('Crítica')}</b><span>prioridade Crítica</span></div><div><b>${cont('Alta')}</b><span>prioridade Alta</span></div><div><b class="${nAj ? 'aj' : ''}">${nAj}</b><span>intervalos ajustados pelo Supervisor</span></div></div>
-   <div class="a1-bar"><input id="mxQ" placeholder="Buscar por nº, equipamento, item, norma…" value="${esc(MX.q)}"><select id="mxS"><option value="">Todos os sistemas</option>${SISTEMAS.map(s => { const k = s.split(' ')[0].replace('.0', '.'); return `<option value="${k}"${MX.sis === k ? ' selected' : ''}>${s}</option>`; }).join('')}</select><select id="mxP"><option value="">Todas as prioridades</option>${['Crítica', 'Alta', 'Média', 'Baixa'].map(p => `<option${MX.prio === p ? ' selected' : ''}>${p}</option>`).join('')}</select><span class="sp"></span><span class="note">${l.length} de ${A1.filter(t => t.kind !== 'sup').length} itens</span></div>
+  return `<div class="vh"><div><h1>Plano de manutenção · Anexo I</h1><p>Matriz de Manutenção Preventiva da NP 055 (item 7.2): o que fazer, intervalo (horas OU meses, o que ocorrer primeiro), prioridade e registro. Clique num item para ver a descrição, o método executivo e a base normativa. O cronograma é calculado a partir deste plano.</p></div><span class="sp"></span><button class="mbtn" data-a1pr="0" title="Nº, frequência, item, prioridade, página do manual e registros">🖨 Imprimir</button><details class="pt-mais"><summary class="mbtn" title="Mais opções">⋯</summary><div><button class="mbtn" data-a1pr="1" title="Inclui descrição, método executivo e base normativa">🖨 PDF completo</button></div></details></div>
+   <div class="card"><h2>Itens do plano</h2><div class="a1-bar"><input id="mxQ" placeholder="Buscar por nº, equipamento, item, norma…" value="${esc(MX.q)}"><select id="mxS"><option value="">Todos os sistemas</option>${SISTEMAS.map(s => { const k = s.split(' ')[0].replace('.0', '.'); return `<option value="${k}"${MX.sis === k ? ' selected' : ''}>${s}</option>`; }).join('')}</select><select id="mxP"><option value="">Todas as prioridades</option>${['Crítica', 'Alta', 'Média', 'Baixa'].map(p => `<option${MX.prio === p ? ' selected' : ''}>${p}</option>`).join('')}</select><span class="sp"></span><span class="note">${l.length} de ${A1.filter(t => t.kind !== 'sup').length} itens</span></div>
    <div class="a1-leg"><button class="mbtn sm" data-a1all="1">＋ Expandir todos</button><button class="mbtn sm" data-a1all="0">− Recolher todos</button><span style="width:10px"></span>Prioridade (NP 055 · 5.5.1): <span class="a1-p cr">Crítica</span><span class="a1-p al">Alta</span><span class="a1-p me">Média</span><span class="a1-p ba">Baixa</span></div>
    <div class="a1-lista">${grupos.length ? grupos.map(g => { const n = parseInt(g.sis), filtro = !!(q || MX.sis || MX.prio), ab = filtro || MX.ab.has(n); return `<section class="a1-sis${ab ? ' ab' : ''}"><header data-a1s="${n}" role="button" aria-expanded="${ab}" tabindex="0"><span class="a1-num">${n}</span><h3>${esc(g.sis.replace(/^\d+\.\s*/, ''))}</h3><span class="note">${g.eqs.length} equipamento(s) · ${g.eqs.reduce((a, e) => a + e.itens.length, 0)} itens${g.eqs.some(e => e.itens.some(t => t.prio === 'Crítica')) ? ` · <span class="a1-crn">${g.eqs.reduce((a, e) => a + e.itens.filter(t => t.prio === 'Crítica').length, 0)} críticos</span>` : ''}</span><span class="a1-tg">${ab ? '−' : '+'}</span></header>${!ab ? '' : `
      ${g.eqs.map(e => `<div class="a1-eq"><div class="a1-eqh"><span class="a1-code">${esc(e.eq)}</span><div><b>${esc(e.eqn)}</b>${e.eqd ? `<div class="note">${esc(e.eqd)}</div>` : ''}</div></div>
-      <table class="a1-t"><thead><tr><th style="width:70px">Nº</th><th style="width:170px">Frequência</th><th>Item · checklist</th><th style="width:96px">Prioridade</th><th style="width:170px">Registros</th><th style="width:28px"></th></tr></thead><tbody>${e.itens.map(linha).join('')}</tbody></table></div>`).join('')}`}</section>`; }).join('') : '<div class="card note">Nenhum item com esse filtro.</div>'}</div>`;
+      <table class="a1-t"><thead><tr><th style="width:70px">Nº</th><th style="width:170px">Frequência</th><th>Item · checklist</th><th style="width:96px">Prioridade</th><th style="width:170px">Registros</th><th style="width:28px"></th></tr></thead><tbody>${e.itens.map(linha).join('')}</tbody></table></div>`).join('')}`}</section>`; }).join('') : '<div class="card note">Nenhum item com esse filtro.</div>'}</div></div>`;
 };
-{ const a0 = AFTER.matriz; AFTER.matriz = () => { a0(); const m = $('#main'), c0 = m.onchange, k0 = m.onclick; m.onchange = e => { if (e.target.id === 'mxP') { MX.prio = e.target.value; render(); return; } return c0 && c0(e); };
-  m.onclick = e => { const h = e.target.closest('[data-a1s]'); if (h) { const n = +h.dataset.a1s; if (q0()) return; MX.ab.has(n) ? MX.ab.delete(n) : MX.ab.add(n); render(); return; } const a = e.target.closest('[data-a1all]'); if (a) { MX.ab = a.dataset.a1all === '1' ? new Set(SISTEMAS.map((_, i) => i + 1)) : new Set(); render(); return; } return k0 && k0(e); };
-  m.onkeydown = e => { const h = e.target.closest && e.target.closest('[data-a1s]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); h.click(); } }; }; }
+AFTER.matriz = () => { const m = $('#main');
+  m.oninput = e => { if (e.target.id === 'mxQ') { MX.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#mxQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); } };
+  m.onchange = e => { if (e.target.id === 'mxP') { MX.prio = e.target.value; render(); } if (e.target.id === 'mxS') { MX.sis = e.target.value; render(); } };
+  m.onclick = e => { const p = e.target.closest('[data-a1pr]'); if (p) { a1Imprimir(p.dataset.a1pr === '1'); return; }
+    const h = e.target.closest('[data-a1s]'); if (h) { const n = +h.dataset.a1s; if (q0()) return; MX.ab.has(n) ? MX.ab.delete(n) : MX.ab.add(n); render(); return; }
+    const a = e.target.closest('[data-a1all]'); if (a) { MX.ab = a.dataset.a1all === '1' ? new Set(SISTEMAS.map((_, i) => i + 1)) : new Set(); render(); return; }
+    const r = e.target.closest('[data-mx]'); if (r) { MX.open = MX.open === r.dataset.mx ? '' : r.dataset.mx; render(); } };
+  m.onkeydown = e => { const h = e.target.closest && e.target.closest('[data-a1s]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); h.click(); } }; };
 const q0 = () => !!(MX.q || MX.sis || MX.prio);
 
 /* ---------- 11 · Anexo I em A4 (imprimir ou salvar em PDF) ---------- */
@@ -4400,8 +4400,7 @@ ${corpo}
   const go = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { toast('Não foi possível abrir a impressão.'); } setTimeout(() => fr.remove(), 60e3); };
   const imgs = [...d.images]; Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => setTimeout(go, 150));
 }
-{ const v0 = vMatriz; vMatriz = function () { return v0().replace(`<button class="mbtn" onclick="location.hash='crono'">Ver cronograma</button>`, `<button class="mbtn" data-a1pr="0" title="Nº, frequência, item, prioridade, página do manual e registros">🖨 Imprimir / PDF</button><button class="mbtn" data-a1pr="1" title="Inclui descrição, método executivo e base normativa">🖨 PDF completo</button><button class="mbtn" onclick="location.hash='crono'">Ver cronograma</button>`); }; VX.matriz = vMatriz; }
-{ const a0 = AFTER.matriz; AFTER.matriz = () => { a0(); const m = $('#main'), k0 = m.onclick; m.onclick = e => { const b = e.target.closest('[data-a1pr]'); if (b) { a1Imprimir(b.dataset.a1pr === '1'); return; } return k0 && k0(e); }; }; }
+VX.matriz = vMatriz;
 
 /* ---------- 12 · Horímetro do MCP por embarcação: colunas vitrificadas com 3 visões ---------- */
 let HMV = 'acum';
@@ -8356,14 +8355,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-omsf
 'use strict';
 function kpiCronoCard() { try { const ms = PRV.ms; PRV.ms = null; const T = prFrotaV2(hoje().getFullYear()); PRV.ms = ms;
     return `<div class="card"><h2>Cronograma preventivo · carga e execução por mês · frota ${hoje().getFullYear()}</h2>${prGrafico(T.F, T.hm, T.sel)}</div>`; } catch (e) { return ''; } }
-{ const v0 = VX.matriz; VX.matriz = function () { const t = document.createElement('div'); t.innerHTML = v0.apply(this, arguments);
-  const c = t.querySelector('.a1-counts'); if (c) c.remove();
-  const pr = t.querySelectorAll('.vh [data-a1pr]'); if (pr[0]) pr[0].textContent = '🖨 Imprimir';
-  if (pr[1]) { const m = document.createElement('details'); m.className = 'pt-mais'; m.innerHTML = `<summary class="mbtn" title="Mais opções">⋯</summary><div>${pr[1].outerHTML}</div>`; pr[1].replaceWith(m); }
-  t.querySelectorAll('.vh button').forEach(b => { if (/Ver cronograma/.test(b.textContent)) b.remove(); });
-  const parts = ['.a1-bar', '.a1-leg', '.a1-lista'].map(s => t.querySelector(':scope > ' + s)).filter(Boolean);
-  if (parts.length) { const card = document.createElement('div'); card.className = 'card'; card.innerHTML = '<h2>Itens do plano</h2>'; parts[0].before(card); parts.forEach(p => card.appendChild(p)); }
-  return t.innerHTML; }; }
 { const st = document.createElement('style'); st.textContent = `.pt-mais{position:relative;display:inline-block}.pt-mais>summary{list-style:none;cursor:pointer}.pt-mais>summary::-webkit-details-marker{display:none}.pt-mais>div{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #DADCE0;border-radius:8px;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:30;white-space:nowrap}`; document.head.appendChild(st); }
 </script>
 <script>
