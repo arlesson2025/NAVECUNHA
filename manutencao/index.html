@@ -1688,7 +1688,7 @@ let dirty = false;
 function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { dirty = true; renderNav(); return; } render(); }
 function render() {
   renderNav(); renderUser();
-  const V = { geral: vGeral, frota: vFrota, calib: vCalib, over: vOver, doca: vDoca, falhas: vFalhas, hor: vHor, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
+  const V = { geral: vGeral, calib: vCalib, doca: vDoca, falhas: vFalhas, hor: vHor, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   m.innerHTML = banners() + V();
   (AFTER[VIEW] || (() => { }))();
@@ -1745,21 +1745,6 @@ function vGeral() {}
 /* =====================================================================
    FROTA E VENCIMENTOS
    ===================================================================== */
-function vFrota() {
-  const cards = S.cfg.frota.map(v => {
-    const p = painelVessel(v).filter(x => x.s.st !== 'cond'); const n = { venc: 0, viag: 0, ok: 0, sem: 0 }; p.forEach(x => { n[x.s.st]++; }); const T = p.length || 1;
-    const it = interditada(v.id), bq = p.some(x => x.s.st === 'venc' && x.t.prio === 'Crítica' && !x.om);
-    const hrs = posicoes(v).filter(x => x !== 'UN').map(pos => { const h = horAtual(v.id, pos); return `${posTag(pos)}<span>${isMcp(pos) ? 'MCP' + (v.mcpMod && v.mcpMod[pos] ? ' ' + v.mcpMod[pos] : '') + ' · ' + (v.rev[pos] ? EQN[v.rev[pos]].replace('Reversor ', '') : '<i class="mut">reversor ?</i>') : mcaNome(v, pos)}</span><span class="mono">${h ? nf(h.h) + ' h' : '—'}</span>`; }).join('');
-    return `<button class="card vcard" data-vessel="${v.id}"><div class="row"><h3>${esc(v.nome)}</h3><span class="sp"></span>${it ? '<span class="pill p-bad">Interditada</span>' : bq ? '<span class="pill p-bad">Saída bloqueada</span>' : ''}</div>
-     <div class="hrs">${hrs}</div>
-     <div class="note">Próxima viagem: <b>${nf(viagemDe(v))} h</b>${+v.viagH > 0 ? '' : ' (padrão)'}</div>
-     <div class="sbar"><i style="width:${n.venc / T * 100}%;background:var(--bad)"></i><i style="width:${n.viag / T * 100}%;background:var(--warn)"></i><i style="width:${n.ok / T * 100}%;background:var(--ok)"></i><i style="width:${n.sem / T * 100}%;background:var(--line2)"></i></div>
-     <div class="row" style="gap:5px"><span class="pill p-bad">${n.venc} vencidos</span><span class="pill p-ok">${n.ok + n.viag} em dia</span>${n.sem ? `<span class="pill p-mut">${n.sem} sem histórico</span>` : ''}</div></button>`;
-  }).join('');
-  return `<div class="vh"><div><h1>Controle de vencimentos · situação atual da frota</h1><p>Situação de hoje de cada item do Plano de Manutenção em cada embarcação: vencido, vence na próxima viagem ou em dia (horas OU meses, o que ocorrer primeiro). É o controle do que já deveria ter sido feito; a projeção dos próximos 12 meses está no Cronograma. Clique numa embarcação para ver os itens, registrar horímetro ou o último serviço.</p></div><span class="sp"></span>
-   <button class="mbtn" data-act="lancarHor">⏱ Registrar horímetros</button></div>
-   <div class="fleet">${cards}</div>`;
-}
 /* =====================================================================
    AJUSTE E CALIBRAÇÃO MCP (itens em amarelo do Anexo I + caixa de mar)
    ===================================================================== */
@@ -1881,64 +1866,6 @@ function saudeMCP(v, pos) {
 }
 function overDados() { const out = []; S.cfg.frota.forEach(v => mcpPos(v).forEach(pos => { if ((v.off || []).includes('MCP')) return; out.push(saudeMCP(v, pos)); })); return out; }
 // fila de amostragem: cobertura vencida (> 24 meses ou nunca) primeiro; depois pior compressão, maior queda
-function rodizio(D) {
-  const SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
-  return D.slice().sort((a, b) => (b.cobVenc - a.cobVenc) || SO[a.st] - SO[b.st] || ((a.u ? a.u.min : 9) - (b.u ? b.u.min : 9)) || ((b.queda || 0) - (a.queda || 0)));
-}
-function motivoRod(x) {
-  const m = [];
-  if (!x.oleo) m.push('nunca analisado'); else if (x.cobVenc) m.push('última amostra há ' + x.mesesOleo + ' meses (máx. 24)');
-  if (x.st === 'venc') m.push('compressão abaixo do limite'); else if (x.st === 'viag') m.push(x.u && x.u.min < COMP.aten ? 'compressão perto do limite' : 'queda de compressão');
-  if (!m.length) m.push(x.u ? 'menor compressão entre os demais' : 'sem medição de compressão');
-  return m.join(' · ');
-}
-function semestreAtual() { const d = hoje(), s = d.getMonth() < 6 ? 0 : 6; return [new Date(d.getFullYear(), s, 1), d.getFullYear() + (s ? ' · 2º semestre' : ' · 1º semestre')]; }
-function vOver() {
-  const D = overDados(), n = { venc: 0, viag: 0, ok: 0, sem: 0 }; D.forEach(x => n[x.st]++);
-  const [ini, semTxt] = semestreAtual();
-  const amostrasSem = oms().filter(o => o.tipo === 'P' && o.status === 'encerrada' && (o.items || []).includes('1.1.29') && pD(o.dreal || isoD(new Date(o.fechadoAt || 0))) >= ini).length + recs('base').filter(b => b.item === '1.1.29' && !b.seed && pD(b.date) >= ini).length;
-  const cob = D.filter(x => x.cobVenc).length;
-  const SO = { venc: 0, viag: 1, ok: 2, sem: 3 };
-  const lista = D.slice().sort((a, b) => SO[a.st] - SO[b.st] || ((a.u ? a.u.min : 9) - (b.u ? b.u.min : 9)));
-  // escala 1,0 a 2,0 MPa
-  const X = x => Math.max(0, Math.min(100, (x - 1.0) / 1.0 * 100));
-  const linhas = lista.map(x => {
-    const tag = x.st === 'venc' ? '<span class="pill p-bad">avaliar overhaul</span>' : x.st === 'viag' ? '<span class="pill p-warn">atenção</span>' : x.st === 'sem' ? '<span class="pill p-mut">sem medição</span>' : '';
-    const info = [x.u ? 'medido ' + brD(x.u.date) : '', x.desdeOv != null ? nf(x.desdeOv) + ' h desde o overhaul' : ''].filter(Boolean).join(' · ');
-    const pts = x.u ? `${x.a ? `<i class="ovln" style="left:${Math.min(X(x.a.min), X(x.u.min))}%;width:${Math.abs(X(x.a.min) - X(x.u.min))}%"></i><i class="ovpt prev" style="left:${X(x.a.min)}%" data-tip="Medição anterior ${brD(x.a.date)}: ${fMPa(x.a.min)} MPa"></i>` : ''}<i class="ovpt" style="left:${X(x.u.min)}%;background:${CORST[x.st]}" data-tip="Última ${brD(x.u.date)}: cilindro ${x.u.cil} = ${fMPa(x.u.min)} MPa"></i>` : '';
-    const vl = x.u ? `<span class="ovvl" style="color:${CORST[x.st]}">${fMPa(x.u.min)} MPa <small>cil. ${x.u.cil}${x.queda != null ? ' · ' + (Math.abs(x.queda) < 0.005 ? 'estável' : (x.queda > 0 ? 'caiu ' : 'subiu ') + fMPa(Math.abs(x.queda))) : ''}</small></span>` : '<span class="ovvl mut">—</span>';
-    return `<div class="rkrow" data-ov="${x.v.id}|${x.pos}"><div class="rklb"><b>${esc(x.v.nome)} ${x.pos}</b> ${tag}<div class="note">${info || 'registre o ensaio de compressão'}</div></div><div class="ovtr">${pts}</div>${vl}</div>`;
-  }).join('');
-  const rod = rodizio(D).slice(0, 6);
-  return `<div class="vh"><div><h1>Manutenção baseada na condição (MBC) · MCP</h1><p>O overhaul é decidido pela condição (Anexo I, item 1.1.28): compressão medida a cada 1.000 h junto com a calibração dos bicos (item 1.1.12), apoiada pela análise de óleo (1.1.29) e pela tendência de parâmetros (1.1.30). Padrão ${fMPa(COMP.pad)} MPa · atenção abaixo de ${fMPa(COMP.aten)} · limite ${fMPa(COMP.lim)} MPa.</p></div><span class="sp"></span><button class="mbtn" data-novacomp>＋ Registrar ensaio de compressão</button></div>
-  <div class="kgrid six">
-   <div class="card mini ${n.venc ? 'bad' : 'ok'}"><b>${n.venc}</b><span>avaliar overhaul (abaixo de ${fMPa(COMP.lim)} MPa)</span></div>
-   <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>atenção (abaixo de ${fMPa(COMP.aten)} ou queda ≥ ${fMPa(COMP.queda)})</span></div>
-   <div class="card mini ok"><b>${n.ok}</b><span>compressão normal</span></div>
-   <div class="card mini"><b>${n.sem}</b><span>sem medição de compressão</span></div>
-   <div class="card mini ${amostrasSem ? 'ok' : 'warn'}"><b>${amostrasSem}</b><span>amostras de óleo analisadas no semestre (meta: 1)</span></div>
-   <div class="card mini ${cob ? 'warn' : 'ok'}"><b>${cob}</b><span>MCPs sem laudo há mais de 24 meses</span></div>
-  </div>
-  <div class="card"><div class="row"><h2>A · Pressão de compressão do cilindro crítico, por motor</h2><span class="sp"></span><span class="note">Clique num motor para ver o histórico dos 6 cilindros.</span></div>
-   <div class="clegend note"><span><i style="background:var(--bad)"></i>avaliar overhaul</span><span><i style="background:var(--warn)"></i>atenção</span><span><i style="background:var(--ok)"></i>normal</span><span><i style="background:transparent;border:2px solid var(--mut);border-radius:50%"></i>medição anterior</span></div>
-   <div class="rk ovrk">${linhas}
-    <div class="rkrow rkax"><span></span><div class="ovtr ax"><span style="left:0">1,0</span><span style="left:${X(COMP.lim)}%">${fMPa(COMP.lim)} limite</span><span style="left:${X(COMP.aten)}%">${fMPa(COMP.aten)} atenção</span><span style="left:${X(COMP.pad)}%">${fMPa(COMP.pad)} padrão</span><span style="right:0">2,0 MPa</span></div><span></span></div></div></div>
-  <div class="card"><div class="row"><h2>B · Programa de amostragem da análise de óleo · ${semTxt}</h2><span class="sp"></span><span class="note">1 amostra por semestre. Prioridade: sem laudo há mais de 24 meses, depois a pior compressão e a maior queda.</span></div>
-   ${rod.length ? `<div class="banner info"><b>Sugestão para este semestre: ${esc(rod[0].v.nome)} ${rod[0].pos}</b> · ${esc(motivoRod(rod[0]))}${rod[0].omOleo ? ' · OM ' + esc(rod[0].omOleo.num) + ' já aberta' : ''}<span class="sp"></span><a class="mbtn sm pri" href="#emitir/${rod[0].v.id}">Emitir OM</a></div>` : ''}
-   <div class="tw"><table class="t"><thead><tr><th>#</th><th>Motor</th><th>Compressão (pior cil.)</th><th>Queda</th><th>Última amostra de óleo</th><th>Motivo</th></tr></thead><tbody>
-   ${rod.map((x, i) => `<tr class="click" data-ov="${x.v.id}|${x.pos}"><td>${i + 1}</td><td><b>${esc(x.v.nome)} ${x.pos}</b></td><td>${x.u ? `<b style="color:${CORST[x.st]}">${fMPa(x.u.min)}</b> MPa` : '<span class="mut">—</span>'}</td><td>${x.queda != null ? fMPa(x.queda) + ' MPa' : '—'}</td><td>${x.oleo ? brD(x.oleo.date) + ' · há ' + x.mesesOleo + ' meses' : '<span style="color:var(--badt)">nunca</span>'}</td><td class="note">${esc(motivoRod(x))}</td></tr>`).join('')}
-   </tbody></table></div></div>`;
-}
-function ovModal(vid, pos) {
-  const x = saudeMCP(vessel(vid), pos), H = x.H.slice().reverse();
-  const cel = v => v == null ? '<td class="mut">—</td>' : `<td class="mono" style="color:${v < COMP.lim ? 'var(--badt)' : v < COMP.aten ? 'var(--warnt)' : 'inherit'};font-weight:${v < COMP.aten ? 700 : 400}">${fMPa(v)}</td>`;
-  modal(`<div class="row"><h2>${esc(x.v.nome)} · MCP ${pos}</h2><span class="sp"></span><button class="mbtn sm" data-novacomp="${vid}|${pos}">＋ Registrar compressão</button><button class="mbtn sm" data-base="${vid}|${pos}|1.1.28">Último overhaul</button><button class="mbtn sm" data-base="${vid}|${pos}|1.1.29">Última amostra de óleo</button><button class="mbtn" data-close>Fechar</button></div>
-   <div class="row"><span class="pill ${{ venc: 'p-bad', viag: 'p-warn', ok: 'p-ok', sem: 'p-mut' }[x.st]}">${{ venc: 'Avaliar overhaul', viag: 'Atenção', ok: 'Boa', sem: 'Sem medição' }[x.st]}</span><span>${esc(x.txt)}</span><span class="sp"></span><span class="note">${x.ov ? 'Último overhaul: ' + (x.ov.h != null ? nf(x.ov.h) + ' h · ' : '') + brD(x.ov.date) : 'Último overhaul não registrado'} · ${x.oleo ? 'Última amostra de óleo: ' + brD(x.oleo.date) : 'Nunca analisado'}</span></div>
-   ${H.length ? `<div class="tw" style="max-height:55vh"><table class="t"><thead><tr><th>Data</th><th>Horímetro</th><th>Cil. 1</th><th>Cil. 2</th><th>Cil. 3</th><th>Cil. 4</th><th>Cil. 5</th><th>Cil. 6</th><th>Pior</th><th>Diferença entre cilindros</th><th>Origem</th></tr></thead><tbody>
-   ${H.map(p => `<tr><td>${brD(p.date)}</td><td class="mono">${p.h != null && p.h !== '' ? nf(p.h) + ' h' : '—'}</td>${[0, 1, 2, 3, 4, 5].map(i => cel(p.vals[i])).join('')}<td class="mono"><b>${fMPa(p.min)}</b> (cil. ${p.cil})</td><td class="mono">${p.vals.filter(v => v != null).length > 1 ? fMPa(p.max - p.min) + ' MPa' : '—'}</td><td>${p.om ? `<a href="#om/${p.om}" data-close>${esc(p.src)}</a>` : esc(p.src)}</td></tr>`).join('')}
-   </tbody></table></div><p class="note">Padrão 1,8 MPa {18,5 kgf/cm²} e limite 1,27 MPa {13 kgf/cm²}: Service Manual S6R2-MPTK, p. 2-3; abaixo do limite, inspeção de overhaul (p. 4-4). Critérios internos (Anexo I item 1.1.12): programar abaixo de 1,45 MPa; diferença acima de 0,18 MPa {1,8 kgf/cm²} entre cilindros (10% do padrão) aponta falha localizada (válvula, anel ou junta), mesmo com a média boa.</p>` : '<div class="note">Nenhuma medição ainda. A compressão entra automaticamente quando a OM do item 1.1.12 (bicos) é encerrada com os 6 cilindros preenchidos. Testes antigos podem ser lançados em "＋ Registrar compressão".</div>'}`, true);
-  $('#modal').addEventListener('click', e => { const bs = e.target.closest('[data-base]'); if (bs) baseModal(...bs.dataset.base.split('|')); const nc = e.target.closest('[data-novacomp]'); if (nc) compModal(...nc.dataset.novacomp.split('|')); });
-}
 function compModal(vid, pos) {
   if (!precisa(false)) return;
   vid = vid || S.cfg.frota[0].id; pos = pos || mpos(vid);
@@ -1962,7 +1889,6 @@ function compModal(vid, pos) {
     closeModal(); toast('Ensaio de compressão registrado.'); render();
   };
 }
-AFTER.over = () => { $('#main').onclick = e => { const nc = e.target.closest('[data-novacomp]'); if (nc) { compModal(); return; } const b = e.target.closest('[data-ov]'); if (b) ovModal(...b.dataset.ov.split('|')); }; };
 // dados de exemplo da compressão (só para a demonstração; somem em "Limpar dados de exemplo")
 function exemploComp() {
   const R = rnd(7031), out = [];
@@ -2943,8 +2869,6 @@ function lubDados() {
     out.push({ v, e, t, s, om: omAberta(v.id, e.pos, t.id), dias, horas, saida, porData: horas !== null && horas !== s.rest }); }));
   return out;
 }
-const lubVal = x => { const s = x.s; if (s.st === 'sem') return 'sem hist.'; if (s.rest !== null && s.rest !== undefined) return s.rest < 0 ? '−' + nf(-s.rest) + ' h' : nf(s.rest) + ' h'; if (s.alvoD) { const d = Math.floor((s.alvoD - hoje()) / 864e5); return d < 0 ? '−' + (-d) + ' d' : d + ' d'; } return '—'; };
-const lubFonte = L => !L ? '—' : L.src && L.src.startsWith('fr049:') ? 'FR 049_B · OM ' + L.src.slice(6) : L.src && L.src.startsWith('om:') ? 'OM ' + L.src.slice(3) : 'ponto de partida';
 
 /* ---------- lançamentos de óleo (trocas do FR 049_B + complementos) ---------- */
 function lubLanc() {
@@ -3015,70 +2939,6 @@ function mesesAte(n, ref) { const d = ref || hoje(), o = []; for (let i = n - 1;
    TELA · TROCAS DE ÓLEO (situação, previsão, óleo a comprar, consumo do MCP)
    ===================================================================== */
 const LV = { prazo: 15, nec: 30, tab: false };
-const GCOLS = [['mcp', 'MCP'], ['crp', 'Reversor'], ['mca', 'MCA'], ['hid', 'Governo']];
-function vLub() {
-  const D = lubDados(), n = { venc: 0, viag: 0, ok: 0, sem: 0 }; let emOM = 0;
-  D.forEach(x => { if (x.om) emOM++; else if (n[x.s.st] !== undefined) n[x.s.st]++; });
-  const mesK = isoD(hoje()).slice(0, 7), LM = lubLanc().filter(x => x.date.slice(0, 7) === mesK), fMes = fr049s().filter(r => (r.date || '').slice(0, 7) === mesK);
-  const chip = x => `<span class="lc ${x.om ? 'om' : x.s.st}" data-tip="${esc(x.e.nome + ' · ' + (x.e.mod || '') + ' · ' + (x.om ? 'OM ' + x.om.num + ' aberta · ' : '') + (x.s.txt || ''))}">${x.e.g === 'mcp' || x.e.g === 'crp' ? (x.v.mcp === 'mono' ? '' : x.e.pos + ' ') : x.e.g === 'mca' ? x.e.pos.replace('MCA', '') + ' ' : ''}<b>${x.om ? 'OM' : lubVal(x)}</b></span>`;
-  const linhas = S.cfg.frota.map(v => { const L = D.filter(x => x.v === v), pior = L.some(x => x.s.st === 'venc' && !x.om) ? 'venc' : L.some(x => x.s.st === 'viag' && !x.om) ? 'viag' : '';
-    return `<tr class="click" data-lubv="${v.id}"><td><b>${esc(v.nome)}</b>${pior ? ` <span class="pill ${pior === 'venc' ? 'p-bad' : 'p-warn'}">${pior === 'venc' ? 'vencida' : 'na viagem'}</span>` : ''}</td>${GCOLS.map(([g]) => `<td>${L.filter(x => x.e.g === g).map(chip).join('') || '<span class="mut">–</span>'}</td>`).join('')}</tr>`; }).join('');
-  // B · previsão
-  const prev = D.filter(x => x.dias !== null && x.dias <= LV.prazo).sort((a, b) => a.dias - b.dias);
-  const dataEst = d => { const x = new Date(hoje().getTime() + Math.max(0, d) * 864e5); return x.toLocaleDateString('pt-BR'); };
-  const prevRows = prev.map(x => { const h = horAtual(x.v.id, lubHp(x.v, x.e)); return `<tr class="click" data-lubv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${esc(x.e.nome)}<div class="note">${esc(x.e.mod || '')}</div></td><td>${esc(x.e.oleo === 'Outros' ? (x.e.lub || '—') : x.e.oleo)}</td><td class="mono">${x.e.cap ? (x.e.est ? '≈ ' : '') + nf1(x.e.cap) + ' L' : '—'}</td><td class="mono">${h ? nf(h.h) + ' h' : '—'}</td><td class="mono">${x.s.alvoH != null ? nf(x.s.alvoH) + ' h' : '—'}${x.s.alvoD ? '<div class="note">até ' + x.s.alvoD.toLocaleDateString('pt-BR') + '</div>' : ''}</td><td class="mono">${lubVal(x)}</td><td class="mono">${x.dias < 0 ? '<b style="color:var(--badt)">vencida</b>' : dataEst(x.dias)}</td><td>${x.om ? `<a class="pill p-inf" href="#om/${x.om.id}">OM ${esc(x.om.num)}</a>` : pillSt(x.s.st)}</td></tr>`; }).join('');
-  // C · óleo necessário
-  const NE = [30, 60, 90].map(d => lubNecessario(D, d)), tiposNE = OLEOS.map(o => o[0]).filter(t => NE.some(x => x.t[t]));
-  // D · consumo do MCP
-  const CM = lubConsumoMCP(120), cmRows = CM.out.filter(x => x.n || x.taxa !== null).sort((a, b) => (b.taxa || 0) - (a.taxa || 0));
-  return `<div class="vh"><div><h1>Lubrificação · controle de trocas</h1><p>Situação das trocas de óleo e fluidos de cada equipamento, pelo Anexo I (horas OU meses, o que vier primeiro). O lançamento oficial é o FR 049_B: ao salvar, o último serviço do item e o horímetro do sistema são atualizados na hora. "Na viagem" = vence antes do fim da próxima viagem de cada embarcação.</p></div><span class="sp"></span><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn pri" data-act="lubForm">📝 Preencher FR 049_B</button></div>
-  ${(() => { const semOM = fr049s().filter(r => lubEmp(r) && r.vessel && !r.seed && !omDoFr(r)); return semOM.length ? `<div class="banner ex"><span><b>${semOM.length} FR 049_B sem a OM II-B no sistema</b> (${semOM.slice(0, 4).map(r => esc(vName(r.vessel)) + ' OM ' + esc(r.om)).join(', ')}${semOM.length > 4 ? '…' : ''}). Pela NP 055 (7.4), a troca de óleo é registrada no Anexo II-B e também no FR 049_B.</span><span class="sp"></span><a class="mbtn sm" href="#lubreg">Ver registros</a></div>` : ''; })()}
-  <div class="kgrid six">
-   <div class="card mini ${n.venc ? 'bad' : 'ok'}"><b>${n.venc}</b><span>trocas vencidas sem OM</span></div>
-   <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>vencem na próxima viagem · trocar no porto antes de sair</span></div>
-   <div class="card mini ok"><b>${n.ok}</b><span>em dia</span></div>
-   <div class="card mini"><b>${n.sem}</b><span>sem histórico (registre a última troca)</span></div>
-   <div class="card mini"><b>${fMes.length}</b><span>FR 049_B lançados em ${MESESL[hoje().getMonth()].toLowerCase()}${emOM ? ` · ${emOM} troca(s) já com OM` : ''}</span></div>
-   <div class="card mini"><b>${nf(LM.reduce((a, x) => a + x.L, 0))} L</b><span>de óleo no mês (trocas + complementos)</span></div>
-  </div>
-  ${(() => { // A · a troca mais urgente de cada embarcação (dias até a troca: horas pelo ritmo do equipamento, ou a data)
-    const R = S.cfg.frota.map(v => { const L = D.filter(x => x.v === v && !x.om && !x.saida && x.horas !== null); const w = L.sort((a, b) => a.horas - b.horas)[0]; return w ? { v, x: w, mais: L.filter(y => y !== w && (y.s.st === 'venc' || y.s.st === 'viag')).length } : null; }).filter(Boolean).sort((a, b) => a.x.horas - b.x.horas);
-    const neg = Math.max(1, ...R.map(r => -Math.min(0, r.x.horas))), pos = Math.max(1, ...R.map(r => Math.max(0, r.x.horas))), z = neg / (neg + pos) * 100, cor = { venc: 'var(--bad)', viag: 'var(--warn)', ok: 'var(--ok)' };
-    const c = s => R.filter(r => r.x.s.st === s).length;
-    return `<div class="card"><div class="row"><h2>A · Horas até a próxima troca, por embarcação</h2><span class="sp"></span><span class="lcont"><span><b class="b">${c('venc')}</b> vencidas</span><span><b class="w">${c('viag')}</b> na próxima viagem</span><span><b class="g">${c('ok')}</b> em dia</span></span></div>
-     <div class="note">Horas que faltam para a troca mais urgente de cada embarcação (MCP, reversor, MCA e governo). Esquerda = vencida; direita = folga. Quando o limite é o prazo em meses, a data vira horas pelo ritmo de uso. Clique na embarcação para ver todos os equipamentos.</div>
-     <div class="dvg">${R.map(r => { const d = r.x.horas, w = d < 0 ? (-d / neg) * z : (d / pos) * (100 - z), st = r.x.s.st === 'cond' || r.x.s.st === 'sem' ? 'ok' : r.x.s.st;
-       return `<div class="dvr click" data-lubv="${r.v.id}"><span class="dvn"><b>${esc(r.v.nome)}</b><small>${esc(r.x.e.nome)}${r.mais ? ' · +' + r.mais + ' pendente' + (r.mais > 1 ? 's' : '') : ''}</small></span><span class="dvt"><i class="dvz" style="left:${z}%"></i><i class="dvb" style="${d < 0 ? `right:${100 - z}%` : `left:${z}%`};width:${Math.max(0.8, w)}%;background:${cor[st]}"></i></span><span class="dvv" style="color:${cor[st]}">${d < 0 ? '−' + nf(-d) + ' h' : nf(d) + ' h'}<small>${r.x.porData ? (d < 0 ? 'venceu por data ' : 'limite: data ') + (r.x.s.alvoD ? r.x.s.alvoD.toLocaleDateString('pt-BR') : '') : d < 0 ? 'vencida por horas' : 'próx. ' + nf(r.x.s.alvoH) + ' h'}</small></span></div>`; }).join('')}</div>
-
-     <div class="row" style="margin-top:8px"><button class="mbtn sm" data-lubtab>${LV.tab ? '▲ Esconder' : '▼ Ver'} todos os equipamentos (tabela)</button></div></div>`; })()}
-  ${LV.tab ? `<div class="card"><div class="row"><h2>Todos os equipamentos por empurrador</h2><span class="sp"></span><span class="note">h = horas · d = dias que faltam (− = vencida). Clique na embarcação para ver o detalhe.</span></div>
-   <div class="clegend note"><span><i style="background:var(--bad)"></i>vencida</span><span><i style="background:var(--warn)"></i>vence na próxima viagem</span><span><i style="background:var(--ok)"></i>em dia</span><span><i style="background:var(--acc)"></i>OM aberta</span><span><i style="background:var(--line2)"></i>sem histórico</span></div>
-   <div class="tw"><table class="t lubt"><thead><tr><th>Embarcação</th>${GCOLS.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${linhas}</tbody></table></div></div>` : ''}
-  <div class="card"><div class="row"><h2>B · Programação das próximas trocas</h2><span class="sp"></span><div class="seg">${[15, 30, 60, 90].map(d => `<button data-lubprazo="${d}" class="${LV.prazo === d ? 'on' : ''}">${d} dias</button>`).join('')}</div></div>
-   <div class="note">Data estimada pelo ritmo de horas de cada equipamento (horímetro dos últimos 90 dias) ou pela data-limite em meses, o que vier primeiro. Inclui as vencidas.</div>
-   ${prevRows ? `<div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Equipamento</th><th>Óleo</th><th>Volume</th><th>Horímetro</th><th>Próxima troca</th><th>Faltam</th><th>Data estimada</th><th>Situação</th></tr></thead><tbody>${prevRows}</tbody></table></div>` : `<div class="note">Nenhuma troca prevista nos próximos ${LV.prazo} dias.</div>`}</div>
-  <div class="two">
-   <div class="card"><div class="row"><h2>C · Demanda de lubrificante para as trocas programadas</h2></div>
-    ${tiposNE.length ? `<div class="tw"><table class="t"><thead><tr><th>Óleo</th><th class="c">até 30 dias</th><th class="c">até 60 dias</th><th class="c">até 90 dias</th></tr></thead><tbody>${tiposNE.map(t => `<tr><td><i class="dotc" style="background:${OLEO_COR[t]}"></i>${t === 'Outros' ? 'Outros (rabeta SAE 90)' : t}</td>${NE.map(x => `<td class="c mono">${x.t[t] ? nf1(x.t[t]) + ' L' : '–'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="note">Nenhuma troca prevista em 90 dias.</div>'}
-    <p class="note">Soma da capacidade de cada equipamento (matriz técnica) para as trocas vencidas e as que vencem no prazo, sem OM aberta. Use para o pedido de compra. ${NE[2].est ? 'Hitachi e governo são volumes estimados (≈).' : ''} ${NE[2].semCap ? NE[2].semCap + ' troca(s) sem volume na matriz (motobomba de incêndio).' : ''}</p></div>
-   <div class="card"><div class="row"><h2>D · Taxa de consumo de óleo do MCP (L/100 h)</h2><span class="sp"></span><button class="mbtn sm" data-act="lubComp">＋ Complemento</button></div>
-    ${cmRows.length ? `<div class="tw"><table class="t"><thead><tr><th>Motor</th><th class="c">Repostos</th><th class="c">Horas</th><th class="c">L / 100 h</th><th>Situação</th></tr></thead><tbody>${cmRows.map(x => `<tr><td><b>${esc(x.v.nome)}</b> ${x.v.mcp === 'mono' ? '' : posTag(x.p)}</td><td class="c mono">${nf1(x.L)} L <span class="note">(${x.n}×)</span></td><td class="c mono">${x.h ? nf(x.h) : '—'}</td><td class="c mono">${x.taxa !== null ? '<b>' + nf(x.taxa, 2) + '</b>' : '—'}</td><td>${x.st === 'venc' ? '<span class="pill p-bad">alto · investigar</span>' : x.st === 'viag' ? '<span class="pill p-warn">acima da frota</span>' : x.st === 'ok' ? '<span class="pill p-ok">normal</span>' : '<span class="pill p-mut">poucos dados</span>'}</td></tr>`).join('')}</tbody></table></div>
-    <p class="note">Últimos ${CM.dias} dias. Mediana da frota: ${CM.med !== null ? nf(CM.med, 2) + ' L/100 h' : '— (precisa de 3 motores com dados)'}. Acima de 1,5× a mediana = atenção; acima de 2× = investigar: anéis e camisas, guias de válvula, turbo ou vazamento. Confirme com o ensaio de compressão (1.1.12) e a análise de óleo (1.1.29). Este é o "consumo de óleo" da tendência trimestral 1.1.30.</p>`
-    : `<div class="note">Ainda não há complementos lançados. Sempre que completar o nível do cárter entre uma troca e outra, lance aqui os litros e o horímetro: o sistema calcula o consumo de cada MCP (L por 100 h) e avisa quando um motor começa a beber óleo, que é um dos primeiros sinais de desgaste.</div>`}</div>
-  </div>`;
-}
-AFTER.lub = () => { $('#main').onclick = e => { if (e.target.closest('[data-lubtab]')) { LV.tab = !LV.tab; render(); return; } const p = e.target.closest('[data-lubprazo]'); if (p) { LV.prazo = +p.dataset.lubprazo; render(); return; } const b = e.target.closest('[data-lubv]'); if (b && !e.target.closest('a')) lubBarcoModal(b.dataset.lubv); }; };
-function lubBarcoModal(vid) {
-  const v = vessel(vid); if (!v) return;
-  const L = lubEquip(v).map(e => { const t = A1M[e.itens[0]], s = situacao(v, e.pos, t); return { v, e, t, s, om: omAberta(v.id, e.pos, t.id) }; });
-  const ult = fr049s().filter(r => r.vessel === vid).sort((a, b) => a.date < b.date ? 1 : -1)[0];
-  modal(`<div class="row"><h2>${esc(v.nome)} · lubrificação</h2><span class="sp"></span><button class="mbtn sm" data-act="lubComp" data-v="${v.id}">＋ Complemento</button><button class="mbtn sm pri" data-act="lubForm" data-v="${v.id}">📝 FR 049_B</button><button class="mbtn" data-close>Fechar</button></div>
-   <p class="note">Último FR 049_B: ${ult ? 'OM ' + esc(ult.om) + ' · ' + brD(ult.date) : 'nenhum lançado'}. "Última troca" serve para registrar o ponto de partida de trocas feitas antes do sistema.</p>
-   <div class="tw" style="max-height:62vh"><table class="t"><thead><tr><th>Equipamento</th><th>Óleo</th><th>Volume</th><th>Intervalo</th><th>Última troca</th><th>Situação</th><th></th></tr></thead><tbody>
-   ${L.map(x => `<tr><td><b>${esc(x.e.nome)}</b><div class="note">${esc(x.e.mod || '')} · ${x.t.id}</div></td><td>${esc(x.e.lub || x.e.oleo)}<div class="note">${esc((x.e.marcas || '').split(';')[0])}</div></td><td class="mono">${x.e.cap ? (x.e.est ? '≈ ' : '') + nf1(x.e.cap) + ' L' : '—'}</td><td class="mono">${(() => { const iv = intervalo(x.t, v, x.e.pos); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' ou ') || '—'; })()}</td><td class="mono">${x.s.L ? (x.s.L.h !== null ? nf(x.s.L.h) + ' h · ' : '') + brD(x.s.L.date) + '<div class="note">' + esc(lubFonte(x.s.L)) + '</div>' : '—'}</td><td>${x.om ? `<a class="pill p-inf" href="#om/${x.om.id}" data-close>OM ${esc(x.om.num)}</a>` : pillSt(x.s.st)}<div class="note">${esc(x.s.txt || '')}</div></td><td><button class="mbtn sm" data-base="${v.id}|${x.e.pos}|${x.t.id}">Última troca</button></td></tr>`).join('')}
-   </tbody></table></div>`, true);
-  $('#modal').addEventListener('click', e => { const bs = e.target.closest('[data-base]'); if (bs) baseModal(...bs.dataset.base.split('|')); });
-}
 
 /* =====================================================================
    TELA · CONSUMO DE ÓLEO E RESÍDUOS
@@ -3430,7 +3290,7 @@ async function lubBoot() {
 
 /* ---------- menu, telas e ações ---------- */
 NAV.splice(1, 0, ['Lubrificação', [['lub', 'Controle de trocas'], ['lubcons', 'Consumo e OLUC'], ['lubreg', 'Registros FR 049_B'], ['plano', 'Plano de lubrificação']]]);
-const VX = { lub: vLub, lubcons: vLubCons, lubreg: vLubReg, plano: vPlano };
+const VX = { lubcons: vLubCons, lubreg: vLubReg, plano: vPlano };
 { const b0 = badge; badge = k => k === 'lub' ? lubBadge() : b0(k); }
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-act]'); if (!a) return;
@@ -4157,34 +4017,6 @@ function laudoSt(r) {
 const laudos = (vid, pos) => recs('laudo').filter(r => r.vessel === vid && r.pos === pos).sort((a, b) => a.date < b.date ? -1 : 1);
 { const u0 = ultimoServico; ultimoServico = function (vid, pos, item) { let b = u0(vid, pos, item); if (item === '1.1.29') recs('laudo').forEach(r => { if (r.vessel === vid && r.pos === pos && (!b || r.date > b.date)) b = { h: r.h != null && r.h !== '' ? +r.h : null, date: r.date, src: 'laudo:' + (r.num || '') }; }); return b; }; }
 // saúde do MCP: compressão + consumo de óleo + laudo → recomendação
-function saudeTec() {
-  const CM = typeof lubConsumoMCP === 'function' ? lubConsumoMCP(120) : { out: [] };
-  return overDados().map(x => {
-    const c = CM.out.find(y => y.v === x.v && y.p === x.pos) || { st: 'sem' }, L = laudos(x.v.id, x.pos), ul = L[L.length - 1], ls = ul ? laudoSt(ul) : { st: 'sem', alertas: [] };
-    const desg = ls.alertas.filter(a => ['fe', 'cr', 'al', 'pb', 'cu'].includes(a.k) && a.s === 'venc').length;
-    let rec, rst;
-    if (x.st === 'venc' || desg || (c.st === 'venc' && x.st === 'viag')) { rec = 'Programar inspeção / retífica (overhaul)'; rst = 'venc'; }
-    else if (x.st === 'viag' || c.st === 'venc' || c.st === 'viag' || ls.st !== 'ok' && ls.st !== 'sem') { rec = 'Monitorar: antecipar ensaio de compressão e amostragem'; rst = 'viag'; }
-    else if (x.st === 'sem' && ls.st === 'sem') { rec = 'Dados insuficientes'; rst = 'sem'; }
-    else { rec = 'Manter'; rst = 'ok'; }
-    return { x, c, ul, ls, rec, rst };
-  });
-}
-function saudeCard() {
-  const D = saudeTec(), cor = s => CORST[s] || 'var(--line2)', SO = { venc: 0, viag: 1, sem: 2, ok: 3 };
-  D.sort((a, b) => SO[a.rst] - SO[b.rst]);
-  return `<div class="card"><div class="row"><h2>Diagnóstico de condição do MCP: compressão, consumo de óleo e análise de óleo</h2><span class="sp"></span><button class="mbtn sm" data-laudo="">＋ Registrar laudo de óleo</button></div>
-   <div class="note">Os três sinais juntos dão a recomendação: compressão (desgaste interno), consumo de óleo em L/100 h (anéis, guias, vazamento) e laudo de laboratório (metais de desgaste e contaminação). Clique num motor para ver os laudos.</div>
-   <div class="tw"><table class="t"><thead><tr><th>Motor</th><th>Compressão (pior cil.)</th><th>Consumo de óleo</th><th>Último laudo</th><th>Recomendação</th></tr></thead><tbody>
-   ${D.map(d => `<tr class="click" data-laudov="${d.x.v.id}|${d.x.pos}"><td><b>${esc(d.x.v.nome)}</b> ${d.x.v.mcp === 'mono' ? '' : posTag(d.x.pos)}</td>
-    <td><span class="sdot" style="background:${cor(d.x.st)}"></span>${d.x.u ? fMPa(d.x.u.min) + ' MPa <span class="note">cil. ' + d.x.u.cil + '</span>' : '<span class="mut">sem medição</span>'}</td>
-    <td><span class="sdot" style="background:${cor(d.c.st)}"></span>${d.c.taxa != null ? nf(d.c.taxa, 2) + ' L/100 h' : '<span class="mut">sem complementos</span>'}</td>
-    <td><span class="sdot" style="background:${cor(d.ls.st)}"></span>${d.ul ? brD(d.ul.date) + (d.ls.alertas.length ? ' · <span style="color:' + cor(d.ls.alertas[0].s) + '">' + d.ls.alertas.slice(0, 2).map(a => a.nome.split(' (')[0] + ' ' + nf(a.v, a.v < 10 ? 1 : 0)).join(', ') + '</span>' : ' · normal') : '<span class="mut">sem laudo</span>'}</td>
-    <td><span class="pill ${{ venc: 'p-bad', viag: 'p-warn', ok: 'p-ok', sem: 'p-mut' }[d.rst]}">${d.rec}</span></td></tr>`).join('')}</tbody></table></div>
-   <p class="note">Limites do laudo: referência geral para diesel com 15W-40 (Fe 50/100, Cr 10/20, Al 15/30, Cu 25/50, Pb 25/50, Si 20/40 ppm; água 0,1/0,2%; diluição 2/4%; fuligem 2/3%; TBN mín. ${nf(TBN_NOVO * 0.6, 1)}/${nf(TBN_NOVO * 0.5, 1)} (60%/50% do óleo novo); viscosidade 100 °C 12,5–16,3 cSt). Ajuste com os limites do seu laboratório.</p></div>`;
-}
-{ const v0 = vOver; vOver = function () { const h = v0(), i = h.indexOf('<div class="card"><div class="row"><h2>B · Programa de amostragem'); return i > 0 ? h.slice(0, i) + saudeCard() + h.slice(i) : h + saudeCard(); }; }
-{ const a0 = AFTER.over; AFTER.over = () => { a0(); const m = $('#main'), c0 = m.onclick; m.onclick = e => { const l = e.target.closest('[data-laudo]'); if (l) { laudoModal(); return; } const v = e.target.closest('[data-laudov]'); if (v) { laudoLista(...v.dataset.laudov.split('|')); return; } return c0 && c0(e); }; }; }
 function laudoLista(vid, pos) {
   const L = laudos(vid, pos).reverse(), v = vessel(vid);
   modal(`<div class="row"><h2>${esc(v.nome)} · MCP ${pos} · laudos de óleo</h2><span class="sp"></span><button class="mbtn sm pri" id="lnv">＋ Registrar laudo</button><button class="mbtn" data-close>Fechar</button></div>
@@ -4282,8 +4114,7 @@ async function tecExemplo() {
 { const lb0 = lubBoot; lubBoot = async function () { await lb0(); await tecExemplo(); }; }
 
 /* ---------- 7 · matriz de condição da frota (substitui os cartões como vista padrão) ---------- */
-let FROTAMODO = 'matriz';   // só a matriz (os botões Matriz/Cartões saíram)
-const SIS_CURTO = ['Propulsão', 'Governo', 'Geração', 'Emergência', 'Salvag.', 'Combust.', 'Comunic.', 'Amarra', 'Casco', 'Habitab.', 'Naveg.'];
+   // só a matriz (os botões Matriz/Cartões saíram)
 function frotaMatriz() {
   const SO = { venc: 3, viag: 2, ok: 1, sem: 0 };
   const L = S.cfg.frota.map(v => {
@@ -4297,34 +4128,6 @@ function frotaMatriz() {
   }).sort((a, b) => b.sit - a.sit || b.n.venc - a.n.venc || (a.ader || 0) - (b.ader || 0));
   return L;
 }
-function frotaMatrizHtml() {
-  const L = frotaMatriz(), tot = { venc: 0, viag: 0, ok: 0 }; L.forEach(x => { tot.venc += x.n.venc; tot.viag += x.n.viag; tot.ok += x.n.ok; });
-  const lib = L.filter(x => x.sit >= 0 && x.sit < 2).length, aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null;
-  const cel = (s, i) => { const nm = SISTEMAS[i]; if (!s) return `<td class="m2-c"><span class="m2-na" title="${esc(nm)}: não se aplica"></span></td>`;
-    const t = esc(`${nm} · ${s.n} itens: ${s.c.venc} vencidos · ${s.c.ok + s.c.viag} em dia${s.c.sem ? ' · ' + s.c.sem + ' sem histórico' : ''}`);
-    if (s.pior === 'venc') return `<td class="m2-c" title="${t}"><span class="m2-t v">${s.c.venc}</span></td>`;
-    if (s.pior === 'viag') return `<td class="m2-c" title="${t}"><span class="m2-t a">${s.c.viag}</span></td>`;
-    if (s.pior === 'ok') return `<td class="m2-c" title="${t}"><span class="m2-ok"></span></td>`;
-    return `<td class="m2-c" title="${t}"><span class="m2-sem"></span></td>`; };
-  const sit = x => [['o', 'Liberada'], ['a', 'Liberada com restrição'], ['v', 'Saída bloqueada'], ['v', 'Interditada']][x.sit] || ['o', 'Liberada'];   // x.sit inclui NO do FR 027_L sem OM
-  const donut = a => { const v = a == null ? null : a, cor = v >= 95 ? '#1E8E3E' : v >= 85 ? '#F9AB00' : '#D93025', pc = v == null ? 0 : Math.max(2, Math.min(100, (v - 80) / 20 * 100));
-    return `<span class="m2-ab" title="aderência ${v == null ? '—' : nf(v, 1) + '%'} · meta 95% · escala 80–100%"><span class="m2-abt"><i style="width:${pc}%;background:${cor}"></i><em></em></span><b>${v == null ? '—' : nf(v, 0) + '%'}</b></span>`; };
-  const hor = x => x.mcp.map(m => { const d = m.h ? Math.round((hoje() - pD(m.h.date)) / 864e5) : null; return `<div class="m2-h"><span class="m2-pos">${x.v.mcp === 'mono' ? 'CE' : m.pos}</span><b>${m.h ? nf(m.h.h) : '—'}</b><em class="${d > 7 ? 'old' : ''}">${d == null ? '' : d === 0 ? 'hoje' : d + ' d'}</em></div>`; }).join('');
-  return `<div class="kgrid six"><div class="card mini ${lib === L.length ? 'ok' : 'bad'}"><b>${lib}/${L.length}</b><span>embarcações liberadas para operação</span></div><div class="card mini ${tot.venc ? 'bad' : 'ok'}"><b>${tot.venc}</b><span>itens vencidos (backlog preventivo)</span></div><div class="card mini"><b>${tot.viag}</b><span>itens que vencem na próxima viagem</span></div><div class="card mini ${aderF >= 95 ? 'ok' : 'bad'}"><b>${aderF == null ? '—' : nf(aderF, 1) + '%'}</b><span>aderência ao plano (Anexo I) · meta ≥ 95%</span></div><div class="card mini"><b>${L.reduce((a, x) => a + x.comOM, 0)}</b><span>itens já programados em OM</span></div><div class="card mini"><b>${L.reduce((a, x) => a + x.n.sem, 0)}</b><span>itens sem histórico (cadastrar último serviço)</span></div></div>
-   <div class="card m2-card"><div class="m2-top"><div><h2>Matriz de condição da frota</h2><div class="note">embarcação × sistema do Anexo I · ordenada por criticidade · clique na linha para abrir a embarcação</div></div><span class="sp"></span>
-    <div class="m2-leg"><span><span class="m2-t v sm">3</span>itens vencidos</span><span><span class="m2-t a sm">2</span>vencem na viagem</span><span><span class="m2-ok"></span>em dia</span><span><span class="m2-sem"></span>sem histórico</span><span><span class="m2-na"></span>não se aplica</span></div></div>
-   <div class="tw"><table class="m2"><thead><tr><th class="l">Embarcação</th><th class="l">Horímetro MCP</th><th>Aderência</th><th>Pendências</th>${SIS_CURTO.map((n, i) => `<th class="m2-s${i === 0 ? ' f' : ''}" title="${esc(SISTEMAS[i])}"><small>${i + 1}.0</small>${n}</th>`).join('')}</tr></thead><tbody>
-   ${L.map(x => { const [sc, st] = sit(x); return `<tr class="click" data-vessel="${x.v.id}"><td class="l"><div class="m2-v">${esc(x.v.nome)}</div><div class="m2-st ${sc}"${x.bq.length ? ` title="Crítica vencida sem OM: ${esc(x.bq.map(b => b.t.id).join(', '))}"` : ''}><i></i>${st}</div></td>
-    <td class="l">${hor(x)}</td><td>${donut(x.ader)}</td>
-    <td><div class="m2-pd"><span class="${x.n.venc ? 'v' : 'z'}" title="itens vencidos">${x.n.venc}</span><span class="${x.n.viag ? 'a' : 'z'}" title="vencem na próxima viagem">${x.n.viag}</span></div></td>
-    ${x.sis.map((s, i) => cel(s, i).replace('<td class="m2-c"', i === 0 ? '<td class="m2-c f"' : '<td class="m2-c"')).join('')}</tr>`; }).join('')}</tbody></table></div>
-   <p class="note">Aderência = itens em dia ÷ itens com histórico (barra na escala 80–100%; o traço marca a meta de 95%). Pendências = itens vencidos | itens que vencem na próxima viagem. Vencimento = horas OU meses, o que ocorrer primeiro (Anexo I). Horímetro: última leitura do FR 027_L. Saída bloqueada = item de prioridade Crítica vencido sem OM.</p></div>`;
-}
-{ const v0 = vFrota; vFrota = function () {
-  const h = v0(), seg = `<div class="seg"><button data-fmodo="matriz" class="${FROTAMODO === 'matriz' ? 'on' : ''}">Matriz</button><button data-fmodo="cartoes" class="${FROTAMODO === 'cartoes' ? 'on' : ''}">Cartões</button></div>`;
-  const h2 = h;
-  if (FROTAMODO === 'cartoes') return h2; const i = h2.indexOf('<div class="fleet">'); return h2.slice(0, i) + frotaMatrizHtml(); }; }
-{ const a0 = AFTER.frota; AFTER.frota = () => { if (a0) a0(); const m = $('#main'), c0 = m.onclick; m.onclick = e => { const b = e.target.closest('[data-fmodo]'); if (b) { FROTAMODO = b.dataset.fmodo; render(); return; } return c0 && c0(e); }; }; }
 
 /* ---------- 8 · cronograma de manutenção (projetado do Anexo I) ---------- */
 const CRONO_FORA = ['11.1.2', '11.3.2'];   // motor de popa e motobomba 5 HP: troca a cada saída, fora do cronograma
@@ -4728,20 +4531,6 @@ horMcpCard = rioCard;
 <script>
 /* ===== Controle da condição em 4 abas: Vencimentos (+lubrificação) · MCP (calibração + MBC) · Docagem · Horímetros ===== */
 'use strict';
-{ const keep = { frota: VX.frota || vFrota, lub: VX.lub, calib: VX.calib || vCalib, over: VX.over || vOver }, A = { frota: AFTER.frota, lub: AFTER.lub, calib: AFTER.calib, over: AFTER.over };
-  const semCab = h => { const t = document.createElement('div'); t.innerHTML = h; const vh = t.querySelector('.vh'); if (vh) vh.remove(); return t.innerHTML; };
-  const sec = (tit, sub) => `<div class="ab4-sec"><h2>${tit}</h2>${sub ? `<span class="note">${sub}</span>` : ''}</div>`;
-  const juntaAfter = (a, b) => () => { const m = $('#main'); a && a(); const h1 = [m.onclick, m.oninput, m.onchange]; b && b(); const h2 = [m.onclick, m.oninput, m.onchange];
-    ['onclick', 'oninput', 'onchange'].forEach((k, i) => { const f1 = h1[i], f2 = h2[i]; m[k] = f1 && f2 && f1 !== f2 ? e => { f1.call(m, e); f2.call(m, e); } : (f2 || f1); }); };
-  VX.frota = () => keep.frota() + sec('Lubrificação', 'trocas de óleo · FR 049_B') + semCab(keep.lub());
-  VX.mcp = () => { const c = keep.calib(); return c + sec('MBC · condição do MCP', 'compressão e análise de óleo') + semCab(keep.over()); };
-  AFTER.frota = juntaAfter(A.frota, A.lub); AFTER.mcp = juntaAfter(A.calib, A.over);
-  const s = SECOES.find(x => x.id === 'cond');
-  if (s) { s.views = [['frota', 'Vencimentos e lubrificação'], ['mcp', 'MCP · calibração e MBC'], ['doca', 'Docagem'], ['hor', 'Horímetros']]; s.extra = (s.extra || []).concat(['lub', 'calib', 'over']); }
-  // links antigos levam para a aba nova
-  const redir = () => { if (VX.controle) return; const h = location.hash.slice(1); if (h === 'lub') location.replace('#frota'); else if (h === 'calib' || h === 'over') location.replace('#mcp'); };
-  window.addEventListener('hashchange', redir); redir();
-}
 
 if (typeof LAY_VIEWS !== 'undefined' && !LAY_VIEWS.includes('mcp')) LAY_VIEWS.push('mcp');
 
@@ -4749,8 +4538,7 @@ if (typeof LAY_VIEWS !== 'undefined' && !LAY_VIEWS.includes('mcp')) LAY_VIEWS.pu
 <script>
 /* ===== Controle da condição numa página só: seções uma embaixo da outra, com índice fixo ===== */
 'use strict';
-{ const SEC = [['venc', VX.frota, AFTER.frota], ['mcp', VX.mcp, AFTER.mcp], ['doca', VX.doca, AFTER.doca], ['hor', VX.hor, AFTER.hor]];
-  const IDX = [['venc', 'Vencimentos'], ['lub', 'Lubrificação'], ['mcp', 'Calibração do MCP'], ['mbc', 'MBC · MCP'], ['doca', 'Docagem'], ['hor', 'Horímetros']];
+{
   let ALVO = '';
   const parte = (k, f, i) => { const t = document.createElement('div'); t.innerHTML = f();
     t.querySelectorAll('.banner').forEach(b => b.remove());
