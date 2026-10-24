@@ -2124,7 +2124,7 @@ function vFalhas() {
    <div class="note">A medida é registrada na própria corretiva (campo A9 · Análise). É obrigatória em Crítica e Alta. Clique numa linha para abrir a OM.</div>
    ${med.length ? `<div class="tw"><table class="t"><thead><tr><th>OM</th><th>Embarcação</th><th>Classe</th><th>Falha</th><th>Causa raiz</th><th>Medida de mitigação</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr></thead><tbody>
    ${med.map(({ o, s }) => `<tr class="click" data-open="${o.id}"><td class="mono">${esc(o.num)}</td><td>${esc(vName(o.vessel))} ${posTag(o.pos)}</td><td>${esc(o.classe || '')}</td><td>${esc(o.descricao || '')}${o._reinc ? ` <span class="pill p-bad" data-tip="Repetiu a OM ${esc(o._reinc.num)} de ${brD(o._reinc.abertura)}">reincidente</span>` : ''}</td><td class="note">${esc(o.causa || '—')}</td><td>${esc(o.mitig || '—')}</td><td>${esc(o.mitigResp || '—')}</td><td>${o.mitigPrazo ? brD(o.mitigPrazo) : '—'}</td><td><span class="pill ${s.c}">${s.t}</span></td></tr>`).join('')}
-   </tbody></table></div>` : `<div class="note">${FALMED === 'abertas' ? 'Nenhuma medida pendente.' : 'Nenhuma corretiva no período.'}</div>`}</div>`;
+   </tbody></table></div>` : `<div class="note">${FALMED === 'abertas' ? 'Nenhuma medida pendente.' : 'Nenhuma corretiva no período.'}</div>`}</div>` + tecFalhasCard();
 }
 AFTER.falhas = () => { $('#main').onclick = e => {
   const p = e.target.closest('[data-falper]'); if (p) { FALPER = +p.dataset.falper; render(); return; }
@@ -4134,7 +4134,6 @@ function tecFalhasCard() {
    <div class="card"><div class="row"><h2>F · Sistema × modo de falha</h2><span class="sp"></span><span class="note">densidade de falhas: quanto mais escuro, maior a frequência</span></div>
     ${sis.length && mods.length ? `<div class="tw"><table class="t hm"><thead><tr><th>Sistema</th>${mods.map(m => `<th class="c">${esc(m)}</th>`).join('')}</tr></thead><tbody>${sis.map(s => `<tr><td><b>${esc(s)}</b></td>${mods.map(m => { const n = T.mat[s][m] || 0; return `<td class="c" style="${n ? `background:rgba(26,115,232,${(.25 + .65 * n / mx).toFixed(2)});color:#173252;font-weight:600` : 'color:var(--mut)'}">${n || '·'}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="note">Ainda não há corretivas com modo de falha registrado.</div>'}</div>`;
 }
-{ const v0 = vFalhas; vFalhas = function () { return v0() + tecFalhasCard(); }; }
 
 /* ---------- 2 · laudo de óleo e saúde do MCP ---------- */
 // limites de referência para motor diesel com óleo 15W-40 (ajuste com os limites do laboratório)
@@ -7038,14 +7037,15 @@ document.addEventListener('click', e => { const a = e.target.closest('[data-fsgo
   if (nav && !(typeof ehOperador === 'function' && ehOperador())) { const g = nav.querySelector('.grp-t'); if (g) g.textContent = 'Gestão'; if (!nav.querySelector('.grp-trab')) nav.insertAdjacentHTML('afterbegin', '<div class="grp-t grp-trab">Operação</div>'); }
   return x; }; }
 // Conferir e encerrar: OMs (preventiva e corretiva) na etapa "Em conferência", que só o Supervisor aprova
+/* Conferir e encerrar num bloco só (24/10/2026) */
 function vOmConf() { const L = [], vis = new Set();
   oms().filter(o => !o.excluido && o.status !== 'encerrada').forEach(o => { const g = o.grupo || o.id; if (vis.has(g)) return; vis.add(g); const st = o.grupo ? grpStatus(omGrupo(o.grupo)) : o.status; if (st === 'conferencia') L.push({ o, g }); });
   L.sort((a, b) => (a.o.updatedAt || 0) - (b.o.updatedAt || 0));
   const linha = ({ o, g }) => { const dias = o.updatedAt ? Math.floor((Date.now() - o.updatedAt) / 864e5) : null;
     return `<tr><td class="mono"><b>OM ${esc(o.num || '—')}</b></td><td><b>${esc(vName(o.vessel))}</b></td><td>${o.tipo === 'C' ? '<span class="pill p-bad">Corretiva</span> ' + esc(o.classe || '') : '<span class="pill p-ok">Preventiva</span>'}</td><td class="note">${dias == null ? '' : dias === 0 ? 'lançada hoje' : 'esperando há ' + dias + ' dia' + (dias > 1 ? 's' : '')}</td>
       <td class="r"><a class="mbtn sm pri" href="${o.grupo ? '#omg/' + encodeURIComponent(g) : '#om/' + o.id}">Conferir e encerrar</a></td></tr>`; };
-  return `<div class="vh"><div><h1>Conferir e encerrar</h1><p>OMs já lançadas que esperam a conferência do Supervisor. Só você aprova e encerra.</p></div></div>
-   <div class="card"><h2>Esperando conferência · ${L.length}</h2>${L.length ? `<div class="tw"><table class="t"><tbody>${L.map(linha).join('')}</tbody></table></div>` : '<p class="note">Nada esperando conferência.</p>'}</div>`; }
+  return `<div class="vh"><div><h1>Conferir e encerrar</h1><p>1) Conferir e encerrar no SMF · 2) anexar o PDF e encerrar a OM no Sankhya.</p></div></div>
+   <div class="card"><h2>Esperando conferência · ${L.length}</h2>${L.length ? `<div class="tw"><table class="t"><tbody>${L.map(linha).join('')}</tbody></table></div>` : '<p class="note">Nada esperando conferência.</p>'}</div>` + skCard(); }   /* + Anexar no Sankhya (bloco do Sankhya) */
 // Calibração e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
 { const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}.fs-sr.fs-dm{color:#5F6368;font-size:13px}.fs-sr.fs-dm .fs-sn{color:#5F6368;grid-column:2/-1}
@@ -8186,7 +8186,7 @@ function skCard() {
   return `<div class="card"><h2>Anexar no Sankhya · ${L.length}</h2><p class="note">OMs já encerradas no SMF. Abra o PDF, anexe na OM do Sankhya, encerre a OM lá e marque aqui. Enquanto não marcar, a OM continua nesta lista.</p>
    ${L.length ? `<div class="tw"><table class="t"><tbody>${L.map(linha).join('')}</tbody></table></div>` : '<p class="note">Nada pendente no Sankhya.</p>'}</div>`;
 }
-{ const v0 = vOmConf; vOmConf = function () { return v0().replace('<p>OMs já lançadas que esperam a conferência do Supervisor. Só você aprova e encerra.</p>', '<p>1) Conferir e encerrar no SMF · 2) anexar o PDF e encerrar a OM no Sankhya.</p>') + skCard(); }; VX.omconf = vOmConf; }
+VX.omconf = vOmConf;
 document.addEventListener('click', async e => { const b = e.target.closest('[data-skfim]'); if (!b) return; e.preventDefault(); e.stopPropagation();
   if (!precisa(true)) return; const r = S.recs.get(b.dataset.skfim); if (!r) return; const num = r.kind === 'lub' ? r.om : r.num;
   if (!confirm('Confirma que o PDF foi anexado e a OM ' + (num || '') + ' foi encerrada no Sankhya?')) return;
@@ -8557,7 +8557,6 @@ function vPainel() {
    <div class="card"><h2>1 · Como está a frota</h2><div class="pf-tw"><table class="pf-tb"><thead><tr><th>Empurrador</th><th>Situação</th><th>Onde está</th><th>Próximo passo</th><th>Pendências</th><th></th></tr></thead><tbody>${quadro}</tbody></table></div>${fora.length ? `<p class="note" style="margin-top:10px">Fora de operação: ${fora.map(v => esc(v.nome)).join(', ')}</p>` : ''}</div>
    <div class="card"><h2>2 · O que fazer agora</h2>${A.length ? `<div class="pf-ag">${lista(U, 'u', 'Urgente')}${lista(W, 'w', 'Esta semana')}${U.length > MX || W.length > MX ? '<button class="mbtn sm" data-pfmais>Mostrar todas</button>' : ''}</div>` : '<p class="note pf-ok">✓ Nada pendente agora.</p>'}</div></div></div>`;
 }
-{ const r0 = VX.rotina; VX.rotina = function () { return typeof ehOperador === 'function' && ehOperador() ? r0.apply(this, arguments) : vPainel(); }; }
 document.addEventListener('click', e => { if (VIEW !== 'rotina') return;
   const m = e.target.closest('[data-pfmais]'); if (m) { document.querySelectorAll('#main .pf-x').forEach(x => x.hidden = false); m.remove(); return; }
   const q = e.target.closest('[data-pfgo]'); if (q && !e.target.closest('a,button,summary,details,select,input')) location.hash = '#barco/' + q.dataset.pfgo; }, true);
