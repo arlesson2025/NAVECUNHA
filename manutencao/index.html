@@ -6043,24 +6043,6 @@ function rotinaPasso(x) {
   if (n) return { n: 1, txt: `${x.venc.length ? `<b style="color:#D93025">${x.venc.length} vencidos</b>` : ''}${x.venc.length && x.viag.length ? ' + ' : ''}${x.viag.length ? x.viag.length + ' vencem na próxima viagem' : ''}: programar a OM`, btn: `<a class="mbtn sm pri" href="#emitir/${x.v.id}">Programar OM</a>` };
   return { n: 6, txt: 'Em dia: nada a programar', btn: '' };
 }
-function vRotina() {
-  const D = rotinaDados(), A = D.filter(x => !x.fora), Pa = A.map(x => ({ x, p: rotinaPasso(x) }));
-  const cont = k => Pa.filter(y => y.p.n === k).length, hrOld = A.filter(x => x.dHr == null || x.dHr > 7), corr = A.reduce((a, x) => a + x.corr.length, 0), crit = A.filter(x => x.crit);
-  const passos = [['1', 'Programar', 'marcar o que vence e abrir a OM no Sankhya'], ['2', 'Imprimir', 'ficha checklist para a equipe de terra'], ['3', 'Executar', 'equipe de terra faz e marca OK / NOK / NA'], ['4', 'Lançar', 'copiar a ficha para o sistema'], ['5', 'Conferir', 'Supervisor aprova; PDF vai para o Drive']];
-  const corP = { 1: '#D93025', 2: '#E37400', 3: '#1967D2', 4: '#E37400', 5: '#188038', 6: '#188038', 0: '#9AA0A6' };
-  const ordem = Pa.slice().sort((a, b) => (a.p.n || 9) - (b.p.n || 9) || (b.x.venc ? b.x.venc.length : 0) - (a.x.venc ? a.x.venc.length : 0));
-  return `<div class="vh"><div><h1>Rotina do dia</h1><p>O que fazer agora, empurrador por empurrador, na ordem do processo. Cada linha mostra o próximo passo e o botão para fazê-lo.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
-   <div class="rt-passos">${passos.map(([n, t, d], i) => `<div><b>${n}</b><span>${t}</span><small>${d}</small><em>${cont(i + 1)}</em></div>`).join('<i>›</i>')}</div>
-   ${crit.length || hrOld.length || corr ? `<div class="card rt-al"><h2>Antes de tudo</h2><ul>
-    ${crit.map(x => `<li><b style="color:#D93025">${esc(x.v.nome)}: saída bloqueada</b>, item Crítico vencido sem OM. <a href="#emitir/${x.v.id}">Programar agora</a></li>`).join('')}
-    ${corr ? `<li><b>${corr} ${corr === 1 ? 'corretiva aberta' : 'corretivas abertas'}</b>. <a href="#acomp">Ver no quadro</a></li>` : ''}
-    ${hrOld.length ? `<li><b>Horímetro desatualizado</b> (mais de 7 dias): ${hrOld.map(x => esc(x.v.nome)).join(', ')}. Sem leitura, o vencimento fica errado. <a href="#hor">Lançar horímetros</a></li>` : ''}</ul></div>` : ''}
-   <div class="card"><div class="tw"><table class="t rt-t"><thead><tr><th>Embarcação</th><th>Passo</th><th>O que fazer agora</th><th>Horímetro MCP</th><th></th></tr></thead><tbody>
-    ${ordem.map(({ x, p }) => `<tr><td><b>${esc(x.v.nome)}</b></td><td><span class="rt-n" style="background:${corP[p.n]}">${p.n >= 1 && p.n <= 5 ? p.n : '✓'}</span></td><td>${p.txt}</td><td class="mono note">${x.hr ? nf(x.hr.h) + ' h · ' + (x.dHr === 0 ? 'hoje' : x.dHr + ' d') : '—'}</td><td class="rt-b">${p.btn}</td></tr>`).join('')}
-    ${D.filter(x => x.fora).map(x => `<tr class="rt-fora"><td>${esc(x.v.nome)}</td><td><span class="rt-n" style="background:#9AA0A6">—</span></td><td class="note">Fora de operação</td><td></td><td></td></tr>`).join('')}</tbody></table></div></div>
-   <p class="note">Detalhes: <a href="#emitir">Programação</a> · <a href="#acomp">OMs em execução</a> · <a href="#cxr">Cronograma × Realizado</a> · <a href="#geral">Painel de gestão</a></p>`;
-}
-VX.rotina = vRotina;
 AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
   if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'abordo' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); } render(); } }; };
@@ -6211,10 +6193,6 @@ AFTER.crono = function () { const m = $('#main');
       t.disabled = true; t.textContent = 'Aprovando…'; await cronoAprovar(vs, +CR2.ano); toast('Cronograma ' + CR2.ano + ' aprovado' + (vs.length > 1 ? ' para ' + vs.length + ' embarcações.' : '.')); render(); } }; };
 { const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'crono'); if (i >= 0) s.views[i][1] = 'Cronograma anual'; const m = s.views.findIndex(x => x[0] === 'matriz'); if (m >= 0) s.views[m][1] = 'Anexo I · consulta'; }
   const c = s && s.views.splice(s.views.findIndex(x => x[0] === 'crono'), 1)[0]; if (c) s.views.unshift(c); }
-// rotina: troca de óleo só aparece quando estiver VENCIDA, numa linha curta
-{ const r0 = vRotina; vRotina = function () { let h = r0(); const L = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, o: cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null && x.p.rest < 0) })).filter(x => x.o.length);
-  if (!L.length) return h; const card = `<div class="banner bad" style="margin-bottom:12px"><b>Troca de óleo vencida:</b> ${L.map(x => esc(x.v.nome) + ' (' + x.o.map(({ l }) => esc(l.nome.replace('Troca de óleo · ', '').replace(' + itens de 250 h', ''))).join(', ') + ')').join(' · ')}. </div>`;
-  const i = h.indexOf('<div class="card"><div class="tw"><table class="t rt-t">'); return i > 0 ? h.slice(0, i) + card + h.slice(i) : h + card; }; VX.rotina = vRotina; }
 
 </script>
 <script>
@@ -6362,7 +6340,6 @@ async function situSalvar(vid, st) {
   S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg);
   if (S.url && can.admin()) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } } catch (e) { } }
 }
-const diasDesde = d => d ? Math.max(0, Math.round((hoje() - pD(d)) / 864e5)) : null;
 function oleoDoBarco(v) {
   return cronoLinhas(v).filter(l => l.tr === 'bordo' && /MCP|MCA/.test(l.nome)).map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p && x.p.rest != null)
     .map(x => { const rate = (typeof horasDiaPos === 'function' && horasDiaPos(v.id, x.p.pos)) || 20, dh = x.p.dd != null ? x.p.dd * rate : null, porData = dh != null && dh < x.p.rest;   /* 350 h ou 6 meses: vale o que vencer primeiro (antes só horas) */
@@ -6377,45 +6354,6 @@ function horPainelTotal(vid, pos, h, date) {   // devolve o total se 'h' é com 
   if (ant.h < VOLTA) { const dias = Math.max(0, Math.round((pD(date) - pD(ant.date)) / 864e5)); if (t - ant.h > dias * 24 + 24) return null; }   // 1ª volta só se as horas a mais cabem nos dias passados; senão vira pendência (horp)
   return Math.round(t * 10) / 10;
 }
-let FRFIX = false;
-async function frPainelFix() {   // FR 049_B lançados com o número do painel (antes da correção): converte para o horímetro total
-  if (FRFIX || !S.session) return; FRFIX = true; let n = 0;
-  for (const r of recs('lub').filter(r => r.tipo === 'fr049' && r.vessel)) { const v = vessel(r.vessel); if (!v) continue; let mud = false;
-    for (const q of r.eq || []) { if (q.status !== 'T' || q.hr == null || !q.hp || q.hrPainel != null || +q.hr >= VOLTA || ['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) continue;
-      if (r.seed) continue; const tot = horPainelTotal(v.id, q.hp, +q.hr, r.date); if (tot == null) continue;
-      q.hrPainel = +q.hr; q.hr = tot; mud = true; await lubHor(v.id, q.hp, tot, r.date, 'FR 049_B OM ' + r.om); }
-    if (mud) { await saveRec(r); n++; } }
-  if (n) { toast(n + (n === 1 ? ' FR 049_B corrigido' : ' FR 049_B corrigidos') + ': horímetro do painel convertido para o total.', 6000); render(); }
-}
-vRotina = function () {
-  setTimeout(frPainelFix, 300);
-  const D = rotinaDados(), A = D.filter(x => !x.fora), hv = hViagem();
-  const porto = A.filter(x => situDe(x.v) && x.v.situ.st === 'porto'), viag = A.filter(x => situDe(x.v) && x.v.situ.st === 'viagem'), sem = A.filter(x => !situDe(x.v));
-  const hrTxt = x => x.hr ? nf(x.hr.h) + ' h · ' + (x.dHr === 0 ? 'hoje' : 'há ' + x.dHr + ' d') : 'sem leitura';
-  const omPasso = x => { const p = rotinaPasso(x); return p.n >= 2 && p.n <= 5 ? `<div class="rt2-l"><span class="rt-n" style="background:#1967D2">${p.n}</span><span>${p.txt}</span><span class="sp"></span>${p.btn}</div>` : ''; };
-  const cardPorto = x => { const v = x.v, O = oleoDoBarco(v), oleoAgora = O.filter(o => o.rest < (typeof horasViagem === 'function' ? horasViagem(v, o.pos) : hv)), n = x.venc.length + x.viag.length, d = diasDesde(v.situ.at), crit = x.crit;
-    const hrVelho = !x.hr || pD(x.hr.date) < pD(v.situ.at);
-    return `<div class="rt2-c porto"><div class="rt2-h"><b>${esc(v.nome)}</b><span class="note">no porto ${d === 0 ? 'desde hoje' : 'há ' + d + (d === 1 ? ' dia' : ' dias')}</span><span class="sp"></span><button class="mbtn sm" data-situ="${v.id}|viagem">⛴ Saiu de viagem</button></div>
-     ${typeof fr27Linha === 'function' ? fr27Linha(v) : ''}${crit ? `<div class="rt2-l bad">⛔ <b>Saída bloqueada:</b> item Crítico vencido sem OM.</div>` : ''}
-     ${hrVelho ? `<div class="rt2-l"><span>⏱ Lançar o horímetro da chegada</span><span class="sp"></span><a class="mbtn sm" href="#hor">Lançar</a></div>` : ''}
-     ${omPasso(x) || (n ? `<div class="rt2-l"><span>🔧 <b>OM da janela:</b> ${x.venc.length ? `<b style="color:#D93025">${x.venc.length} vencidos</b> + ` : ''}${x.viag.length} vencem antes da volta</span><span class="sp"></span><a class="mbtn sm pri" href="#emitir/${v.id}">Programar OM</a></div>` : '<div class="rt2-l ok">✓ Nada da janela vence antes da volta</div>')}
-     ${oleoAgora.length ? `<div class="rt2-l"><span>🛢 <b>Troca de óleo antes de sair</b> (equipe + CTF/MFM) ou mandar óleo e filtros: ${oleoAgora.map(o => esc(o.nome) + (o.rest < 0 ? ' <b style="color:#D93025">vencida' + (o.porData ? ' (por data)' : '') + '</b>' : o.porData ? ' vence por data em ' + o.dd + ' dias' : ' faltam ' + nf(o.rest) + ' h')).join(' · ')}</span><span class="sp"></span><button class="mbtn sm pri" data-frv="${v.id}">🛢 Lançar troca de óleo</button></div>` : '<div class="rt2-l ok">✓ Óleo aguenta a próxima viagem</div>'}
-    </div>`; };
-  const linhaViag = x => { const v = x.v, O = oleoDoBarco(v), o = O[0], d = diasDesde(v.situ.at), rate = (typeof horasDiaPos === 'function' && o && horasDiaPos(v.id, o.pos)) || 20;
-    const quando = o ? (o.rest < 0 ? `<b style="color:#D93025">${esc(o.nome)}: troca vencida (${o.porData ? 'por data, há ' + (-o.dd) + ' dias' : nf(-o.rest) + ' h'})</b>` : o.porData ? `${esc(o.nome)}: vence por data em ${o.dd} dias` : `${esc(o.nome)}: faltam ${nf(o.rest)} h ≈ ${o.rest / rate < 1 ? 'hoje/amanhã' : 'em ' + Math.round(o.rest / rate) + ' dias'}`) : 'sem horímetro';
-    const urg = o && o.rest < rate * 2;
-    return `<tr class="${urg ? 'rt2-urg' : ''}"><td><b>${esc(v.nome)}</b>${typeof saidaTag === 'function' ? saidaTag(v) : ''}</td><td class="note">viajando ${d === 0 ? 'desde hoje' : 'há ' + d + ' d'}</td><td>🛢 ${quando}${urg ? ' · <b>acompanhar a troca pela câmera e lançar o FR 049_B</b>' : ''}</td><td class="note mono">${hrTxt(x)}</td><td class="rt-b">${urg ? '<button class="mbtn sm pri" data-frv="${v.id}">🛢 Lançar troca de óleo</button>' : ''}<button class="mbtn sm" data-situ="${v.id}|porto">⚓ Chegou em Manaus</button></td></tr>`; };
-  const corr = A.reduce((a, x) => a + x.corr.length, 0);
-  return `<div class="vh"><div><h1>Rotina do dia</h1><p>Empurrador no porto: o que fazer antes de sair. Empurrador viajando: só a troca de óleo quando chegar a hora. Informe quando o empurrador chega e sai.</p></div><span class="sp"></span><span class="note">${hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></div>
-   ${sem.length ? `<div class="card rt2-sem"><h2>Onde está cada empurrador?</h2><p class="note">Informe uma vez. Depois é só clicar quando o empurrador chegar ou sair.</p>${sem.map(x => `<div class="rt2-l"><b style="min-width:90px">${esc(x.v.nome)}</b><span class="sp"></span><button class="mbtn sm" data-situ="${x.v.id}|porto">⚓ Está no porto</button><button class="mbtn sm" data-situ="${x.v.id}|viagem">⛴ Está viajando</button></div>`).join('')}</div>` : ''}
-   <h2 class="rt2-t">⚓ No porto de Manaus <span>${porto.length}</span></h2>
-   ${porto.length ? `<div class="rt2-g">${porto.map(cardPorto).join('')}</div>` : '<p class="note">Nenhum empurrador no porto.</p>'}
-   <h2 class="rt2-t">⛴ Em viagem <span>${viag.length}</span></h2>
-   ${viag.length ? `<div class="card"><div class="tw"><table class="t rt-t">${viag.map(linhaViag).join('')}</table></div></div>` : '<p class="note">Nenhum empurrador em viagem.</p>'}
-   ${corr ? `<p class="note" style="margin-top:14px">Corretivas abertas: <b>${corr}</b> · <a href="#acomp">ver OMs em execução</a></p>` : ''}
-   ${D.filter(x => x.fora).length ? `<p class="note">Fora de operação: ${D.filter(x => x.fora).map(x => esc(x.v.nome)).join(', ')}</p>` : ''}`;
-};
-VX.rotina = vRotina;
 AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
   if (t.dataset.frv) { if (!precisa(false)) return; return lubAbrirForm(t.dataset.frv); }
@@ -6515,8 +6453,8 @@ AFTER.barco = function () { const m = $('#main');
 }
 /* ---------- "ficha" passa a se chamar "formulário" ---------- */
 { const troca = h => h.replace(/(^|[\s>(“"])([Ff])icha(?![\w])/g, (m, a, f) => a + (f === 'F' ? 'Formulário' : 'formulário')).replace(/\b([Aa]) formulário/g, (m, a) => (a === 'A' ? 'O' : 'o') + ' formulário').replace(/\bda formulário/g, 'do formulário').replace(/\bna formulário/g, 'no formulário').replace(/\bpela formulário/g, 'pelo formulário').replace(/\bDa formulário/g, 'Do formulário');
-  ['vRotina', 'vAcomp', 'vOmg', 'vEmitir', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
-  VX.rotina = window.vRotina; VX.acomp = window.vAcomp; VX.omg = window.vOmg; VX.barco = window.vBarco;
+  ['vAcomp', 'vOmg', 'vEmitir', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
+  VX.acomp = window.vAcomp; VX.omg = window.vOmg; VX.barco = window.vBarco;
   const d0 = docFichaEmb; docFichaEmb = function (g) { return d0(g).map(troca); };
   const m0 = fichaModal; fichaModal = function (o) { m0(o); const h = $('#modal'); if (h) h.querySelectorAll('h2,p,button').forEach(el => { if (el.children.length === 0 || el.tagName === 'P') el.innerHTML = troca(el.innerHTML); }); }; }
 { const st = document.createElement('style'); st.textContent = `.ol-k{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 14px}.ol-k>div{flex:1;min-width:150px;background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;align-items:baseline;gap:10px}.ol-k b{font-size:30px}.ol-k .venc b{color:#C5221F}.ol-k .aten b{color:#E37400}.ol-k .ok b{color:#188038}.ol-k .sem b{color:#9AA0A6}
@@ -7083,7 +7021,6 @@ const O3 = {
   open: null, mode: null, ves: null, L: null, z: 5
 };
 const o3nf = n => Math.round(n).toLocaleString('pt-BR');
-const o3dt = d => d ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
 const o3nome = (v, e) => String(eqNomeC(v, e) || '').replace(/^Motobomba de incêndio.*$/, 'Motobomba').replace(/^Governo.*$/, 'Governo').replace(/ \(Linha de centro\)/, ' LC');
 function o3Carter(e) {
   if (e.carterTxt) return { t: e.carterTxt, s: e.carterSub };
@@ -7343,41 +7280,6 @@ function amoCard() {
 <script>
 /* ===== Vencimentos: lista da frota (esquerda) + detalhe da embarcação ou da frota toda (direita) ===== */
 let FS_SEL = 'frota';
-const FS_NOME = ['Propulsão', 'Governo', 'Geração', 'Emergência', 'Salvatagem', 'Combustível', 'Comunicação', 'Amarração', 'Casco', 'Habitabilidade', 'Navegação'];
-function fsHTML() {
-  const L = frotaMatriz(), sel = FS_SEL === 'frota' ? null : L.find(x => x.v.id === FS_SEL) || null;
-  const sit = x => [['o', 'Liberada'], ['a', 'Liberada com restrição'], ['v', 'Saída bloqueada'], ['v', 'Interditada']][x.sit] || ['o', 'Liberada'];   // x.sit inclui NO do FR 027_L sem OM
-  const semH = x => !x.n.venc && !x.n.viag && !x.n.ok;
-  const tot = { venc: 0, viag: 0, ok: 0 }; L.forEach(x => { tot.venc += x.n.venc; tot.viag += x.n.viag; tot.ok += x.n.ok; });
-  const aderF = tot.venc + tot.viag + tot.ok ? (tot.viag + tot.ok) / (tot.venc + tot.viag + tot.ok) * 100 : null, lib = L.filter(x => x.sit >= 0 && x.sit < 2).length, nRes = L.filter(x => x.sit === 1).length, nFora = L.filter(x => x.sit < 0).length;   // fora de operação: nem liberada nem bloqueada
-  const titLib = [[lib - nRes, 'liberada', 'liberadas'], [nRes, 'com restrição', 'com restrição'], [L.length - lib - nFora, 'bloqueada ou interditada', 'bloqueadas ou interditadas'], [nFora, 'fora de operação', 'fora de operação']].filter(a => a[0]).map(a => a[0] + ' ' + (a[0] === 1 ? a[1] : a[2])).join(' · ');
-  const demais = (n, txt) => n ? `<div class="fs-sr fs-dm"><span class="fs-n"></span><span class="fs-sn">demais ${n} sistema${n === 1 ? '' : 's'} ${txt}</span></div>` : '';
-  const corA = a => a == null ? '#5F6368' : a >= 95 ? '#188038' : a >= 85 ? '#B06000' : '#C5221F';
-  const lista = `<div class="fs-l"><div class="fs-lh"><h2>Situação da frota</h2><div class="note">agora · ordenada por criticidade</div></div>
-   <table class="fs-t"><thead><tr><th>Embarcação</th><th title="itens vencidos agora">Venc.</th><th title="vencem na próxima viagem">Viag.</th><th title="itens em dia ÷ itens com histórico">Em dia</th></tr></thead><tbody>
-   <tr class="fs-r fs-all${!sel ? ' on' : ''}" data-fsel="frota"><td><b>Consolidado da frota</b><small class="fs-sm">${L.length} empurradores</small></td><td class="${tot.venc ? 'v' : 'z'}">${tot.venc}</td><td class="${tot.viag ? 'a' : 'z'}">${tot.viag}</td><td style="color:${corA(aderF)}">${aderF == null ? '—' : nf(aderF, 0) + '%'}</td></tr>
-   ${L.map(x => { const s = sit(x), sh = semH(x); return `<tr class="fs-r${sel === x ? ' on' : ''}" data-fsel="${x.v.id}"><td><i class="fs-d ${sh ? 'g' : s[0]}"></i>${esc(x.v.nome)}</td><td class="${sh ? 'z' : x.n.venc ? 'v' : 'z'}">${sh ? '—' : x.n.venc}</td><td class="${sh ? 'z' : x.n.viag ? 'a' : 'z'}">${sh ? '—' : x.n.viag}</td><td style="color:${corA(x.ader)}">${x.ader == null ? '—' : nf(x.ader, 0) + '%'}</td></tr>`; }).join('')}
-   </tbody></table></div>`;
-  const ader = (a, sub) => `<div class="fs-k" title="itens do Anexo I em dia agora ÷ itens com histórico (não é a aderência ao cronograma)"><span>Itens em dia</span><b style="color:${corA(a)}">${a == null ? '—' : nf(a, 0) + '%'}</b><div class="fs-ab"><i style="width:${a == null ? 0 : Math.max(2, a)}%;background:${corA(a)}"></i><em style="left:95%"></em></div><small>${a == null ? 'sem histórico' : a >= 95 ? 'meta de 95% atingida' : 'faltam ' + nf(95 - a, 0) + ' p.p. para a meta de 95%'}${sub ? ' · ' + sub : ''}</small></div>`;
-  let det;
-  if (!sel) {
-    const sis = FS_NOME.map((n, i) => { let v = 0, a = 0, ok = 0, ap = 0; const bv = []; L.forEach(x => { const s = x.sis[i]; if (!s) return; ap++; v += s.c.venc; a += s.c.viag; ok += s.c.ok; if (s.c.venc) bv.push([x.v.nome, s.c.venc]); }); return { n, i, v, a, ok, ap, bv: bv.sort((p, q) => q[1] - p[1]) }; }).sort((p, q) => q.v - p.v || q.a - p.a || p.i - q.i);
-    const mx = Math.max(1, ...sis.map(s => s.v));
-    det = `<div class="fs-dh"><h1>Consolidado da frota</h1><span class="fs-p ${lib - nRes === L.length ? 'o' : lib === L.length ? 'a' : 'v'}" title="bloqueio = item Crítico vencido sem OM">${titLib}</span><span class="sp"></span><a class="mbtn" href="#cxr" data-fscr="frota">Cronograma</a><a class="mbtn pri" href="#emitir">Gerar OMs</a></div>
-     <p class="fs-sub">${tot.venc} itens vencidos em ${sis.filter(s => s.v).length} sistema${sis.filter(s => s.v).length === 1 ? '' : 's'} · ${tot.viag} vence${tot.viag === 1 ? '' : 'm'} na próxima viagem · ${L.filter(x => x.n.venc).length} embarcação(ões) com pendência</p>
-     <div class="fs-ks">${ader(aderF)}<div class="fs-k"><span>Embarcações liberadas</span><b>${lib} de ${L.length}</b><small>${nRes ? nRes + ' com restrição (item vencido não crítico ou já em OM)' : 'nenhuma com restrição'}${L.length - lib ? ' · ' + (L.length - lib) + ' bloqueada(s)' : ''}</small></div><div class="fs-k"><span>Vencidos agora</span><b><span style="color:${tot.venc ? '#C5221F' : '#188038'}">${tot.venc}</span></b><small>backlog preventivo da frota</small></div></div>
-     <div class="fs-sb">${sis.filter(s => s.v || s.a).map(s => `<div class="fs-sr"><span class="fs-n">${s.i + 1}.0</span><span class="fs-sn${s.v ? ' b' : ''}">${FS_NOME[s.i]}</span><span class="fs-bar">${s.v ? `<i style="width:${Math.max(4, s.v / mx * 100)}%;background:#B3261E"></i>` : s.a ? `<i style="width:100%;background:#FCEFC7"></i>` : `<i style="width:100%;background:#D6E9DA"></i>`}</span><span class="fs-sv ${s.v ? 'v' : 'o'}">${s.v ? s.v + ' vencido' + (s.v > 1 ? 's' : '') : 'em dia'}</span><span class="fs-bv">${s.bv.slice(0, 3).map(b => esc(b[0]) + ' ' + b[1]).join(' · ')}</span></div>`).join('')}${demais(sis.filter(s => !s.v && !s.a).length, 'em dia')}</div>`;
-  } else {
-    const x = sel, s = sit(x), nsV = x.sis.filter(c => c && c.c.venc).length, mx = Math.max(1, ...x.sis.map(c => c ? c.c.venc : 0));
-    const ord = x.sis.map((c, i) => ({ c, i })).sort((p, q) => (q.c ? q.c.c.venc : -1) - (p.c ? p.c.c.venc : -1) || (q.c ? q.c.c.viag : -1) - (p.c ? p.c.c.viag : -1) || p.i - q.i);
-    const hor = x.mcp.map(m => { const d = m.h ? Math.round((hoje() - pD(m.h.date)) / 864e5) : null; return `<div class="fs-k"><span>Horímetro MCP${x.v.mcp === 'mono' ? '' : ' · ' + m.pos}</span><b>${m.h ? nf(m.h.h) + ' h' : '—'}</b><small style="color:${d > 7 ? '#C5221F' : ''}">${d == null ? 'sem leitura' : 'leitura há ' + (d === 0 ? 'menos de 1 d' : d + ' d')}</small></div>`; }).join('');
-    det = `<div class="fs-dh"><h1>${esc(x.v.nome)}</h1><span class="fs-p ${s[0]}">${s[1]}</span><span class="sp"></span><a class="mbtn" href="#cxr" data-fscr="${x.v.id}">Cronograma</a><a class="mbtn pri" href="#emitir/${x.v.id}">Gerar OMs</a><button class="mbtn" data-vessel="${x.v.id}">Abrir embarcação</button></div>
-     <p class="fs-sub">${semH(x) ? 'sem histórico: cadastre o último serviço' : `${x.n.venc} itens vencidos em ${nsV} sistema${nsV === 1 ? '' : 's'} · ${x.n.viag} vence${x.n.viag === 1 ? '' : 'm'} na próxima viagem${x.comOM ? ' · ' + x.comOM + ' já programados em OM' : ''}`}</p>
-     <div class="fs-ks">${ader(x.ader)}${hor}</div>
-     <div class="fs-sb">${ord.filter(({ c }) => c && (c.c.venc || c.c.viag)).map(({ c, i }) => `<div class="fs-sr"><span class="fs-n">${i + 1}.0</span><span class="fs-sn${c && c.c.venc ? ' b' : ''}">${FS_NOME[i]}</span><span class="fs-bar">${!c ? '' : c.c.venc ? `<i style="width:${Math.max(4, c.c.venc / mx * 100)}%;background:#B3261E"></i>` : c.c.viag ? '<i style="width:100%;background:#FCEFC7"></i>' : c.c.ok ? '<i style="width:100%;background:#D6E9DA"></i>' : ''}</span><span class="fs-sv ${!c ? 'z' : c.c.venc ? 'v' : (c.c.ok || c.c.viag) ? 'o' : 'z'}">${!c ? 'não se aplica' : c.c.venc ? c.c.venc + ' vencido' + (c.c.venc > 1 ? 's' : '') : (c.c.ok || c.c.viag) ? 'em dia' : 'sem histórico'}</span><span class="fs-bv"></span></div>`).join('')}${(() => { const r = ord.filter(({ c }) => !(c && (c.c.venc || c.c.viag))), ok = r.filter(({ c }) => c && c.c.ok).length, sh = r.filter(({ c }) => c && !c.c.ok).length; return demais(ok, 'em dia') + (sh ? `<div class="fs-sr fs-dm"><span class="fs-n"></span><span class="fs-sn">${sh} sistema${sh === 1 ? '' : 's'} sem histórico</span></div>` : ''); })()}</div>`;
-  }
-  return `<div class="card fs-card" data-lk="Vencimentos da frota"><div class="fs-g">${lista}<div class="fs-dt">${det}</div></div></div>`;
-}
 if (VX.controle) { const c2 = VX.controle; VX.controle = function () {
   const t = document.createElement('div'); t.innerHTML = c2();
   t.querySelectorAll('.kgrid').forEach(g => { if (/embarcações liberadas para operação/.test(g.textContent)) g.remove(); });
@@ -7678,12 +7580,6 @@ function cmpJanelas() { janelasLivres(document.querySelector('#main .cm-ws'), 's
 { const i = SECOES.findIndex(s => s.id === 'oleo'); SECOES.splice(i < 0 ? 1 : i + 1, 0, { id: 'compr', nome: 'Compressão MCP', views: [['compr', 'Compressão do MCP']] });
   ICO.compr = '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4"/><path d="M9 3h6"/>'; }
 // Hoje: motor fora do limite e ensaio vencido (P1) · overhaul a programar (P2)
-function cmpCardHoje() {
-  const D = cmpDados(), p1 = D.filter(x => x.st === 'fora' || x.vencida), p2 = D.filter(x => x.st === 'prog' && !x.vencida);
-  if (!p1.length && !p2.length) return '';
-  const it = (x, p) => `<li><span class="pill ${p === 'P1' ? 'p-bad' : 'p-warn'}">${p}</span> <a href="#compr"><b>${cmpNome(x)}</b></a> · ${esc(x.mot.join(' · '))}</li>`;
-  return `<div class="card cm-hoje"><div class="row"><h2>Compressão do MCP</h2><span class="sp"></span><a class="mbtn sm" href="#compr">Ver a frota</a></div><ul>${p1.map(x => it(x, 'P1')).join('')}${p2.map(x => it(x, 'P2')).join('')}</ul></div>`;
-}
 // dados fictícios: garante um caso de cada situação (fora do limite, atenção por diferença entre cilindros, ensaio vencido, sem ensaio)
 { const e0 = exemploComp; exemploComp = function () {
     let out = e0(); const ativo = m => { const v = vessel(m.split('|')[0]); return v && !(typeof foraOp === 'function' && foraOp(v)); };
@@ -7700,7 +7596,6 @@ function cmpCardHoje() {
       for (const r of recs('comp').filter(r => r.seed)) { S.recs.delete(r.id); if (MEM) MEM.delete(r.id); else await DB.del(r.id); }
       const l = exemploComp().filter(r => r.kind === 'comp'); l.forEach(r => { r.updatedAt = r.createdAt = Date.now(); S.recs.set(r.id, r); }); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l);
       await kvSet('cmpExV', 3); render(); } catch (e) { console.warn(e); } }, 300); }
-{ const r0 = VX.rotina; if (r0) VX.rotina = function () { const h = r0.apply(this, arguments), c = cmpCardHoje(); if (!c) return h; const i = h.indexOf('<div class="card'); return i >= 0 ? h.slice(0, i) + c + h.slice(i) : h + c; }; }
 { const st = document.createElement('style'); st.textContent = `.cm-ws{position:relative}.cm-ws.cm-free>.card{position:absolute;margin:0!important;box-sizing:border-box}.cm-v .card.cm-win{position:relative;overflow:auto;min-width:300px;min-height:70px}body:has(.cm-ws.cm-wide) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}#main .cm-ws.cm-free>.card.cm-win{position:absolute}#main .card>.cm-tb{position:absolute}#main .card>.cm-rz{position:sticky}.cm-grip{cursor:grab;color:#9AA0A6;padding:2px 6px;letter-spacing:-2px;user-select:none;touch-action:none;font-size:13px}.cm-hd{cursor:grab;user-select:none}.cm-drag{box-shadow:0 12px 32px rgba(22,33,44,.22)!important;opacity:.96}.cm-drag,.cm-drag .cm-hd{cursor:grabbing}.cm-rz{position:sticky;bottom:0;align-self:flex-end;flex:none;width:16px;height:16px;margin:-16px -10px -8px auto;cursor:nwse-resize;touch-action:none;z-index:4;background:linear-gradient(135deg,transparent 50%,#9AA0A6 50%,#9AA0A6 56%,transparent 56%,transparent 68%,#9AA0A6 68%,#9AA0A6 74%,transparent 74%)}.cm-win.cm-min .cm-rz,.cm-win:fullscreen .cm-rz,.cm-win.cm-full .cm-rz{display:none}.cm-tb{position:absolute;top:6px;right:8px;display:flex;gap:2px;z-index:3}.cm-ib{border:0;background:transparent;width:26px;height:24px;border-radius:5px;cursor:pointer;color:var(--mut);font-size:15px;line-height:1;padding:0;min-height:0;box-shadow:none}.cm-ib:hover{background:#E8EAED}.cm-win>.row:nth-child(2),.cm-win>h2:nth-child(2){padding-right:86px}.cm-win.cm-min{height:auto!important;min-height:0}.cm-win.cm-min>:not(.cm-tb):not(:nth-child(2)){display:none!important}
  .cm-gw{flex:1;min-height:0;display:flex}.cm-gw svg{width:100%;height:100%;min-height:180px}
  .cm-win:fullscreen,.cm-win.cm-full{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;border-radius:0;z-index:9999;background:#fff;padding:18px 26px!important;resize:none;overflow:auto;font-size:15px}.cm-win:fullscreen h2,.cm-win.cm-full h2{font-size:22px}.cm-win:fullscreen .t td,.cm-win:fullscreen .t th,.cm-win.cm-full .t td,.cm-win.cm-full .t th{font-size:15px!important;padding:5px 10px!important}.cm-win:fullscreen .cm-gw svg,.cm-win.cm-full .cm-gw svg{max-height:calc(100vh - 170px)}.cm-win:fullscreen .cm-det svg,.cm-win.cm-full .cm-det svg{max-height:calc(100vh - 200px)}.cm-win:fullscreen .note,.cm-win:fullscreen p,.cm-win:fullscreen li{font-size:14px}
@@ -7712,20 +7607,7 @@ function cmpCardHoje() {
 /* ===== Menu por decisão: Hoje (rotina + situação da frota + alertas) · Cronograma · OMs · Condição · Indicadores · Biblioteca · Administração =====
    Nomes que não se repetem: "Itens em dia" e "Vencidos agora" = foto de agora (Situação da frota);
    "Aderência ao cronograma" e "Ocorrências vencidas" = execução do previsto nos meses marcados (Cronograma). */
-// Hoje: rotina (porto e viagem) · situação da frota · alertas de compressão
-{ const r0 = VX.rotina; if (r0) VX.rotina = function () { const t = document.createElement('div'); t.innerHTML = r0.apply(this, arguments);
-  const cm = t.querySelector(':scope > .cm-hoje'), ref = t.querySelector(':scope > p.note'), d = document.createElement('div'); d.innerHTML = fsHTML();
-  const ol = document.createElement('div'); ol.innerHTML = olCardHoje();
-  [d.firstElementChild, cm, ol.firstElementChild].filter(Boolean).forEach(n => ref ? ref.before(n) : t.appendChild(n));   // depois da rotina (porto e viagem), antes das notas do rodapé
-  return t.innerHTML; }; }
 // Hoje: troca de óleo vencida (P1) · vence em até OL_ALERTA_H horas ou OL_ALERTA_D dias (P2) — mesmo critério da tela Óleo da frota
-function olCardHoje() {
-  const D = lubDados().filter(x => !(typeof foraOp === 'function' && foraOp(x.v))).map(x => ({ x, st: olStatus(x) }));
-  const p1 = D.filter(d => d.st === 'venc'), p2 = D.filter(d => d.st === 'aten'); if (!p1.length && !p2.length) return '';
-  const it = (d, p) => `<li><span class="pill ${p === 'P1' ? 'p-bad' : 'p-warn'}">${p}</span> <a href="#oleo"><b>${esc(d.x.v.nome)} · ${esc(eqNomeC(d.x.v, d.x.e))}</b></a> · ${esc(olValor(d.x))}${d.x.om ? ' · OM aberta' : ' · sem OM'}</li>`;
-  const L = p1.map(d => it(d, 'P1')).concat(p2.map(d => it(d, 'P2'))), max = 8;
-  return `<div class="card cm-hoje"><div class="row"><h2>Troca de óleo</h2><span class="sp"></span><a class="mbtn sm" href="#oleo">Ver a frota</a></div><ul>${L.slice(0, max).join('')}${L.length > max ? `<li class="note"><a href="#oleo">+ ${L.length - max} na tela Óleo da frota</a></li>` : ''}</ul></div>`;
-}
 // #lubreg (antiga tela de registros) abre o Óleo da frota no bloco Trocas lançadas
 let OL_IR = 0;   // veio de #lubreg: rolar até o bloco das trocas
 VX.lubreg = () => { OL_IR = Date.now(); location.replace('#oleo'); return ''; };
@@ -8328,11 +8210,6 @@ function agoraLista() {
   const am = amoDados().M.filter(x => x.s.st === 'venc' || x.extra).length; if (am) add(2, `${am} amostra(s) de óleo do MCP vencida(s) ou coleta extra`, `<a class="mbtn sm" href="#anoleo">Ver</a>`);
   return out.sort((a, b) => a.p - b.p);
 }
-function agoraHTML() { const L = agoraLista(), max = 8;
-  return `<div class="card ag-card"><div class="row"><h2>O que precisa de você agora</h2><span class="sp"></span><span class="note">${L.length ? L.filter(x => x.p === 1).length + ' P1 · ' + L.filter(x => x.p === 2).length + ' P2' : ''}</span></div>
-   ${L.length ? `<ul class="ag-l">${L.slice(0, max).map(x => `<li><span class="pill ${x.p === 1 ? 'p-bad' : 'p-warn'}">P${x.p}</span><span class="ag-t">${x.txt}</span><span class="sp"></span>${x.btn}</li>`).join('')}</ul>${L.length > max ? `<details><summary class="note">mais ${L.length - max}</summary><ul class="ag-l">${L.slice(max).map(x => `<li><span class="pill ${x.p === 1 ? 'p-bad' : 'p-warn'}">P${x.p}</span><span class="ag-t">${x.txt}</span><span class="sp"></span>${x.btn}</li>`).join('')}</ul></details>` : ''}`
-     : '<p class="ag-ok">✓ Nada pendente para você agora.</p>'}</div>`; }
-{ const r0 = VX.rotina; if (r0) VX.rotina = function () { const t = document.createElement('div'); t.innerHTML = r0.apply(this, arguments); const vh = t.querySelector(':scope > .vh'); const d = document.createElement('div'); d.innerHTML = agoraHTML(); vh ? vh.after(d.firstElementChild) : t.prepend(d.firstElementChild); return t.innerHTML; }; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-agfs]'); if (!b) return; e.preventDefault(); e.stopPropagation(); FS_SEL = b.dataset.agfs; render(); setTimeout(() => { const c = document.querySelector('#main .fs-card'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 350); }, true);
 { const st = document.createElement('style'); st.textContent = `.ag-l{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column}.ag-l li{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #F1F3F4;font-size:14px}.ag-l li:first-child{border-top:0}.ag-t{line-height:1.35}.ag-ok{color:var(--okt);margin:4px 0}`; document.head.appendChild(st); }
 </script>
@@ -8365,7 +8242,7 @@ function vOperador() {
   return `<div class="vh"><div><h1>Chegada e saída · FR 027_L</h1><p>Você preenche e assina o check-list do empurrador na chegada e na saída do terminal (NP 055, itens 4.4 e 5.5.1). Todo item NO precisa de criticidade e do nº da OM aberta no Sankhya. O Supervisor de Manutenção confere depois.</p></div><span class="sp"></span><span class="note">${esc(S.session.name)} · Operador</span></div>
     <div class="op-g">${V.map(linha).join('')}</div>`;
 }
-{ const r0 = VX.rotina; VX.rotina = function () { return ehOperador() ? vOperador() : r0.apply(this, arguments); }; }
+VX.rotina = function () { return ehOperador() ? vOperador() : vPainel(); };   /* o Operador vê a tela dele; os outros, o Painel da frota (bloco “Painel da frota”) */
 // o operador só vê a tela dele: o menu mostra só "Hoje" e qualquer outro endereço volta para ela
 { const n0 = renderNav; renderNav = function () { n0(); if (!ehOperador()) return; const nav = $('#nav'); if (nav) nav.innerHTML = `<a href="#rotina" class="on">${ico('hoje')}<span>Chegada e saída</span></a>`; }; }
 { const rd = render; render = function () { situRecalc(); document.body.classList.toggle('perfil-opr', ehOperador()); if (ehOperador() && VIEW !== 'rotina') { VIEW = 'rotina'; ARG = ''; if (location.hash !== '#rotina') history.replaceState(null, '', '#rotina'); } return rd.apply(this, arguments); }; }
@@ -9023,7 +8900,6 @@ function popaSit(v, e, s) { const pend = popaPend(v).some(x => x.key === e.key),
    Resumo em 4 números · pendências agrupadas (f2Agora) · No porto com UM próximo passo na ordem do ciclo (horímetro → programar preventiva → lançar formulário → troca de óleo → saiu de viagem) e o resto no ⋯ ·
    Em viagem com cabeçalho · Situação da frota só vencido/em dia com barrinha. O Operador continua vendo a tela dele (versão anterior de VX.rotina). */
 'use strict';
-const F2_SIT = { '-1': ['p-mut', 'Fora de operação'], 0: ['p-ok', 'Liberado'], 1: ['p-warn', 'Com restrição'], 2: ['p-bad', 'Bloqueado'], 3: ['p-bad', 'Interditado'] };
 const f2Dias = d => d ? Math.max(0, Math.floor((hoje() - pD(String(d).slice(0, 10))) / 864e5)) : null;
 const f2DiasTx = n => n == null ? '—' : n === 0 ? 'hoje' : n === 1 ? '1 dia' : n + ' dias';
 // pendências agrupadas: o mesmo tipo de aviso em vários empurradores vira uma linha só
@@ -9033,47 +8909,7 @@ function f2Agora() { const L = agoraLista(), G = new Map();
   return [...G.values()].map(g => { if (g.itens.length < 2 || !g.itens[0].nome) return { p: g.p, txt: g.txt, btn: g.btn };
     const tipo = g.resto.replace(/<[^>]+>/g, '').replace(/\s+há \d+ dias/, ' há mais de 14 dias').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
     return { p: g.p, txt: `${esc(tipo)} · <b>${g.itens.length} empurradores</b> <span class="note">(${g.itens.map(i => esc(i.nome)).join(', ')})</span>`, btn: g.btn }; }).sort((a, b) => a.p - b.p); }
-function f2Porto(v, FM) { const x = FM.find(y => y.v === v) || { sit: 0 }, falta = [], hp = mpos(v.id), hr = horAtual(v.id, hp), ch = String(v.situ.at || '').slice(0, 10);
-  const horPend = !hr || hr.date < ch; if (horPend) falta.push('horímetro da chegada');
-  const P = painelVessel(v, viagemDe(v)).filter(y => y.t.kind === 'prog' && ['venc', 'mes', 'emb'].includes(emGrp(v, y)) && !y.om);
-  if (P.length) falta.push(P.length + ' ite' + (P.length > 1 ? 'ns' : 'm') + ' para programar');
-  const G = {}; oms().filter(o => o.tipo === 'P' && o.vessel === v.id && !o.excluido && ['emitida', 'abordo', 'executada'].includes(o.status)).forEach(o => { G[o.grupo || o.id] = o; });
-  const om = Object.entries(G)[0]; if (om) falta.push('OM ' + om[1].num + ' emitida');
-  const O = (typeof oleoDoBarco === 'function' ? oleoDoBarco(v) : []).filter(o => o.rest < (typeof horasViagem === 'function' ? horasViagem(v, o.pos) : 480)), PP = typeof popaPend === 'function' ? popaPend(v) : [];
-  if (O.length + PP.length) falta.push((O.length + PP.length) + ' troca' + (O.length + PP.length > 1 ? 's' : '') + ' de óleo');
-  const acoes = { hor: `<a class="mbtn sm pri" href="#hor">Lançar horímetro</a>`, prog: `<a class="mbtn sm pri" href="#emitir/${v.id}">Programar preventiva</a>`,
-    lan: om ? `<a class="mbtn sm pri" href="${om[1].grupo ? '#omg/' + encodeURIComponent(om[0]) : '#om/' + om[1].id}">Lançar formulário</a>` : '', ole: `<button class="mbtn sm pri" data-frv="${v.id}">Lançar troca de óleo</button>`, sai: `<button class="mbtn sm pri" data-situ="${v.id}|viagem">Saiu de viagem</button>` };
-  const prox = horPend ? 'hor' : P.length ? 'prog' : om ? 'lan' : O.length + PP.length ? 'ole' : 'sai';
-  const mais = [prox !== 'prog' && P.length ? `<a class="mbtn sm" href="#emitir/${v.id}">Programar preventiva</a>` : '', prox !== 'ole' ? `<button class="mbtn sm" data-frv="${v.id}">Lançar troca de óleo</button>` : '', prox !== 'sai' ? `<button class="mbtn sm" data-situ="${v.id}|viagem">Saiu de viagem</button>` : '', `<button class="mbtn sm" data-sitboia="${v.id}|boia">Foi para a boia</button>`].filter(Boolean).join('');
-  const [cl, tx] = F2_SIT[x.sit] || F2_SIT[0];
-  return `<tr><td><b>${esc(v.nome)}</b></td><td class="note">${f2DiasTx(f2Dias(ch))}</td><td><span class="pill ${cl}">${tx}</span></td><td class="note">${falta.length ? esc(falta.join(' · ')) : 'nada pendente'}</td>
-    <td class="f2-ac">${acoes[prox]}<details class="f2-m"><summary class="mbtn sm" aria-label="Mais ações">⋯</summary><div>${mais}</div></details></td></tr>`; }
-function f2Viagem(v) { const O = (typeof oleoDoBarco === 'function' ? oleoDoBarco(v) : [])[0], hr = horAtual(v.id, mpos(v.id));
-  const ol = !O ? '—' : O.rest < 0 ? `<span style="color:var(--badt)">${esc(O.nome)} · vencida</span>` : O.porData ? `${esc(O.nome)} · vence por data em ${O.dd} dias` : `${esc(O.nome)} · faltam ${nf(O.rest)} h`;
-  return `<tr><td><b>${esc(v.nome)}</b></td><td class="note">${f2DiasTx(f2Dias(v.situ.at))}</td><td class="note">${ol}</td><td class="note">${hr ? nf(hr.h) + ' h · lido há ' + f2DiasTx(f2Dias(hr.date)) : 'sem leitura'}</td>
-    <td class="f2-ac"><button class="mbtn sm" data-avaria="${v.id}">Avaria</button><button class="mbtn sm" data-pmcnovo="${v.id}">Leituras</button><button class="mbtn sm" data-situ="${v.id}|porto">Chegou em Manaus</button></td></tr>`; }
-function vFrota2() {
-  const F = S.cfg.frota, FM = frotaMatriz(), op = F.filter(v => !foraOp(v)), porto = op.filter(v => situDe(v) && v.situ.st === 'porto'), viag = op.filter(v => situDe(v) && v.situ.st === 'viagem'), sem = op.filter(v => !situDe(v)), fora = F.filter(v => foraOp(v));
-  const lib = FM.filter(x => x.sit >= 0 && x.sit < 2).length, A = f2Agora(), n1 = A.filter(a => a.p === 1).length, n2 = A.length - n1;
-  const dia = hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
-  const k = (l, v, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
-  const lin = (a, i) => `<tr${i >= 6 ? ' class="f2-x" hidden' : ''}><td style="width:40px"><span class="pill ${a.p === 1 ? 'p-bad' : 'p-warn'}">P${a.p}</span></td><td>${a.txt}</td><td class="f2-ac">${a.btn || ''}</td></tr>`;
-  const ind = x => { const t = x.n.venc + x.n.viag + x.n.ok; if (!t) return '—'; const pc = Math.round((x.n.viag + x.n.ok) / t * 100); return `<span class="f2-bar" title="${pc}% dos itens em dia"><i style="width:${pc}%"></i></span> ${pc}%`; };
-  return `<div class="cm-v"><div class="vh"><div><h1>Frota</h1><p>Chegada, saída e viagem · ${esc(dia)}</p></div><span class="sp"></span><button class="mbtn" data-f2reset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
-  <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="f2-ks">${k('No porto', porto.length)}${k('Em viagem', viag.length)}${k('Liberados', lib + ' de ' + op.length)}${k('Pendências', `<i class="f2-r">${n1} P1</i> · ${n2} P2`)}</div></div>
-  <div class="card"><div class="row"><h2>O que precisa de você agora</h2><span class="sp"></span><span class="note">${n1} P1 · ${n2} P2</span></div>
-   ${A.length ? `<div class="tw"><table class="t f2-t"><tbody>${A.map(lin).join('')}</tbody></table></div>${A.length > 6 ? `<button class="mbtn sm" data-f2mais>+ ${A.length - 6} pendências</button>` : ''}` : '<p class="note">Nada pendente agora.</p>'}</div>
-  <div class="card"><h2>No porto · ${porto.length}</h2>${porto.length ? `<div class="tw"><table class="t f2-t"><thead><tr><th>Empurrador</th><th>No porto</th><th>Situação</th><th>Falta</th><th>Próximo passo</th></tr></thead><tbody>${porto.map(v => f2Porto(v, FM)).join('')}</tbody></table></div>` : '<p class="note">Nenhum empurrador no porto.</p>'}</div>
-  <div class="card"><h2>Em viagem · ${viag.length}</h2>${viag.length ? `<div class="tw"><table class="t f2-t"><thead><tr><th>Empurrador</th><th>Viajando</th><th>Próxima troca de óleo</th><th>Último horímetro</th><th></th></tr></thead><tbody>${viag.map(f2Viagem).join('')}</tbody></table></div>` : '<p class="note">Nenhum empurrador em viagem.</p>'}</div>
-  ${sem.length ? `<div class="card"><h2>Sem situação informada · ${sem.length}</h2><div class="tw"><table class="t f2-t"><tbody>${sem.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td class="note">informe onde está</td><td class="f2-ac"><button class="mbtn sm" data-situ="${v.id}|porto">Está no porto</button><button class="mbtn sm" data-situ="${v.id}|viagem">Está viajando</button></td></tr>`).join('')}</tbody></table></div></div>` : ''}
-  <div class="card"><div class="row"><h2>Situação da frota</h2><span class="sp"></span><a class="mbtn sm" href="#cxr">Cronograma</a></div><div class="tw"><table class="t f2-t"><thead><tr><th>Empurrador</th><th class="r">Vencidos</th><th class="r">Itens em dia</th><th>Situação</th></tr></thead><tbody>
-   ${FM.filter(x => x.sit >= 0).map(x => { const [cl, tx] = F2_SIT[x.sit] || F2_SIT[0]; return `<tr><td><b>${esc(x.v.nome)}</b></td><td class="r mono" style="color:${x.n.venc ? 'var(--badt)' : ''}">${x.n.venc}</td><td class="r mono">${ind(x)}</td><td><span class="pill ${cl}">${tx}</span></td></tr>`; }).join('')}</tbody></table></div>
-   ${fora.length ? `<p class="note">Fora de operação: ${fora.map(v => esc(v.nome)).join(', ')}</p>` : ''}</div></div></div>`;
-}
-VX.frota2 = vFrota2;
-AFTER.frota2 = () => { if (AFTER.rotina) AFTER.rotina(); };
 { const a0 = AFTER.rotina; AFTER.rotina = function () { a0 && a0.apply(this, arguments); const ws = document.querySelector('#main .cm-ws'); if (ws && !(typeof ehOperador === 'function' && ehOperador())) janelasLivres(ws, 'smf_frota_lay', '[data-f2reset]'); }; }   /* janelas livres, como Compressão e Óleo */
-{ const r0 = VX.rotina; VX.rotina = function () { return typeof ehOperador === 'function' && ehOperador() ? r0.apply(this, arguments) : vFrota2(); }; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-f2mais]'); if (!b) return; document.querySelectorAll('#main tr.f2-x').forEach(r => r.hidden = false); b.remove(); }, true);
 { const st = document.createElement('style'); st.textContent = `.f2-ks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}.f2-k{background:#fff;border:1px solid #E3E6EA;border-radius:10px;padding:12px 14px}.f2-k span{display:block;font-size:12px;color:#5F6368}.f2-k b{font-size:22px;font-weight:600;white-space:nowrap}.f2-k .f2-r{font-style:normal;color:var(--badt)}.cm-v .f2-ks{margin:4px 0 0}
 #main .f2-t td{vertical-align:middle}.f2-bar{display:inline-block;width:90px;height:8px;border-radius:4px;background:#F4C7C3;vertical-align:middle;overflow:hidden;margin-right:6px}.f2-bar i{display:block;height:100%;background:#34A853}.f2-ac{text-align:right;white-space:nowrap}.f2-ac .mbtn{margin-left:6px}.f2-m{display:inline-block;position:relative}.f2-m summary{list-style:none;cursor:pointer;margin-left:6px}.f2-m summary::-webkit-details-marker{display:none}.f2-m>div{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:#fff;border:1px solid #DADCE0;border-radius:8px;box-shadow:0 6px 18px rgba(60,64,67,.18);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:190px}.f2-m>div .mbtn{margin:0;text-align:left}
@@ -9270,8 +9106,6 @@ padTela('controle', { titulo: 'Calibração e docagem', desc: 'Calibração de i
 'use strict';
 function sbTxt(e) { if (!e || e.sem || e.v == null) return 'sem histórico'; const n = Math.round(Math.abs(e.v)), u = e.u === 'd' ? (n === 1 ? ' dia' : ' dias') : ' h';
   return e.v < 0 ? 'atrasado ' + nf(n) + u : n === 0 ? (e.u === 'd' ? 'vence hoje' : 'vence agora') : 'faltam ' + nf(n) + u; }
-function sbBar(e) { const st = e.sem ? 'sem' : e.st, w = e.sem ? 0 : e.v < 0 ? 100 : Math.max(2, Math.min(100, (e.pct || 0) * 100));
-  return `<div class="sb-r"><span class="sb-t"><i class="sb-${st}" style="width:${w}%"></i></span><b class="sb-x sb-${st}t">${sbTxt(e)}</b></div>`; }
 function vBarco2() {   /* ficha compacta (22/10/2026): situação no cabeçalho, Resumo, Equipamentos no mesmo desenho do Saldo para a troca, OMs abertas + histórico numa janela só */
   const ativos = S.cfg.frota.filter(v => !foraOp(v)), vid = ARG || BR.v || (ativos[0] || {}).id; BR.v = vid; const v = vessel(vid); if (!v) return '<div class="empty">Empurrador não encontrado.</div>';
   const x = rotinaDados().find(d => d.v === v) || { venc: [], viag: [] }, s = situDe(v), { ENG } = o3Dados(), E = ENG.filter(e => e.vid === v.id), LD = lubDados().filter(d => d.v === v && !d.saida);
