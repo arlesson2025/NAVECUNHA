@@ -2134,6 +2134,7 @@ function horasMes(vid, pos, nMeses) {
   }
   return out;
 }
+/* Horímetros num bloco só (24/10/2026): pendências de horímetro e horas do MCP entram direto (antes eram 2 camadas por cima) */
 function vHor() {
   const D = horDados(), n = { ok: 0, viag: 0, venc: 0, sem: 0 }; D.forEach(x => n[x.st]++);
   const sus = horSuspeitos(), SO = { venc: 0, sem: 1, viag: 2, ok: 3 };
@@ -2156,14 +2157,14 @@ function vHor() {
   const frotaMes = ativo.reduce((a, b) => a + b, 0);
   return `<div class="vh"><div><h1>Controle de horímetros (FR 027_L)</h1><p>O horímetro é a base de todos os vencimentos por hora: se ele está atrasado, o painel mostra itens "em dia" que já venceram. Em dia = lançado nos últimos ${HOR.ok} dias · atenção até ${HOR.aten} dias · depois disso, desatualizado.</p></div><span class="sp"></span><button class="mbtn pri" data-act="lancarHor">⏱ Registrar horímetros</button></div>
   <div class="kgrid six">
-   <div class="card mini ok"><b>${n.ok}</b><span>empurradores com horímetro em dia (≤ ${HOR.ok} dias)</span></div>
+   ${horPendCard() || ''}<div class="card mini ok"><b>${n.ok}</b><span>empurradores com horímetro em dia (≤ ${HOR.ok} dias)</span></div>
    <div class="card mini ${n.viag ? 'warn' : 'ok'}"><b>${n.viag}</b><span>atenção (${HOR.ok + 1} a ${HOR.aten} dias)</span></div>
    <div class="card mini ${n.venc + n.sem ? 'bad' : 'ok'}"><b>${n.venc + n.sem}</b><span>leituras desatualizadas ou ausentes</span></div>
    <div class="card mini ${sus.length ? 'bad' : 'ok'}"><b>${sus.length}</b><span>leituras inconsistentes</span></div>
    <div class="card mini"><b>${nf(frotaMes)}</b><span>horas ${HORPOS === 'BB' ? 'de MCP (BB ou central)' : HORPOS === 'BE' ? 'de MCP BE' : 'do ' + HORPOS} da frota em ${meses[ultFech]}</span></div>
    <div class="card mini"><b>${ativo.length ? nf(Math.round(frotaMes / ativo.length / diasMes(1) * 10) / 10) : '—'}</b><span>média de horas por dia, por empurrador (${meses[ultFech]})</span></div>
   </div>
-  <div class="card"><div class="row"><h2>A · Última leitura por embarcação</h2><span class="sp"></span><span class="note">Barra = dias desde o último lançamento (escala até 30 dias).</span></div>
+  ${horMcpCard()}<div class="card"><div class="row"><h2>A · Última leitura por embarcação</h2><span class="sp"></span><span class="note">Barra = dias desde o último lançamento (escala até 30 dias).</span></div>
    <div class="rk">${linhas}</div></div>
   <div class="two">
    <div class="card"><div class="row"><h2>B · Horas de operação por mês</h2><span class="sp"></span><div class="seg">${[['BB', 'MCP BB/central'], ['BE', 'MCP BE'], ['MCA1', 'MCA1'], ['MCA2', 'MCA2'], ['MCA3', 'MCA3']].map(([p, l]) => `<button data-horpos="${p}" class="${p === HORPOS ? 'on' : ''}">${l}</button>`).join('')}</div></div>
@@ -4220,7 +4221,6 @@ VX.matriz = vMatriz;
 /* ---------- 12 · Horímetro do MCP por embarcação: colunas vitrificadas com 3 visões ---------- */
 let HMV = 'acum';
 function horMcpCard() {}
-{ const v0 = vHor; vHor = function () { const h = v0(), i = h.indexOf('<div class="card">'); return i > 0 ? h.slice(0, i) + horMcpCard() + h.slice(i) : h + horMcpCard(); }; VX.hor = vHor; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-hmv]'); if (b) { HMV = b.dataset.hmv; render(); } });
 
 /* ---------- 13 · "Rio do ciclo de óleo": cada MCP é um empurrador navegando até a próxima troca ---------- */
@@ -4764,7 +4764,6 @@ document.addEventListener('click', async e => {
     $('#hpOk').onclick = async () => { const t = horNum($('#hpT').value); if (t == null) return toast('Informe o total.'); await horConfirmar(r, t); closeModal(); toast('Leitura corrigida e confirmada.'); render(); }; }
 }, true);
 // cartão de pendências no topo da tela de horímetros e aviso no painel
-{ const h0 = VX.hor || vHor; VX.hor = function () { const h = h0(), c = horPendCard(); if (!c) return h; const i = h.indexOf('<div class="card'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c; }; }
 { const g0 = vGeral; vGeral = function () { const h = g0(), n = recsHorp().length; if (!n || !can.admin()) return h; return `<div class="banner info"><span><b>${n} leitura(s) de horímetro</b> aguardando sua confirmação.</span><span class="sp"></span><a class="mbtn sm" href="#hor">Conferir</a></div>` + h; }; }
 // tabela de horímetros: marca estimados
 { const d0 = horDados; horDados = function () { return d0().map(x => { const ult = x.ult.filter(u => !u.r.est); if (ult.length === x.ult.length) return x;
