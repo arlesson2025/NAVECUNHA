@@ -5445,7 +5445,10 @@ function rgDados(P) { const o = P[0]; o.rap = o.rap || { res: {}, obs: {}, med: 
 function rgSalvar(P) { clearTimeout(RG.t); RG.t = setTimeout(() => saveRec(P[0]), 700); }
 function rgPend(P) {}
 const rgRegs = P => { const s = new Set(); P.forEach(o => regsDe({ items: o.itensProg || o.items }).forEach(r => s.add(r))); return [...s].filter(r => ['end', 'cert'].includes(r)); };   // lote do lubrificante, FR 049_B e instrumento ficam no formulário de troca de óleo
-function vOmg() {
+/* Lançar OM num bloco só (24/10/2026): faixa-guia (guiaOM) + lançamento + histórico; antes eram 3 camadas por cima (troca de "ficha", histórico e faixa-guia) */
+function vOmg() { const P = omGrupo(ARG); if (!P.length) return omgCorpo(); return guiaOM(P[0], P) + emTroca(omgCorpo()) + omHistHTML(P[0]); }
+VX.omg = vOmg;
+function omgCorpo() {
   const g = ARG, P = omGrupo(g); if (!P.length) return '<div class="empty">OM não encontrada. Talvez ainda não tenha sincronizado.</div>';
   const o1 = P[0], v = vessel(o1.vessel), R = rgDados(P), st = grpStatus(P), fechada = st === 'encerrada', ro = fechada || !can.edit(), idx = grpOrd.indexOf(st);
   const bar = `<div class="stepsbar">${ETAPAS_P.map(([k, l], i) => `<div class="${i < idx || fechada ? 'done' : i === idx ? 'cur' : ''}"><b>${i < idx || fechada ? '✓' : i + 1}</b>${l}</div>`).join('')}</div>`;
@@ -5861,8 +5864,8 @@ AFTER.barco = function () { const m = $('#main');
 }
 /* ---------- "ficha" passa a se chamar "formulário" ---------- */
 { const troca = h => h.replace(/(^|[\s>(“"])([Ff])icha(?![\w])/g, (m, a, f) => a + (f === 'F' ? 'Formulário' : 'formulário')).replace(/\b([Aa]) formulário/g, (m, a) => (a === 'A' ? 'O' : 'o') + ' formulário').replace(/\bda formulário/g, 'do formulário').replace(/\bna formulário/g, 'no formulário').replace(/\bpela formulário/g, 'pelo formulário').replace(/\bDa formulário/g, 'Do formulário');
-  ['vAcomp', 'vOmg', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
-  VX.acomp = window.vAcomp; VX.omg = window.vOmg;   const d0 = docFichaEmb;   const m0 = fichaModal; fichaModal = function (o) { m0(o); const h = $('#modal'); if (h) h.querySelectorAll('h2,p,button').forEach(el => { if (el.children.length === 0 || el.tagName === 'P') el.innerHTML = troca(el.innerHTML); }); }; }
+  ['vAcomp', 'vBarco'].forEach(n => { const f0 = window[n]; if (typeof f0 !== 'function') return; window[n] = function () { return troca(f0.apply(this, arguments)); }; });
+  VX.acomp = window.vAcomp;   const d0 = docFichaEmb;   const m0 = fichaModal; fichaModal = function (o) { m0(o); const h = $('#modal'); if (h) h.querySelectorAll('h2,p,button').forEach(el => { if (el.children.length === 0 || el.tagName === 'P') el.innerHTML = troca(el.innerHTML); }); }; }
 { const st = document.createElement('style'); st.textContent = `.ol-k{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 14px}.ol-k>div{flex:1;min-width:150px;background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;align-items:baseline;gap:10px}.ol-k b{font-size:30px}.ol-k .venc b{color:#C5221F}.ol-k .aten b{color:#E37400}.ol-k .ok b{color:#188038}.ol-k .sem b{color:#9AA0A6}
  .ol-t{width:100%;border-collapse:collapse}.ol-t th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5F6368;padding:8px 6px;border-bottom:2px solid #E8EAED}.ol-t td{padding:8px 6px;border-bottom:1px solid #F1F3F4;vertical-align:middle}
  .ol-v{white-space:nowrap}.ol-v b{font-size:15px}.ol-v small{display:block;color:#5F6368;margin-left:18px}.ol-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
@@ -7534,7 +7537,6 @@ function omHistHTML(o) {
 function omOrigemHTML(o) { if (!o || !o.fr027) return ''; const r = S.recs.get(o.fr027); if (!r) return '';
   return `<div class="banner info">Aberta pelo <b>FR 027_L de ${r.mov === 'saida' ? 'saída' : 'chegada'}</b> de ${brD(r.date)} ${esc(r.hora || '')} · ${esc(((r.ass || [])[0] || {}).nome || '')}${((r.ass || [])[1] || {}).nome ? ' · CTF ' + esc(r.ass[1].nome) : ''}<span class="sp"></span>${drivePdf(r.pdfFileId, '📄 Abrir o FR 027_L')}</div>`; }
 { const v0 = vOM; vOM = function () { const h = v0.apply(this, arguments), o = S.recs.get(ARG); return o ? omOrigemHTML(o) + h + omHistHTML(o) : h; }; }
-if (VX.omg) { const g0 = VX.omg; VX.omg = function () { const h = g0.apply(this, arguments), P = omGrupo(ARG); return P.length ? h + omHistHTML(P[0]) : h; }; }
 // 6 · Hoje: o que precisa de você agora
 function agoraLista() {
   const out = [], add = (p, txt, btn) => out.push({ p, txt, btn }), FM = frotaMatriz();
@@ -8282,7 +8284,6 @@ function guiaOM(o, P) {
     ${falta.length && idx < (prev ? 2 : 3) ? `<div class="gu-f"><b>Falta para aprovar:</b> ${falta.slice(0, 6).map(esc).join(' · ')}${falta.length > 6 ? ' · +' + (falta.length - 6) : ''}</div>` : ''}</div>`;
 }
 { const v0 = VX.om || (typeof vOM === 'function' ? function () { return vOM.apply(this, arguments); } : null); if (v0) VX.om = function () { const h = v0.apply(this, arguments), o = S.recs.get(ARG); return o && o.kind === 'om' ? guiaOM(o, o.grupo ? omGrupo(o.grupo) : [o]) + h : h; }; }
-{ const v0 = VX.omg; if (v0) VX.omg = function () { const h = v0.apply(this, arguments), P = typeof omGrupo === 'function' ? omGrupo(ARG) : []; return P.length ? guiaOM(P[0], P) + h : h; }; }
 document.addEventListener('click', e => { const b = e.target.closest('[data-guia]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const d = b.dataset.guia;
   if (d === 'sankhya') { location.hash = '#omconf'; return; }
   if (d === 'lancar') { location.hash = '#omg/' + encodeURIComponent(b.dataset.gg); return; }
