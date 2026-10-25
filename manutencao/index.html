@@ -1685,7 +1685,11 @@ const NAV = [
   ['Supervisor', [['rel', 'Relatório mensal'], ['admin', 'Administração']]],
 ];
 let VIEW = 'geral', ARG = '';
+/* frota escolhida no topo do menu (24/10/2026): 'emp' = empurradores (tudo o que existe hoje) · 'bal' = balsas petroleiras (ainda sem plano nem cadastro) */
+let FROTA_TIPO = (() => { try { return localStorage.getItem('smf_frota_tipo') === 'bal' ? 'bal' : 'emp'; } catch (e) { return 'emp'; } })();
+const FROTA_TIPOS = { emp: 'Frota de empurradores', bal: 'Frota de balsas petroleiras' };
 function badge(k) {   // num lugar só (24/10/2026): antes eram 5 camadas por cima
+  if (FROTA_TIPO === 'bal') return '';   // balsas: nada pendente enquanto não há cadastro
   if (['rotina', 'emitir', 'oms', 'falhas2', 'omconf'].includes(k) && !(typeof ehOperador === 'function' && ehOperador())) {   // número no menu = trabalho pendente (navCont)
     let C; try { C = navCont(); } catch (e) { return ''; } const n = C[k] || 0; if (!n) return '';
     const red = k === 'rotina' || (k === 'falhas2' && C.falhasSem); return `<span class="n${red ? '' : ' blue'}">${n}</span>`; }
@@ -1707,7 +1711,7 @@ function renderNav() {   // menu num lugar só (24/10/2026): antes eram 6 camada
   const item = s => { const n = s.views.reduce((a, [k]) => a + numBadge(k), 0), red = s.views.some(([k]) => /class="n"/.test(badge(k)));
     return `<a href="#${ULT[s.id] || s.views[0][0]}" class="${s === cur ? 'on' : ''}">${ico(s.id)}<span>${s.nome}</span>${n ? `<span class="n${red ? '' : ' blue'}">${n}</span>` : ''}</a>`; };
   const nav = document.getElementById('nav');
-  nav.innerHTML = '<div class="grp-t grp-trab">Operação</div>' + SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Acompanhamento</div>' + SECOES.filter(s => s.cfg).map(item).join('');
+  nav.innerHTML = `<label class="fr-tipo"><span>Frota</span><select id="frTipo">${Object.entries(FROTA_TIPOS).map(([k, n]) => `<option value="${k}"${k === FROTA_TIPO ? ' selected' : ''}>${n}</option>`).join('')}</select></label>` + '<div class="grp-t grp-trab">Operação</div>' + SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Acompanhamento</div>' + SECOES.filter(s => s.cfg).map(item).join('');
   if (solta && h) { ULT[h.id] = u0; const a1 = document.querySelector('#nav > a'); if (a1) { a1.setAttribute('href', '#' + (u0 || h.views[0][0])); a1.classList.remove('on'); } }
   const A = [...nav.querySelectorAll(':scope > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
   L.forEach((s, i) => { const sp = A[i] && A[i].querySelector('span'); if (s.sub && sp && !sp.querySelector('.nav-sub')) sp.insertAdjacentHTML('beforeend', `<small class="nav-sub">${esc(s.sub)}</small>`); });
@@ -1729,6 +1733,15 @@ let dirty = false;
 function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { dirty = true; renderNav(); return; } render(); }
 /* montagem da página num lugar só (24/10/2026): antes eram 11 camadas por cima de render, aplicadas nesta mesma ordem */
 let RENDER_ULTV = '';
+function balsasVazio() {
+  const s = SECOES.find(x => x.views.some(v => v[0] === VIEW)) || {}, nome = (s.views || []).find(v => v[0] === VIEW);
+  return `<div class="vh"><div><h1>${esc(nome ? nome[1] : s.nome || 'Frota de balsas petroleiras')}</h1><p>Frota de balsas petroleiras · em construção</p></div></div>
+   <div class="card"><h2>Ainda não há balsas cadastradas</h2><p>Esta tela vai mostrar a mesma informação da frota de empurradores, só que das balsas petroleiras.
+   Para começar, falta o plano da balsa (o equivalente ao Anexo I: equipamentos, serviços e intervalos) e o cadastro das balsas.</p>
+   <p><button class="mbtn pri" data-frtipo="emp">Voltar para a frota de empurradores</button></p></div>`; }
+document.addEventListener('change', e => { const s = e.target.closest('#frTipo'); if (!s) return; FROTA_TIPO = s.value === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } render(); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-frtipo]'); if (!b) return; FROTA_TIPO = b.dataset.frtipo; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } render(); });
+{ const st = document.createElement('style'); st.textContent = `.fr-tipo{display:flex;flex-direction:column;gap:3px;margin:2px 6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#5F6368}.fr-tipo select{font:600 13.5px inherit;text-transform:none;letter-spacing:0;padding:7px 8px;border:1px solid #DADCE0;border-radius:8px;background:#fff;color:#1F2A44}`; document.head.appendChild(st); }
 function render() {
   if (VIEW === 'om' && ARG) { const o = S.recs.get(ARG);   // OM preventiva solta (sem grupo) abre como OM de janela de 1 parte
     if (o && o.kind === 'om' && o.tipo === 'P' && !o.grupo && o.status !== 'encerrada' && o.num && !oms().some(x => x.grupo === o.num && x.id !== o.id)) {
@@ -1741,6 +1754,7 @@ function render() {
   renderNav(); renderUser();
   const V = { geral: vGeral, calib: vCalib, doca: vDoca, falhas: vFalhas, hor: vHor, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
+  if (FROTA_TIPO === 'bal' && !ehOperador() && !['admin', 'bib'].includes(VIEW)) { m.innerHTML = balsasVazio(); return; }   // balsas: telas ainda sem dados
   m.innerHTML = banners() + V();
   (AFTER[VIEW] || (() => { }))();
   try { layApply(); } catch (er) { console.error(er); }
