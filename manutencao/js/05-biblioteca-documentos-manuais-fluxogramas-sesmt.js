@@ -15,6 +15,7 @@ const BIB_CAT = [
 const bicon = (p, s) => `<svg viewBox="0 0 24 24" width="${s || 18}" height="${s || 18}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 // documentos que já fazem parte do sistema (não precisam de cadastro)
 const BIB_FIXOS = [
+  { cat: 'sgi', titulo: 'Manual de Operação do SMF', desc: 'Caderno de instruções: papéis, ciclos em fluxograma (chegada e saída, preventiva, corretiva, óleo, viagem), telas, regras, documentos, rotina e glossário', url: '../docs/Manual_Operacao_SMF.html' },
   { cat: 'fluxo', titulo: 'Fluxo do processo de manutenção (PDCA)', desc: 'Plano (Anexo I) → cronograma → programação → execução → controle → análise → melhoria (PDCA)', abre: 'fluxo' },
   { cat: 'fluxo', titulo: 'Procedimento de troca de óleo (FR 049_B)', desc: 'Preparar, drenar, filtros, abastecer, conferir, registrar, resíduos', abre: '#plano' },
   { cat: 'sgi', titulo: 'NP Navecunha 055 · Plano de Gestão de Manutenção', desc: 'Procedimento vigente (revisão em aprovação)', url: '../docs/NP_Navecunha_055_corrigida.html' },
