@@ -33,7 +33,7 @@ function saidaModal(vid, fr) {
     <div class="i53-l">${INSP53.map((t, i) => `<label><input type="checkbox" data-i53="${i}"> ${esc(t)}</label>`).join('')}</div>
     <div class="g" style="margin-top:6px"><label class="f s3">Feita por (CTF ou MFM)<input id="i53Q" placeholder="Nome de quem fez"></label><label class="f s3">Irregularidade ou item não feito<input id="i53O" placeholder="Obrigatório se algum item ficar sem marcar"></label></div>
     <p class="note" style="margin:4px 0 0">A NP trata esta inspeção como requisito para liberar a saída. Irregularidade encontrada segue a NP 5.4.1 (comunicar e abrir a OM).</p></div>`;
-  const m = modal(`<div class="row"><h2>Registrar saída · ${esc(v.nome)}</h2><span class="sp"></span><button type="button" class="mbtn" data-pacote="${v.id}" title="Imprimir para o CTF: serviços embarcados, trocas de óleo, material, amostra, limites e folha diária">🖨 Pacote de bordo</button></div>
+  const m = modal(`<div class="row"><h2>Registrar saída · ${esc(v.nome)}</h2><span class="sp"></span><button type="button" class="mbtn" data-pacote="${v.id}" title="Imprimir para o CTF: serviços embarcados, trocas de óleo, material, amostra, limites e folha diária">🖨 Instruções de Máquinas</button></div>
    <p class="note">Fica gravado como estava a parte técnica na hora da saída e quem assumiu cada pendência. A decisão de sair é da Operação; aqui fica o registro.</p>
    <div class="row" style="gap:8px;align-items:center;margin:6px 0 10px"><span class="fs-p ${cls}">${nome}</span><span class="note">${F.pend.filter(x => x.st === 'venc').length} vencido(s) · ${F.corr.length} corretiva(s) aberta(s)${fr ? ' · FR 027_L: ' + esc(FR27_LIB[fr.lib][0]) + ', ' + (fr.nc || []).length + ' NO' : ''}</span></div>
    ${saidaLista(F)}
