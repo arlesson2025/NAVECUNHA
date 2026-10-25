@@ -153,15 +153,19 @@ function prGrafAcum(F, hm, sel, W = 900, H = 260) {   // curva acumulada (curva 
   const kh = pts.findIndex(q => q.i === hm); if (kh >= 0) s += `<line x1="${X(kh)}" x2="${X(kh)}" y1="${T - 6}" y2="${H - B}" stroke="#1967D2" stroke-dasharray="3 3" opacity=".5"/><text x="${X(kh) + 4}" y="${T - 4}" font-size="10" fill="#1967D2">hoje</text>`;
   s += `<polyline fill="none" stroke="#8AB4F8" stroke-width="2" stroke-dasharray="6 4" points="${pts.map((q, k) => X(k) + ',' + Y(q.p)).join(' ')}"/>`;
   s += pts.map((q, k) => `<circle cx="${X(k)}" cy="${Y(q.p)}" r="3" fill="#fff" stroke="#8AB4F8" stroke-width="1.6"><title>${PR_MESL[q.i]}: ${q.p} previstos no acumulado</title></circle>`).join('');
+  pts.forEach((q, k) => { if (q.r != null && q.r === q.p) return;   // previsto em azul onde difere do realizado (meses à frente ou com atraso)
+    s += `<text x="${X(k)}" y="${Y(q.p) - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1967D2" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">${q.p}</text>`; });
   const R2 = pts.map((q, k) => ({ q, k })).filter(o => o.q.r != null);
   if (R2.length) {
     const linha = R2.map(o => X(o.k) + ',' + Y(o.q.r)).join(' ');
     s += `<path d="M${X(R2[0].k)},${H - B} L${linha.replace(/ /g, ' L')} L${X(R2[R2.length - 1].k)},${H - B} Z" fill="rgba(24,128,56,.10)"/><polyline fill="none" stroke="#188038" stroke-width="2.4" points="${linha}"/>`;
     s += R2.map(o => `<circle cx="${X(o.k)}" cy="${Y(o.q.r)}" r="3.6" fill="#188038"><title>${PR_MESL[o.q.i]}: ${o.q.r} realizados no acumulado · atraso ${o.q.p - o.q.r}</title></circle>`).join('');
     const u = R2[R2.length - 1], gap = u.q.p - u.q.r;
+    const ro = 'paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round"';   // número legível sobre as linhas
+    s += R2.map(o => `<text x="${X(o.k)}" y="${o.q.p > o.q.r ? Y(o.q.r) + 15 : Y(o.q.r) - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#188038" ${ro}>${o.q.r}</text>`).join('');
     if (gap > 0) s += `<line x1="${X(u.k)}" x2="${X(u.k)}" y1="${Y(u.q.p)}" y2="${Y(u.q.r)}" stroke="#C5221F" stroke-width="1.5"/><text x="${X(u.k) + (u.k === n - 1 ? -6 : 6)}" y="${(Y(u.q.p) + Y(u.q.r)) / 2 + 3}" font-size="11" font-weight="600" text-anchor="${u.k === n - 1 ? 'end' : 'start'}" fill="#C5221F">atraso acumulado: ${gap}</text>`;
   }
-  return `<div class="cm-gw"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Previsto acumulado × realizado acumulado">${s}</svg></div><p class="cf-lg"><span style="color:#5F8FE0">- - -</span> previsto acumulado · <span style="color:#188038">——</span> realizado acumulado (dentro do previsto) · <span style="color:#C5221F">vermelho</span> = atraso acumulado · passe o mouse nos pontos para ver os valores</p>`;
+  return `<div class="cm-gw"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Previsto acumulado × realizado acumulado">${s}</svg></div><p class="cf-lg"><span style="color:#5F8FE0">- - -</span> previsto acumulado · <span style="color:#188038">——</span> realizado acumulado (dentro do previsto) · <span style="color:#C5221F">vermelho</span> = atraso acumulado · número azul = previsto acumulado, verde = realizado acumulado</p>`;
 }
 function prTelaFrota(ativos, ano, nAp, anos) {
   const T = prFrotaV2(ano), sel = T.sel, todos = sel.length === 12, hm = T.hm; PRV._T = T;
