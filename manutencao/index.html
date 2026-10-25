@@ -1756,6 +1756,7 @@ function render() {
   const V = { geral: vGeral, calib: vCalib, doca: vDoca, falhas: vFalhas, hor: vHor, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   if (FROTA_TIPO === 'bal' && !ehOperador() && !['admin', 'bib'].includes(VIEW)) { m.innerHTML = balsasVazio(); return; }   // balsas: telas ainda sem dados
+  m.style.removeProperty('--ws-esq'); m.style.removeProperty('--ws-larg');   // janelas livres da tela anterior
   m.innerHTML = banners() + V();
   (AFTER[VIEW] || (() => { }))();
   try { layApply(); } catch (er) { console.error(er); }
@@ -6227,7 +6228,11 @@ function janelasLivres(ws, chave, resetSel) {
   const nat = cards.map(c => ({ x: 0, y: c.offsetTop, w: W, h: c.offsetHeight }));   // padrão: empilhados na ordem da tela
   const pos = k => L[k] || (L[k] = Object.assign({}, nat[+k.slice(1)]));
   const salva = () => LS.S(L);
-  const fundo = () => { if (livre) ws.style.height = Math.max(...cards.map(c => { const p = pos(c.dataset.k); return p.y + (p.m ? c.offsetHeight : p.h); })) + 12 + 'px'; };
+  const alinha = () => { const m = document.getElementById('main'); if (!m) return;   // cabeçalho e barra "Próximo" na mesma largura das janelas
+    const R = cards.filter(c => c.offsetParent).map(c => c.getBoundingClientRect()); if (!livre || !R.length) { m.style.removeProperty('--ws-esq'); m.style.removeProperty('--ws-larg'); return; }
+    const x0 = m.getBoundingClientRect().left + (parseFloat(getComputedStyle(m).paddingLeft) || 0), esq = Math.max(0, Math.min(...R.map(r => r.left)) - x0);
+    m.style.setProperty('--ws-esq', esq + 'px'); m.style.setProperty('--ws-larg', (Math.max(...R.map(r => r.right)) - x0 - esq) + 'px'); };
+  const fundo = () => { if (livre) ws.style.height = Math.max(...cards.map(c => { const p = pos(c.dataset.k); return p.y + (p.m ? c.offsetHeight : p.h); })) + 12 + 'px'; alinha(); };
   const aplica = c => { const p = pos(c.dataset.k); c.classList.toggle('cm-min', !!p.m); if (!livre) return;
     c.style.left = p.x + 'px'; c.style.top = p.y + 'px'; c.style.width = p.w + 'px'; c.style.height = p.m ? '' : p.h + 'px'; };
   let z = 5;
@@ -8188,5 +8193,7 @@ function sideLargura(w) { const a = document.querySelector('.app'), side = docum
     h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up); });
   h.addEventListener('dblclick', () => { try { localStorage.removeItem('smf_side_w'); } catch (e) { } sideLargura(0); }); }
 </script>
+<style>/* cabeçalho da tela e barra Próximo alinhados às janelas livres (--ws-esq/--ws-larg vêm de janelasLivres) */
+#main .vh,#main .nx-bar{margin-left:var(--ws-esq,0px);max-width:var(--ws-larg,none);box-sizing:border-box}</style>
 </body>
 </html>
