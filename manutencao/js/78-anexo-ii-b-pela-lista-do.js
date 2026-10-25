@@ -52,9 +52,9 @@ function anxContra(o) {   // contracapa = rastreabilidade (decisão do Superviso
   if (F.length) E.push(['Fotos', F.length + ' (' + F.filter(f => f.tipo === 'ANTES').length + ' de antes, ' + F.filter(f => f.tipo === 'DEPOIS').length + ' de depois)', nDrive === F.length ? 'Google Drive' : nDrive + ' no Drive · ' + (F.length - nDrive) + ' só no aparelho']);
   if (fr27) E.push(['FR 027_L de origem', (fr27.mov === 'saida' ? 'saída' : 'chegada') + ' de ' + brD(fr27.date), fr27.pdfFileId ? 'Google Drive (PDF)' : 'SMF']);
   fr49.forEach(r => E.push(['FR 049_B', 'troca de óleo de ' + brD(r.date), r.pdfFileId ? 'Google Drive (PDF)' : 'SMF']));
-  if (o.rnc) E.push(['RNC', o.rnc, 'SGI']);
-  if (o.relTerc || F.some(f => f.tipo === 'RELATÓRIO DO FORNECEDOR')) E.push(['Relatório do fornecedor (5.8)', o.relTerc || 'anexo', F.some(f => f.tipo === 'RELATÓRIO DO FORNECEDOR') ? 'Google Drive' : 'Sankhya']);
-  if (o1.fr016 || o.fr016) E.push(['FR 016_E (resíduos)', o1.fr016 || o.fr016, 'SGI']);
+  if (o.rnc) E.push(['RNC', o.rnc, 'Sankhya (anexo da OM)']);
+  if (o.relTerc || F.some(f => f.tipo === 'RELATÓRIO DO FORNECEDOR')) E.push(['Relatório do fornecedor (5.8)', o.relTerc || 'anexo', F.some(f => f.tipo === 'RELATÓRIO DO FORNECEDOR') ? 'Google Drive' : 'Sankhya (anexo da OM)']);
+  if (o1.fr016 || o.fr016) E.push(['FR 016_E (resíduos)', o1.fr016 || o.fr016, 'Sankhya (anexo da OM)']);
   if (o1.pdfFileId) E.push(['Este Anexo II (PDF)', 'OM ' + o.num, 'Google Drive']);
   const itens = c ? 'NP 055 itens 4.7, 4.8, 5.2, 5.4.1 (comunicação, RNC e nova inspeção), 5.5.1 (criticidade e liberação), 5.7 (resíduos), 5.8 (inspeção final, terceiros e fotos), 5.11 (SESMT e terceiros) e 10.3 (treinamento pós-falha)'
     : 'NP 055 itens 4.7, 4.8, 5.2, 5.7 (resíduos), 5.8 (inspeção final, terceiros e fotos), 5.9 (lote e instrumentos), 5.11 (SESMT e terceiros), 7.2 e 7.4 (preventiva e preditiva) · Anexo I (intervalos e método executivo)';
