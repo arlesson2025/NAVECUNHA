@@ -1379,7 +1379,9 @@ function tbl(cols, rows, w) { return `<table><tr>${cols.map((c, i) => `<th${w &&
 function paginar(fbarHtml, blocks, hdrHtml) {
   const R = $('#render'); const pages = [];
   let sh = null, body = null;
-  const nova = () => { sh = document.createElement('div'); sh.className = 'sheet'; sh.innerHTML = (hdrHtml || HDR()) + `<div class="body">${fbarHtml}</div>` + FOOT(pages.length + 1); R.appendChild(sh); body = sh.querySelector('.body'); pages.push(sh); };
+  const tit = (fbarHtml.match(/<h3>([\s\S]*?)<\/h3>/) || [])[1] || '', num = (fbarHtml.match(/class="om"[\s\S]*?<b>([\s\S]*?)<\/b>/) || [])[1] || '';
+  const curta = tit ? `<div class="fbar" style="padding:3px 10px;min-height:0"><small>${tit.replace(/\s*—.*$/, '')}${num ? ' · OM ' + num : ''} · continuação</small></div>` : fbarHtml;   // da 2ª folha em diante, só uma linha que identifica a folha
+  const nova = () => { sh = document.createElement('div'); sh.className = 'sheet'; sh.innerHTML = (hdrHtml || HDR()) + `<div class="body">${pages.length ? curta : fbarHtml}</div>` + FOOT(pages.length + 1); R.appendChild(sh); body = sh.querySelector('.body'); pages.push(sh); };
   nova();
   const over = () => body.scrollHeight > body.clientHeight + 1;
   // divide a última tabela do bloco entre páginas quando ela não cabe inteira
