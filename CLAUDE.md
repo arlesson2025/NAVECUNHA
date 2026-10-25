@@ -25,6 +25,9 @@ Não há build, lint, testes nem gerenciador de pacotes. Publicação: GitHub Pa
 - Dados de exemplo: o app gera uma frota simulada (`gerarExemplo` / `carregarExemplo`); o banner “Dados de exemplo” aparece enquanto existirem `js/81-dados-de-exemplo-completos.js` (`exemploDemo`, uma vez por aparelho, registro `ex-demo-v1`) completa para apresentação: onde está cada empurrador (`S.cfg.situExemplo`, desfeito em `limparExemplo`), docagens com estaleiro e custo, laudos anteriores (tendência), OM em conferência, OMs para anexar no Sankhya (`skDemo`, o `skPend` ignora seed sem essa marca), avaria em viagem, prestadores e treinamentos.
 - **Teste das telas** (compara o estilo em ordem alfabética das propriedades): `python testes/telas.py` (precisa de playwright + Chromium) abre a versão desta pasta e a da `main` com a mesma data e os mesmos dados de exemplo e compara o HTML de cada tela, o estilo calculado de cada elemento (pega mudança de CSS), os Anexos II gerados e o código final de `VX`/`AFTER`. Os arquivos vêm direto do disco pelo Playwright (sem servidor HTTP). Rode antes de cada push; numa limpeza tem de dar tudo IGUAL. Saída em `testes/saida/` (fora do git).
 - Servidor: o código é colado manualmente no editor do Apps Script e implantado como App da Web; a URL `/exec` vai em Administração → Nuvem.
+- **Checagem automática** (`.claude/settings.json`): a cada edição em `manutencao/js/*.js`, o hook `.claude/hooks/checa-js.js` confere a sintaxe do arquivo (acorn) e se algum nome de topo choca com outro arquivo; havendo problema, devolve o erro com a linha. Todos os arquivos de uma vez: `node .claude/hooks/checa-js.js --todos`. Precisa do acorn (`npm i -g acorn`).
+- **Teste de fumaça**: `python testes/fumaca.py` (playwright + Chromium) abre todas as telas, uma `#omg`, uma `#om` e a rotina do Operador; tem de dar zero erros.
+- **Antes de publicar na `main`**: `/publicar-smf` roda sintaxe, nomes globais, fumaça, teste das telas e confere cache do service worker, manual e servidor.
 
 ## Como ler o código do SMF (`manutencao/js/*.js`, ~1 MB em 79 arquivos)
 
@@ -63,6 +66,11 @@ O app cresceu empilhando ~50 blocos, cada um com um cabeçalho `/* ===== … ===
 - **Antes de publicar**, confira a sintaxe de todos os arquivos com um parser de verdade (acorn): `node -e "const fs=require('fs'),a=require('acorn');for(const f of fs.readdirSync('manutencao/js'))try{a.parse(fs.readFileSync('manutencao/js/'+f,'utf8'),{ecmaVersion:'latest',allowReturnOutsideFunction:true})}catch(e){console.log(f,e.message)}"` não pode imprimir nada (um erro derruba o arquivo inteiro em silêncio, e os seguintes quebram com “X is not defined”; `new Function` não acusa chave aberta). Nunca ponha `// comentário` no meio de uma linha que continua com código — e isso **não** é pego pela checagem de sintaxe quando o resto da linha era declaração (o código fica válido e quebra só ao rodar). Por isso rode também o **teste de fumaça**: logado, abrir cada tela (`rotina, cxr, crono, audit, oms, emitir, oleo, anoleo, parmcp, compr, controle, kpi, falhas, bib, terc, trein, pecas, matriz, admin, hor`, uma `#omg/…` e uma `#om/…`, e `rotina` com `role: 'opr'`) chamando `render()` e escutando `error`/`unhandledrejection`; tem de dar zero erros.
 
 Consequência prática: para saber o que realmente aparece numa tela, procure a **última** atribuição (`VX\.crono\s*=`, `AFTER\.crono\s*=`) — a primeira definição pode estar morta. Ao alterar, prefira editar o bloco que hoje vence; se acrescentar um novo bloco de patch, siga o mesmo formato de cabeçalho e coloque-o no fim.
+
+## Working preferences
+
+- Responda sempre em português do Brasil.
+- Faça poucas perguntas: escolha o caminho mais razoável, siga em frente e diga o que decidiu; pergunte só quando a decisão for difícil de desfazer.
 
 ## Convenções do projeto
 
