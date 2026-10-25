@@ -2,7 +2,7 @@
 // depois sem que ninguém tenha guardado o valor antigo na carga da página. Lista arquivo:linha de cada atribuição morta.
 // Uso: node mortas.js <index.html>
 const fs = require('fs'), acorn = require('acorn'), walk = require('acorn-walk');
-const arq = process.argv[2], src = fs.readFileSync(arq, 'utf8');
+const arq = process.argv[2], src = require('./codigo').ler(arq);
 const linhaDe = off => src.slice(0, off).split('\n').length;
 const ev = [], PAI = new Map();   // eventos em ordem de carga: {k, tipo: 'def'|'leitura', off, fim, stmtIni, stmtFim}
 const chave = n => {
@@ -76,6 +76,6 @@ if (process.argv.includes('--aplicar')) {
     else console.log('pulei', x.linha, x.k); }
   let out = src; cortes.sort((p, q) => q.a - p.a); let ult = Infinity;
   for (const c of cortes) { if (c.b > ult) { console.log('sobreposto, pulei', c.k); continue; } let b = c.b; if (!c.por && out[b] === '\n') b++; out = out.slice(0, c.a) + c.por + out.slice(b); ult = c.a; }
-  fs.writeFileSync(arq, out); console.log('aplicado: ' + cortes.length);
+  require('./codigo').gravar(arq, out); console.log('aplicado: ' + cortes.length);
 }
 console.log('acessos dinâmicos window[...] nas linhas:', dyn.join(', '));

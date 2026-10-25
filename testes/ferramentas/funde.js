@@ -1,6 +1,6 @@
 // Funde os embrulhos de AFTER na função base. node funde.js index.html
 const fs = require('fs'), acorn = require('acorn');
-const arq = process.argv[2]; let src = fs.readFileSync(arq, 'utf8');
+const arq = process.argv[2]; const COD = require('./codigo'); let src = COD.ler(arq);
 function stmts() { const out = []; const re = /<script>([\s\S]*?)<\/script>/g; let m;
   while ((m = re.exec(src))) { const ini = m.index + 8; const ast = acorn.parse(m[1], { ecmaVersion: 'latest' }); ast.body.forEach(st => out.push({ st, ini })); } return out; }
 function base(nome) { // última atribuição de topo AFTER.nome = function
@@ -17,5 +17,5 @@ function wrapper(txt) { const i = src.indexOf(txt); if (i < 0 || src.indexOf(txt
   const x = stmts().find(({ st, ini }) => ini + st.start === i); if (!x) throw new Error('não é instrução ' + txt); return [i, x.ini + x.st.end]; }
 const ins = (pos, code) => { src = src.slice(0, pos) + code + src.slice(pos); };
 const tira = ([a, b]) => { if (src[b] === '\n') b++; src = src.slice(0, a) + src.slice(b); };
-module.exports = { get src() { return src; }, set src(v) { src = v; }, base, onclickIni, wrapper, ins, tira, salva: () => fs.writeFileSync(arq, src) };
+module.exports = { get src() { return src; }, set src(v) { src = v; }, base, onclickIni, wrapper, ins, tira, salva: () => COD.gravar(arq, src) };
 if (require.main === module) for (const n of ['om', 'acomp', 'cxr', 'compr', 'barco', 'rotina']) console.log(n, JSON.stringify(base(n).tops));

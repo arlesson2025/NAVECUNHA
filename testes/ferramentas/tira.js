@@ -2,7 +2,7 @@
 // Uso: node tira.js <index.html> <lista.txt>   — falha se algum texto não for o começo exato de uma instrução, ou aparecer mais de uma vez.
 const fs = require('fs'), acorn = require('acorn');
 const [arq, lista] = [process.argv[2], process.argv[3]];
-let src = fs.readFileSync(arq, 'utf8');
+const COD = require('./codigo'); let src = COD.ler(arq);
 const alvos = fs.readFileSync(lista, 'utf8').split('\n').filter(l => l.trim());
 const cortes = [];
 for (const txt of alvos) {
@@ -17,4 +17,4 @@ for (const txt of alvos) {
 }
 cortes.sort((a, b) => b[0] - a[0]);
 for (const [a, b0] of cortes) { let b = b0; if (src[b] === '\n') b++; src = src.slice(0, a) + src.slice(b); }
-fs.writeFileSync(arq, src); console.log('tiradas ' + cortes.length + ' instruções');
+COD.gravar(arq, src); console.log('tiradas ' + cortes.length + ' instruções');

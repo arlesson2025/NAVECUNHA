@@ -1,0 +1,32 @@
+/* ===== Corretiva que refaz serviço do Anexo I: o próximo vencimento conta dali, sem virar preventiva realizada =====
+   Decisão do Supervisor (21/10/2026). Na corretiva (II-A, bloco Análise), "Serviços do Anexo I refeitos por completo" guarda o.itensRefeitos = ['POS|item', …].
+   Com a OM encerrada: ultimoServico usa a data de término (e o horímetro daquela data) desses itens; no cronograma (cxIndice/cxLinha) entra como reinício (reset):
+   não conta como realizado na aderência, e a preventiva que já tinha passado do prazo antes da falha continua como não feita. */
+'use strict';
+function corrRefeitos(o) { const d = String(o.termino || o.liberacao || (o.fechadoAt ? isoD(new Date(o.fechadoAt)) : '')).slice(0, 10); if (!d) return [];
+  return (o.itensRefeitos || []).map(k => { const [pos, id] = k.split('|'), t = A1M[id]; if (!t) return null; const r = horEm(o.vessel, posHor(pos, t, o.vessel), d); return { pos, id, date: d, h: r ? +r.h : null }; }).filter(Boolean); }
+const a1Lista = (o, campo) => { const v = vessel(o.vessel); return (o[campo] || []).map(k => { const [pos, id] = k.split('|'), t = A1M[id]; return t ? `<li>${esc(id)} · ${esc(t.item)} — ${esc(t.chk || '')} <span class="note">(${esc(v ? posNome(v, pos) : pos)})</span></li>` : ''; }).join(''); };
+function refeitosHTML(o) { const L = a1Lista(o, 'itensRefeitos');   // seção 3 da II-A: alimenta o cronograma
+  return `<div class="f s6"><b style="font-size:13px">Itens do Anexo I executados neste reparo</b>${L ? `<ul style="margin:4px 0 6px 18px">${L}</ul>` : '<div class="note">Nenhum. Marque só o serviço do plano feito <b>por completo</b> (ex.: trocou a mangueira, a correia): o próximo vencimento conta da data de término do reparo, sem contar como preventiva realizada.</div>'}<button type="button" class="mbtn sm" data-refeitos="${o.id}">${L ? 'Alterar' : 'Marcar itens do Anexo I'}</button></div>`; }
+function revPlanoHTML(o) { const L = a1Lista(o, 'itensRev'), f = o.revFeita;   // seção 4 da II-A: o plano (intervalo ou tarefa) precisa mudar
+  return `<div class="f s6"><b style="font-size:13px">Item do Anexo I a revisar</b>${L ? `<ul style="margin:4px 0 6px 18px">${L}</ul>` : '<div class="note">Escolha o item cujo intervalo ou tarefa a falha mostrou que precisa mudar. Vira pendência do Supervisor em “O que precisa de você agora”.</div>'}
+    <div class="row" style="gap:6px"><button type="button" class="mbtn sm" data-refeitos="${o.id}" data-campo="itensRev">${L ? 'Alterar' : 'Escolher item do Anexo I'}</button>${L && can.admin() ? (f ? `<span class="note">✓ Anexo I revisado em ${brD(isoD(new Date(f.at)))} por ${esc(f.by || '')}</span> <button type="button" class="mbtn sm" data-revfeita="${o.id}">Desfazer</button>` : `<button type="button" class="mbtn sm" data-revfeita="${o.id}">Anexo I revisado</button>`) : ''}</div></div>`; }
+function refeitosModal(id, campo = 'itensRefeitos') { const o = S.recs.get(id); if (!o) return; if (!precisa(o.status === 'encerrada')) return;
+  const rev = campo === 'itensRev';
+  const v = vessel(o.vessel); if (!v) return; const P = posicoes(v).concat(['UN']); let pos = P.includes(o.pos) ? o.pos : P[0]; const sel = new Set(o[campo] || []);
+  const lista = () => { const q = BQ_NORM(($('#rfQ') || {}).value || ''); return A1.filter(t => aplica(v, pos, t) && (!q || BQ_NORM(t.id + ' ' + t.item + ' ' + (t.chk || '') + ' ' + t.eq).includes(q))).map(t => { const k = pos + '|' + t.id;
+    return `<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0"><input type="checkbox" data-rfk="${esc(k)}"${sel.has(k) ? ' checked' : ''}><span><b>${esc(t.id)}</b> · ${esc(t.item)} — ${esc(t.chk || '')} <span class="note">${esc(t.freq || '')}</span></span></label>`; }).join('') || '<p class="note">Nenhum item do plano nesta posição.</p>'; };
+  modal((rev ? `<h2>Item do Anexo I a revisar · OM ${esc(o.num || '')}</h2><p class="note">Marque o item cujo intervalo ou tarefa precisa mudar por causa desta falha. Nada muda no plano agora: fica como pendência do Supervisor até a revisão do Anexo I.</p>`
+    : `<h2>Itens do Anexo I executados · OM ${esc(o.num || '')}</h2><p class="note">Marque só o que foi feito <b>por completo</b> neste reparo. Quando a corretiva for encerrada, o próximo vencimento desses itens conta da data de término dela. Não conta como preventiva realizada no cronograma.</p>`) + `
+   <div class="g"><label class="f s2">Equipamento / posição<select id="rfP">${P.map(p => `<option value="${p}"${p === pos ? ' selected' : ''}>${esc(p === 'UN' ? 'Embarcação (geral)' : posNome(v, p))}</option>`).join('')}</select></label><label class="f s4">Buscar<input id="rfQ" placeholder="nº do item, peça, serviço…"></label></div>
+   <div id="rfL" style="max-height:50vh;overflow:auto">${lista()}</div><div class="note" id="rfN">${sel.size ? sel.size + ' marcado(s)' : ''}</div>
+   <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="rfOk">Gravar</button></div>`, true);
+  const sync = () => { document.querySelectorAll('#rfL [data-rfk]').forEach(c => c.checked ? sel.add(c.dataset.rfk) : sel.delete(c.dataset.rfk)); $('#rfN').textContent = sel.size ? sel.size + ' marcado(s)' : ''; };
+  $('#rfL').onchange = sync; $('#rfP').onchange = () => { sync(); pos = $('#rfP').value; $('#rfL').innerHTML = lista(); }; $('#rfQ').oninput = () => { sync(); $('#rfL').innerHTML = lista(); };
+  $('#rfOk').onclick = async () => { sync(); o[campo] = [...sel]; if (rev) delete o.revFeita; o.hist = (o.hist || []).concat([{ at: Date.now(), by: S.session.name, ev: (rev ? 'Item do Anexo I a revisar: ' : 'Itens do Anexo I executados: ') + (o[campo].map(k => k.replace('|', ' ')).join(', ') || 'nenhum') }]); await saveRec(o); closeModal(); toast('Gravado.'); render(); };
+}
+document.addEventListener('click', async e => { const b = e.target.closest('[data-refeitos],[data-revfeita]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+  if (b.dataset.refeitos) return refeitosModal(b.dataset.refeitos, b.dataset.campo);
+  const o = S.recs.get(b.dataset.revfeita); if (!o || !precisa(true)) return;   // o Supervisor marca quando revisou o Anexo I
+  if (o.revFeita) delete o.revFeita; else o.revFeita = { at: Date.now(), by: S.session.name };
+  o.hist = (o.hist || []).concat([{ at: Date.now(), by: S.session.name, ev: o.revFeita ? 'Anexo I revisado' : 'Revisão do Anexo I desfeita' }]); await saveRec(o); render(); }, true);

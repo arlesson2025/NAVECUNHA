@@ -3,7 +3,7 @@
 // "Ninguém usa" = o nome aparece uma vez só no arquivo inteiro (a própria declaração), contando também textos e HTML.
 const fs = require('fs'), acorn = require('acorn');
 const arq = process.argv[2], aplicar = process.argv.includes('--aplicar');
-let src = fs.readFileSync(arq, 'utf8');
+const COD = require('./codigo'); let src = COD.ler(arq);
 const conta = n => (src.match(new RegExp('(?<![\\w$])' + n.replace(/\$/g, '\\$') + '(?![\\w$])', 'g')) || []).length;
 let total = [], volta = 0;
 while (true) {
@@ -30,4 +30,4 @@ while (true) {
   if (!aplicar) break;
 }
 console.log((aplicar ? 'removidos ' : 'sem uso ') + total.length + ': ' + total.join(', '));
-if (aplicar) fs.writeFileSync(arq, src);
+if (aplicar) COD.gravar(arq, src);

@@ -15,14 +15,14 @@ from playwright.async_api import async_playwright
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAIDA = os.path.join(RAIZ, 'testes', 'saida')
 DATA = datetime.datetime(2026, 10, 24, 10, 0, 0)
-TELAS = ['rotina', 'barco/v1', 'emitir', 'emitir/v3', 'oms', 'acomp', 'omconf', 'falhas', 'falhas2', 'cxr', 'crono', 'audit', 'matriz', 'critic',
+TELAS = ['rotina', 'barco/v1', 'emitir', 'emitir/v3', 'oms', 'acomp', 'omconf', 'falhas', 'falhas2', 'cxr', 'crono', 'audit', 'matriz',
          'controle', 'horfrota', 'hor', 'oleo', 'anoleo', 'parmcp', 'compr', 'kpi', 'regs', 'bib', 'pecas', 'terc', 'trein', 'lubcons', 'admin']
 INICIO = """
 (() => { let s = 20261024; Math.random = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
   try { sessionStorage.setItem('sgmf_ok', '1'); localStorage.clear(); } catch (e) {} })();
 """
 ESTILO = """() => { const h = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); } return (x >>> 0).toString(36); };
-  const um = (el, ps) => { const c = getComputedStyle(el, ps); let s = ''; for (let i = 0; i < c.length; i++) s += c[i] + ':' + c.getPropertyValue(c[i]) + ';'; return s.split(location.origin).join(''); };   // url() vem com a porta do servidor
+  const um = (el, ps) => { const c = getComputedStyle(el, ps), L = []; for (let i = 0; i < c.length; i++) L.push(c[i] + ':' + c.getPropertyValue(c[i])); return L.sort().join(';').split(location.origin).join(''); };   // em ordem alfabética: a ordem das variáveis (--x) muda com a ordem das folhas, o valor não   // url() vem com a porta do servidor
   const nome = el => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.classList.length ? '.' + [...el.classList].join('.') : '');
   return ['nav', 'main'].flatMap(id => [...document.getElementById(id).querySelectorAll('*')].map(el => nome(el) + ' ' + h(um(el, null) + '|' + um(el, '::before') + '|' + um(el, '::after')))).join(String.fromCharCode(10)); }"""   # estilo calculado de cada elemento: pega mudança de CSS que o HTML não mostra
 NORMALIZA = [(re.compile(r'\b(om|r|hor|lub|ap|cmp|base|fr27|situ|saida|param)-[a-z0-9]{6,9}-[a-z0-9]{5}\b'), r'\1-ID'),

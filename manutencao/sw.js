@@ -1,5 +1,5 @@
 /* SMF · service worker: deixa o painel abrir sem internet. Os dados vão ao Google quando houver sinal. */
-const CACHE='ctle-man-v75';
+const CACHE='ctle-man-v76';
 // essenciais: sem eles o SMF não abre, o FR 049_B (óleo) não abre/salva ou o login e os PDFs saem sem as logos — se algum falhar, a instalação é cancelada e o aparelho segue com a versão anterior inteira
 const ESSENCIAIS=['./','./index.html','./dados/anexo1.js','./forms/FR_049_B.html','./forms/FR_027_L.html','./lib/html2canvas.min.js','./lib/jspdf.umd.min.js','./img/logo-nav.png','./img/logo-vda.png'];
 // opcionais: se falharem (sinal fraco a bordo), usa a cópia da versão anterior ou fica para a próxima abertura com sinal
@@ -8,7 +8,9 @@ const espera=ms=>new Promise(r=>setTimeout(r,ms));
 async function baixa(c,u){for(const t of [0,1000,3000]){await espera(t);try{const res=await fetch(u,{cache:'no-cache'});if(res.ok){await c.put(u,res);return true;}}catch(e){}}return false;}   // 3 tentativas
 async function guarda(){
   const c=await caches.open(CACHE);
-  for(const u of ESSENCIAIS)if(!await baixa(c,u))throw new Error('essencial não baixou: '+u);
+  // o código do SMF fica em js/*.js e css/*.css: a lista sai do próprio index.html (arquivo novo entra sozinho)
+  let ess=ESSENCIAIS;try{const h=await (await fetch('./index.html',{cache:'no-cache'})).text();ess=ess.concat([...h.matchAll(/(?:src|href)="((?:js|css)\/[^"?#]+)/g)].map(m=>'./'+m[1]));}catch(e){throw new Error('index.html não baixou');}
+  for(const u of ess)if(!await baixa(c,u))throw new Error('essencial não baixou: '+u);
   for(const u of OPCIONAIS)if(!await baixa(c,u)){const m=await caches.match(u);if(m)await c.put(u,m);}
 }
 self.addEventListener('install',e=>{e.waitUntil(guarda().then(()=>self.skipWaiting()));});
