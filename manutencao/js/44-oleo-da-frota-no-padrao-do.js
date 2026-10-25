@@ -60,8 +60,9 @@ function vOleoP() {
    ${corpo}<p class="note">Esquerda = atraso · direita = % do intervalo que ainda resta · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d</p></div>`;
   const t = document.createElement('div'); t.innerHTML = vLubReg(); const card = t.querySelector(':scope > .card');   // filtros e tabela da antiga tela Registros de lubrificação
   const reg = card ? `<div class="card" id="ol-trocas"><div class="row"><h2>Trocas lançadas</h2><span class="sp"></span><span class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e complementos de óleo</span></div>${card.innerHTML}</div>` : '';
-  return `<div class="cm-v"><div class="vh"><div><h1>Óleo da frota</h1><p>Troca de óleo por horímetro ou prazo (Anexo I · matriz de lubrificação) · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d · registro pelo FR 049_B</p></div><span class="sp"></span><button class="mbtn" data-olreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn pri" data-ollanca>＋ Lançar troca</button></div>
-   <div class="cm-ws">${tab}${graf}${reg}</div></div>`;
+  const { M: AM } = amoDados();   // análise de óleo do MCP na mesma aba (Supervisor, 25/10/2026)
+  return `<div class="cm-v"><div class="vh"><div><h1>Óleo da frota e análise de óleo</h1><p>Troca de óleo por horímetro ou prazo (Anexo I · matriz de lubrificação) · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d · registro pelo FR 049_B · laudo de cada MCP a cada 1.000 h ou 12 meses (item 1.1.29)</p></div><span class="sp"></span><button class="mbtn" data-olreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn" data-laudo2="">＋ Registrar laudo</button><button class="mbtn pri" data-ollanca>＋ Lançar troca</button></div>
+   <div class="cm-ws">${tab}${graf}${reg}${aoMatriz(AM)}${aoTend(AM)}${amoCard()}${aoParam()}</div></div>`;
 }
 VX.oleo = vOleoP;
 AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.open]); O3.S('mode', O3.mode); O3.S('ves', O3.ves); };
@@ -75,11 +76,15 @@ AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.o
     if (t.closest('[data-ollanca]')) { if (!precisa(false)) return; lubAbrirForm(O3.mode !== 'frota' ? O3.ves : undefined); return; }
     const fr = t.closest('[data-frv]'); if (fr) { if (!precisa(false)) return; lubAbrirForm(fr.dataset.frv); return; }
     const x = t.closest('[data-lubexc]'); if (x) { lubExcluir(x.dataset.lubexc); return; }
-    const lv = t.closest('[data-lubver]'); if (lv) lubVerModal(lv.dataset.lubver); };
+    const lv = t.closest('[data-lubver]'); if (lv) { lubVerModal(lv.dataset.lubver); return; }
+    const af = t.closest('[data-aof]'); if (af) { AO.f = af.dataset.aof; render(); return; }   // análise de óleo (mesma aba)
+    const ap = t.closest('[data-aop]'); if (ap) { AO.p = ap.dataset.aop; render(); return; }
+    const as = t.closest('[data-aosel]'); if (as) { AO.sel = as.dataset.aosel; AO.p = ''; render(); const c = $('#aoSel'); if (c) c.closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
   m.onchange = e => { const id = e.target.id;
     if (id === 'olSv') { O3.ves = e.target.value; O3.mode = '1'; salva(); render(); }
-    if (id === 'lrB') { LR.barco = e.target.value; render(); } if (id === 'lrM') { LR.mes = e.target.value; render(); } };
-  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ol_lay2', '[data-olreset]');
+    if (id === 'lrB') { LR.barco = e.target.value; render(); } if (id === 'lrM') { LR.mes = e.target.value; render(); }
+    if (id === 'aoSel') { AO.sel = e.target.value; AO.p = ''; render(); } };
+  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ol_lay3', '[data-olreset]');
   if (Date.now() - OL_IR < 3000) { OL_IR = 0; setTimeout(() => { const s = document.getElementById('ol-trocas'); if (s) s.scrollIntoView({ block: 'start' }); }, 300); } };
 { const st = document.createElement('style'); st.textContent = `
 #main .ol-t th{white-space:nowrap}#main .ol-t th.ol-gu{background:#F4F6F9;text-align:center}#main .ol-t th.ol-gp{background:#E8F0FE;color:#1967D2;text-align:center}

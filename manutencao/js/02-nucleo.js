@@ -577,7 +577,8 @@ document.addEventListener('mousemove', e => { const t = $('#tip'); if (t.hidden)
 const PST = { venc: ['p-bad', 'Vencido'], viag: ['p-warn', 'Vence na viagem'], ok: ['p-ok', 'Em dia'], sem: ['p-mut', 'Sem histórico'], cond: ['p-mut', 'Por condição'] };
 const pillSt = st => `<span class="pill ${PST[st][0]}">${PST[st][1]}</span>`;
 const posTag = p => `<span class="pos ${p}">${p === 'UN' ? 'UN' : p}</span>`;
-const omStatusTxt = o => ((o.tipo === 'C' ? ETAPAS_C : ETAPAS_P).find(x => x[0] === o.status) || ['', o.status])[1];
+const OM3 = { emitida: 'Aberta', abordo: 'Aberta · a bordo', aberta: 'Aberta', execucao: 'Aberta · em execução', executada: 'Executada', conferencia: 'Executada · em conferência', encerrada: 'Encerrada' };   // 3 etapas na tela (Supervisor, 25/10/2026)
+const omStatusTxt = o => OM3[o.status] || o.status;
 
 /* =====================================================================
    VISÃO GERAL
@@ -1440,7 +1441,7 @@ function vKpi() {
    ${kpiCard('Cumprimento do plano preditivo', pr, '%', '≥ 80%', pr >= 80, lineChart(K.pred, K.qs.map(x => x.lab), 80, '%', 0), 'análises de óleo (1.1.29) e avaliações de tendência (1.1.30) realizadas ÷ programadas no trimestre × 100', 'Trimestral', 0)}
    ${kpiCard('Conformidade de fotos', ft, '%', '100%', ft >= 99.95, lineChart(K.fotos, labs, 100, '%', 0), 'OMs encerradas com foto ANTES e DEPOIS ÷ OMs encerradas × 100. Card: últimos 7 dias; gráfico: por mês.', 'Semanal', 0)}
   </div>
-  ` + riscoHTML() + mitigHTML() + resumoMesHTML() + kpiCronoCard();
+  ` + resumoMesHTML(true) + kpiCronoCard();   // riscos e alertas ficam no “O que precisa de você agora” da Frota; medidas de mitigação em Corretivas e falhas
 }
 
 /* ---------- administração ---------- */

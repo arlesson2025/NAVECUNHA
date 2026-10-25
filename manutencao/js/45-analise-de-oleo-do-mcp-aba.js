@@ -71,7 +71,7 @@ function vAnOleo() {
   return `<div class="cm-v"><div class="vh"><div><h1>Análise de óleo · MCP</h1><p>Laudo de laboratório por motor: metais de desgaste, contaminação e condição do óleo · amostra de cada MCP a cada 1.000 h ou 12 meses, junto com os bicos e a compressão (Anexo I, item 1.1.29)</p></div><span class="sp"></span><button class="mbtn" data-aoreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn pri" data-laudo2="">＋ Registrar laudo</button></div>
    <div class="cm-ws">${aoMatriz(M)}${aoTend(M)}${amo}${aoParam()}</div></div>`;
 }
-VX.anoleo = vAnOleo;
+VX.anoleo = () => { setTimeout(() => location.replace('#oleo')); return ''; };   // a análise de óleo está na aba Óleo e análise (25/10/2026); vAnOleo continua para o relatório mensal
 AFTER.anoleo = () => { const m = $('#main');
   m.onclick = e => { const t = e.target;
     const f = t.closest('[data-aof]'); if (f) { AO.f = f.dataset.aof; render(); return; }
@@ -80,7 +80,7 @@ AFTER.anoleo = () => { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'aoSel') { AO.sel = e.target.value; AO.p = ''; render(); } };
   janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ao_lay', '[data-aoreset]'); };
 // registrar/ver laudo (data-laudo2 / data-laudov2) também nesta aba
-document.addEventListener('click', e => { if (VIEW !== 'anoleo') return; const l = e.target.closest('[data-laudo2]'); if (l) { e.stopPropagation(); laudoModal(); return; } const v = e.target.closest('[data-laudov2]'); if (v) { e.stopPropagation(); laudoLista(...v.dataset.laudov2.split('|')); } }, true);
+document.addEventListener('click', e => { if (VIEW !== 'anoleo' && VIEW !== 'oleo') return; const l = e.target.closest('[data-laudo2]'); if (l) { e.stopPropagation(); laudoModal(); return; } const v = e.target.closest('[data-laudov2]'); if (v) { e.stopPropagation(); laudoLista(...v.dataset.laudov2.split('|')); } }, true);
 { const st = document.createElement('style'); st.textContent = `
 #main .ao-t th,#main .ao-t td{white-space:nowrap}#main .ao-t th.ao-g{text-align:center;background:#F4F6F9;border-left:2px solid #fff}
 #main .ao-t td.ao-c.viag{background:#FEF3D6;color:#7A5200;font-weight:600}#main .ao-t td.ao-c.venc{background:#FCE8E6;color:#B3261E;font-weight:700}`; document.head.appendChild(st); }

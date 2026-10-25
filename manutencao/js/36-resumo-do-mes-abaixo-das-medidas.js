@@ -51,7 +51,7 @@ function rmDetHTML(det, enc, fal, topo) {
   return `<div class="card rm rm-det"><h2>O que mais quebrou · ${esc(det.k)} · ${L.length} falha${L.length === 1 ? '' : 's'}</h2><p class="rm-sub">Corretivas abertas no período com este ${eixo} · clique na OM para ver o Anexo II-A</p>
     ${L.length ? `<table class="t"><thead><tr><th>Aberta em</th><th>Empurrador</th><th>OM</th><th>Equipamento</th><th>O que aconteceu</th><th>O que foi feito</th><th>Classe</th></tr></thead><tbody>${L.map(o => `<tr><td>${dt(o.abertura)}</td><td><b>${esc(vName(o.vessel))}</b></td><td class="mono">${lk(o, 'OM ' + esc(o.num || '—'))}</td><td>${esc(o.equip || '—')}<br><span class="note">${esc(rmSis(o.sistema))}</span></td><td>${esc(o.descricao || '')}${o.modo ? `<br><span class="note">${esc(o.modo)}</span>` : ''}</td><td><span class="note">${o.status === 'encerrada' ? esc(rmFeito(o)) : 'Em andamento'}</span></td><td><span class="pill ${o.classe === 'Crítica' ? 'p-bad' : o.classe === 'Alta' ? 'p-warn' : ''}">${esc(o.classe || '—')}</span></td></tr>`).join('')}</tbody></table>` : '<div class="note">Nenhuma falha deste grupo no período.</div>'}</div>`;
 }
-function resumoMesHTML() {
+function resumoMesHTML(soPareto) {   // soPareto: Indicadores mostram só o que mais quebrou (o relatório mensal usa o resumo inteiro)
   const d = hoje(), cur = d.getFullYear() * 12 + d.getMonth(), sel = RM_SEL == null ? cur : RM_SEL, todos = sel === 'todos';
   const ini = todos ? new Date(d.getFullYear(), d.getMonth() - 11, 1) : new Date(Math.floor(sel / 12), sel % 12, 1), fim = todos ? new Date(d.getFullYear(), d.getMonth() + 1, 1) : new Date(Math.floor(sel / 12), sel % 12 + 1, 1);
   const MS = [...Array(6).keys()].map(i => cur - 5 + i);
@@ -63,13 +63,13 @@ function resumoMesHTML() {
   fal.forEach(o => { const s = rmChave(o); cnt[s] = (cnt[s] || 0) + 1; });
   let E = Object.entries(cnt).sort((a, b) => b[1] - a[1]);
   if (E.length > 10) { const resto = E.slice(9).reduce((a, e) => a + e[1], 0); E = E.slice(0, 9).concat([['Outros', resto]]); }
-  const det = RM_DET && (RM_DET.t === 'emp' ? V.some(v => v.id === RM_DET.k) : E.some(e => e[0] === RM_DET.k)) ? RM_DET : E.length ? { t: 'par', k: E[0][0] } : null;
+  const det = RM_DET && (RM_DET.t === 'emp' ? !soPareto && V.some(v => v.id === RM_DET.k) : E.some(e => e[0] === RM_DET.k)) ? RM_DET : E.length ? { t: 'par', k: E[0][0] } : null;
   const cab = `<div class="ab4-sec rm-sec"><h2>Resumo do mês · ${esc(tit.charAt(0).toUpperCase() + tit.slice(1))}</h2><span class="sp"></span><div class="rk-f" style="margin:0">${MS.map(k => `<button data-rmm="${k}" class="${!todos && k === sel ? 'on' : ''}">${MESESL[k % 12].slice(0, 3).toLowerCase()}</button>`).join('')}<button data-rmm="todos" class="${todos ? 'on' : ''}">Todos os meses</button></div></div>`;
   const c1 = `<div class="card rm" data-lk="OMs fechadas por embarcacao"><h2>O que foi feito · OMs fechadas por empurrador</h2><p class="rm-sub">Preventivas (azul) × corretivas (âmbar) · ${enc.length} OM${enc.length === 1 ? '' : 's'} fechada${enc.length === 1 ? '' : 's'} · clique numa barra para ver o que foi feito</p>${rmBarras(V.map(v => v.nome.replace(/^CJA /, '')), P, C, V.map(v => v.id))}</div>`;
   const c2 = `<div class="card rm" data-lk="Pareto por sistema"><div class="row"><h2>O que mais quebrou · Pareto</h2><span class="sp"></span><div class="rk-f" style="margin:0">${RM_EIXOS.map(([k, t]) => `<button data-rmeixo="${k}" class="${RM_EIXO === k ? 'on' : ''}">${t}</button>`).join('')}</div></div><p class="rm-sub">Falhas registradas no período (${fal.length}) por ${RM_EIXOS.find(e => e[0] === RM_EIXO)[1].toLowerCase()} e % acumulado · clique numa barra para ver quais</p>${E.length ? rmPareto(E) : '<div class="note" style="padding:30px 0">Nenhuma falha registrada no período.</div>'}</div>`;
   const topo = E.some(e => e[0] === 'Outros') ? new Set(E.slice(0, 9).map(e => e[0])) : null;   // "Outros" = o que ficou fora das 9 primeiras barras
   const dh = det ? rmDetHTML(det, enc, fal, topo) : '';
-  return cab + `<div class="two">${c1}${c2}</div>` + dh;
+  return soPareto ? cab.replace('Resumo do mês', 'O que mais quebrou') + c2 + dh : cab + `<div class="two">${c1}${c2}</div>` + dh;
 }
 VX.kpi = vKpi;
 document.addEventListener('click', e => { const b = e.target.closest('[data-rmm]'); if (!b) return; RM_SEL = b.dataset.rmm === 'todos' ? 'todos' : +b.dataset.rmm; render(); });
