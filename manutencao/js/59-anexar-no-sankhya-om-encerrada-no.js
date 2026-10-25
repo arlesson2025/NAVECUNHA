@@ -4,7 +4,7 @@
    até o Supervisor marcar "Anexado e encerrado no Sankhya" (r.skFim = { at, by }). Registros de exemplo (seed) não entram. */
 'use strict';
 function skPend() {
-  const L = oms().filter(o => o.status === 'encerrada' && !o.seed && !o.excluido && !o.skFim).map(o => ({ r: o, tipo: o.tipo === 'C' ? 'Corretiva' : 'Preventiva', num: o.num, vid: o.vessel, at: o.fechadoAt || o.updatedAt || 0 }));
+  const L = oms().filter(o => o.status === 'encerrada' && (!o.seed || o.skDemo) && !o.excluido && !o.skFim).map(o => ({ r: o, tipo: o.tipo === 'C' ? 'Corretiva' : 'Preventiva', num: o.num, vid: o.vessel, at: o.fechadoAt || o.updatedAt || 0 }));
   recs('lub').filter(r => r.tipo === 'fr049' && r.om && !r.seed && !r.excluido && !r.skFim).forEach(r => L.push({ r, tipo: 'Troca de óleo', num: r.om, vid: r.vessel, at: r.updatedAt || +pD(r.date) || 0 }));
   return L.sort((a, b) => a.at - b.at);
 }

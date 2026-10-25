@@ -10,7 +10,8 @@ function f2Agora() { const L = agoraLista(), G = new Map();
     const g = G.get(chave) || { p: x.p, itens: [], btn: x.btn, txt: x.txt, resto }; g.itens.push({ nome, x }); G.set(chave, g); });
   return [...G.values()].map(g => { if (g.itens.length < 2 || !g.itens[0].nome) return { p: g.p, txt: g.txt, btn: g.btn };
     const tipo = g.resto.replace(/<[^>]+>/g, '').replace(/\s+há \d+ dias/, ' há mais de 14 dias').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
-    return { p: g.p, txt: `${esc(tipo)} · <b>${g.itens.length} empurradores</b> <span class="note">(${g.itens.map(i => esc(i.nome)).join(', ')})</span>`, btn: g.btn }; }).sort((a, b) => a.p - b.p); }
+    const nomes = [...new Set(g.itens.map(i => i.nome))];   // dois MCAs do mesmo empurrador contam um empurrador só
+    return { p: g.p, txt: `${esc(tipo)} · ${nomes.length === 1 ? `<b>${esc(nomes[0])}</b>` : `<b>${nomes.length} empurradores</b> <span class="note">(${nomes.map(esc).join(', ')})</span>`}${g.itens.length > nomes.length ? ` <span class="note">· ${g.itens.length} motores</span>` : ''}`, btn: g.btn }; }).sort((a, b) => a.p - b.p); }
    /* janelas livres, como Compressão e Óleo */
 { const st = document.createElement('style'); st.textContent = `.f2-ks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}.f2-k{background:#fff;border:1px solid #E3E6EA;border-radius:10px;padding:12px 14px}.f2-k span{display:block;font-size:12px;color:#5F6368}.f2-k b{font-size:22px;font-weight:600;white-space:nowrap}.cm-v .f2-ks{margin:4px 0 0}
 .f2-ac{text-align:right;white-space:nowrap}.f2-ac .mbtn{margin-left:6px}

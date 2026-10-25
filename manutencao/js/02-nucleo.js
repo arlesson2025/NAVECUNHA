@@ -446,6 +446,7 @@ async function carregarExemplo() { const l0 = gerarExemplo(); l0.forEach(r => S.
 async function limparExemplo() {
   const ids = [...S.recs.values()].filter(r => r.seed).map(r => r.id);
   for (const id of ids) { S.recs.delete(id); if (MEM) MEM.delete(id); else await DB.del(id); }
+  if (S.cfg.situExemplo) { S.cfg.frota.forEach(v => { delete v.situ; }); S.cfg.situExemplo = false; await kvSet('cfg', S.cfg); }   // onde está cada empurrador veio do exemplo (js/81)
   if (S.cfg.revExemplo) { S.cfg.frota.forEach(v => { if (!FROTA_MATRIZ[v.nome]) v.rev = {}; }); S.cfg.revExemplo = false; await kvSet('cfg', S.cfg); }
   await kvSet('seeded', 'limpo');
 }
