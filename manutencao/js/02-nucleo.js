@@ -527,7 +527,7 @@ function render() {
   const mesma = VIEW === RENDER_ULTV, y = scrollY;   // re-render da mesma tela: volta para onde estava a rolagem
   if (S.cfg && S.cfg.frota) { placaInit(); foraInit(); }
   renderNav(); renderUser();
-  const V = { geral: vGeral, calib: vCalib, doca: vDoca, hor: vHor, kpi: vKpi, emitir: vEmitir, acomp: vAcomp, om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
+  const V = { geral: vGeral, calib: vCalib, doca: vDoca, hor: vHor, kpi: vKpi, emitir: vEmitir, acomp: () => { setTimeout(() => location.replace('#oms')); return ''; },   /* a tela antiga de OMs em execução saiu (25/10/2026): Executar e lançar */ om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   if (FROTA_TIPO === 'bal' && !ehOperador() && !['admin', 'bib'].includes(VIEW)) { m.innerHTML = balsasVazio(); return; }   // balsas: telas ainda sem dados
   m.style.removeProperty('--ws-esq'); m.style.removeProperty('--ws-larg');   // janelas livres da tela anterior
@@ -580,7 +580,6 @@ const PST = { venc: ['p-bad', 'Vencido'], viag: ['p-warn', 'Vence na viagem'], o
 const pillSt = st => `<span class="pill ${PST[st][0]}">${PST[st][1]}</span>`;
 const posTag = p => `<span class="pos ${p}">${p === 'UN' ? 'UN' : p}</span>`;
 const omStatusTxt = o => ((o.tipo === 'C' ? ETAPAS_C : ETAPAS_P).find(x => x[0] === o.status) || ['', o.status])[1];
-const tipoPill = o => o.tipo === 'C' ? `<span class="pill p-bad">Corretiva · ${esc(o.classe || '?')}</span>` : `<span class="pill p-inf">${(o.items || []).every(i => A1M[i] && A1M[i].pred) ? 'Preditiva' : 'Preventiva'}</span>`;
 
 /* =====================================================================
    VISÃO GERAL
@@ -1102,11 +1101,6 @@ function fichaModal(o) {   // Anexo II-B da OM preventiva para imprimir (só é 
 /* =====================================================================
    ACOMPANHAR (quadro)
    ===================================================================== */
-const AC = { tipo: 'todas' };
-AFTER.acomp = () => { $('#main').onclick = async e => { const ga = e.target.closest('button[data-gadv]'); if (ga) { if (!precisa(false)) return; const [g, st] = ga.dataset.gadv.split('|'); await grpAvancar(g, st); if (st === 'conferencia') go('omg/' + encodeURIComponent(g)); else render(); return; } const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.ac) { AC.tipo = t.dataset.ac; render(); }
-  if (t.dataset.ficha) fichaModal(S.recs.get(t.dataset.ficha));
-  if (t.dataset.adv) { if (!precisa(false)) return; const [id, st] = t.dataset.adv.split('|'); const o = S.recs.get(id); o.status = st; (o.hist = o.hist || []).push({ at: Date.now(), by: S.session.name, ev: omStatusTxt(o) }); if (st === 'execucao' && !o.inicio) o.inicio = isoDT(hoje()); await saveRec(o); if (st === 'conferencia') go('om/' + id); else render(); } }; };
 
 /* =====================================================================
    HISTÓRICO
@@ -1413,11 +1407,6 @@ function paginar(fbarHtml, blocks, hdrHtml) {
   const out = pages.map(p => p.outerHTML); pages.forEach(p => p.remove()); return out;
 }
 function numerar(pages) { const N = pages.length; return pages.map((p, i) => p.replace(/@N/g, N).replace(/Página <b>[^<]*<\/b>/, 'Página <b>' + (i + 1) + '</b>')); }
-function assinaturas(o, extra) {
-  const ap = o.status === 'encerrada' ? `<span class="stamp">✓ Conferido e aprovado no SMF · ${esc(o.aprovBy || '')}</span>` : '';
-  const rows = [['Executor', (o.ass || {}).exec || o.execn || '', '', ''], ['Supervisor de Manutenção — inspeção final e entrega do equipamento testado (5.8)', '', { h: ap }, o.status === 'encerrada' ? brDT(o.aprovAt) : ''], ['Recebido a bordo — Comandante ou Coordenador de Operações (4.7)', (o.ass || {}).cmd || '', '', '']].concat(extra || []);
-  return tbl(['Função', 'Nome', 'Assinatura', 'Data e hora'], rows, ['40%', '22%', '22%', '16%']);
-}
 
 function previewPages(cont, pages, w) {
   const W = w || Math.max(240, Math.min(620, (cont.clientWidth || 600) - 24)), k = W / 794;

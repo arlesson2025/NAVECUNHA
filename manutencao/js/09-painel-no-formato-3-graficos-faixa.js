@@ -6,7 +6,6 @@
 const GC = { az: '26,115,232', az2: '138,180,248', az3: '25,103,210', vm: '217,48,37', lj: '242,153,0', ci: '154,160,166', am: '249,171,0' };
 const vid = (c, dir) => `background:rgb(${c})`;
 const tickNice = mx => { const p = Math.pow(10, Math.floor(Math.log10(mx || 1))), f = mx / p, s = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10; return s * p; };
-const legenda = L => `<div class="dz-leg">${L.map(([n, c, t]) => `<span><i class="${t || ''}" style="${t === 'ln' ? `background:rgb(${c})` : vid(c)}"></i>${esc(n)}</span>`).join('')}</div>`;
 
 // colunas (agrupadas) com rótulo de valor em cima de cada barra
 // linhas (uma ou duas séries, cada uma na sua escala) com marcador em losango e valor
