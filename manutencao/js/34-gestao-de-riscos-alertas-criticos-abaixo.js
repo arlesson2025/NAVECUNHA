@@ -18,7 +18,7 @@ function riscoDados() {
     const corA = ab.some(o => o.tipo === 'C' && o.classe === 'Alta');
     const nivel = al.some(a => a[0] === 1) ? 'alto' : (al.length || corA) ? 'medio' : 'baixo';
     al.forEach(a => alertas.push({ p: a[0], t: a[1], v }));
-    out.push({ v, hr: hr ? hr.h : null, ol: ol ? ol.horas : null, cal: cal ? cal.d : null, nivel, ab: ab.length });
+    out.push({ v, hr: hr ? hr.h : null, ol: ol ? ol.horas : null, cal: cal ? cal.d : null, nivel, ab: ab.length, al });
   });
   const o = { alto: 0, medio: 1, baixo: 2 }; out.sort((a, b) => o[a.nivel] - o[b.nivel] || (a.cal ?? 1e9) - (b.cal ?? 1e9));
   alertas.sort((a, b) => a.p - b.p);
@@ -31,6 +31,7 @@ function riscoHTML() {
   const cab = `<div class="ab4-sec rk-sec"><h2>Gestão de riscos e alertas críticos</h2><span class="note">empurradores em risco, pendências regulatórias e matriz da frota</span><span class="sp"></span><div class="seg">${[6, 12, 24].map(m => `<button data-falper="${m}" class="${m === FALPER ? 'on' : ''}">${m} meses</button>`).join('')}</div><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>`;
   const c1 = `<div class="card rk" data-lk="Risco alto"><div class="rk-h"><h2>Empurradores em risco alto</h2>${alto.length ? '<span class="rk-bd alto">AÇÃO IMEDIATA</span>' : '<span class="rk-bd baixo">SOB CONTROLE</span>'}</div>
     <div class="rk-big"><span style="color:${alto.length ? '#DC2626' : '#16A34A'}">${alto.length}</span><em>de ${out.length} empurradores ativos</em></div>
+    ${alto.map(x => `<a class="rk-emp" href="#barco/${x.v.id}" title="Abrir a ficha técnica do ${esc(x.v.nome)}"><b>${esc(x.v.nome)}</b><span>${x.al.filter(a => a[0] === 1).map(a => esc(a[1].replace(x.v.nome + ' · ', ''))).join('<br>')}</span><i>›</i></a>`).join('')}
     <div class="rk-2"><div><b>${omA}</b><small>OM aberta${omA === 1 ? '' : 's'}${alto.length ? ' nos empurradores em risco' : ''}</small></div><div><b>${med == null ? '—' : nf(Math.round(med)) + ' h'}</b><small>horímetro médio MCP</small></div></div></div>`;
   const c2 = `<div class="card rk" data-lk="Alertas criticos"><div class="rk-h"><h2>Alertas críticos</h2><span class="note"><b style="color:#DC2626">${alertas.filter(a => a.p === 1).length}</b> P1 · <b style="color:#D97706">${alertas.filter(a => a.p === 2).length}</b> P2</span></div>
     ${alertas.length ? alertas.slice(0, 12).map(a => `<div class="rk-al"><span class="rk-pp p${a.p}">P${a.p}</span>${esc(a.t)}</div>`).join('') + (alertas.length > 12 ? `<div class="note">+ ${alertas.length - 12} alertas</div>` : '') : '<div class="note">Nenhum alerta crítico.</div>'}
@@ -50,6 +51,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-rkf]
 .rk-h b {font-size:15px;font-weight:700;color:#0F172A}
 .rk-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .rk-big{display:flex;align-items:baseline;gap:12px;margin:8px 0 12px}.rk-big span{font-size:46px;font-weight:800;line-height:1}.rk-big em{font-style:normal;color:#64748B;font-size:13px}
+.rk-emp{display:flex;align-items:flex-start;gap:12px;padding:9px 12px;margin:0 0 8px;border:1px solid #FECACA;background:#FEF2F2;border-radius:8px;text-decoration:none;color:#0F172A}.rk-emp b{font-size:14px;min-width:84px}.rk-emp span{flex:1;font-size:13px;color:#7F1D1D}.rk-emp i{font-style:normal;color:#DC2626;font-size:18px;line-height:1}.rk-emp:hover{background:#FEE2E2}
 .rk-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.rk-2 div{border:1px solid #E3E8EF;background:#F8FAFC;border-radius:8px;padding:12px}
 .rk-2 b{display:block;font-size:19px;font-weight:700;color:#0F766E}.rk-2 small{color:#64748B;font-size:11.5px}
 
