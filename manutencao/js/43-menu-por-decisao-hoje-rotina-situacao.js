@@ -1,6 +1,6 @@
 /* ===== Menu por decisão: Hoje (rotina + situação da frota + alertas) · Cronograma · OMs · Condição · Indicadores · Biblioteca · Administração =====
    Nomes que não se repetem: "Itens em dia" e "Vencidos agora" = foto de agora (Situação da frota);
-   "Aderência ao cronograma" e "Ocorrências vencidas" = execução do previsto nos meses marcados (Cronograma). */
+   "Aderência ao cronograma" e "Serviços preventivos não realizados dentro do prazo" = execução do previsto nos meses marcados (Cronograma). */
 // Hoje: troca de óleo vencida (P1) · vence em até OL_ALERTA_H horas ou OL_ALERTA_D dias (P2) — mesmo critério da tela Óleo da frota
 // #lubreg (antiga tela de registros) abre o Óleo da frota no bloco Trocas lançadas
 let OL_IR = 0;   // veio de #lubreg: rolar até o bloco das trocas
