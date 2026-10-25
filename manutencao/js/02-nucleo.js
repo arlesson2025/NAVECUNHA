@@ -493,6 +493,7 @@ function renderNav() {   // menu num lugar só (24/10/2026): antes eram 6 camada
   if (ehOperador()) { nav.innerHTML = `<a href="#rotina" class="on">${ico('hoje')}<span>Chegada e saída</span></a>`; return; }
   L.forEach((s, i) => { const a = A[i]; if (!a) return; if (['prev2', 'omsv2', 'conf2'].includes(s.id)) a.classList.toggle('nav-zero', !a.querySelector('.n') && !a.classList.contains('on')); });
   const i = L.findIndex(s => s.id === 'regs2'); if (i >= 0 && A[i]) A[i].insertAdjacentHTML('beforebegin', '<div class="grp-t grp-apoio">Suporte</div>');
+  L.forEach((s, k) => { const x = A[k]; if (x && s.id === 'relm' && (!can.admin() || (typeof menuOculto === 'function' && menuOculto('relm'))) && !x.classList.contains('on')) x.style.display = 'none'; });   /* Relatório mensal: só o Supervisor, e pode ficar oculto neste aparelho (js/82) */
 }
 function omTipo() { const o = S.recs.get(ARG); return o ? o.tipo : ''; }
 function renderUser() {
@@ -1475,7 +1476,7 @@ function vAdmin() {
     ${temExemplo() ? `<button class="mbtn bad" data-act="limparEx" ${a ? '' : 'disabled'}>Limpar dados de exemplo</button>` : `<button class="mbtn" data-act="carregarEx" ${a ? '' : 'disabled'}>Carregar dados de exemplo</button>`}
     <button class="mbtn" data-act="exportar">⬇ Cópia de segurança (JSON)</button><label class="mbtn" style="position:relative" ${a ? '' : 'onclick="toast(\'Entre como Supervisor (botão Entrar, embaixo à esquerda) para importar.\')"'}>⬆ Importar / restaurar (JSON)<input type="file" id="adImp" accept=".json,application/json,text/plain,*/*" style="position:absolute;inset:0;opacity:0" ${a ? '' : 'disabled'}></label>
     <button class="mbtn" data-act="instalar" id="btnInstall" ${window._bip ? '' : 'hidden'}>📲 Instalar app</button></div>
-    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML();   /* fora de operação e marco zero ficam nos blocos deles */
+    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML() + (typeof admMenuHTML === 'function' ? admMenuHTML() : '');   /* fora de operação e marco zero ficam nos blocos deles */
 }
 AFTER.admin = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'adQ') { ADM.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#adQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 350); } };
