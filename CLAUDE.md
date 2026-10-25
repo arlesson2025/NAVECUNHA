@@ -64,6 +64,11 @@ O app cresceu empilhando ~50 blocos, cada um com um cabeçalho `/* ===== … ===
 
 Consequência prática: para saber o que realmente aparece numa tela, procure a **última** atribuição (`VX\.crono\s*=`, `AFTER\.crono\s*=`) — a primeira definição pode estar morta. Ao alterar, prefira editar o bloco que hoje vence; se acrescentar um novo bloco de patch, siga o mesmo formato de cabeçalho e coloque-o no fim.
 
+## Working preferences
+
+- Responda sempre em português do Brasil.
+- Faça poucas perguntas: escolha o caminho mais razoável, siga em frente e diga o que decidiu; pergunte só quando a decisão for difícil de desfazer.
+
 ## Convenções do projeto
 
 - Todo o código, identificadores, textos de UI e mensagens de commit em português (pt-BR). Commits no formato `Área: o que mudou` (ex.: `Óleo: …`, `Vencimentos: …`, `Menu: …`).
