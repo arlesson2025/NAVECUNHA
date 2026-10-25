@@ -100,7 +100,7 @@ const recs = kind => { const M = S.recs; if (!M.__tag) { M.__tag = 1; M.__v = 0;
   if (RECS_C.m !== M || RECS_C.v !== M.__v) { RECS_C.m = M; RECS_C.v = M.__v; RECS_C.k = {}; } return (RECS_C.k[kind] || (RECS_C.k[kind] = [...M.values()].filter(r => r.kind === kind && !r.excluido))).slice(); };
 const oms = () => recs('om');
 const vessel = id => S.cfg.frota.find(v => v.id === id);
-const vName = id => (vessel(id) || { nome: id }).nome;
+const vName = id => (vessel(id) || (typeof balsaDe === 'function' && balsaDe(id)) || { nome: id }).nome;   // balsas petroleiras (js/83) ficam fora de S.cfg.frota
 async function saveRec(r, opts = {}) {
   r.updatedAt = Date.now();
   if (!r.createdAt) r.createdAt = r.updatedAt;
@@ -460,11 +460,11 @@ const NAV = [
   ['Supervisor', [['rel', 'Relatório mensal'], ['admin', 'Administração']]],
 ];
 let VIEW = 'geral', ARG = '';
-/* frota escolhida no topo do menu (24/10/2026): 'emp' = empurradores (tudo o que existe hoje) · 'bal' = balsas petroleiras (ainda sem plano nem cadastro) */
+/* frota escolhida no topo do menu (24/10/2026): 'emp' = empurradores · 'bal' = balsas petroleiras (js/83: cadastro, plano da NP 024, situação, cronograma e ficha técnica, 25/10/2026) */
 let FROTA_TIPO = (() => { try { return localStorage.getItem('smf_frota_tipo') === 'bal' ? 'bal' : 'emp'; } catch (e) { return 'emp'; } })();
 const FROTA_TIPOS = { emp: 'Frota de empurradores', bal: 'Frota de balsas petroleiras' };
 function badge(k) {   // num lugar só (24/10/2026): antes eram 5 camadas por cima
-  if (FROTA_TIPO === 'bal') return '';   // balsas: nada pendente enquanto não há cadastro
+  if (FROTA_TIPO === 'bal') return '';   // balsas: o número do menu vem do balNav (js/83)
   if (['rotina', 'emitir', 'oms', 'falhas2', 'omconf'].includes(k) && !(typeof ehOperador === 'function' && ehOperador())) {   // número no menu = trabalho pendente (navCont)
     let C; try { C = navCont(); } catch (e) { return ''; } const n = C[k] || 0; if (!n) return '';
     const red = k === 'rotina' || (k === 'falhas2' && C.falhasSem); return `<span class="n${red ? '' : ' blue'}">${n}</span>`; }
@@ -485,8 +485,9 @@ function renderNav() {   // menu num lugar só (24/10/2026): antes eram 6 camada
   const cur = secDe(VIEW); ULT[cur.id] = cur.views.some(v => v[0] === VIEW) ? VIEW : (ULT[cur.id] || cur.views[0][0]);   /* o menu volta para a última ABA da seção, nunca para uma tela de dentro (ficha, OM, programar) */
   const item = s => { const n = s.views.reduce((a, [k]) => a + numBadge(k), 0), red = s.views.some(([k]) => /class="n"/.test(badge(k)));
     return `<a href="#${ULT[s.id] || s.views[0][0]}" class="${s === cur ? 'on' : ''}">${ico(s.id)}<span>${s.nome}</span>${n ? `<span class="n${red ? '' : ' blue'}">${n}</span>` : ''}</a>`; };
-  const nav = document.getElementById('nav');
-  nav.innerHTML = `<label class="fr-tipo"><span>Frota</span><select id="frTipo">${Object.entries(FROTA_TIPOS).map(([k, n]) => `<option value="${k}"${k === FROTA_TIPO ? ' selected' : ''}>${n}</option>`).join('')}</select></label>` + '<div class="grp-t grp-trab">Operação</div>' + SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Acompanhamento</div>' + SECOES.filter(s => s.cfg).map(item).join('');
+  const nav = document.getElementById('nav'), frSel = `<label class="fr-tipo"><span>Frota</span><select id="frTipo">${Object.entries(FROTA_TIPOS).map(([k, n]) => `<option value="${k}"${k === FROTA_TIPO ? ' selected' : ''}>${n}</option>`).join('')}</select></label>`;
+  if (FROTA_TIPO === 'bal' && !ehOperador() && typeof balNav === 'function') { nav.innerHTML = frSel + balNav(); return; }   // frota de balsas: menu próprio (js/83)
+  nav.innerHTML = frSel + '<div class="grp-t grp-trab">Operação</div>' + SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Acompanhamento</div>' + SECOES.filter(s => s.cfg).map(item).join('');
   if (solta && h) { ULT[h.id] = u0; const a1 = document.querySelector('#nav > a'); if (a1) { a1.setAttribute('href', '#' + (u0 || h.views[0][0])); a1.classList.remove('on'); } }
   const A = [...nav.querySelectorAll(':scope > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
   L.forEach((s, i) => { const sp = A[i] && A[i].querySelector('span'); if (s.sub && sp && !sp.querySelector('.nav-sub')) sp.insertAdjacentHTML('beforeend', `<small class="nav-sub">${esc(s.sub)}</small>`); });
@@ -509,14 +510,8 @@ let dirty = false;
 function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { dirty = true; renderNav(); return; } render(); }
 /* montagem da página num lugar só (24/10/2026): antes eram 11 camadas por cima de render, aplicadas nesta mesma ordem */
 let RENDER_ULTV = '';
-function balsasVazio() {
-  const s = SECOES.find(x => x.views.some(v => v[0] === VIEW)) || {}, nome = (s.views || []).find(v => v[0] === VIEW);
-  return `<div class="vh"><div><h1>${esc(nome ? nome[1] : s.nome || 'Frota de balsas petroleiras')}</h1><p>Frota de balsas petroleiras · em construção</p></div></div>
-   <div class="card"><h2>Ainda não há balsas cadastradas</h2><p>Esta tela vai mostrar a mesma informação da frota de empurradores, só que das balsas petroleiras.
-   Para começar, falta o plano da balsa (o equivalente ao Anexo I: equipamentos, serviços e intervalos) e o cadastro das balsas.</p>
-   <p><button class="mbtn pri" data-frtipo="emp">Voltar para a frota de empurradores</button></p></div>`; }
-document.addEventListener('change', e => { const s = e.target.closest('#frTipo'); if (!s) return; FROTA_TIPO = s.value === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } render(); });
-document.addEventListener('click', e => { const b = e.target.closest('[data-frtipo]'); if (!b) return; FROTA_TIPO = b.dataset.frtipo; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } render(); });
+document.addEventListener('change', e => { const s = e.target.closest('#frTipo'); if (!s) return; FROTA_TIPO = s.value === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } location.hash = FROTA_TIPO === 'bal' ? '#bal' : '#rotina'; });
+document.addEventListener('click', e => { const b = e.target.closest('[data-frtipo]'); if (!b) return; FROTA_TIPO = b.dataset.frtipo === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } location.hash = FROTA_TIPO === 'bal' ? '#bal' : '#rotina'; });
 { const st = document.createElement('style'); st.textContent = `.fr-tipo{display:flex;flex-direction:column;gap:3px;margin:2px 6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#5F6368}.fr-tipo select{font:600 13.5px inherit;text-transform:none;letter-spacing:0;padding:7px 8px;border:1px solid #DADCE0;border-radius:8px;background:#fff;color:#1F2A44}`; document.head.appendChild(st); }
 function render() {
   if (VIEW === 'om' && ARG) { const o = S.recs.get(ARG);   // OM preventiva solta (sem grupo) abre como OM de janela de 1 parte
@@ -524,13 +519,15 @@ function render() {
       o.grupo = o.num; o.parte = 1; o.partes = 1; o.itensProg = o.itensProg || (o.items || []).slice(); saveRec(o);
       VIEW = 'omg'; ARG = o.num; try { history.replaceState(null, '', '#omg/' + encodeURIComponent(o.num)); } catch (e) { } } }
   situRecalc(); document.body.classList.toggle('perfil-opr', ehOperador());
+  if (!ehOperador() && typeof BAL_VIEWS !== 'undefined') { const ehBal = BAL_VIEWS.some(v => v[0] === VIEW);   // frota de balsas (js/83)
+    if (ehBal && FROTA_TIPO !== 'bal') { FROTA_TIPO = 'bal'; try { localStorage.setItem('smf_frota_tipo', 'bal'); } catch (e) { } }
+    else if (!ehBal && FROTA_TIPO === 'bal' && !['admin', 'bib'].includes(VIEW)) { VIEW = 'bal'; ARG = ''; try { history.replaceState(null, '', '#bal'); } catch (e) { } } }
   if (ehOperador() && VIEW !== 'rotina') { VIEW = 'rotina'; ARG = ''; if (location.hash !== '#rotina') history.replaceState(null, '', '#rotina'); }   // perfil Operador só vê Chegada e saída
   const mesma = VIEW === RENDER_ULTV, y = scrollY;   // re-render da mesma tela: volta para onde estava a rolagem
   if (S.cfg && S.cfg.frota) { placaInit(); foraInit(); }
   renderNav(); renderUser();
   const V = { geral: vGeral, calib: vCalib, doca: vDoca, hor: vHor, kpi: vKpi, emitir: vEmitir, acomp: () => { setTimeout(() => location.replace('#oms')); return ''; },   /* a tela antiga de OMs em execução saiu (25/10/2026): Executar e lançar */ om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
-  if (FROTA_TIPO === 'bal' && !ehOperador() && !['admin', 'bib'].includes(VIEW)) { m.innerHTML = balsasVazio(); return; }   // balsas: telas ainda sem dados
   m.style.removeProperty('--ws-esq'); m.style.removeProperty('--ws-larg');   // janelas livres da tela anterior
   m.innerHTML = banners() + V();
   (AFTER[VIEW] || (() => { }))();
@@ -546,7 +543,7 @@ const AFTER = {};
 function banners() {
   let h = abasHtml();
   if (temExemplo()) h += `<div class="banner ex"><b>Dados de exemplo.</b> O SMF está mostrando uma frota simulada para você ver o sistema funcionando.<span class="sp"></span>${can.admin() ? '<button class="mbtn sm" data-act="limparEx">Limpar dados de exemplo</button>' : '<span>O Supervisor limpa em Administração.</span>'}</div>`;
-  if (S.cfg.frota.some(v => mcpPos(v).some(p => !v.rev[p])) && VIEW !== 'admin') h += `<div class="banner info">Há empurradores sem o modelo do reversor informado. Os itens do reversor só aparecem depois de configurar em <a href="#admin">Administração › Frota</a>.</div>`;
+  if (FROTA_TIPO !== 'bal' && S.cfg.frota.some(v => mcpPos(v).some(p => !v.rev[p])) && VIEW !== 'admin') h += `<div class="banner info">Há empurradores sem o modelo do reversor informado. Os itens do reversor só aparecem depois de configurar em <a href="#admin">Administração › Frota</a>.</div>`;
   if (MEM) h += `<div class="banner bad">Este navegador bloqueou o armazenamento. Os dados só valem até fechar a página. Abra em uma janela normal.</div>`;
   return h;
 }

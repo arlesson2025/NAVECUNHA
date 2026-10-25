@@ -14,6 +14,11 @@ function bqResultados(q) {
   const emp = (exV ? (T.length ? [] : [exV]) : F.filter(v => ok(v.nome, v.id, Object.values(v.mcpMod || {}).join(' '), Object.values(v.mcaMod || {}).join(' '))))
     .map(v => ({ t: v.nome, s: typeof foraOp === 'function' && foraOp(v) ? 'fora de operação' : 'abrir o cartão do empurrador', go: '#barco/' + encodeURIComponent(v.id) }));
   if (emp.length) G.push(['Empurradores', emp]);
+  if (!exV && typeof BALSAS !== 'undefined') {   // balsas petroleiras (js/83): ficha da balsa e itens do plano da NP 024
+    const ba = BALSAS.filter(b => ok(b.nome, b.marca, b.modelo, BAL_MOTOR[b.mot], 'balsa')).map(b => ({ t: b.nome, s: 'balsa petroleira · ' + BAL_MOTOR[b.mot], go: '#balft/' + b.id }));
+    if (ba.length) G.push(['Balsas petroleiras', ba]);
+    const bp = BA1.filter(t => ok(t.id, t.eq, t.serv, 'balsa')).map(t => ({ t: `${t.id} · ${t.eq}`, s: t.serv + ' · ' + balIvTx(t), go: '#balpl' }));
+    if (bp.length) G.push(['Plano das balsas (NP 024)', bp]); }
   const om = recs('om').filter(o => (!exV || o.vessel === exV.id) && ok(o.num, o.rnc, o.descricao, o.equip, o.sistema, o.classe, exV ? '' : vName(o.vessel), o.pos, (o.items || []).join(' '), o.tipo === 'C' ? 'corretiva' : 'preventiva'))
     .sort((a, z) => (z.updatedAt || 0) - (a.updatedAt || 0))
     .map(o => ({ t: `OM ${o.num || '—'} · ${vName(o.vessel)}`, s: [o.tipo === 'C' ? 'Corretiva' + (o.classe ? ' ' + o.classe : '') : 'Preventiva', BQ_ST[o.status] || o.status, o.descricao || o.equip || ''].filter(Boolean).join(' · '), go: '#om/' + encodeURIComponent(o.id) }));
