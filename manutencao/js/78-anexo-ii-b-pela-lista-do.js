@@ -19,16 +19,10 @@ function anxFolhasFotos(o, L, ini, tot, sobra) {
   return out; }
 function anxMax5(paginas, o) {   // capa + até 5 folhas (formulário e fotos) + contracapa; capa e contracapa não contam no limite
   const L = anxFotos(o), livres = Math.max(0, ANX_MAX - paginas.length), cabe = Math.min(L.length, livres * ANX_FPP);
-  return numerar([anxCapa(o)].concat(paginas, anxFolhasFotos(o, L.slice(0, cabe), 0, 0, L.length - cabe), [anxContra()]));
+  return numerar([anxCapa(o)].concat(paginas, anxFolhasFotos(o, L.slice(0, cabe), 0, 0, L.length - cabe), [anxContra(o)]));
 }
 /* capa e contracapa do Anexo II no modelo do documento controlado (Anexo_II_Registro_de_Manutencao_NP055, Rev. 00) */
 const ANX_SGI = { efet: '10/10/2026', valid: '17/04/2028', rev: '00', ed: '00', elab: 'Arlissom Azevedo', verif: 'Samy Lins', aprov: 'Conforme NP Navecunha 055 Rev. 04' };
-const ANX_REFS = [['NP Navecunha 055, item 4.7', 'Aceite técnico do Comandante'], ['NP Navecunha 055, item 4.8', 'Controle documental e retenção por 10 anos'], ['NP Navecunha 055, item 5.2', 'Registro exigido por tipo e classe de manutenção'],
-  ['NP Navecunha 055, item 5.4.1', 'Prazos de comunicação, RNC e nova inspeção de segurança'], ['NP Navecunha 055, item 5.5.1', 'Classificação de criticidade e liberação formal pós-falha Crítica'], ['NP Navecunha 055, item 5.7', 'Gestão de resíduos e comprovante do SGI'],
-  ['NP Navecunha 055, item 5.8', 'Inspeção final, relatório de terceiros e registro fotográfico'], ['NP Navecunha 055, item 5.9', 'Lote e validade de lubrificantes'], ['NP Navecunha 055, item 5.11', 'Liberação de segurança do SESMT e autorização de terceiros'],
-  ['NP Navecunha 055, itens 7.2 e 7.4', 'Uso do Anexo II nas preventivas e preditivas'], ['NP Navecunha 055, item 10.3', 'Treinamento pós-falha Crítica ou Alta'], ['Anexo I – Matriz de Manutenção Preventiva', 'Especificações, intervalos e procedimento executivo'],
-  ['FR 027_L – Check-list dos Empurradores', 'Origem da demanda (inspeção de chegada e saída)'], ['FR 049_B – Troca de óleo e filtros', 'Registro complementar da troca de óleo e filtros'], ['FR 016_E – Entrega de resíduos ao SGI', 'Comprovante de destinação de resíduos'],
-  ['RNC – Relatório de Não Conformidade', 'Análise de causa raiz nas falhas Crítica e Alta'], ['OM e SOLICITA (Sankhya)', 'Ordem de manutenção e solicitação de compra vinculadas']];
 function anxCapa(o) {
   const c = o.tipo === 'C', B = 'border:1px solid #1F2A44', cel = (lab, v, x) => `<div style="padding:6px 10px;${x || ''}"><div style="font-size:8.5px;letter-spacing:.06em;color:#5F6B7A;text-transform:uppercase">${lab}</div><div style="font-size:12px;font-weight:600;color:#1F2A44">${v}</div></div>`;
   const ln = (cols, cells) => `<div style="display:grid;grid-template-columns:${cols};border-bottom:1px solid #1F2A44">${cells}</div>`, sep = 'border-left:1px solid #1F2A44';
@@ -49,8 +43,28 @@ function anxCapa(o) {
       <div style="padding:6px 10px"><div style="display:grid;grid-template-columns:50px 90px 1fr;font-size:8.5px;color:#5F6B7A;text-transform:uppercase"><span>Rev.</span><span>Data</span><span>Descrição</span></div><div style="display:grid;grid-template-columns:50px 90px 1fr;margin-top:4px"><span>${ANX_SGI.rev}</span><span>${ANX_SGI.efet}</span><span>Emissão inicial</span></div></div>
       <div style="${sep}">${cel('Área responsável', 'Manutenção', 'border-bottom:1px solid #1F2A44')}<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #1F2A44">${cel('Elaborado por', ANX_SGI.elab)}${cel('Verificado por', ANX_SGI.verif, sep)}</div>${cel('Aprovação', ANX_SGI.aprov)}</div></div></div>${FOOT(1)}</div>`;
 }
-function anxContra() {
-  return `<div class="sheet">${HDR()}<div class="body"><div style="font-size:18px;color:#1F2A44;margin:6px 0 10px;border-bottom:1px solid #C7CED8;padding-bottom:6px">Referências</div>${tbl(['Documento / item', 'Uso neste anexo'], ANX_REFS, ['42%', '58%'])}</div>${FOOT(0)}</div>`;
+function anxContra(o) {   // contracapa = rastreabilidade (decisão do Supervisor, 24/10/2026): histórico da OM, evidências, controle documental e itens da NP
+  const c = o.tipo === 'C', P = !c && o.grupo ? omGrupo(o.grupo) : [o], o1 = P[0] || o, tit = t => `<div style="font-size:13px;font-weight:700;color:#1F2A44;margin:12px 0 4px;text-transform:uppercase;letter-spacing:.05em">${t}</div>`;
+  const H = (o1.hist || []).map(h => [new Date(h.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), h.by || '—', h.ev || '']);
+  if (o1.skFim) H.push([new Date(o1.skFim.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), o1.skFim.by || '—', 'Anexado e encerrado no Sankhya']);
+  const F = P.flatMap(x => x.fotos || []), nDrive = F.filter(f => f.fid).length, fr27 = o.fr027 ? S.recs.get(o.fr027) : null, fr49 = recs('lub').filter(r => r.tipo === 'fr049' && o.num && String(r.om) === String(o.num));
+  const E = [];
+  if (F.length) E.push(['Fotos', F.length + ' (' + F.filter(f => f.tipo === 'ANTES').length + ' de antes, ' + F.filter(f => f.tipo === 'DEPOIS').length + ' de depois)', nDrive === F.length ? 'Google Drive' : nDrive + ' no Drive · ' + (F.length - nDrive) + ' só no aparelho']);
+  if (fr27) E.push(['FR 027_L de origem', (fr27.mov === 'saida' ? 'saída' : 'chegada') + ' de ' + brD(fr27.date), fr27.pdfFileId ? 'Google Drive (PDF)' : 'SMF']);
+  fr49.forEach(r => E.push(['FR 049_B', 'troca de óleo de ' + brD(r.date), r.pdfFileId ? 'Google Drive (PDF)' : 'SMF']));
+  if (o.rnc) E.push(['RNC', o.rnc, 'SGI']);
+  if (o.relTerc || F.some(f => f.tipo === 'RELATÓRIO DO FORNECEDOR')) E.push(['Relatório do fornecedor (5.8)', o.relTerc || 'anexo', F.some(f => f.tipo === 'RELATÓRIO DO FORNECEDOR') ? 'Google Drive' : 'Sankhya']);
+  if (o1.fr016 || o.fr016) E.push(['FR 016_E (resíduos)', o1.fr016 || o.fr016, 'SGI']);
+  if (o1.pdfFileId) E.push(['Este Anexo II (PDF)', 'OM ' + o.num, 'Google Drive']);
+  const itens = c ? 'NP 055 itens 4.7, 4.8, 5.2, 5.4.1 (comunicação, RNC e nova inspeção), 5.5.1 (criticidade e liberação), 5.7 (resíduos), 5.8 (inspeção final, terceiros e fotos), 5.11 (SESMT e terceiros) e 10.3 (treinamento pós-falha)'
+    : 'NP 055 itens 4.7, 4.8, 5.2, 5.7 (resíduos), 5.8 (inspeção final, terceiros e fotos), 5.9 (lote e instrumentos), 5.11 (SESMT e terceiros), 7.2 e 7.4 (preventiva e preditiva) · Anexo I (intervalos e método executivo)';
+  return `<div class="sheet">${HDR()}<div class="body">
+    <div style="font-size:18px;color:#1F2A44;margin:6px 0 4px;border-bottom:1px solid #C7CED8;padding-bottom:6px">Rastreabilidade · OM ${esc(o.num || '')}</div>
+    ${tit('1 · Histórico da OM')}${H.length ? tbl(['Data e hora', 'Quem', 'O que aconteceu'], H, ['22%', '24%', '54%']) : '<div class="note">Sem eventos registrados.</div>'}
+    ${tit('2 · Evidências desta OM')}${E.length ? tbl(['Evidência', 'Identificação', 'Onde está'], E, ['30%', '40%', '30%']) : '<div class="note">Nenhuma evidência vinculada além deste formulário.</div>'}
+    ${tit('3 · Controle documental (NP 055 item 4.8)')}<div style="font-size:11px;line-height:1.5">Registro retido por 10 anos · original anexado à OM no Sankhya, cópia no Google Drive · gerado pelo SMF ${esc(VERSAO_APP)} em ${new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}${S.session ? ' por ' + esc(S.session.name) : ''} · código de verificação <b>${esc(o1.id || o.id)}</b></div>
+    ${tit('4 · Referências')}<div style="font-size:11px;line-height:1.5">${itens}.</div>
+   </div>${FOOT(0)}</div>`;
 }
 function docIIBOM(P) {
   P = P.slice().sort((a, b) => (a.parte || 0) - (b.parte || 0));
