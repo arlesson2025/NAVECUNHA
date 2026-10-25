@@ -102,7 +102,7 @@ let FOTO_T = 0;
 
 /* ---------- exemplo: modo/causa, HH e custo nas corretivas e laudos (só dados de exemplo) ---------- */
 async function tecExemplo() {
-  if (!temExemplo() || (await kvGet('tecV')) === 1) return;
+  if (!temExemplo() || (await kvGet('tecV')) === 2) return;   // v2: refaz nos aparelhos em que a v1 marcou sem gerar (só preenche o que falta)
   const R = rnd(1405), put = [], regra = [[/vazament|mangueira/i, 'Vazamento', 'Montagem ou instalação incorreta'], [/superaquec|temperatura/i, 'Superaquecimento', 'Desgaste natural (fim de vida)'], [/pressão de óleo/i, 'Perda de pressão ou vazão', 'Lubrificação inadequada'], [/correia|rompid/i, 'Quebra ou ruptura', 'Montagem ou instalação incorreta'], [/excitação|blackout|bateria|luz|alternador/i, 'Falha elétrica ou sem partida', 'Desgaste natural (fim de vida)'], [/patinando|folga|desgast/i, 'Desgaste ou folga excessiva', 'Manutenção não feita ou fora do prazo'], [/água|racor/i, 'Contaminação (água, combustível, partículas)', 'Causa externa (detrito, colisão, água do rio)'], [/escorva|não funciona/i, 'Não funciona quando acionado', 'Manutenção não feita ou fora do prazo'], [/ruído|rolamento|vibra/i, 'Vibração ou ruído anormal', 'Desgaste natural (fim de vida)']];
   oms().filter(o => o.seed).forEach(o => {
     if (o.tipo === 'C' && !o.modo) { const t = (o.descricao || '') + ' ' + (o.equip || ''), m = regra.find(r => r[0].test(t)) || [0, 'Outro', 'Causa não identificada']; o.modo = m[1]; o.causaCat = m[2]; }
@@ -111,12 +111,18 @@ async function tecExemplo() {
     if (o.tipo === 'P' && o.status === 'encerrada' && !o.alvoH && o.hreal) o.alvoH = +o.hreal + (R() > .15 ? 10 : -12);
     put.push(o);
   });
-  overDados().forEach((x, i) => { const b = recs('base').find(r => r.seed && r.vessel === x.v.id && r.pos === x.pos && r.item === '1.1.29'); if (!b) return;
-    const ruim = x.v.nome === 'CJA II' && x.pos === 'BB', meio = x.v.nome === 'CJA XX' && x.pos === 'BB';
-    put.push({ id: 'ex-laudo-' + x.v.id + x.pos, kind: 'laudo', vessel: x.v.id, pos: x.pos, date: b.date, h: b.h, hOleo: String(180 + Math.round(R() * 150)), lab: 'Laboratório (exemplo)', num: 'EX-' + (1000 + i), vals: { fe: String(ruim ? 92 : meio ? 38 : Math.round(12 + R() * 22)), cr: String(ruim ? 13 : Math.round(1 + R() * 4)), al: String(Math.round(2 + R() * 6)), cu: String(Math.round(3 + R() * 10)), pb: String(Math.round(1 + R() * 6)), si: String(ruim ? 26 : Math.round(5 + R() * 9)), na: String(Math.round(4 + R() * 12)), agua: '0,05', comb: meio ? '2,6' : '0,8', fuligem: String(ruim ? '2,4' : '0,' + Math.round(4 + R() * 5)), tbn: String(ruim ? '4,6' : (7 + R() * 2).toFixed(1).replace('.', ',')), visc: (ruim ? 12.8 : 13.6 + R() * 1.2).toFixed(1).replace('.', ',') }, seed: true, createdAt: Date.now(), updatedAt: Date.now() }); });
+  if (!recs('laudo').some(l => l.seed)) exemploLaudos(R).forEach(l => put.push(l));
   [['Bomba injetora (recondicionada)', 'MCP', '1', '1', '25', 'Diesel Norte'], ['Turbocompressor', 'MCP', '0', '1', '30', 'Turbo Manaus'], ['Mangueira de alta pressão do governo (kit)', 'GOV', '2', '2', '7', 'Hidráulica Amazonas'], ['Bomba de água bruta', 'MCP', '1', '1', '20', 'Diesel Norte'], ['Embreagem do reversor', 'HITACHI', '1', '1', '45', 'Representante Hitachi']].forEach((x, i) => { if (!recs('peca').length) put.push({ id: 'ex-peca-' + i, kind: 'peca', nome: x[0], equip: EQN[x[1]] ? x[1] : '', estoque: x[2], minimo: x[3], prazo: x[4], forn: x[5], seed: true, createdAt: Date.now(), updatedAt: Date.now() }); });
   put.forEach(r => S.recs.set(r.id, r)); if (MEM) put.forEach(r => MEM.set(r.id, r)); else await DB.putMany(put);
-  await kvSet('tecV', 1);
+  await kvSet('tecV', 2);
+}
+// laudos de óleo de exemplo (um por MCP); também chamado sozinho em js/81 quando o aparelho ficou sem laudos
+function exemploLaudos(R) {
+  const out = []; overDados().forEach((x, i) => { let b = recs('base').find(r => r.seed && r.vessel === x.v.id && r.pos === x.pos && r.item === '1.1.29');
+    if (!b) { const hr = horAtual(x.v.id, x.pos); if (!hr) return; const d = pD(hr.date); d.setDate(d.getDate() - 20 - Math.round(R() * 100)); b = { date: isoD(d), h: Math.max(400, Math.round(hr.h - 200 - R() * 700)) }; }   // exemplo antigo sem o 1.1.29
+    const ruim = x.v.nome === 'CJA II' && x.pos === 'BB', meio = x.v.nome === 'CJA XX' && x.pos === 'BB';
+    out.push({ id: 'ex-laudo-' + x.v.id + x.pos, kind: 'laudo', vessel: x.v.id, pos: x.pos, date: b.date, h: b.h, hOleo: String(180 + Math.round(R() * 150)), lab: 'Laboratório (exemplo)', num: 'EX-' + (1000 + i), vals: { fe: String(ruim ? 92 : meio ? 38 : Math.round(12 + R() * 22)), cr: String(ruim ? 13 : Math.round(1 + R() * 4)), al: String(Math.round(2 + R() * 6)), cu: String(Math.round(3 + R() * 10)), pb: String(Math.round(1 + R() * 6)), si: String(ruim ? 26 : Math.round(5 + R() * 9)), na: String(Math.round(4 + R() * 12)), agua: '0,05', comb: meio ? '2,6' : '0,8', fuligem: String(ruim ? '2,4' : '0,' + Math.round(4 + R() * 5)), tbn: String(ruim ? '4,6' : (7 + R() * 2).toFixed(1).replace('.', ',')), visc: (ruim ? 12.8 : 13.6 + R() * 1.2).toFixed(1).replace('.', ',') }, seed: true, createdAt: Date.now(), updatedAt: Date.now() }); });
+  return out;
 }
 
 /* ---------- 7 · matriz de condição da frota (substitui os cartões como vista padrão) ---------- */

@@ -24,14 +24,8 @@ async function exemploDemo() {
     put.push(b);
     const atraso = [-1, 0, 0, 1, 2, 3][i % 6], e0 = addM(ent, -(60 + atraso)), s0 = new Date(e0); s0.setDate(s0.getDate() + 14 + Math.round(R() * 14));
     put.push(Object.assign({ id: 'ex-doca-' + v.id, kind: 'base', vessel: v.id, pos: b.pos || 'UN', item: DOCA.item, h: null, date: isoD(e0), saida: isoD(s0), estaleiro: EST[(i + 1) % 3], servicos: 'Jateamento e pintura; medição de espessura; troca de zincos', custo: Math.round(140 + R() * 180) }, base)); });
-  // 3) laudos de óleo anteriores: 3 por MCP (~1.000 h e ~4 meses entre eles), para a tendência
-  const num = (s, f) => { const x = parseFloat(String(s).replace(',', '.')); return isNaN(x) ? s : f(x); }, fmt = (x, c) => c ? x.toFixed(c).replace('.', ',') : String(Math.round(x));
-  recs('laudo').filter(l => l.seed && !/-a\d$/.test(l.id)).forEach((L, i) => { const ruim = L.vessel === (S.cfg.frota.find(v => v.nome === 'CJA II') || {}).id && L.pos === 'BB', meio = L.vessel === (S.cfg.frota.find(v => v.nome === 'CJA XX') || {}).id && L.pos === 'BB';
-    for (let k = 1; k <= 3; k++) { const h = (+L.h || 0) - 1000 * k; if (h < 300) break; const f = ruim ? [1, .76, .57, .41][k] : 1, n = () => .85 + R() * .3, vv = L.vals || {};
-      const vals = { fe: num(vv.fe, x => fmt(x * f * n())), cr: num(vv.cr, x => fmt(Math.max(1, x * f * n()))), al: num(vv.al, x => fmt(x * n())), cu: num(vv.cu, x => fmt(x * n())), pb: num(vv.pb, x => fmt(x * n())),
-        si: num(vv.si, x => fmt(x * (ruim ? f : 1) * n())), na: num(vv.na, x => fmt(x * n())), agua: '0,05', comb: meio ? ['2,6', '1,6', '1,0', '0,8'][k] : '0,8',
-        fuligem: num(vv.fuligem, x => fmt(Math.max(.3, x * (ruim ? f : 1) * n()), 1)), tbn: num(vv.tbn, x => fmt(Math.min(9.6, ruim ? x + 1.1 * k : x + (R() - .3) * .6), 1)), visc: num(vv.visc, x => fmt(ruim ? x + .3 * k : x + (R() - .5) * .4, 1)) };
-      put.push(Object.assign({ id: L.id + '-a' + k, kind: 'laudo', vessel: L.vessel, pos: L.pos, date: isoD(addM(pD(L.date), -4 * k)), h: Math.round(h), hOleo: String(180 + Math.round(R() * 150)), lab: L.lab, num: (L.num || 'EX') + '-' + k, vals }, base)); } });
+  // 3) laudos de óleo anteriores (tendência): exLaudoHist
+  exLaudoHist(R, base).forEach(l => put.push(l));
   // 4) OM em conferência e OMs encerradas esperando o anexo no Sankhya (skDemo: o cartão ignora os seed sem essa marca)
   const c1 = nOm('48213'); if (c1 && c1.status === 'executada') { c1.status = 'conferencia'; c1.updatedAt = agora - 2 * 864e5; put.push(c1); }
   ['P', 'C'].forEach(t => { const o = oms().filter(o => o.seed && o.tipo === t && o.status === 'encerrada').sort((a, b) => (b.fechadoAt || 0) - (a.fechadoAt || 0))[0]; if (o && !o.skFim) { o.skDemo = true; put.push(o); } });
@@ -48,5 +42,23 @@ async function exemploDemo() {
   put.forEach(r => S.recs.set(r.id, r)); if (MEM) put.forEach(r => MEM.set(r.id, r)); else await DB.putMany(put);
   if (typeof render === 'function' && S.session) render();
 }
-(async () => { for (let i = 0; i < 120; i++) { if (typeof S !== 'undefined' && S.pronto && recs('laudo').some(l => l.seed)) break; await new Promise(r => setTimeout(r, 500)); }
-  try { await exemploDemo(); } catch (e) { console.warn('exemploDemo', e); } })();
+// laudos anteriores de cada MCP: 3 por motor (~1.000 h e ~4 meses entre eles), para o gráfico de tendência
+function exLaudoHist(R, base) { const out = [];
+  const num = (s, f) => { const x = parseFloat(String(s).replace(',', '.')); return isNaN(x) ? s : f(x); }, fmt = (x, c) => c ? x.toFixed(c).replace('.', ',') : String(Math.round(x));
+  recs('laudo').filter(l => l.seed && !/-a\d$/.test(l.id)).forEach((L, i) => { const ruim = L.vessel === (S.cfg.frota.find(v => v.nome === 'CJA II') || {}).id && L.pos === 'BB', meio = L.vessel === (S.cfg.frota.find(v => v.nome === 'CJA XX') || {}).id && L.pos === 'BB';
+    for (let k = 1; k <= 3; k++) { const h = (+L.h || 0) - 1000 * k; if (h < 300) break; const f = ruim ? [1, .76, .57, .41][k] : 1, n = () => .85 + R() * .3, vv = L.vals || {};
+      const vals = { fe: num(vv.fe, x => fmt(x * f * n())), cr: num(vv.cr, x => fmt(Math.max(1, x * f * n()))), al: num(vv.al, x => fmt(x * n())), cu: num(vv.cu, x => fmt(x * n())), pb: num(vv.pb, x => fmt(x * n())),
+        si: num(vv.si, x => fmt(x * (ruim ? f : 1) * n())), na: num(vv.na, x => fmt(x * n())), agua: '0,05', comb: meio ? ['2,6', '1,6', '1,0', '0,8'][k] : '0,8',
+        fuligem: num(vv.fuligem, x => fmt(Math.max(.3, x * (ruim ? f : 1) * n()), 1)), tbn: num(vv.tbn, x => fmt(Math.min(9.6, ruim ? x + 1.1 * k : x + (R() - .3) * .6), 1)), visc: num(vv.visc, x => fmt(ruim ? x + .3 * k : x + (R() - .5) * .4, 1)) };
+      out.push(Object.assign({ id: L.id + '-a' + k, kind: 'laudo', vessel: L.vessel, pos: L.pos, date: isoD(addM(pD(L.date), -4 * k)), h: Math.round(h), hOleo: String(180 + Math.round(R() * 150)), lab: L.lab, num: (L.num || 'EX') + '-' + k, vals }, base)); } });
+  return out; }
+// roda uma vez depois do boot; também conserta aparelhos cujo exemplo antigo ficou sem laudos (o tecExemplo marcou tecV sem gerar)
+(async () => { for (let i = 0; i < 120; i++) { if (typeof S !== 'undefined' && S.pronto) break; await new Promise(r => setTimeout(r, 500)); }
+  await new Promise(r => setTimeout(r, 3000));
+  try {
+    const grava = async l => { if (!l.length) return; l.forEach(r => S.recs.set(r.id, r)); if (MEM) l.forEach(r => MEM.set(r.id, r)); else await DB.putMany(l); };
+    if (temExemplo() && !recs('laudo').some(l => l.seed)) await grava(exemploLaudos(rnd(1405)));
+    await exemploDemo();
+    if (temExemplo() && !recs('laudo').some(l => l.seed && /-a\d$/.test(l.id))) { let sd = 2611; const R = () => (sd = (sd * 9301 + 49297) % 233280) / 233280; await grava(exLaudoHist(R, { seed: true, createdAt: Date.now(), updatedAt: Date.now(), by: 'Supervisor (exemplo)' })); }
+    if (typeof render === 'function' && S.session) render();
+  } catch (e) { console.warn('exemploDemo', e); } })();
