@@ -1062,7 +1062,7 @@ function vEmitir() {
      <div class="row end" style="margin-top:10px"><button class="mbtn" data-pvpasso="1">← Voltar</button><button class="mbtn pri" data-pvpasso="3" ${nSel ? '' : 'disabled'}>Próximo: abrir a OM com ${nSel} ite${nSel === 1 ? 'm' : 'ns'} →</button></div></div>`;
   else corpo = `<div><h2>③ Abrir a OM · ${esc(v.nome)} · ${nSel} itens</h2>${om || '<p class="note">Volte ao passo 2 e marque os itens.</p>'}<div class="row" style="margin-top:10px"><button class="mbtn" data-pvpasso="2">← Voltar ao que entra</button></div></div>`;
   return `<div class="cm-v"><div class="vh"><div><h1>Programar preventiva</h1><p>O que tem para abrir na frota · monte a OM de um empurrador em 3 passos e abra no Sankhya</p></div><span class="sp"></span><button class="mbtn" data-pvreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
-   <div class="cm-ws">${pvFrota(v)}<div class="card"><h2>${esc(v.nome)} · passo a passo</h2><div class="gu-ps" style="margin:0 0 8px">${passos}</div>${corpo}</div></div></div>`;
+   <div class="cm-ws">${pvFrota(v)}<div class="card"><div class="row"><h2>${esc(v.nome)} · passo a passo</h2><span class="sp"></span><button type="button" class="mbtn sm" data-pacote="${v.id}">🖨 Pacote de bordo</button></div><div class="gu-ps" style="margin:0 0 8px">${passos}</div>${corpo}</div></div></div>`;
 }
 AFTER.emitir = () => {
   const m = $('#main');
@@ -1379,8 +1379,8 @@ function tbl(cols, rows, w) { return `<table><tr>${cols.map((c, i) => `<th${w &&
 function paginar(fbarHtml, blocks, hdrHtml) {
   const R = $('#render'); const pages = [];
   let sh = null, body = null;
-  const tit = (fbarHtml.match(/<h3>([\s\S]*?)<\/h3>/) || [])[1] || '', num = (fbarHtml.match(/class="om"[\s\S]*?<b>([\s\S]*?)<\/b>/) || [])[1] || '';
-  const curta = tit ? `<div class="fbar" style="padding:3px 10px;min-height:0"><small>${tit.replace(/\s*—.*$/, '')}${num ? ' · OM ' + num : ''} · continuação</small></div>` : fbarHtml;   // da 2ª folha em diante, só uma linha que identifica a folha
+  const tit = (fbarHtml.match(/<h3>([\s\S]*?)<\/h3>/) || [])[1] || '', om = fbarHtml.match(/class="om">([^<]*)<br><b>([\s\S]*?)<\/b>/), num = om ? (/OM/.test(om[1]) ? 'OM ' : om[1].trim() + ' ') + om[2] : '';
+  const curta = tit ? `<div class="fbar" style="padding:3px 10px;min-height:0"><small>${tit.replace(/\s*—.*$/, '')}${num ? ' · ' + num : ''} · continuação</small></div>` : fbarHtml;   // da 2ª folha em diante, só uma linha que identifica a folha
   const nova = () => { sh = document.createElement('div'); sh.className = 'sheet'; sh.innerHTML = (hdrHtml || HDR()) + `<div class="body">${pages.length ? curta : fbarHtml}</div>` + FOOT(pages.length + 1); R.appendChild(sh); body = sh.querySelector('.body'); pages.push(sh); };
   nova();
   const over = () => body.scrollHeight > body.clientHeight + 1;
