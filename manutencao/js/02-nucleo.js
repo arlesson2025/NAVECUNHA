@@ -738,8 +738,10 @@ function compModal(vid, pos) {
 function exemploComp() {
   const R = rnd(7031); let out = [];
   S.cfg.frota.forEach((v, i) => mcpPos(v).forEach((pos, j) => {
-    const b = recs('base').find(r => r.vessel === v.id && r.pos === pos && r.item === '1.1.12' && r.seed); const hr = horAtual(v.id, pos);
-    if (!b || !hr) return;
+    const hr = horAtual(v.id, pos); if (!hr) return;
+    let b = recs('base').find(r => r.vessel === v.id && r.pos === pos && r.item === '1.1.12' && r.seed);
+    if (!b) { const d = pD(hr.date); d.setDate(d.getDate() - 20 - Math.round(R() * 120));   // exemplo antigo sem o 1.1.12: última medição a partir do horímetro atual
+      b = { id: 'ex-base-' + v.id + pos + '1.1.12', kind: 'base', vessel: v.id, pos, item: '1.1.12', h: Math.max(1200, Math.round(hr.h - 300 - R() * 700)), date: isoD(d), seed: true }; out.push(b); }
     const k = i * 2 + j, base = 1.68 + R() * 0.12, taxa = [0.05, 0.03, 0.09, 0.02, 0.04, 0.16, 0.03, 0.06][k % 8];
     const fraco = k === 5 ? 0.30 : k === 2 ? 0.16 : k === 9 ? 0.2 : 0;
     for (let n = 2; n >= 0; n--) {
