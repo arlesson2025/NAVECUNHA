@@ -1062,7 +1062,7 @@ function vEmitir() {
      <div class="row end" style="margin-top:10px"><button class="mbtn" data-pvpasso="1">← Voltar</button><button class="mbtn pri" data-pvpasso="3" ${nSel ? '' : 'disabled'}>Próximo: abrir a OM com ${nSel} ite${nSel === 1 ? 'm' : 'ns'} →</button></div></div>`;
   else corpo = `<div><h2>③ Abrir a OM · ${esc(v.nome)} · ${nSel} itens</h2>${om || '<p class="note">Volte ao passo 2 e marque os itens.</p>'}<div class="row" style="margin-top:10px"><button class="mbtn" data-pvpasso="2">← Voltar ao que entra</button></div></div>`;
   return `<div class="cm-v"><div class="vh"><div><h1>Programar preventiva</h1><p>O que tem para abrir na frota · monte a OM de um empurrador em 3 passos e abra no Sankhya</p></div><span class="sp"></span><button class="mbtn" data-pvreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
-   <div class="cm-ws">${pvFrota(v)}<div class="card"><div class="row"><h2>${esc(v.nome)} · passo a passo</h2><span class="sp"></span><button type="button" class="mbtn sm" data-pacote="${v.id}">🖨 Instruções de Máquinas</button></div><div class="gu-ps" style="margin:0 0 8px">${passos}</div>${corpo}</div></div></div>`;
+   <div class="cm-ws">${pvFrota(v)}<div class="card"><div class="row"><h2>${esc(v.nome)} · passo a passo</h2><span class="sp"></span><button type="button" class="mbtn sm" data-pacote="${v.id}">🖨 Ordens de Máquinas</button></div><div class="gu-ps" style="margin:0 0 8px">${passos}</div>${corpo}</div></div></div>`;
 }
 AFTER.emitir = () => {
   const m = $('#main');
