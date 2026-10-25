@@ -52,6 +52,16 @@ function exLaudoHist(R, base) { const out = [];
         fuligem: num(vv.fuligem, x => fmt(Math.max(.3, x * (ruim ? f : 1) * n()), 1)), tbn: num(vv.tbn, x => fmt(Math.min(9.6, ruim ? x + 1.1 * k : x + (R() - .3) * .6), 1)), visc: num(vv.visc, x => fmt(ruim ? x + .3 * k : x + (R() - .5) * .4, 1)) };
       out.push(Object.assign({ id: L.id + '-a' + k, kind: 'laudo', vessel: L.vessel, pos: L.pos, date: isoD(addM(pD(L.date), -4 * k)), h: Math.round(h), hOleo: String(180 + Math.round(R() * 150)), lab: L.lab, num: (L.num || 'EX') + '-' + k, vals }, base)); } });
   return out; }
+// corretivas de exemplo sem equipamento ou sem o serviço executado (o Pareto por equipamento e a lista do que foi feito precisam deles)
+const EX_EQUIP = [[/água bruta|rotor/i, 'Bomba de água bruta'], [/porão/i, 'Bomba de porão'], [/correia do alternador|alternador de carga|rolamento/i, 'Alternador e correia'], [/mangueira|governo/i, 'Mangueira hidráulica do governo'],
+  [/volante|bloco de válvulas/i, 'Bloco de válvulas do governo'], [/racor|separador|água no combustível/i, 'Filtro separador Racor'], [/bateria/i, 'Bateria de partida'], [/sanitário/i, 'Sanitário'], [/luz|lâmpada/i, 'Luzes de navegação'],
+  [/alta pressão de combustível|injet|bico/i, 'Linha de injeção do MCP'], [/reversor|embreagem|patinando/i, 'Reversor'], [/excitação|blackout|regulador/i, 'Gerador do MCA'], [/pressão de óleo/i, 'Bomba de óleo do MCP'], [/superaquec/i, 'Arrefecimento do MCP']];
+function exCorrCompletar() { const out = [];
+  oms().filter(o => o.seed && o.tipo === 'C').forEach(o => { let mud = false; const t = (o.descricao || '') + ' ' + (o.equip || '');
+    if (!String(o.equip || '').trim()) { const m = EX_EQUIP.find(x => x[0].test(t)); o.equip = m ? m[1] : 'Outros equipamentos'; mud = true; }
+    if (o.status === 'encerrada' && !String(o.servicos || '').trim()) { o.servicos = 'Troca ou reparo: ' + o.equip.toLowerCase() + '. Teste em operação conforme e liberação para uso (exemplo).'; mud = true; }
+    if (mud) out.push(o); });
+  return out; }
 // roda uma vez depois do boot; também conserta aparelhos cujo exemplo antigo ficou sem laudos (o tecExemplo marcou tecV sem gerar)
 (async () => { for (let i = 0; i < 120; i++) { if (typeof S !== 'undefined' && S.pronto) break; await new Promise(r => setTimeout(r, 500)); }
   await new Promise(r => setTimeout(r, 3000));
@@ -60,5 +70,6 @@ function exLaudoHist(R, base) { const out = [];
     if (temExemplo() && !recs('laudo').some(l => l.seed)) await grava(exemploLaudos(rnd(1405)));
     await exemploDemo();
     if (temExemplo() && !recs('laudo').some(l => l.seed && /-a\d$/.test(l.id))) { let sd = 2611; const R = () => (sd = (sd * 9301 + 49297) % 233280) / 233280; await grava(exLaudoHist(R, { seed: true, createdAt: Date.now(), updatedAt: Date.now(), by: 'Supervisor (exemplo)' })); }
+    if (temExemplo()) await grava(exCorrCompletar());
     if (typeof render === 'function' && S.session) render();
   } catch (e) { console.warn('exemploDemo', e); } })();

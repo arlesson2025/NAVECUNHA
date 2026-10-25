@@ -179,7 +179,7 @@ function janelasLivres(ws, chave, resetSel) {
   ws.classList.add('cm-free'); cards.forEach(aplica); fundo();
   cards.forEach(c => { const k = c.dataset.k;
     c.addEventListener('pointerdown', () => { c.style.zIndex = ++z; });
-    const mover = e => { if (e.button !== 0 || (e.target.closest('button,select,input,a,textarea,option') && !e.target.closest('.cm-grip'))) return;
+    const mover = e => { if (e.button !== 0 || (e.target.closest('button,select,input,a,textarea,option,[data-nodrag],.rm-hit') && !e.target.closest('.cm-grip'))) return;   // barras clicáveis dos gráficos não arrastam a janela
       e.preventDefault(); const el = e.currentTarget, p = pos(k), sx = e.clientX, sy = e.clientY, ox = p.x, oy = p.y; el.setPointerCapture(e.pointerId); c.classList.add('cm-drag');
       const mv = ev => { p.x = Math.max(0, ox + ev.clientX - sx); p.y = Math.max(0, oy + ev.clientY - sy); aplica(c); fundo(); };
       const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); c.classList.remove('cm-drag'); salva(); };
