@@ -60,46 +60,7 @@ function proxLinha(v, l) {
 }
 
 /* ---------- tela ---------- */
-const CR2 = { v: '', ano: hoje().getMonth() >= 9 ? hoje().getFullYear() + 1 : hoje().getFullYear() };
 const cronoBase = (ano, vid) => S.recs.get('crono-' + ano + '-' + vid);
-function vCrono2() {
-  const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (!CR2.v || !ativos.some(v => v.id === CR2.v)) CR2.v = (ativos[0] || {}).id;
-  const v = vessel(CR2.v); if (!v) return '<div class="empty">Nenhuma embarcação em operação.</div>';
-  const ano = +CR2.ano, R = cronoMarcas(v, ano), B = cronoBase(ano, v.id), c = ciclo(), hv = hViagem();
-  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'], mesH = hoje().getFullYear() === ano ? hoje().getMonth() : -1;
-  const anos = [hoje().getFullYear(), hoje().getFullYear() + 1];
-  const TR = { bordo: ['1', 'Troca de óleo', 'Óleo e itens de 250 h · FR 049_B · em viagem: tripulação (Supervisor acompanha pela câmera) · no porto: equipe de manutenção + CTF/MFM'], janela: ['2', 'Janela em Manaus', 'Revisões por hora · equipe de terra · OM da embarcação'], cal: ['3', 'Calendário', 'Trimestral, semestral, anual e longo prazo · mês fixo, aprovado pelo Supervisor'], doca: ['4', 'Docagem', 'Plano próprio · 5 anos ou CSN'] };
-  const cel = (l, i) => { const m = l.M[i], bp = B && B.linhas && B.linhas[l.k] ? B.linhas[l.k][i] || 0 : null, pl = B ? bp : m.plan + m.miss;
-    const tip = esc([MES[i] + '/' + String(ano).slice(2), ...m.its.slice(0, 12)].join('\n'));
-    if (m.ok || m.late) return `<td title="${tip}"><span class="c2 ${m.late ? 'late' : 'ok'}">R${m.ok + m.late > 1 ? '<small>×' + (m.ok + m.late) + '</small>' : ''}</span>${m.miss ? '<span class="c2 miss">P</span>' : ''}</td>`;
-    if (m.miss) return `<td title="${tip}"><span class="c2 miss">P</span></td>`;
-    if (pl) return `<td title="${tip}"><span class="c2 ${l.tr === 'cal' || l.tr === 'doca' ? 'plan' : 'est'}">P${pl > 1 ? '<small>×' + pl + '</small>' : ''}</span></td>`;
-    return `<td${i === mesH ? ' class="hj"' : ''}></td>`; };
-  const linhas = R.filter(l => l.tr === 'cal' || l.tr === 'doca' || l.M.some(m => m.plan || m.ok || m.late || m.miss) || l.tr === 'bordo');
-  let trAnt = '';
-  const corpo = linhas.map(l => { const h = l.tr !== trAnt ? `<tr class="c2-tr"><td colspan="15"><b>${TR[l.tr][0]} · ${TR[l.tr][1]}</b><span>${TR[l.tr][2]}</span></td></tr>` : ''; trAnt = l.tr;
-    return h + `<tr><td class="c2-n"><b>${esc(l.nome)}</b><small>${l.its.length} ${l.its.length === 1 ? 'item' : 'itens'} do Anexo I · ${[...new Set(l.its.map(x => x.t.id))].slice(0, 8).join(', ')}${new Set(l.its.map(x => x.t.id)).size > 8 ? '…' : ''}</small></td>${MES.map((_, i) => cel(l, i)).join('')}<td class="c2-tot">${l.M.reduce((a, m) => a + m.ok + m.late, 0)}/${B && B.linhas && B.linhas[l.k] ? B.linhas[l.k].reduce((a, x) => a + x, 0) : l.M.reduce((a, m) => a + m.plan + m.miss + m.ok + m.late, 0)}</td></tr>`; }).join('');
-  // próxima janela: o que fazer antes da próxima saída
-  const jan = R.filter(l => l.tr === 'janela').map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p).sort((a, b) => a.p.sc - b.p.sc);
-  const oleo = R.filter(l => l.tr === 'bordo').map(l => ({ l, p: proxLinha(v, l) })).filter(x => x.p).sort((a, b) => a.p.sc - b.p.sc);
-  const falta = p => p.rest != null ? (p.rest < 0 ? `<b style="color:#D93025">${nf(-p.rest)} h vencido</b>` : `faltam ${nf(p.rest)} h`) : p.dd != null ? (p.dd < 0 ? `<b style="color:#D93025">${-p.dd} d vencido</b>` : `faltam ${p.dd} d`) : '—';
-  const quando = p => p.rest == null ? '' : p.rest < hv ? '<span class="pill p-warn">Fazer nesta janela</span>' : `<span class="pill p-mut">em ${Math.floor(p.rest / hv)} ${Math.floor(p.rest / hv) === 1 ? 'viagem' : 'viagens'}</span>`;
-  const quandoO = p => p.rest == null ? '' : p.rest < 0 ? '<span class="pill p-bad">Vencida</span>' : p.rest < hv ? '<span class="pill p-warn">Vence na próxima viagem</span>' : '<span class="pill p-ok">Em dia</span>';
-  const sel = (k, ops, val) => `<select data-c2="${k}">${ops.map(([a, b]) => `<option value="${a}"${String(a) === String(val) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
-  return `<div class="vh"><div><h1>Cronograma de manutenção · ${esc(v.nome)} · ${ano}</h1><p>Tirado do Anexo I (que fica para consulta: como fazer, com o quê, quais regras). Os 160 itens viram poucos serviços, em três trilhas: a troca de óleo com os itens de 250 h (FR 049_B), as revisões por hora na janela em Manaus (equipe de terra) e o que tem mês fixo no calendário.</p></div><span class="sp"></span><button class="mbtn" data-c2pdf>⬇ PDF</button></div>
-   <div class="card"><div class="g"><label class="f s2">Embarcação${sel('v', ativos.map(x => [x.id, x.nome]), v.id)}</label><label class="f s2">Ano${sel('ano', anos.map(y => [y, y]), ano)}</label>
-    <div class="s6 c2-ciclo"><b>Ciclo de viagem</b> ida <input data-cic="ida" value="${c.ida}"> d · descargas <input data-cic="desc" value="${c.desc}"> d · volta <input data-cic="volta" value="${c.volta}"> d · porto <input data-cic="porto" value="${c.porto}"> d<br><span class="note">1 viagem ≈ <b>${nf(hv)} h de MCP</b> (${c.hNav} h/dia navegando, ${c.hDesc} h/dia nas descargas) · ≈ ${(365 / (c.ida + c.desc + c.volta + c.porto)).toFixed(1).replace('.', ',')} viagens por ano</span></div></div></div>
-   <div class="two">
-    <div class="card"><h2>1 · Troca de óleo: próximas</h2><div class="tw"><table class="t"><thead><tr><th>Serviço</th><th>Próximo</th><th></th></tr></thead><tbody>${oleo.map(({ l, p }) => `<tr><td><b>${esc(l.nome.replace('Troca de óleo · ', ''))}</b><div class="note">${l.its.length} itens · FR 049_B</div></td><td class="mono">${falta(p)}</td><td>${quandoO(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="note">Sem dados.</td></tr>'}</tbody></table></div><p class="note">Junto com o óleo são feitos os itens de 250 h (correias, pré-filtro, filtros de combustível e de ar, baterias, zincos). Em viagem: a tripulação, com o Supervisor acompanhando pela câmera. No porto: a equipe de manutenção com o CTF ou MFM disponível. Nos dois casos lança-se o FR 049_B, e a troca e esses itens contam como feitos.</p></div>
-    <div class="card"><div class="row"><h2>2 · Janela em Manaus: antes da próxima saída</h2><span class="sp"></span><a class="mbtn sm pri" href="#emitir/${v.id}">Programar OM</a></div><div class="tw"><table class="t"><thead><tr><th>Revisão</th><th>Próximo item</th><th></th></tr></thead><tbody>${jan.map(({ l, p }) => `<tr><td><b>${esc(l.nome)}</b><div class="note">${l.its.length} itens</div></td><td class="mono">${falta(p)}<div class="note">${p.t.id} ${esc(p.t.chk)}</div></td><td>${quando(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="note">Sem dados.</td></tr>'}</tbody></table></div><p class="note">Vence na próxima viagem: trocar no porto antes da saída ou mandar óleo e filtros para a tripulação. "Fazer nesta janela" = vence antes de o empurrador voltar da próxima viagem (≈ ${nf(hv)} h).</p></div>
-   </div>
-   <div class="card"><div class="row"><h2>3 · Cronograma anual ${ano} · ${esc(v.nome)}</h2><span class="sp"></span>
-    ${B ? `<span class="pill p-ok">Aprovado por ${esc(B.aprovBy)} em ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : '<span class="pill p-warn">Ainda não aprovado</span>'}
-    ${can.admin() ? `<button class="mbtn sm ${B ? '' : 'ok'}" data-c2apr="um">${B ? 'Revisar e reaprovar' : '✓ Aprovar este cronograma'}</button><button class="mbtn sm" data-c2apr="frota">Aprovar para a frota toda</button>` : ''}</div>
-    <div class="c2-leg"><span><i class="c2 plan">P</i>programado (mês fixo)</span><span><i class="c2 est">P</i>previsto pelo horímetro</span><span><i class="c2 ok">R</i>realizado no prazo</span><span><i class="c2 late">R</i>realizado com atraso</span><span><i class="c2 miss">P</i>venceu e não foi feito</span></div>
-    <div class="tw"><table class="c2-t"><thead><tr><th>Serviço</th>${MES.map((m, i) => `<th${i === mesH ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>R / P</th></tr></thead><tbody>${corpo}</tbody></table></div>
-    <p class="note">${B ? 'Os P mostram o cronograma aprovado; o Cronograma × Realizado compara com ele. ' : 'Ao aprovar, os P de cada mês ficam congelados como linha de base do ano. '}Trilhas 1 e 2 são por horímetro: o mês é a previsão pela média de horas do empurrador e acompanha as leituras. Passe o mouse numa célula para ver os itens e o nº da OM ou do FR 049_B.</p></div>`;
-}
 { const s = SECOES.find(x => x.id === 'plan'); if (s) { const i = s.views.findIndex(x => x[0] === 'crono'); if (i >= 0) s.views[i][1] = 'Cronograma anual'; const m = s.views.findIndex(x => x[0] === 'matriz'); if (m >= 0) s.views[m][1] = 'Anexo I · consulta'; }
   const c = s && s.views.splice(s.views.findIndex(x => x[0] === 'crono'), 1)[0]; if (c) s.views.unshift(c); }
 

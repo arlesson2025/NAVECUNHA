@@ -3,10 +3,8 @@
    1 Indicadores · 2 Riscos & alertas críticos · 3 Resumo do mês · 4 Praça de máquinas · 5 Docagem
    ===================================================================== */
 'use strict';
-let RFILT = '';
 
 /* ---------- 2 · matriz de risco ---------- */
-document.addEventListener('click', e => { const b = e.target.closest('[data-rfilt]'); if (!b) return; e.stopPropagation(); RFILT = b.dataset.rfilt; render(); }, true);
 
 /* ---------- 3 · resumo do mês ---------- */
 
@@ -14,7 +12,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-rfil
 
 /* ---------- montagem ---------- */
 VX.geral = vGeral;
-document.addEventListener('click', e => { const b = e.target.closest('[data-pngo]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const el = document.getElementById('pn-' + b.dataset.pngo); if (el) scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + scrollY - 20), behavior: 'smooth' }); }, true);
 // docagem: o clique nas embarcações do cronograma também vale no painel
 document.addEventListener('click', e => { if (VIEW !== 'geral') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
   if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);
@@ -45,8 +42,6 @@ kvGet('layout').then(v => { if (v && !v._pn5) { delete v.geral; v._pn5 = 1; LAY 
 /* ---------- 4.1 troca de óleo: barras horizontais (uma por sistema, por embarcação) ---------- */
 
 /* ---------- 4.2 calibração do MCP: quadro + motor + mapa da frota ---------- */
-let CSEL = '';
-document.addEventListener('click', e => { const b = e.target.closest('[data-csel]'); if (!b) return; e.stopPropagation(); CSEL = b.dataset.csel; render(); }, true);
 
 /* ---------- gráficos do relatório: mais limpos ---------- */
 

@@ -34,7 +34,6 @@ padTela('regs', { titulo: 'Registros e evidências', desc: 'Tudo o que a auditor
 document.addEventListener('click', e => { const b = e.target.closest('[data-rgf]'); if (!b || VIEW !== 'regs') return; e.preventDefault(); e.stopPropagation(); const [k, v] = b.dataset.rgf.split('|'); REGF[k] = v; render(); }, true);
 document.addEventListener('change', e => { if (e.target.id === 'rgV' && VIEW === 'regs') { REGF.v = e.target.value; render(); } }, true);
 /* Equipamentos críticos (NP 6), derivado da prioridade dos itens do Anexo I */
-VX.critic = () => { MX.prio = 'Crítica'; setTimeout(() => location.replace('#matriz'), 0); return ''; };   // aba saiu (decisão do Supervisor, 24/10/2026): Anexo I com o filtro Crítica e Alta
 /* NP Navecunha 055, item 6.3 · Relação de Equipamentos Críticos (texto da norma) */
 const NP63 = [
   ['1. Sistema de Propulsão', 'Motores principais Mitsubishi (S6R2 / S6R) e Reversores/Redutores (Hitachi, Masson e Reintjes)', 'Avaria mecânica severa por fadiga ou perda de pressão; colisão direta de comboios e comboio à deriva.', 'Monitoramento visual do padrão da fumaça de escape, controle do nível de óleo por vareta mecânica e verificação de ruídos/vibrações incomuns.', 'Inspeção antes da saída (item 5.3) e inspeção diária em viagem (item 5.4).'],
@@ -55,8 +54,6 @@ function critPDF() {   // lista de equipamentos críticos (NP 6) para a auditori
    <div class="hd"><img src="${new URL(LOGOS.nav, location.href)}" alt=""><img src="${new URL(LOGOS.vda, location.href)}" alt=""><div><h1>Relação de equipamentos críticos · NP Navecunha 055 item 6.3</h1><p>Critérios de criticidade: segurança e saúde, meio ambiente, operação e qualidade (item 6.2) · emitido em ${hoje().toLocaleDateString('pt-BR')} pelo SMF</p></div></div>
    ${corpo}<p class="note">Itens do Anexo I desses equipamentos têm prioridade Crítica: vencido sem OM bloqueia a saída (NP 5.5).</p><div class="ass"><div>Supervisor de Manutenção</div><div>Data</div></div><script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
 }
-padTela('critic', { titulo: 'Equipamentos críticos', desc: 'Equipamentos com itens de prioridade Crítica ou Alta no Anexo I',
-  resumo: () => { const P = A1.filter(t => t.kind !== 'sup'); let blo = 0; try { blo = frotaMatriz().filter(x => x.sit >= 2).length; } catch (e) { } return [['Equipamentos com item Crítico', new Set(P.filter(t => t.prio === 'Crítica').map(t => t.sis + t.eqn)).size, 'var(--badt)'], ['Itens Críticos', P.filter(t => t.prio === 'Crítica').length, 'var(--badt)'], ['Itens Alta', P.filter(t => t.prio === 'Alta').length, 'var(--warnt)'], ['Empurradores bloqueados agora', blo, blo ? 'var(--badt)' : 'var(--okt)']]; } });
 /* menu: Suporte = Registros e evidências · Biblioteca (abas) · Administração; Plano preventivo ganha Equipamentos críticos */
 { const by = id => SECOES.find(s => s.id === id), cr = by('crono'), cd = by('cond2'), bib = by('apoio2'), adm = by('adm');
   if (cr) cr.sub = 'cronograma, Anexo I';   // a aba Equipamentos críticos saiu: o Anexo I tem o filtro Crítica e Alta e o PDF da NP 6

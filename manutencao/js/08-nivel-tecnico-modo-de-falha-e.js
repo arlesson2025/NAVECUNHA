@@ -7,22 +7,6 @@
 const numv = v => { const x = parseFloat(String(v == null ? '' : v).replace(/\./g, '').replace(',', '.')); return isNaN(x) ? 0 : x; };
 
 /* ---------- 1 · análise de falhas por modo e causa ---------- */
-function tecFalhas(meses, fim) {
-  fim = fim || hoje(); const ini = addM(fim, -meses);
-  const F = oms().filter(o => o.tipo === 'C' && o.abertura && pD(o.abertura) >= ini && pD(o.abertura) < fim);
-  const cont = k => { const c = {}; F.forEach(o => { const x = o[k] || 'Não classificado'; c[x] = (c[x] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1]); };
-  const sisN = s => String(s || '?').replace(/^\d+\.0 /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração').replace('Alimentação de Combustível', 'Combustível').replace('Salvaguarda e Flutuabilidade', 'Salvaguarda').replace('Sinalização e Comunicação', 'Comunicação').replace('Resposta a Emergências', 'Emergências');
-  const mat = {}; F.forEach(o => { const s = sisN(o.sistema), m = o.modo || 'Não classificado'; (mat[s] = mat[s] || {})[m] = (mat[s][m] || 0) + 1; });
-  return { F, modos: cont('modo'), causas: cont('causaCat'), mat, sisN, semClass: F.filter(o => !o.modo).length };
-}
-function tecFalhasCard() {
-  const T = tecFalhas(12), mods = T.modos.map(m => m[0]).filter(m => m !== 'Não classificado').slice(0, 6), sis = Object.keys(T.mat).sort((a, b) => Object.values(T.mat[b]).reduce((x, y) => x + y, 0) - Object.values(T.mat[a]).reduce((x, y) => x + y, 0));
-  const mx = Math.max(1, ...sis.flatMap(s => mods.map(m => T.mat[s][m] || 0)));
-  return `<div class="two"><div class="card"><div class="row"><h2>D · Modo de falha (ISO 14224)</h2><span class="sp"></span><span class="note">12 meses · todas as classes</span></div>${hbar(T.modos.slice(0, 8), '')}${T.semClass ? `<p class="note">${T.semClass} corretiva(s) sem modo de falha. Preencha no bloco 1 da corretiva.</p>` : ''}</div>
-   <div class="card"><div class="row"><h2>E · Causa da falha (ISO 14224)</h2><span class="sp"></span><span class="note">causa a eliminar para evitar recorrência</span></div>${hbar(T.causas.slice(0, 8), '')}</div></div>
-   <div class="card"><div class="row"><h2>F · Sistema × modo de falha</h2><span class="sp"></span><span class="note">densidade de falhas: quanto mais escuro, maior a frequência</span></div>
-    ${sis.length && mods.length ? `<div class="tw"><table class="t hm"><thead><tr><th>Sistema</th>${mods.map(m => `<th class="c">${esc(m)}</th>`).join('')}</tr></thead><tbody>${sis.map(s => `<tr><td><b>${esc(s)}</b></td>${mods.map(m => { const n = T.mat[s][m] || 0; return `<td class="c" style="${n ? `background:rgba(26,115,232,${(.25 + .65 * n / mx).toFixed(2)});color:#173252;font-weight:600` : 'color:var(--mut)'}">${n || '·'}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="note">Ainda não há corretivas com modo de falha registrado.</div>'}</div>`;
-}
 
 /* ---------- 2 · laudo de óleo e saúde do MCP ---------- */
 // limites de referência para motor diesel com óleo 15W-40 (ajuste com os limites do laboratório)
@@ -243,8 +227,6 @@ ${corpo}
 VX.matriz = vMatriz;
 
 /* ---------- 12 · Horímetro do MCP por embarcação: colunas vitrificadas com 3 visões ---------- */
-let HMV = 'acum';
-document.addEventListener('click', e => { const b = e.target.closest('[data-hmv]'); if (b) { HMV = b.dataset.hmv; render(); } });
 
 /* ---------- 13 · "Rio do ciclo de óleo": cada MCP é um empurrador navegando até a próxima troca ---------- */
 

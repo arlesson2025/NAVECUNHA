@@ -15,7 +15,7 @@ from playwright.async_api import async_playwright
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAIDA = os.path.join(RAIZ, 'testes', 'saida')
 DATA = datetime.datetime(2026, 10, 24, 10, 0, 0)
-TELAS = ['rotina', 'barco/v1', 'emitir', 'emitir/v3', 'oms', 'acomp', 'omconf', 'falhas', 'falhas2', 'cxr', 'crono', 'audit', 'matriz',
+TELAS = ['rotina', 'barco/v1', 'emitir', 'emitir/v3', 'oms', 'acomp', 'omconf', 'falhas2', 'cxr', 'crono', 'audit', 'matriz',
          'controle', 'horfrota', 'hor', 'oleo', 'anoleo', 'parmcp', 'compr', 'kpi', 'regs', 'bib', 'pecas', 'terc', 'trein', 'lubcons', 'admin']
 INICIO = """
 (() => { let s = 20261024; Math.random = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };

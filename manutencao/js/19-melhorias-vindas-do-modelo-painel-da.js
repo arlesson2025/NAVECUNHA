@@ -9,8 +9,7 @@
 /* ---------- 1) alertas ---------- */
 
 /* ---------- 3) previsto × realizado ---------- */
-let PRM = 0;   // 0 = mês atual, 1 = anterior…
-document.addEventListener('click', e => { const b = e.target.closest('[data-prm]'); if (!b) return; e.stopPropagation(); PRM = +b.dataset.prm; render(); }, true);
+   // 0 = mês atual, 1 = anterior…
 
 /* ---------- painel: alertas logo depois do cabeçalho; previsto × realizado depois dos indicadores ---------- */
 

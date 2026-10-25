@@ -4,7 +4,6 @@
    verde: feito no prazo · laranja: feito com atraso · vermelho: venceu e não foi feito · cinza: ainda vai vencer
    ===================================================================== */
 'use strict';
-const CX = { ano: hoje().getFullYear(), v: '', sis: '', so: true };
 let CXI = null;   // índices montados uma vez por cálculo
 function cxIndice() {
   const ev = {}, hor = {}, add = (k, o) => (ev[k] = ev[k] || []).push(o);
@@ -53,8 +52,6 @@ function cxLinha(v, pos, t, ano) {
   }
   return { v, pos, t, iv, marks };
 }
-document.addEventListener('change', e => { const s = e.target.closest('[data-cx]'); if (!s || VIEW !== 'cxr') return; const k = s.dataset.cx; CX[k] = k === 'so' ? s.checked : k === 'ano' ? +s.value : s.value; render(); });
-document.addEventListener('click', e => { if (VIEW !== 'cxr') return; const r = e.target.closest('[data-cxv]'); if (r) { CX.v = r.dataset.cxv; render(); setTimeout(() => { const t = document.querySelector('.cx-w'); if (t) t.scrollIntoView({ behavior: 'smooth' }); }, 300); return; } const sx = e.target.closest('[data-cxs]'); if (sx) { CX.sis = String(CX.sis) === sx.dataset.cxs ? '' : sx.dataset.cxs; render(); return; } if (e.target.closest('[data-cxpdf]')) cxPDF(); });
 // menu: 2 · Planejar
 { const s = SECOES.find(x => x.id === 'plan'); if (s && !s.views.some(x => x[0] === 'cxr')) { const i = s.views.findIndex(x => x[0] === 'crono'); s.views.splice(i < 0 ? s.views.length : i + 1, 0, ['cxr', 'Cronograma × Realizado']); } }
 

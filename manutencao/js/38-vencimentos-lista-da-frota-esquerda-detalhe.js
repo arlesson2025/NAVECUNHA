@@ -1,6 +1,5 @@
 /* ===== Vencimentos: lista da frota (esquerda) + detalhe da embarcação ou da frota toda (direita) ===== */
 let FS_SEL = 'frota';
-document.addEventListener('click', e => { if (VIEW !== 'rotina') return; const r = e.target.closest('[data-fsel]'); if (!r) return; e.stopPropagation(); FS_SEL = r.dataset.fsel; render(); }, true);
 { const st = document.createElement('style'); st.textContent = `
 .card.fs-card{padding:0;overflow:hidden}
 

@@ -65,18 +65,7 @@ function saidaModal(vid, fr) {
     if ($('#saHor') && $('#saHor').checked) horModal(v.id); else render();
     if (ok53.length < INSP53.length) toast('Saída registrada com a inspeção 5.3 incompleta: ' + o53); };
 }
-function saidaVer(id) {
-  const r = S.recs.get(id); if (!r) return; const v = vessel(r.vessel), [cls] = SAI_SIT[r.sit] || SAI_SIT[0];
-  modal(`<h2>Saída · ${esc(v ? v.nome : r.vessel)} · ${brD(r.date)} ${esc(r.hora || '')}</h2>
-   <div class="row" style="gap:8px;align-items:center;margin:4px 0 10px"><span class="fs-p ${cls}">${esc(r.sitTxt)}</span><span class="note">registrada por ${esc(r.by || '—')}${r.autorizou ? ' · autorizada por ' + esc(r.autorizou) + ' (Coordenador de Operações)' : ''}</span></div>
-   ${r.fr027 && S.recs.get(r.fr027) ? `<p>FR 027_L de saída: ${drivePdf(S.recs.get(r.fr027).pdfFileId, '📄 abrir o PDF assinado')}</p>` : ''}${r.just ? `<p><b>Justificativa:</b> ${esc(r.just)}</p>` : ''}
-   <p class="note" style="margin-bottom:4px">Pendências como estavam na hora da saída:</p>${saidaLista(r)}
-   ${r.hr ? `<p class="note">Horímetro na saída: ${nf(r.hr.h)} h (leitura de ${brD(r.hr.date)})</p>` : ''}
-   ${r.fotoMin ? `<img src="${r.fotoMin}" style="max-width:260px;border-radius:6px">` : r.fotoId ? `<p><a href="https://drive.google.com/file/d/${encodeURIComponent(r.fotoId)}/view" target="_blank" rel="noopener">Foto do FR 027_L de saída (Drive)</a></p>` : ''}
-   <div class="row end"><button class="mbtn" data-close>Fechar</button></div>`, true);
-}
 // "Saiu de viagem" abre primeiro o FR 027_L de saída (bloco FR 027_L), que depois chama saidaModal(vid, fr)
-document.addEventListener('click', e => { const b = e.target.closest('[data-saiver]'); if (!b) return; e.preventDefault(); e.stopPropagation(); saidaVer(b.dataset.saiver); }, true);
 // Hoje · em viagem: como saiu (situação registrada na saída)
 
 { const st = document.createElement('style'); st.textContent = `.sai-l{list-style:none;padding:0;margin:4px 0;display:flex;flex-direction:column;gap:5px;font-size:13.5px;max-height:240px;overflow:auto}

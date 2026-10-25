@@ -526,7 +526,7 @@ function render() {
   const mesma = VIEW === RENDER_ULTV, y = scrollY;   // re-render da mesma tela: volta para onde estava a rolagem
   if (S.cfg && S.cfg.frota) { placaInit(); foraInit(); }
   renderNav(); renderUser();
-  const V = { geral: vGeral, calib: vCalib, doca: vDoca, falhas: vFalhas, hor: vHor, kpi: vKpi, hist: vHist, emitir: vEmitir, acomp: vAcomp, prev: vPrevLista, corr: vCorrLista, om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
+  const V = { geral: vGeral, calib: vCalib, doca: vDoca, hor: vHor, kpi: vKpi, emitir: vEmitir, acomp: vAcomp, om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   if (FROTA_TIPO === 'bal' && !ehOperador() && !['admin', 'bib'].includes(VIEW)) { m.innerHTML = balsasVazio(); return; }   // balsas: telas ainda sem dados
   m.style.removeProperty('--ws-esq'); m.style.removeProperty('--ws-larg');   // janelas livres da tela anterior
@@ -834,48 +834,6 @@ function mitigSit(o) {
   if (o.mitigPrazo && pD(o.mitigPrazo) < hoje()) return { k: 'atraso', t: 'Atrasada', c: 'p-bad' };
   return { k: 'and', t: o.mitigSt === 'Em andamento' ? 'Em andamento' : 'Pendente', c: 'p-warn' };
 }
-function vFalhas() {
-  const C = falhasDados(FALPER), CA = C.filter(o => o.classe === 'Crítica' || o.classe === 'Alta');
-  const horas = C.reduce((s, o) => s + (o._h || 0), 0), reinc = C.filter(o => o._reinc);
-  const sits = C.map(mitigSit), pend = sits.filter(s => s.k === 'falta' || s.k === 'atraso').length;
-  // A · Pareto por sistema
-  const porSis = SISTEMAS.map(s => { const L = C.filter(o => o.sistema === s); return { s, n: L.length, h: L.reduce((a, o) => a + (o._h || 0), 0), crit: L.filter(o => o.classe === 'Crítica').length, alta: L.filter(o => o.classe === 'Alta').length }; }).filter(x => x.n).sort((a, b) => b.n - a.n || b.h - a.h);
-  const maxN = Math.max(1, ...porSis.map(x => x.n)); let acc = 0;
-  const pareto = porSis.map(x => { acc += x.n; const pc = Math.round(acc / C.length * 100); const ou = x.n - x.crit - x.alta;
-    return `<div class="pfrow"><div class="pflb"><b>${esc(x.s.replace(/^\d+\.0 /, ''))}</b><span class="note">${nf(Math.round(x.h))} h indisponível</span></div>
-     <div class="pftr"><i style="width:${x.crit / maxN * 100}%;background:var(--bad)" data-tip="${x.crit} Crítica"></i><i style="width:${x.alta / maxN * 100}%;background:#F29900" data-tip="${x.alta} Alta"></i><i style="width:${ou / maxN * 100}%;background:var(--line2)" data-tip="${ou} Média/Baixa"></i><span class="pfn">${x.n}</span></div><span class="pfac ${pc <= 80 ? 'top' : ''}">${pc}%</span></div>`; }).join('');
-  // B · componentes com maior frequência de falha
-  const comp = {}; C.forEach(o => { const k = o._comp.toLowerCase(); (comp[k] = comp[k] || { nome: o._comp, L: [] }).L.push(o); });
-  const topComp = Object.values(comp).sort((a, b) => b.L.length - a.L.length || b.L.reduce((s, o) => s + (o._h || 0), 0) - a.L.reduce((s, o) => s + (o._h || 0), 0)).slice(0, 8);
-  // C · medidas
-  const SO = { falta: 0, atraso: 1, and: 2, nd: 3, ok: 4 };
-  let med = C.map(o => ({ o, s: mitigSit(o) })).sort((a, b) => SO[a.s.k] - SO[b.s.k] || (b.o.abertura > a.o.abertura ? 1 : -1));
-  if (FALMED === 'abertas') med = med.filter(x => x.s.k !== 'ok' && x.s.k !== 'nd');
-  return `<div class="vh"><div><h1>Análise de falhas e ações de bloqueio</h1><p>Corretivas (Anexo II-A) dos últimos ${FALPER} meses: distribuição de falhas por sistema (Pareto), modo e causa (ISO 14224), reincidência e acompanhamento das ações de bloqueio. Reincidência = mesma falha (empurrador + sistema + componente) em até ${REINC_DIAS} dias.</p></div><span class="sp"></span>
-   <div class="seg">${[6, 12, 24].map(m => `<button data-falper="${m}" class="${m === FALPER ? 'on' : ''}">${m} meses</button>`).join('')}</div><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>
-  <div class="kgrid six">
-   <div class="card mini"><b>${C.length}</b><span>corretivas no período</span></div>
-   <div class="card mini ${CA.length ? 'bad' : 'ok'}"><b>${CA.length}</b><span>falhas Crítica ou Alta</span></div>
-   <div class="card mini"><b>${nf(Math.round(horas))}</b><span>horas de indisponibilidade (abertura → liberação)</span></div>
-   <div class="card mini ${reinc.length ? 'bad' : 'ok'}"><b>${reinc.length}</b><span>reincidências · ação anterior ineficaz</span></div>
-   <div class="card mini ${pend ? 'warn' : 'ok'}"><b>${pend}</b><span>ações de bloqueio pendentes ou em atraso</span></div>
-   <div class="card mini ok"><b>${sits.filter(s => s.k === 'ok').length}</b><span>ações de bloqueio concluídas</span></div>
-  </div>
-  <div class="two">
-   <div class="card"><div class="row"><h2>A · Pareto de falhas por sistema</h2></div>
-    <div class="clegend note"><span><i style="background:var(--bad)"></i>Crítica</span><span><i style="background:#F29900"></i>Alta</span><span><i style="background:var(--line2)"></i>Média/Baixa</span><span class="sp"></span><span>% = acumulado (destaque até 80%)</span></div>
-    ${pareto || '<div class="note">Nenhuma corretiva no período.</div>'}
-    <p class="note">Os sistemas em destaque somam 80% das falhas: é onde a medida de mitigação dá mais retorno.</p></div>
-   <div class="card"><div class="row"><h2>B · Componentes com maior frequência de falha</h2></div>
-    ${topComp.length ? `<div class="tw"><table class="t"><thead><tr><th>Componente / falha</th><th class="c">Ocorrências</th><th>Embarcações</th><th class="c">h indisponível</th></tr></thead><tbody>${topComp.map(c => `<tr><td><b>${esc(c.nome)}</b>${c.L.some(o => o._reinc) ? ' <span class="pill p-bad">reincidente</span>' : ''}<div class="note">${esc(c.L[0].sistema.replace(/^\d+\.0 /, ''))}</div></td><td class="c"><b>${c.L.length}</b></td><td>${[...new Set(c.L.map(o => vName(o.vessel)))].map(esc).join(', ')}</td><td class="c">${nf(Math.round(c.L.reduce((s, o) => s + (o._h || 0), 0)))}</td></tr>`).join('')}</tbody></table></div>` : '<div class="note">Nenhuma corretiva no período.</div>'}
-    <p class="note">Preencha o campo "Equipamento / componente" na corretiva para o agrupamento ficar exato. Sem ele, o painel usa o início da descrição.</p></div>
-  </div>
-  <div class="card"><div class="row"><h2>C · Ações de bloqueio (medidas de mitigação)</h2><span class="sp"></span><div class="seg">${[['abertas', 'Pendentes'], ['todas', 'Todas']].map(([k, l]) => `<button data-falmed="${k}" class="${k === FALMED ? 'on' : ''}">${l}</button>`).join('')}</div></div>
-   <div class="note">A medida é registrada na própria corretiva (campo A9 · Análise). É obrigatória em Crítica e Alta. Clique numa linha para abrir a OM.</div>
-   ${med.length ? `<div class="tw"><table class="t"><thead><tr><th>OM</th><th>Embarcação</th><th>Classe</th><th>Falha</th><th>Causa raiz</th><th>Medida de mitigação</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr></thead><tbody>
-   ${med.map(({ o, s }) => `<tr class="click" data-open="${o.id}"><td class="mono">${esc(o.num)}</td><td>${esc(vName(o.vessel))} ${posTag(o.pos)}</td><td>${esc(o.classe || '')}</td><td>${esc(o.descricao || '')}${o._reinc ? ` <span class="pill p-bad" data-tip="Repetiu a OM ${esc(o._reinc.num)} de ${brD(o._reinc.abertura)}">reincidente</span>` : ''}</td><td class="note">${esc(o.causa || '—')}</td><td>${esc(o.mitig || '—')}</td><td>${esc(o.mitigResp || '—')}</td><td>${o.mitigPrazo ? brD(o.mitigPrazo) : '—'}</td><td><span class="pill ${s.c}">${s.t}</span></td></tr>`).join('')}
-   </tbody></table></div>` : `<div class="note">${FALMED === 'abertas' ? 'Nenhuma medida pendente.' : 'Nenhuma corretiva no período.'}</div>`}</div>` + tecFalhasCard();
-}
 AFTER.falhas = () => { $('#main').onclick = e => {
   const p = e.target.closest('[data-falper]'); if (p) { FALPER = +p.dataset.falper; render(); return; }
   const m = e.target.closest('[data-falmed]'); if (m) { FALMED = m.dataset.falmed; render(); return; }
@@ -1151,17 +1109,6 @@ AFTER.acomp = () => { $('#main').onclick = async e => { const ga = e.target.clos
    HISTÓRICO
    ===================================================================== */
 const HI = { q: '', tipo: 'todas', v: '' };
-function vHist() {
-  const q = HI.q.toLowerCase();
-  const l = oms().filter(o => o.status === 'encerrada' && (HI.tipo === 'todas' || o.tipo === HI.tipo) && (!HI.v || o.vessel === HI.v) && (!q || [o.num, vName(o.vessel), (o.items || []).join(' '), o.descricao, o.sistema, o.rnc].join(' ').toLowerCase().includes(q))).sort((a, b) => (b.fechadoAt || 0) - (a.fechadoAt || 0));
-  return `<div class="vh"><div><h1>Histórico de OMs</h1><p>OMs encerradas. O PDF do Anexo II fica guardado no Google Drive, na pasta da embarcação; a planilha tem uma linha por OM com o link.</p></div></div>
-   <div class="card row"><input id="hiQ" placeholder="Buscar OM, item, RNC, descrição…" value="${esc(HI.q)}" style="max-width:320px">
-    <select id="hiV" style="max-width:180px"><option value="">Frota toda</option>${S.cfg.frota.map(v => `<option value="${v.id}"${HI.v === v.id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select>
-    <div class="seg">${[['todas', 'Todas'], ['P', 'Preventivas'], ['C', 'Corretivas']].map(([k, t]) => `<button data-hit="${k}" class="${HI.tipo === k ? 'on' : ''}">${t}</button>`).join('')}</div><span class="sp"></span><span class="pill p-mut">${l.length} OMs</span></div>
-   <div class="card"><div class="tw"><table class="t"><thead><tr><th>OM</th><th>Tipo</th><th>Embarcação</th><th>Itens / falha</th><th>Encerrada</th><th>Fotos</th><th>PDF</th></tr></thead><tbody>
-   ${l.slice(0, 300).map(o => `<tr class="click" data-open="${o.id}"><td class="mono">${esc(o.num)}</td><td>${tipoPill(o)}</td><td>${esc(vName(o.vessel))} ${posTag(o.pos)}</td><td>${o.tipo === 'C' ? esc(o.descricao || '') + (o.rnc ? ` <span class="pill p-mut">${esc(o.rnc)}</span>` : '') : '<span class="mono">' + (o.items || []).join(' · ') + '</span>'}</td><td class="mono">${o.fechadoAt ? new Date(o.fechadoAt).toLocaleDateString('pt-BR') : ''}</td><td>${(o.fotos || []).length}</td><td>${o.pdfFileId ? `<button class="mbtn sm" data-pdf="${o.id}">📄 Abrir</button>` : o.seed ? '<span class="note">exemplo</span>' : `<button class="mbtn sm" data-regen="${o.id}">Gerar</button>`}</td></tr>`).join('') || '<tr><td colspan="7" class="note">Nenhuma OM encerrada com esses filtros.</td></tr>'}
-   </tbody></table></div></div>`;
-}
 AFTER.hist = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'hiQ') { HI.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#hiQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); } };
   m.onchange = e => { if (e.target.id === 'hiV') { HI.v = e.target.value; render(); } };
@@ -1201,20 +1148,6 @@ const ehPred = o => (o.items || []).some(id => A1M[id].pred);
 const tercAnexo = o => o.relTerc === 'Relatório do fornecedor anexo';
 
 /* ---------- listas ---------- */
-function vPrevLista() {
-  const l = oms().filter(o => o.tipo === 'P' && o.status !== 'encerrada').sort((a, b) => ['executada', 'conferencia', 'abordo', 'emitida'].indexOf(a.status) - ['executada', 'conferencia', 'abordo', 'emitida'].indexOf(b.status));
-  return `<div class="vh"><div><h1>Preventiva e preditiva · Anexo II-B</h1><p>Abra a OM para lançar o que voltou na ficha de bordo, conferir e aprovar. O PDF do II-B é gerado e guardado na aprovação.</p></div><span class="sp"></span><a class="mbtn pri" href="#emitir">＋ Programar janela</a></div>
-   <div class="card"><div class="tw"><table class="t"><thead><tr><th>OM</th><th>Embarcação</th><th>Itens</th><th>Etapa</th><th>Prazo</th></tr></thead><tbody>
-   ${l.map(o => `<tr class="click" data-open="${o.id}"><td class="mono">${esc(o.num)}</td><td>${esc(vName(o.vessel))} ${posTag(o.pos)}</td><td class="mono">${(o.items || []).join(' · ')} ${ehPred(o) ? '<span class="pill p-inf">Preditiva</span>' : ''}</td><td><span class="pill ${['executada', 'conferencia'].includes(o.status) ? 'p-inf' : 'p-mut'}">${omStatusTxt(o)}</span></td><td>${omAtrasada(o) ? '<span class="pill p-bad">Em atraso</span>' : (o.alvoH ? '<span class="mono">' + nf(o.alvoH) + ' h</span>' : '') + (o.alvoD ? ' <span class="mono">' + brD(o.alvoD) + '</span>' : '')}</td></tr>`).join('') || '<tr><td colspan="5" class="note">Nenhuma preventiva em aberto.</td></tr>'}
-   </tbody></table></div></div>`;
-}
-function vCorrLista() {
-  const l = oms().filter(o => o.tipo === 'C' && o.status !== 'encerrada').sort((a, b) => Object.keys(CLASSES).indexOf(a.classe) - Object.keys(CLASSES).indexOf(b.classe));
-  return `<div class="vh"><div><h1>Corretiva · Anexo II-A</h1><p>Falhas Crítica e Alta exigem o Anexo II-A e a RNC (item 5.2). Média e Baixa podem ser registradas aqui também, sem RNC.</p></div><span class="sp"></span><button class="mbtn pri" data-act="novaCorr">＋ Nova corretiva</button></div>
-   <div class="card"><div class="tw"><table class="t"><thead><tr><th>OM</th><th>Classe</th><th>Embarcação</th><th>Falha</th><th>RNC</th><th>Prazo de início</th><th>Etapa</th></tr></thead><tbody>
-   ${l.map(o => { const p = prazoCorretiva(o); const rest = p ? (p - hoje()) / 3600e3 : null; return `<tr class="click" data-open="${o.id}"><td class="mono">${esc(o.num)}</td><td><span class="pill ${o.classe === 'Crítica' || o.classe === 'Alta' ? 'p-bad' : 'p-warn'}">${esc(o.classe)}</span></td><td>${esc(vName(o.vessel))} ${posTag(o.pos)}${interditada(o.vessel) === o ? ' <span class="pill p-bad">Interditada</span>' : ''}</td><td>${esc(o.descricao || '')}</td><td class="mono">${esc(o.rnc || '—')}</td><td>${o.inicio ? '<span class="pill p-ok">Iniciada ' + brDT(o.inicio) + '</span>' : rest === null ? '' : rest < 0 ? '<span class="pill p-bad">Vencido há ' + nf(-rest, 1) + ' h</span>' : '<span class="pill p-warn">restam ' + nf(rest, 1) + ' h</span>'}</td><td>${omStatusTxt(o)}</td></tr>`; }).join('') || '<tr><td colspan="7" class="note">Nenhuma corretiva em aberto.</td></tr>'}
-   </tbody></table></div></div>`;
-}
 
 /* ---------- triagem da corretiva (classe pela tabela 5.5.1) ---------- */
 function novaCorretiva() {
