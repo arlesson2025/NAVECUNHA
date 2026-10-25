@@ -94,7 +94,9 @@ function omgCorpo() {
     ${inp('dreal', 'Data da execução', 's2', 'type="date"')}${inp('inicio', 'Início', 's2', 'type="datetime-local"')}${inp('termino', 'Término', 's2', 'type="datetime-local"')}
     ${rgExecHTML(R)}${inp('indispH', 'Empurrador parado para a manutenção (h)', 's2', 'inputmode="decimal" placeholder="0 se não parou"')}
     <label class="f s2">Gerou resíduo?<select data-rg="resid"><option value="">Escolha…</option>${['Não', 'Sim'].map(x => `<option${R.resid === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label>${inp('fr016', 'Nº FR 016_E', 's2')}${inp('pt', 'Nº da PT do SESMT (se houver)', 's2')}
-    ${inp('justif', 'Justificativa (se passou da hora-alvo)', 's6')}</div>${rgProvaHTML(P[0], R)}</div>
+    ${inp('justif', 'Justificativa (se passou da hora-alvo)', 's6')}
+    <label class="f s6">Materiais e peças usados <small class="note">um por linha: peça · quantidade · nº da RM</small><textarea data-rg="matsTxt" rows="3" placeholder="Correia A-38 · 1 · RM 55100">${esc(R.matsTxt || '')}</textarea></label>
+    <label class="f s6">Observações <small class="note">o que encontrou, o que não deu para fazer e por quê</small><textarea data-rg="obsGeral" rows="2">${esc(R.obsGeral || '')}</textarea></label></div>${rgProvaHTML(P[0], R)}</div>
    <div class="card"><div class="row"><h2>2 · Itens da ficha</h2><span class="sp"></span><span class="note" id="rgCnt">${ok} OK · ${nok} NOK · ${na} NA · ${tot - ok - nok - na} sem marcação</span><button class="mbtn" data-rgall="ok">Marcar todos sem marcação como OK</button></div>
     <p class="note">Copie da ficha: OK = feito e conforme. NOK = não conforme ou não feito (escreva o motivo). Todo NOK fica como "falha sem OM" na Frota até ganhar uma corretiva ou ser marcado "não é falha" (só não foi feito). NA = não se aplica. Item NOK ou NA não conta como feito: continua vencido e volta na próxima programação.</p>${partes}</div>
    ${regs.length ? `<div class="card"><h2>3 · Registros exigidos por estes itens</h2><div class="g">${regs.map(r => `<label class="f s3">${REGN[r]}<input data-rgr="${r}" value="${esc(R.regs[r] || '')}"></label>`).join('')}</div></div>` : ''}
@@ -116,6 +118,7 @@ async function rgAplicar(P) {
     o.hreal = o.pos === 'UN' ? (R.hr[mpos(o.vessel)] || Object.values(R.hr)[0] || '') : (R.hr[o.pos] || '');
     if (o.pos === 'UN' && !o.hreal) { const hr = horAtual(o.vessel, mpos(o.vessel)); o.hreal = hr ? hr.h : ''; }
     o.indispH = n === 0 ? (R.indispH || '0') : '0'; o.resid = R.resid || ''; o.residT = R.resid === 'Sim' ? (o.residT || ['Óleo usado']) : []; o.fr016 = R.fr016 || ''; o.pt = R.pt || ''; o.justif = R.justif || '';
+    o.obsGeral = R.obsGeral || ''; o.mats = String(R.matsTxt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => { const c = l.split(/\s*[·;|]\s*/); return [c[0] || '', c[1] || '', c.slice(2).join(' ') || '']; });   // vão para o PDF do Anexo II-B
     o.reg = Object.assign({}, o.reg || {}, R.regs); o.teste = 'Itens conferidos conforme o formulário de execução assinado pelo executor e por quem recebeu a bordo (foto anexa à OM)' + (o.naoExec.length ? '; não executados: ' + o.naoExec.map(x => x.id + ' (' + x.r.toUpperCase() + (x.motivo ? ': ' + x.motivo : '') + ')').join(', ') : '');
     o.criterio = 'Especificação do Anexo I (NP 055)'; o.resultado = 'Conforme'; o.anomalia = o.anomalia && o.anomalia !== 'Não' ? o.anomalia : 'Não'; o.omCorr = o.omCorr || 'N/A';
     o.condEnc = o.condEnc || 'Conforme ficha de execução da OM ' + o.num + '.'; o.origem = o.origem || 'Plano (ClickUp)';

@@ -76,8 +76,11 @@ function docIIBOM(P) {
     B.push(sx([posCurtoE(v, o.pos), L.length + (L.length === 1 ? ' serviço' : ' serviços'), `<table class="lst"><tr><th style="width:58%">Serviço</th><th style="width:11%">A cada</th><th style="width:6%">Feito</th><th style="width:7%">Não feito</th><th>Observação</th></tr>${lin}</table>`]));
   });
   if (P.some(o => (o.itensProg || o.items || []).some(id => A1M[id] && typeof trilha === 'function' && trilha(v, o.pos, A1M[id]) === 'bordo'))) B.push(`<div class="note" style="margin:0 0 4px">Troca de óleo e filtros desta OM: registrar no <b>FR 049_B</b>. É ele que dá baixa no cronograma.</div>`);
-  B.push(sx(['Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], (o1.mats || []).length ? o1.mats.map(m => [m[0], m[1], m[2]]) : [['', '', ''], ['', '', ''], ['', '', '']], ['60%', '12%', '28%'])]));
-  B.push(sx(['Observações', 'o que encontrou, o que não deu para fazer e por quê', `<div class="v" style="min-height:46px">${esc(o1.obsGeral || '')}&nbsp;</div>`]));
+  const lx = (lab, val) => val ? dv(lab, val) : '', ext = lancada ? lx('Início', brDT(o1.inicio)) + lx('Término', brDT(o1.termino)) + lx('Gerou resíduo?', o1.resid) + lx('Nº FR 016_E', o1.fr016) + lx('Nº da PT do SESMT', o1.pt) : '';
+  if (ext) B.push(sx(['Execução', '', grid('repeat(4,1fr)', ext)]));   // o que foi lançado na tela e não aparece na identificação
+  if (lancada && o1.justif) B.push(sx(['Justificativa (passou da hora-alvo)', '', `<div class="v">${esc(o1.justif)}</div>`]));
+  if (!lancada || (o1.mats || []).length) B.push(sx(['Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], (o1.mats || []).length ? o1.mats.map(m => [m[0], m[1], m[2]]) : [['', '', ''], ['', '', ''], ['', '', '']], ['60%', '12%', '28%'])]));
+  if (!lancada || o1.obsGeral) B.push(sx(['Observações', 'o que encontrou, o que não deu para fazer e por quê', `<div class="v" style="min-height:46px">${esc(o1.obsGeral || '')}&nbsp;</div>`]));
   const F = (o1.fotos || []), na = F.filter(x => x.tipo === 'ANTES').length, nd = F.filter(x => x.tipo === 'DEPOIS').length;
   B.push(sx(['Fotos', 'item 5.8', `<div>${F.length ? `${na} foto${na === 1 ? '' : 's'} de antes e ${nd} de depois nas folhas seguintes.` : 'Tirar fotos <b>antes</b> e <b>depois</b> de cada serviço principal.'}</div>`]));
   const ap = fechada ? `<span class="stamp">✓ Conferido e encerrado no SMF · ${esc(o1.aprovBy || '')}</span>` : '';
@@ -86,19 +89,30 @@ function docIIBOM(P) {
 }
 function docIIB(o) { return docIIBOM(o.grupo ? omGrupo(o.grupo) : [o]); }
 /* Anexo II-A enxuto: o que quebrou, o que foi feito e os serviços do cronograma que a corretiva refez (são eles que alimentam o cronograma da preventiva), sem número do Anexo I */
-function docIIA(o) {
+function docIIA(o) {   // tudo o que foi preenchido na tela sai no PDF, na mesma ordem (decisão do Supervisor, 24/10/2026); campo em branco não sai
   const v = vessel(o.vessel) || { nome: o.vessel, mca: {} }, crit = o.classe === 'Crítica', fechada = o.status === 'encerrada', sx = s => blk('', s[0], s[1], s[2]).replace('<code></code>', '');
+  const tx = x => Array.isArray(x) ? x.filter(Boolean).join(', ') : x == null ? '' : String(x).trim(), d = (lab, x, span) => tx(x) ? dv(lab, tx(x), span) : '';
+  const caixa = (lab, x) => tx(x) ? `<div class="fl" style="margin-top:4px">${lab}</div><div class="v">${esc(tx(x))}</div>` : '';
+  const sec = (tit, r, ...partes) => { const h = partes.join(''); return h ? sx([tit, r, h]) : null; }, g4 = c => c ? grid('repeat(4,1fr)', c) : '';
+  const tab = (cols, L, w) => (L || []).filter(r => (r || []).some(x => tx(x))).length ? tbl(cols, L.filter(r => (r || []).some(x => tx(x))).map(r => cols.map((_, i) => r[i] || '')), w) : '';
   const fbar = `<div class="fbar"><div><small>Corretiva · o que quebrou, o que foi feito e o que volta a contar no cronograma</small><h3>Formulário II-A — Manutenção Corretiva</h3></div><div class="om">Nº da OM<br><b>${esc(o.num)}</b></div></div>`;
-  const B = [];
-  B.push(sx(['Identificação', '', grid('1fr 1.2fr 1fr 1fr', dv('Nº da OM (Sankhya)', o.num) + dv('Empurrador', v.nome) + dv('Aberta em', brDT(o.abertura)) + dv('Classe', o.classe || '')
-    + dv('Onde', o.pos === 'UN' ? 'Embarcação' : posCurtoE(v, o.pos)) + dv('Equipamento', o.equip || '') + dv('Sistema', o.sistema || '') + dv('Local', o.local || '')
-    + (crit || o.classe === 'Alta' ? dv('Nº da RNC', o.rnc || '') : '') + (crit ? dv('Interditado em', brDT(o.interdDT)) : ''))]));
-  B.push(sx(['O que aconteceu', '', `<div class="v" style="min-height:40px">${esc(o.descricao || '')}&nbsp;</div>`]));
-  B.push(sx(['O que foi feito', '', `<div class="v" style="min-height:52px">${esc(o.servicos || '')}&nbsp;</div>` + grid('1fr 1fr 1.6fr', dv('Início', brDT(o.inicio)) + dv('Término', brDT(o.termino)) + dv('Executado por', o.execn || o.exec || ''))
-    + (o.causa ? dv('Causa provável', o.causa) : '')]));
+  const par = o.par || {}, parTx = [['oleo', 'Pressão de óleo'], ['tagua', 'Temp. da água'], ['toleo', 'Temp. do óleo'], ['rpm', 'RPM'], ['bat', 'Bateria'], ['outro', 'Outro']].map(([k, l]) => d(l, par[k])).join('');
   const R = (o.itensRefeitos || []).map(k => { const [pos, id] = k.split('|'), t = A1M[id]; return t ? [pos === 'UN' ? 'Embarcação' : posCurtoE(v, pos), { h: `<b>${esc(t.chk || t.item)}</b> <span style="color:#5F6368">· ${esc(EQN[t.eq] || t.eq)}</span>` }, ivEmb(t, v, pos)] : null; }).filter(Boolean);
-  B.push(sx(['Serviços do cronograma refeitos nesta corretiva', 'o próximo vencimento conta da data de término', R.length ? tbl(['Onde', 'Serviço', 'A cada'], R, ['18%', '67%', '15%']) : '<div class="note">Nenhum.</div>']));
-  if ((o.mats || []).length) B.push(sx(['Materiais e peças usados', '', tbl(['Material / peça', 'Qtd.', 'Nº da RM / NF'], o.mats.map(m => [m[0], m[1], m[2]]), ['60%', '12%', '28%'])]));
+  const Rv = (o.itensRev || []).map(k => { const t = A1M[k.split('|')[1]]; return t ? t.chk || t.item : ''; }).filter(Boolean);
+  const B = [
+    sec('1 · Descrição da falha', 'identificação e falha (“antes”)', g4(d('Nº da OM (Sankhya)', o.num) + d('Empurrador', v.nome) + d('Classe', o.classe) + d('Aberta em', brDT(o.abertura)) + d('Sistema', o.sistema) + d('Equipamento / componente', o.equip)
+      + d('Onde', o.pos === 'UN' ? 'Embarcação' : posCurtoE(v, o.pos)) + d('Horímetro (h)', o.horimetro) + d('Local', o.local) + d('Trecho', o.trecho) + d('Origem', o.origem) + d('Modo de falha (ISO 14224)', o.modo)
+      + d('Nº da RNC', o.rnc) + d('Comunicado a (5.4.1)', o.comunicado, 2) + d('Interditada desde', brDT(o.interdDT)) + d('Interdição determinada por', o.interdPor) + d('Detecção', brDT(o.deteccao))), caixa('Descrição da falha', o.descricao), parTx ? `<div class="fl" style="margin-top:4px">Parâmetros observados na hora</div>` + g4(parTx) : ''),
+    sec('2 · Ação de contenção', 'ISO 9001 10.2.1 · ISO 14001 · ISO 45001', g4(d('A falha afetou', o.impacto, 2) + d('Nº da PT do SESMT', o.pt) + d('Liberação do SESMT', o.sesmt)), caixa('Ação de contenção executada', o.contencao)),
+    sec('3 · Reparo e restabelecimento', 'execução e condição final (“depois”)', g4(d('Quem executou', o.exec) + d(o.exec === 'Terceiro' ? 'Empresa e responsável técnico' : 'Nome e função', o.execn, 2) + d('Autorização da Gerência', o.terceiroAut) + d('Nº SC / OC', o.scoc) + d('Relatório do fornecedor', o.relTerc)
+      + d('Início do reparo', brDT(o.inicio)) + d('Término do reparo', brDT(o.termino)) + d('Nº das RMs', o.rms) + d('Horas-homem', o.hh) + d('Peças e materiais (R$)', o.custoMat) + d('Serviço de terceiro (R$)', o.custoServ)), caixa('Serviço executado', o.servicos),
+      R.length ? `<div class="fl" style="margin-top:6px">Itens do Anexo I executados neste reparo <span style="text-transform:none">· o próximo vencimento conta da data de término</span></div>` + tbl(['Onde', 'Serviço', 'A cada'], R, ['18%', '67%', '15%']) : '',
+      tab(['Peças e materiais', 'Qtd.', 'Nº da RM / NF', 'Lote', 'Validade'], o.mats, ['40%', '10%', '20%', '15%', '15%']), tab(['Medição / parâmetro', 'Especificado', 'Como encontrado', 'Como deixado', 'Unidade'], o.medsC),
+      g4(d('Gerou resíduo? (5.7)', o.resid) + d('Quais', o.residT, 2) + d('Nº FR 016_E', o.fr016) + d('Teste funcional', o.teste, 2) + d('Resultado', o.resultado) + d('Nova inspeção de segurança (5.4.1)', o.inspecao))),
+    sec('4 · Análise de causa e ação corretiva', crit || o.classe === 'Alta' ? 'obrigatório em Crítica e Alta · detalhe na RNC' : '', g4(d('Causa da falha (ISO 14224)', o.causaCat, 2) + d('Responsável', o.mitigResp) + d('Prazo', o.mitigPrazo ? brD(o.mitigPrazo) : '') + d('Situação', o.mitigSt) + d('Treinamento pós-falha', o.trPrev ? brD(o.trPrev) : '')
+      + d('O plano preventivo precisa mudar?', o.revPlano) + d('Item do Anexo I a revisar', Rv, 2)), caixa('Análise de causa raiz (5 porquês)', o.causa), caixa('Ação corretiva (eliminação da causa raiz)', o.mitig)),
+    sec('5 · Liberação para operação', '', g4(d('Liberação à operação', brDT(o.liberacao)) + d('Conferência documental', o.conferencia, 2)))
+  ].filter(Boolean);
   const F = anxFotos(o);
   B.push(sx(['Fotos', 'item 5.8', `<div>${F.length ? F.length + ' foto' + (F.length > 1 ? 's' : '') + ' nas folhas seguintes.' : 'Tirar fotos <b>antes</b> e <b>depois</b> do conserto.'}</div>`]));
   const ap = fechada ? `<span class="stamp">✓ Conferido e encerrado no SMF · ${esc(o.aprovBy || '')}</span>` : '';
