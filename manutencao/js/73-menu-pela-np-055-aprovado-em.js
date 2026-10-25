@@ -12,20 +12,23 @@ function regLista() {
   recs('lub').filter(r => r.tipo === 'fr049').forEach(r => L.push({ d: r.date, vid: r.vessel, doc: 'FR 049_B', cls: 'p-warn', ref: r.om ? 'OM ' + r.om : 'sem nº de OM', pdf: drivePdf(r.pdfFileId, '📄 PDF'), sk: r.om ? (r.skFim || (r.seed ? 'seed' : false)) : null, go: '' }));
   return L.sort((a, b) => String(b.d).localeCompare(String(a.d)));
 }
+// o que é cada documento (aparece ao passar o mouse no filtro e na etiqueta da tabela)
+const DOC_NOME = { 'FR 027_L': 'Check-list de chegada e saída do empurrador no terminal (Operador de Medição / Líder, CTF e Coordenação de Operações)', 'Anexo II-B': 'Registro de manutenção preventiva (NP 055 · Anexo II-B)', 'Anexo II-A': 'Registro de manutenção corretiva (NP 055 · Anexo II-A)', 'FR 049_B': 'Registro de troca de óleo e filtro de óleo (feito pelo CTF/MFM)' };
 function vRegs() {
   const H = hoje(), ini = REGF.per === 'mes' ? isoD(new Date(H.getFullYear(), H.getMonth(), 1)) : REGF.per === '3m' ? isoD(new Date(H.getFullYear(), H.getMonth() - 2, 1)) : REGF.per === 'ano' ? isoD(new Date(H.getFullYear(), 0, 1)) : '';
   const T0 = regLista().filter(x => (!REGF.v || x.vid === REGF.v) && (!ini || String(x.d) >= ini));
   const T = T0.filter(x => (REGF.t === 'todos' || x.doc === REGF.t) && (!REGF.sk || x.sk === false));
-  const chip = (k, val, l, n) => `<button class="cm-chip${REGF[k] === val ? ' on' : ''}" data-rgf="${k}|${val}">${l}${n != null ? ` <b>${n}</b>` : ''}</button>`;
+  const chip = (k, val, l, n, tt) => `<button class="cm-chip${REGF[k] === val ? ' on' : ''}" data-rgf="${k}|${val}"${tt ? ` title="${esc(tt)}"` : ''}>${l}${n != null ? ` <b>${n}</b>` : ''}</button>`;
   const c = d => T0.filter(x => x.doc === d).length, falta = T0.filter(x => x.sk === false).length;
   const skTx = x => x.sk === null ? '<span class="note">—</span>' : x.sk === 'seed' ? '<span class="note">exemplo</span>' : x.sk ? `<span class="pill p-ok">✓ anexado ${x.sk.at ? brD(String(x.sk.at).slice(0, 10)) : ''}</span>` : '<span class="pill p-bad">falta anexar</span>';
   const sel = `<select id="rgV" style="width:auto"><option value="">Todos os empurradores</option>${S.cfg.frota.map(v => `<option value="${v.id}"${REGF.v === v.id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select>`;
   return `<div class="vh"><div><h1>Registros e evidências</h1><p>x</p></div></div>
    <div class="card"><h2>Registros · ${T.length}</h2>
     <div class="cm-chips" style="margin-bottom:6px">${sel}<span class="note" style="margin:0 4px 0 10px">Período</span>${chip('per', 'mes', 'Este mês')}${chip('per', '3m', 'Últimos 3 meses')}${chip('per', 'ano', 'Este ano')}${chip('per', 'tudo', 'Tudo')}</div>
-    <div class="cm-chips" style="margin-bottom:10px"><span class="note" style="margin-right:4px">Documento</span>${chip('t', 'todos', 'Todos', T0.length)}${['FR 027_L', 'Anexo II-B', 'Anexo II-A', 'FR 049_B'].map(d => chip('t', d, d, c(d))).join('')}<span style="width:10px"></span>${chip('sk', REGF.sk ? '' : '1', 'Só o que falta anexar no Sankhya', falta)}</div>
+    <div class="cm-chips" style="margin-bottom:10px"><span class="note" style="margin-right:4px">Documento</span>${chip('t', 'todos', 'Todos', T0.length)}${['FR 027_L', 'Anexo II-B', 'Anexo II-A', 'FR 049_B'].map(d => chip('t', d, d, c(d), DOC_NOME[d])).join('')}<span style="width:10px"></span>${chip('sk', REGF.sk ? '' : '1', 'Só o que falta anexar no Sankhya', falta)}</div>
     <div class="tw" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Documento</th><th>Referência</th><th>Evidência</th><th>Sankhya</th><th></th></tr></thead><tbody>
-    ${T.slice(0, 300).map(x => `<tr><td class="mono">${x.d ? brD(String(x.d).slice(0, 10)) : '—'}</td><td><b>${esc(vName(x.vid))}</b></td><td><span class="pill ${x.cls}">${x.doc}</span></td><td>${esc(x.ref)}</td><td>${x.pdf}</td><td>${skTx(x)}</td><td class="rt-b">${x.go ? `<a class="mbtn sm" href="${x.go}">Abrir</a>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="note">Nenhum registro neste filtro.</td></tr>'}</tbody></table></div>
+    ${T.slice(0, 300).map(x => `<tr><td class="mono">${x.d ? brD(String(x.d).slice(0, 10)) : '—'}</td><td><b>${esc(vName(x.vid))}</b></td><td><span class="pill ${x.cls}" title="${esc(DOC_NOME[x.doc] || '')}">${x.doc}</span></td><td>${esc(x.ref)}</td><td>${x.pdf}</td><td>${skTx(x)}</td><td class="rt-b">${x.go ? `<a class="mbtn sm" href="${x.go}">Abrir</a>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="note">Nenhum registro neste filtro.</td></tr>'}</tbody></table></div>
+    <p class="note"><b>FR 027_L</b> = check-list de chegada e saída · <b>Anexo II-B</b> = registro da preventiva · <b>Anexo II-A</b> = registro da corretiva · <b>FR 049_B</b> = troca de óleo e filtro de óleo.</p>
     <p class="note">FR 027_L não vai para o Sankhya (fica no Drive). Anexo II e FR 049_B com nº de OM são anexados na OM do Sankhya, marcados em 4 · Conferir e encerrar.</p></div>`;
 }
 VX.regs = vRegs;
