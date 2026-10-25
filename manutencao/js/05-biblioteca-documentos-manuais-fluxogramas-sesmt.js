@@ -15,6 +15,8 @@ const BIB_CAT = [
 const bicon = (p, s) => `<svg viewBox="0 0 24 24" width="${s || 18}" height="${s || 18}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 // documentos que já fazem parte do sistema (não precisam de cadastro)
 const BIB_FIXOS = [
+  { cat: 'sgi', titulo: 'Apresentação do SMF · gerência e Coordenação de Operações', desc: '25 slides com as telas do sistema, o ciclo completo e as decisões (rascunho, em revisão)', url: 'https://claude.ai/artifact/VAANPwnQv27KL73mzEGwnZ' },
+  { cat: 'sgi', titulo: 'Roteiro da apresentação do SMF', desc: 'Uma folha: o que dizer em cada slide e respostas para as perguntas difíceis', url: '../docs/Roteiro_Apresentacao_SMF.html' },
   { cat: 'sgi', titulo: 'Manual de Operação do SMF', desc: 'Caderno de instruções: papéis, ciclos em fluxograma (chegada e saída, preventiva, corretiva, óleo, viagem), telas, regras, documentos, rotina e glossário', url: '../docs/Manual_Operacao_SMF.html' },
   { cat: 'fluxo', titulo: 'Fluxo do processo de manutenção (PDCA)', desc: 'Plano (Anexo I) → cronograma → programação → execução → controle → análise → melhoria (PDCA)', abre: 'fluxo' },
   { cat: 'fluxo', titulo: 'Procedimento de troca de óleo (FR 049_B)', desc: 'Preparar, drenar, filtros, abastecer, conferir, registrar, resíduos', abre: '#plano' },
