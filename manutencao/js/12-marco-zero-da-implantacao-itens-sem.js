@@ -7,17 +7,17 @@ async function aplicarMarco(date, ids) {
   return n;
 }
 function admMarcoHTML() { const a = can.admin(), F = S.cfg.frota, sem = F.filter(v => !v.marco && !foraOp(v));
-  return `<div class="card" id="cardMarco"><div class="row"><h2>Marco zero da implantação</h2><span class="sp"></span><span class="note">${F.filter(v => v.marco).length} de ${F.length} embarcações com marco</span></div>
-   <p class="note">Os itens do Anexo I que ainda não têm último serviço registrado passam a contar a partir desta data e do horímetro atual de cada motor. Quando uma OM for encerrada ou um último serviço real for lançado, ele substitui o marco automaticamente. Embarcações fora de operação ficam de fora.</p>
+  return `<div class="card" id="cardMarco"><div class="row"><h2>Marco zero da implantação</h2><span class="sp"></span><span class="note">${F.filter(v => v.marco).length} de ${F.length} empurradores com marco</span></div>
+   <p class="note">Os itens do Anexo I que ainda não têm último serviço registrado passam a contar a partir desta data e do horímetro atual de cada motor. Quando uma OM for encerrada ou um último serviço real for lançado, ele substitui o marco automaticamente. Empurradores fora de operação ficam de fora.</p>
    <div class="row"><label class="f" style="max-width:200px">Data do marco<input type="date" id="mzD" value="${isoD(hoje())}" ${a ? '' : 'disabled'}></label>
-    <button class="mbtn pri" id="mzB" ${a && sem.length ? '' : 'disabled'}>Aplicar marco zero em ${sem.length} embarcação(ões)</button></div>
-   <div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Marco</th><th>Horímetros no marco</th><th></th></tr></thead><tbody>${F.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td>${v.marco ? brD(v.marco.date) : foraOp(v) ? '<span class="note">fora de operação</span>' : '<span class="note">sem marco</span>'}</td><td class="mono">${v.marco ? Object.entries(v.marco.h || {}).map(([p, h]) => (MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p) + ' ' + nf(h)).join(' · ') || '—' : ''}</td><td>${v.marco && a ? `<button class="mbtn sm" data-mzdel="${v.id}">Remover</button>` : !v.marco && foraOp(v) && a ? `<button class="mbtn sm" data-mzone="${v.id}">Aplicar</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }
+    <button class="mbtn pri" id="mzB" ${a && sem.length ? '' : 'disabled'}>Aplicar marco zero em ${sem.length} empurrador(es)</button></div>
+   <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Marco</th><th>Horímetros no marco</th><th></th></tr></thead><tbody>${F.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td>${v.marco ? brD(v.marco.date) : foraOp(v) ? '<span class="note">fora de operação</span>' : '<span class="note">sem marco</span>'}</td><td class="mono">${v.marco ? Object.entries(v.marco.h || {}).map(([p, h]) => (MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p) + ' ' + nf(h)).join(' · ') || '—' : ''}</td><td>${v.marco && a ? `<button class="mbtn sm" data-mzdel="${v.id}">Remover</button>` : !v.marco && foraOp(v) && a ? `<button class="mbtn sm" data-mzone="${v.id}">Aplicar</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }
 document.addEventListener('click', async e => {
   const b = e.target.closest('#mzB,[data-mzdel],[data-mzone]'); if (!b || !can.admin()) return;
   if (b.id === 'mzB') { const d = $('#mzD').value; if (!d) return toast('Informe a data.'); const ids = S.cfg.frota.filter(v => !v.marco && !foraOp(v)).map(v => v.id);
-    confirmar('Aplicar o marco zero em ' + brD(d) + ' para ' + ids.length + ' embarcações? Itens sem histórico passam a contar a partir daí.', async () => { const n = await aplicarMarco(d, ids); toast('Marco zero aplicado em ' + n + ' embarcações.'); render(); }); }
+    confirmar('Aplicar o marco zero em ' + brD(d) + ' para ' + ids.length + ' empurradores? Itens sem histórico passam a contar a partir daí.', async () => { const n = await aplicarMarco(d, ids); toast('Marco zero aplicado em ' + n + ' empurradores.'); render(); }); }
   else if (b.dataset.mzone) { const n = await aplicarMarco($('#mzD').value || isoD(hoje()), [b.dataset.mzone]); toast('Marco aplicado.'); render(); }
   else { const v = vessel(b.dataset.mzdel); confirmar('Remover o marco zero de ' + v.nome + '?', async () => { delete v.marco; S.cfg.cfgAt = Date.now(); await kvSet('cfg', S.cfg); if (S.url) { try { await api('setConfig', { cfg: { frota: S.cfg.frota } }); } catch (er) { } } render(); }); }
 });
-// aviso no painel enquanto houver embarcação em operação sem marco nem histórico
+// aviso no painel enquanto houver empurrador em operação sem marco nem histórico
 

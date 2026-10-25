@@ -10,7 +10,7 @@ function cvSit(v, pos, t) {
 }
 function vCronoV2() {
   const ativos = S.cfg.frota.filter(v => !foraOp(v)); if (!CRV.v || !ativos.some(v => v.id === CRV.v)) CRV.v = (ativos[0] || {}).id;
-  const v = vessel(CRV.v); if (!v) return '<div class="empty">Nenhuma embarcação em operação.</div>';
+  const v = vessel(CRV.v); if (!v) return '<div class="empty">Nenhum empurrador em operação.</div>';
   const ps = posicoes(v), linhas = [];
   A1.forEach(t => { if (t.kind !== 'prog' || (typeof CRONO_FORA !== 'undefined' && CRONO_FORA.includes(t.id))) return;
     const pp = ps.filter(p => aplica(v, p, t)); if (!pp.length) return;
@@ -37,7 +37,7 @@ function vCronoV2() {
     <span class="cv-s venc">${cnt('venc')} vencidos</span><span class="cv-s ok">${cnt('ok') + cnt('viag')} em dia</span>${cnt('sem') ? `<span class="cv-s sem">${cnt('sem')} sem registro</span>` : ''}
     <span class="sp"></span><label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="cvSo" ${CRV.so ? 'checked' : ''}> só o que está vencendo</label>
     ${cnt('venc') + cnt('viag') ? `<a class="mbtn pri" href="#emitir/${v.id}">Abrir OM com o que vence</a>` : ''}</div>
-   <div class="card cv-card"><div class="tw"><div class="cv-tit">Cronograma empurradores · ${esc(v.nome)}</div><table class="cv-t"><colgroup><col style="width:110px"><col style="width:120px"><col style="width:38px"><col style="width:150px"><col><col style="width:96px"><col style="width:132px"><col style="width:132px"><col style="width:150px"></colgroup><thead><tr><th>Sistema</th><th>Equipamento</th><th>Nº</th><th>Item</th><th>Checklist</th><th>Frequência / Intervalo</th><th>Última vez</th><th>Próxima</th><th>Situação</th></tr></thead><tbody>${html || '<tr><td colspan="9" class="note">Nada vencendo neste empurrador.</td></tr>'}</tbody></table></div></div>`;
+   <div class="card cv-card"><div class="tw"><div class="cv-tit">Cronograma empurradores · ${esc(v.nome)}</div><table class="cv-t"><colgroup><col style="width:110px"><col style="width:120px"><col style="width:38px"><col style="width:150px"><col><col style="width:96px"><col style="width:132px"><col style="width:132px"><col style="width:150px"></colgroup><thead><tr><th>Sistema</th><th>Equipamento</th><th>Nº</th><th>Item</th><th>Serviço</th><th>Frequência / Intervalo</th><th>Última vez</th><th>Próxima</th><th>Situação</th></tr></thead><tbody>${html || '<tr><td colspan="9" class="note">Nada vencendo neste empurrador.</td></tr>'}</tbody></table></div></div>`;
 }
 VX.crono = vCronoV2;
 AFTER.crono = function () { const m = $('#main');

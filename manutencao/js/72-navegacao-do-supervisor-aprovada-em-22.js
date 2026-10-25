@@ -1,7 +1,7 @@
 /* ===== Navegação do Supervisor (aprovada em 22/10/2026): Operação (o dia, 1 → 4) · Acompanhamento (plano, motores, indicadores) · Apoio (consulta) =====
    · número no menu = trabalho pendente (Frota: urgentes; 2: empurradores com itens para programar; 3: OMs abertas + falhas sem OM; 4: a conferir + a anexar no Sankhya); item da operação sem nada fica apagado
    · 3 · Executar e lançar com duas abas: Preventivas (oms) e Corretivas e falhas (falhas2) · Calibração e docagem vai para o Plano preventivo · "Condição dos motores"
-   · cada tela da operação termina com "→ Próximo" para a etapa seguinte; a ficha do empurrador tem "← Frota". */
+   · cada tela da operação termina com "→ Próximo" para a etapa seguinte; a ficha técnica do empurrador tem "← Frota". */
 'use strict';
 const NAV_C = { v: -1, d: '', r: null };
 function navCont() { const k = (S.recs.__v || 0) + '|' + S.recs.size + '|' + isoD(hoje()); if (NAV_C.r && NAV_C.v === k) return NAV_C.r;

@@ -32,7 +32,7 @@ AFTER.rotina = function () { const m = $('#main'); m.onclick = async e => { cons
   if (S.session && S.session.role === 'opr') return;
   const N = new Map(S.cfg.frota.map(v => [v.nome, v.id]));
   document.querySelectorAll('#main b').forEach(b => { const id = N.get(b.textContent.trim()); if (!id || b.closest('a,button,select,label')) return;
-    const a = document.createElement('a'); a.href = '#barco/' + id; a.className = 'f2-nm'; a.title = 'Abrir a ficha do empurrador'; b.replaceWith(a); a.appendChild(b); });
+    const a = document.createElement('a'); a.href = '#barco/' + id; a.className = 'f2-nm'; a.title = 'Abrir a ficha técnica do empurrador'; b.replaceWith(a); a.appendChild(b); });
 };
 { const st = document.createElement('style'); st.textContent = `
  

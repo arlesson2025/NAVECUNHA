@@ -63,7 +63,7 @@ function cmpMatriz(D) {
     <td><span class="pill ${CMP_ST[x.st][0]}">${CMP_ST[x.st][1]}</span>${x.vencida ? ' <span class="pill p-bad">Vencida</span>' : ''}</td></tr>`;
   return `<div class="card"><div class="row"><h2>Matriz de compressão da frota</h2><span class="sp"></span><span class="note">MPa {kgf/cm²} · clique na linha para ver o detalhe</span></div>
    <div class="cm-chips">${Object.keys(nomes).map(k => `<button class="cm-chip${CF.f === k ? ' on' : ''}" data-cmf="${k}">${nomes[k]} <b>${cnt[k]}</b></button>`).join('')}</div>
-   <div class="tw"><table class="t cm-t"><thead><tr><th>Embarcação</th><th class="r">Horímetro MCP</th><th class="r">Últ. medição</th><th class="r">Menor cil.</th><th class="r">Dif. cil.</th><th class="r">Queda /1.000 h</th><th class="r">Proj. até limite</th><th class="r">Próx. medição</th><th class="r">Falta</th><th>Status</th></tr></thead>
+   <div class="tw"><table class="t cm-t"><thead><tr><th>Empurrador</th><th class="r">Horímetro MCP</th><th class="r">Últ. medição</th><th class="r">Menor cil.</th><th class="r">Dif. cil.</th><th class="r">Queda /1.000 h</th><th class="r">Proj. até limite</th><th class="r">Próx. medição</th><th class="r">Falta</th><th>Status</th></tr></thead>
    <tbody>${F.map(linha).join('') || '<tr><td colspan="10" class="mut">Nenhum motor neste filtro.</td></tr>'}</tbody></table></div>
    <p class="note">Queda = inclinação das 3 últimas medições do pior cilindro, em MPa a cada 1.000 h · Projeção = horas até 1,27 MPa por essa reta (meses pelo uso real do horímetro) · Próx. medição = último ensaio + 1.000 h · Falta: negativo = vencido.</p></div>`;
 }

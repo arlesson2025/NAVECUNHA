@@ -1,16 +1,16 @@
-/* ===== OM por embarcação (uma por janela) · ficha checklist para a equipe de terra · lançamento rápido · rotina do dia ===== */
+/* ===== OM por empurrador (uma por janela) · ficha checklist para a equipe de terra · lançamento rápido · rotina do dia ===== */
 'use strict';
 ETAPAS_P[1][1] = 'Em execução'; ETAPAS_P[2][1] = 'Executada';
 const omGrupo = g => oms().filter(o => o.tipo === 'P' && o.grupo === g).sort((a, b) => (a.parte || 0) - (b.parte || 0));
 const grpOrd = ETAPAS_P.map(x => x[0]);
 const grpStatus = P => grpOrd[Math.min(...P.map(o => Math.max(0, grpOrd.indexOf(o.status))))];
 const grpItens = P => P.reduce((a, o) => a + (o.itensProg || o.items || []).length, 0);
-const grpNext = { emitida: ['abordo', 'Iniciar execução'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Lançar a ficha'] };
+const grpNext = { emitida: ['abordo', 'Registrar início do serviço'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Lançar a ficha'] };
 const ivEmb = (t, v, p) => { const iv = intervalo(t, v, p); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' / '); };
 const ladoMCA = (v, p) => { const l = v && v.mcaLoc && v.mcaLoc[p] ? v.mcaLoc[p] : ''; return /^bomb/i.test(l) ? 'BB' : /^bores/i.test(l) ? 'BE' : ''; };
-const posCurtoE = (v, p) => { if (p === 'UN') return 'Embarcação'; if (isMcp(p)) return p === 'CE' || mcpPos(v).length < 2 ? 'MCP' : 'MCP ' + p; if (p === 'MCA3') return 'Motobomba de incêndio (MCA 3)'; if (MCAS.includes(p)) { const n = MCAS.filter(k => v && v.mca && v.mca[k] && k !== 'MCA3').length, l = ladoMCA(v, p); return n < 2 ? 'MCA' : l ? 'MCA ' + l : posNome(v, p); } return posNome(v, p); };
+const posCurtoE = (v, p) => { if (p === 'UN') return 'Empurrador'; if (isMcp(p)) return p === 'CE' || mcpPos(v).length < 2 ? 'MCP' : 'MCP ' + p; if (p === 'MCA3') return 'Motobomba de incêndio (MCA 3)'; if (MCAS.includes(p)) { const n = MCAS.filter(k => v && v.mca && v.mca[k] && k !== 'MCA3').length, l = ladoMCA(v, p); return n < 2 ? 'MCA' : l ? 'MCA ' + l : posNome(v, p); } return posNome(v, p); };
 
-/* ---------- 1 · Programação: uma OM por embarcação ---------- */
+/* ---------- 1 · Programação: uma OM por empurrador ---------- */
 function foraJanela(id, v, pos) { if (id === DOCA.item || (DOCA.junto || []).includes(id)) return true; if (!v || !pos) return false; const tr = trilha(v, pos, A1M[id]); return tr === 'bordo' || tr === 'doca'; }   // docagem, o que só se faz em dique e o que vai na troca de óleo: fora da OM de janela   // docagem e o que só se faz em dique: planejamento próprio
 function embPartes(v) {
   const P = painelVessel(v, EM.viag ?? viagemDe(v)), viag = EM.viag ?? viagemDe(v), por = {};
@@ -33,7 +33,7 @@ function embTexto(v, partes) {
 /* ---------- 2 · Ficha impressa: checklist em poucas folhas ---------- */
 
 
-/* ---------- 3 · Quadro de OMs: uma linha por OM da embarcação ---------- */
+/* ---------- 3 · Quadro de OMs: uma linha por OM do empurrador ---------- */
 function vAcomp() {
   const ab = oms().filter(o => o.status !== 'encerrada' || (o.fechadoAt && Date.now() - o.fechadoAt < 7 * 864e5));
   const vis = new Set(), L = [];
@@ -47,14 +47,14 @@ function vAcomp() {
        ${late ? '<span class="pill p-bad">Início em atraso</span>' : ''}${o.devolvida ? `<span class="pill p-warn">Devolvida: ${esc(o.devolvida)}</span>` : ''}
        <div class="acts">${nx && x.status !== 'encerrada' ? `<button class="mbtn sm ${nx[0] === 'conferencia' ? 'pri' : ''}" data-gadv="${esc(x.g)}|${nx[0]}">${nx[1]}</button>` : ''}<a class="mbtn sm ${x.status === 'conferencia' ? 'pri' : ''}" href="#omg/${encodeURIComponent(x.g)}">${x.status === 'conferencia' ? 'Conferir' : x.status === 'encerrada' ? 'Ver' : 'Abrir'}</a><button class="mbtn sm" data-ficha="${o.id}">Ficha</button></div></div>`; }
     const c = o.pos === 'BB' ? 'var(--bb)' : o.pos === 'BE' ? 'var(--be)' : o.pos === 'CE' ? 'var(--navy)' : 'var(--acc)';
-    const next = o.tipo === 'C' ? { aberta: ['execucao', 'Iniciar execução'], execucao: ['conferencia', 'Conferir'] }[o.status] : { emitida: ['abordo', 'Iniciar execução'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Conferir'] }[o.status];
+    const next = o.tipo === 'C' ? { aberta: ['execucao', 'Registrar início do serviço'], execucao: ['conferencia', 'Conferir'] }[o.status] : { emitida: ['abordo', 'Registrar início do serviço'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Conferir'] }[o.status];
     return `<div class="omc" style="--c:${c}"><div class="h"><b class="num">OM ${esc(o.num)}</b>${posTag(o.pos)}</div><div>${esc(vName(o.vessel))}</div>${tipoPill(o)}
       <div class="note">${o.tipo === 'C' ? esc(o.descricao || '') : (o.items || []).join(' · ')}</div>
       <div class="note mono">${o.tipo === 'C' ? 'aberta ' + brDT(o.abertura) : (o.alvoH ? 'alvo ' + nf(o.alvoH) + ' h' : '') + (o.alvoD ? ' · até ' + brD(o.alvoD) : '')}</div>
       ${late ? '<span class="pill p-bad">Início em atraso</span>' : ''}${o.devolvida ? `<span class="pill p-warn">Devolvida: ${esc(o.devolvida)}</span>` : ''}
       <div class="acts">${next && o.status !== 'encerrada' ? `<button class="mbtn sm ${next[0] === 'conferencia' ? 'pri' : ''}" data-adv="${o.id}|${next[0]}">${next[1]}</button>` : ''}<a class="mbtn sm" href="#om/${o.id}">Abrir</a>${o.tipo === 'P' ? `<button class="mbtn sm" data-ficha="${o.id}">Ficha</button>` : ''}</div></div>`; };
   const colsH = (AC.tipo === 'todas' ? ETAPAS_P : cols).map(([k, l]) => { const l2 = L.filter(x => (AC.tipo === 'C' ? x.status : colOf(x)) === k); return `<div class="col"><h4>${AC.tipo === 'todas' && k === 'emitida' ? 'Emitida / aberta' : l}<span class="mono">${l2.length}</span></h4>${l2.map(card).join('') || '<div class="note">Nenhuma</div>'}</div>`; }).join('');
-  return `<div class="vh"><div><h1>OMs em execução</h1><p>Cada cartão é uma OM. Preventiva: uma por embarcação, executada pela equipe de terra. Avance o cartão conforme o serviço anda; na volta da ficha, clique em <b>Lançar a ficha</b>.</p></div><span class="sp"></span>
+  return `<div class="vh"><div><h1>OMs em execução</h1><p>Cada cartão é uma OM. Preventiva: uma por empurrador, executada pela equipe de terra. Avance o cartão conforme o serviço anda; quando a equipe devolver a OM assinada, clique em <b>Registrar a execução</b>.</p></div><span class="sp"></span>
    <div class="seg">${[['todas', 'Todas'], ['P', 'Preventivas'], ['C', 'Corretivas']].map(([k, l]) => `<button data-ac="${k}" class="${AC.tipo === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
    <div class="kan" style="grid-template-columns:repeat(${AC.tipo === 'C' ? 4 : 5},minmax(210px,1fr))">${colsH}</div><p class="note">Encerradas aparecem por 7 dias.</p>`;
 }
@@ -106,7 +106,7 @@ function omgCorpo() {
    </div>
    <div class="card rg-fim"><h2>${regs.length ? 5 : 4} · Conferência e encerramento</h2>
     ${fechada ? '<p class="note">Encerrada.</p>' : pend.length ? `<div class="banner warn"><b>Falta:</b> ${pend.map(esc).join(' · ')}</div>` : '<div class="banner ok">Tudo preenchido. Pode aprovar.</div>'}
-    ${fechada ? '' : `<div class="row"><button class="mbtn" data-rgact="salvar">💾 Salvar</button>${st !== 'conferencia' ? '<button class="mbtn" data-rgact="conf">Enviar para conferência</button>' : ''}<span class="sp"></span><button class="mbtn ok" data-rgact="aprovar" ${pend.length ? 'disabled' : ''}>✓ Aprovar a OM inteira e gerar os PDFs</button></div><p class="note">Ao aprovar, cada parte (motor / embarcação) gera o seu Anexo II-B com a mesma OM ${esc(o1.num)}. Itens OK passam a contar como feitos; NOK/NA continuam vencidos.</p>`}</div>`;
+    ${fechada ? '' : `<div class="row"><button class="mbtn" data-rgact="salvar">💾 Salvar</button>${st !== 'conferencia' ? '<button class="mbtn" data-rgact="conf">Enviar para conferência</button>' : ''}<span class="sp"></span><button class="mbtn ok" data-rgact="aprovar" ${pend.length ? 'disabled' : ''}>✓ Aprovar a OM inteira e gerar os PDFs</button></div><p class="note">Ao aprovar, cada parte (motor / empurrador) gera o seu Anexo II-B com a mesma OM ${esc(o1.num)}. Itens OK passam a contar como feitos; NOK/NA continuam vencidos.</p>`}</div>`;
 }
 async function rgAplicar(P) {
   const R = rgDados(P), v = vessel(P[0].vessel), regs = rgRegs(P);
@@ -152,7 +152,7 @@ AFTER.omg = function () {
 };
 { const s = SECOES.find(x => x.id === 'exec'); if (s) s.extra = (s.extra || []).concat(['omg']); }
 
-/* ---------- 5 · Rotina do dia: o que fazer, em ordem, por embarcação ---------- */
+/* ---------- 5 · Rotina do dia: o que fazer, em ordem, por empurrador ---------- */
 function rotinaDados() {
   return S.cfg.frota.map(v => {
     if (foraOp(v)) return { v, fora: true };
@@ -167,7 +167,7 @@ function rotinaDados() {
 function rotinaPasso(x) {
   if (x.fora) return { n: 0, txt: 'Fora de operação', btn: '' };
   if (x.om) { const o = x.om, L = x.om.grp ? `#omg/${encodeURIComponent(o.g)}` : `#om/${o.id}`;
-    if (o.st === 'emitida') return { n: 2, txt: `OM ${esc(o.num)} emitida: imprimir a ficha e entregar à equipe de terra`, btn: `<button class="mbtn sm" data-ficha="${o.id}">🖨 Ficha</button><button class="mbtn sm pri" data-rtadv="${esc(o.g)}|abordo|${o.grp ? 1 : 0}">Iniciar execução</button>` };
+    if (o.st === 'emitida') return { n: 2, txt: `OM ${esc(o.num)} emitida: imprimir a OM (Anexo II-B) e entregar à equipe de terra`, btn: `<button class="mbtn sm" data-ficha="${o.id}">🖨 Ficha</button><button class="mbtn sm pri" data-rtadv="${esc(o.g)}|abordo|${o.grp ? 1 : 0}">Iniciar execução</button>` };
     if (o.st === 'abordo') return { n: 3, txt: `OM ${esc(o.num)} em execução pela equipe de terra`, btn: `<button class="mbtn sm pri" data-rtadv="${esc(o.g)}|executada|${o.grp ? 1 : 0}">Terminou a execução</button>` };
     if (o.st === 'executada') return { n: 4, txt: `OM ${esc(o.num)} executada: lançar a ficha que voltou`, btn: `<a class="mbtn sm pri" href="${L}">Lançar a ficha</a>` };
     if (o.st === 'conferencia') return { n: 5, txt: `OM ${esc(o.num)} lançada: conferir e aprovar`, btn: `<a class="mbtn sm pri" href="${L}">Conferir e aprovar</a>` }; }

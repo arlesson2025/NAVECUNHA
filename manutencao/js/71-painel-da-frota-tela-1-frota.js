@@ -16,7 +16,7 @@ function pfPasso(v) {   /* próximo passo no porto, na ordem do ciclo: horímetr
   if (P.length) return { tx: P.length + ' ite' + (P.length > 1 ? 'ns' : 'm') + ' para programar', b: `<a class="mbtn sm pri" href="#emitir/${v.id}">Programar preventiva</a>` };
   const G = {}; oms().filter(o => o.tipo === 'P' && o.vessel === v.id && !o.excluido && ['emitida', 'abordo', 'executada'].includes(o.status)).forEach(o => { G[o.grupo || o.id] = o; });
   const om = Object.entries(G)[0];
-  if (om) return { tx: 'OM ' + esc(om[1].num) + ' emitida: lançar o formulário', b: `<a class="mbtn sm pri" href="${om[1].grupo ? '#omg/' + encodeURIComponent(om[0]) : '#om/' + om[1].id}">Lançar formulário</a>` };
+  if (om) return { tx: 'OM ' + esc(om[1].num) + ' emitida: registrar a execução', b: `<a class="mbtn sm pri" href="${om[1].grupo ? '#omg/' + encodeURIComponent(om[0]) : '#om/' + om[1].id}">Lançar formulário</a>` };
   const O = (typeof oleoDoBarco === 'function' ? oleoDoBarco(v) : []).filter(o => o.rest < (typeof horasViagem === 'function' ? horasViagem(v, o.pos) : 480)), PP = typeof popaPend === 'function' ? popaPend(v) : [], n = O.length + PP.length;
   if (n) return { tx: n + ' troca' + (n > 1 ? 's' : '') + ' de óleo antes de sair', b: `<button class="mbtn sm pri" data-frv="${v.id}">Lançar troca de óleo</button>` };
   return { tx: 'Pronto para sair', b: `<button class="mbtn sm pri" data-situ="${v.id}|viagem">Saiu de viagem</button>` };
@@ -26,7 +26,7 @@ function vPainel() {
   const pend = v => { const re = new RegExp('(^|[^A-Za-z])' + v.nome.replace(/[^\wÀ-ú ]/g, '.') + '(?![A-Za-z0-9])'); return AG.filter(a => re.test(a.txt.replace(/<[^>]+>/g, ''))); };
   const desde = (pre, d) => { const n = f2Dias(d); return n == null ? pre : n === 0 ? pre + ' desde hoje' : pre + ' há ' + f2DiasTx(n); };
   const Q = op.map(v => { const s = situDe(v), x = FM.find(y => y.v === v) || { sit: 0, n: { venc: 0 } };
-    if (!s) return { v, cls: 'sem', rot: 'Sem situação', onde: 'Informe onde está', passo: { tx: 'Sem essa informação o painel não sabe se pode sair', b: `<button class="mbtn sm" data-situ="${v.id}|porto">No porto</button><button class="mbtn sm" data-situ="${v.id}|viagem">Em viagem</button>` }, x, p: pend(v) };
+    if (!s) return { v, cls: 'sem', rot: 'Local não informado', onde: 'Informe onde está', passo: { tx: 'Sem essa informação o painel não sabe se pode sair', b: `<button class="mbtn sm" data-situ="${v.id}|porto">No porto</button><button class="mbtn sm" data-situ="${v.id}|viagem">Em viagem</button>` }, x, p: pend(v) };
     if (v.situ.st === 'viagem') { const O = (typeof oleoDoBarco === 'function' ? oleoDoBarco(v) : [])[0];
       const ol = !O ? '' : O.rest < 0 ? `<span style="color:var(--badt)">Óleo do ${esc(O.nome)} vencido</span>` : O.porData ? `Óleo do ${esc(O.nome)}: vence em ${O.dd} dias` : `Óleo do ${esc(O.nome)}: faltam ${nf(O.rest)} h`;
       return { v, cls: 'via', rot: 'Em viagem', onde: desde('Viajando', v.situ.at), passo: { tx: ol || 'Acompanhar a viagem', b: `<button class="mbtn sm pri" data-situ="${v.id}|porto">Chegou em Manaus</button><details class="pf-m"><summary class="mbtn sm" aria-label="Mais ações">⋯</summary><div><button class="mbtn sm" data-pmcnovo="${v.id}">📋 Leituras do MCP</button><button class="mbtn sm" data-avaria="${v.id}">⚠ Avaria</button></div></details>` }, x, p: pend(v) }; }
@@ -37,14 +37,14 @@ function vPainel() {
   const PFC = { lib: 'var(--okt)', res: 'var(--warnt)', blo: 'var(--badt)', via: '#1967D2', sem: 'var(--mut)' }, k = (cls, l, n) => `<div class="f2-k"><span>${l}</span><b style="color:${n ? PFC[cls] : 'inherit'}">${n}</b></div>`;
   const quadro = Q.map(q => { const n1 = q.p.filter(a => a.p === 1).length, n = q.p.length;
     /* lista: uma linha por empurrador (pedido do Supervisor, 24/10/2026: "deixa em forma de lista, está horrível assim") */
-    return `<tr class="pf-r ${q.cls}" data-pfgo="${q.v.id}" title="Abrir a ficha do ${esc(q.v.nome)}"><td class="pf-c-nm"><b>${esc(q.v.nome)}</b></td><td><span class="pf-st">${q.rot}</span></td>
+    return `<tr class="pf-r ${q.cls}" data-pfgo="${q.v.id}" title="Abrir a ficha técnica do ${esc(q.v.nome)}"><td class="pf-c-nm"><b>${esc(q.v.nome)}</b></td><td><span class="pf-st">${q.rot}</span></td>
       <td class="pf-o">${q.onde}${q.x.n && q.x.n.venc ? `<div style="color:var(--badt)">${q.x.n.venc} ite${q.x.n.venc > 1 ? 'ns' : 'm'} vencido${q.x.n.venc > 1 ? 's' : ''}</div>` : ''}</td>
       <td class="pf-p">${q.passo.tx}</td><td class="pf-c-n">${n ? `<span class="pf-n${n1 ? ' u' : ''}" title="pendências deste empurrador">${n} pendência${n > 1 ? 's' : ''}</span>` : '<span class="note">—</span>'}</td><td class="pf-a">${q.passo.b}</td></tr>`; }).join('');
   const A = f2Agora(), U = A.filter(a => a.p === 1), W = A.filter(a => a.p !== 1), MX = 8;
   const lista = (L, cls, tit) => L.length ? `<div class="pf-g"><h3 class="${cls}">${tit} · ${L.length}</h3>${L.map((a, i) => `<div class="pf-l${i >= MX ? ' pf-x' : ''}"${i >= MX ? ' hidden' : ''}><span class="pf-d ${cls}"></span><span class="pf-lt">${a.txt}</span><span class="pf-lb">${a.btn || ''}</span></div>`).join('')}</div>` : '';
   const dia = hoje().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
-  return `<div class="cm-v pf"><div class="vh"><div><h1>Frota</h1><p>${esc(dia)} · ${op.length} empurradores em operação · clique na linha para abrir a ficha</p></div><span class="sp"></span><button class="mbtn" data-f2reset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
-   <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="f2-ks">${k('lib', 'Liberados', c('lib'))}${k('res', 'Com restrição', c('res'))}${k('blo', 'Bloqueados', c('blo'))}${k('via', 'Em viagem', c('via'))}${c('sem') ? k('sem', 'Sem situação', c('sem')) : ''}</div></div>
+  return `<div class="cm-v pf"><div class="vh"><div><h1>Frota</h1><p>${esc(dia)} · ${op.length} empurradores em operação · clique na linha para abrir a ficha técnica</p></div><span class="sp"></span><button class="mbtn" data-f2reset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div>
+   <div class="cm-ws"><div class="card"><h2>Resumo</h2><div class="f2-ks">${k('lib', 'Liberados', c('lib'))}${k('res', 'Com restrição', c('res'))}${k('blo', 'Bloqueados', c('blo'))}${k('via', 'Em viagem', c('via'))}${c('sem') ? k('sem', 'Local não informado', c('sem')) : ''}</div></div>
    <div class="card"><h2>1 · Como está a frota</h2><div class="pf-tw"><table class="pf-tb"><thead><tr><th>Empurrador</th><th>Situação</th><th>Onde está</th><th>Próximo passo</th><th>Pendências</th><th></th></tr></thead><tbody>${quadro}</tbody></table></div>${fora.length ? `<p class="note" style="margin-top:10px">Fora de operação: ${fora.map(v => esc(v.nome)).join(', ')}</p>` : ''}</div>
    <div class="card"><h2>2 · O que fazer agora</h2>${A.length ? `<div class="pf-ag">${lista(U, 'u', 'Urgente')}${lista(W, 'w', 'Esta semana')}${U.length > MX || W.length > MX ? '<button class="mbtn sm" data-pfmais>Mostrar todas</button>' : ''}</div>` : '<p class="note pf-ok">✓ Nada pendente agora.</p>'}</div></div></div>`;
 }

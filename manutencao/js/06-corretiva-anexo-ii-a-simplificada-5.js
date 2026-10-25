@@ -17,14 +17,14 @@ function formIIA(o) {
   const terc = o.exec === 'Terceiro', crit = o.classe === 'Crítica', ca = ehCA(o);
   if (crit && o.interd !== 'Sim') o.interd = 'Sim';
   return `<div class="card cblk">${blkH(1, 'Descrição da falha', 'identificação e falha (“antes”)')}<div class="g">
-    <label class="f s2">Nº da OM (Sankhya)<input value="${esc(o.num)}" readonly></label><label class="f s2">Embarcação<input value="${esc(vName(o.vessel))}" readonly></label><label class="f s2">Classe<input value="${esc(o.classe)}" readonly></label>
+    <label class="f s2">Nº da OM (Sankhya)<input value="${esc(o.num)}" readonly></label><label class="f s2">Empurrador<input value="${esc(vName(o.vessel))}" readonly></label><label class="f s2">Classe<input value="${esc(o.classe)}" readonly></label>
     ${fSel(o, 'sistema', 'Sistema (7.1)', SISTEMAS, 's3')}${fIn(o, 'equip', 'Equipamento / componente', 's3')}
     <label class="f s1">Posição<input value="${POSN[o.pos]}" readonly></label>${fIn(o, 'horimetro', 'Horímetro (h)', 's1', 'inputmode="numeric"')}${fRad(o, 'local', 'Local', ['Terminal', 'Em viagem'], 's2')}${fIn(o, 'trecho', 'Trecho (se em viagem)', 's2')}
     ${fTA(o, 'descricao', 'Descrição da falha (modo de detecção, localização, sintomas)', 's6', 3)}${fSel(o, 'modo', 'Modo de falha (ISO 14224)' + (ca ? ' · obrigatório' : ''), MODOS, 's3')}
     ${fDT(o, 'abertura', 'Abertura da OM', 's2')}${fSel(o, 'origem', 'Origem', ['FR 027_L', 'Pré-operacional', 'Em viagem (Autotrac)', 'SESMT', 'Outra'], 's2')}${ca ? fIn(o, 'rnc', 'Nº da RNC (obrigatório)', 's2') : ''}
     ${ca ? fMul(o, 'comunicado', 'Comunicado imediatamente a (5.4.1)', ['Coordenação de Operações', 'Supervisão de Manutenção'], 's6') : ''}
     ${crit ? fDT(o, 'interdDT', 'Interditada desde', 's3') + fIn(o, 'interdPor', 'Interdição determinada por', 's3') : ''}</div>
-    ${crit ? '<div class="banner bad">Falha Crítica: a embarcação está interditada até a liberação do Coordenador de Operações e do Supervisor de Manutenção (bloco 5).</div>' : ''}
+    ${crit ? '<div class="banner bad">Falha Crítica: o empurrador está interditado até a liberação do Coordenador de Operações e do Supervisor de Manutenção (bloco 5).</div>' : ''}
     <details class="cdet"><summary>Parâmetros observados na hora (opcional)</summary><div class="g">${[['oleo', 'Pressão de óleo'], ['tagua', 'Temp. da água'], ['toleo', 'Temp. do óleo'], ['rpm', 'RPM'], ['bat', 'Bateria'], ['outro', 'Outro']].map(([k, l]) => fIn(o, 'par|' + k, l, 's1')).join('')}${fDT(o, 'deteccao', 'Detecção', 's2')}${fDT(o, 'comunicacao', 'Comunicação', 's2')}${fRad(o, 'meio', 'Meio', ['Autotrac', 'Telefone', 'Presencial'], 's2')}</div></details></div>
 
   <div class="card cblk">${blkH(2, 'Ação de contenção', 'proteger pessoas, meio ambiente e operação · ISO 9001 10.2.1 · ISO 14001 · ISO 45001', 'amb')}<div class="g">

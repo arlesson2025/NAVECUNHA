@@ -127,7 +127,7 @@ async function fr27Salvar(v, mov, win, ov) {
   let D; try { D = fr27Ler(win); } catch (e) { alert('Não consegui ler o formulário: ' + e.message); return; }
   const F = fr27Faltas(D); if (F.length) { alert('Falta preencher no FR 027_L:\n• ' + F.join('\n• ')); return; }
   const outra = D.nc.filter(x => /^\d{3,}$/.test(x.o)).map(x => [x, oms().find(o => o.num === x.o && o.vessel !== v.id)]).filter(y => y[1]);
-  if (outra.length) { alert('Nº de OM que já pertence a outra embarcação:\n• ' + outra.map(([x, o]) => 'OM ' + x.o + ' é do ' + vName(o.vessel) + ' (' + x.lab + ')').join('\n• ') + '\nConfira o número no Sankhya.'); return; }
+  if (outra.length) { alert('Nº de OM que já pertence a outro empurrador:\n• ' + outra.map(([x, o]) => 'OM ' + x.o + ' é do ' + vName(o.vessel) + ' (' + x.lab + ')').join('\n• ') + '\nConfira o número no Sankhya.'); return; }
   const dup = fr27s(v.id).find(r => r.mov === (mov === 'Saida' ? 'saida' : 'chegada') && r.date === D.date);
   if (dup && !confirm('Já existe um FR 027_L de ' + (mov === 'Saida' ? 'saída' : 'chegada') + ' do ' + v.nome + ' salvo hoje' + (dup.hora ? ' às ' + dup.hora : '') + '.\nSalvar outro mesmo assim?')) return;
   const semOM = D.nc.filter(x => !/^\d{3,}$/.test(x.o)).length;

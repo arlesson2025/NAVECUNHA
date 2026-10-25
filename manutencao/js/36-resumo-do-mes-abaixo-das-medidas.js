@@ -1,4 +1,4 @@
-/* ===== Resumo do mês (abaixo das medidas de mitigação): OMs fechadas por embarcação + Pareto de falhas por sistema ===== */
+/* ===== Resumo do mês (abaixo das medidas de mitigação): OMs fechadas por empurrador + Pareto de falhas por sistema ===== */
 let RM_SEL = null;   // null = mês atual · 'todos' = 12 meses · ou índice do mês (y*12+m)
 const rmSis = s => String(s || '?').replace(/^\d+\.0 /, '').replace(/^\d+\. /, '').replace('Sistema de ', '').replace('Manobrabilidade e Governo', 'Governo').replace('Geração Elétrica de Bordo', 'Geração').replace('Alimentação de Combustível', 'Combustível').replace('Salvaguarda e Flutuabilidade', 'Salvaguarda').replace('Sinalização e Comunicação', 'Comunicação').replace('Resposta a Emergências', 'Emergências').replace('Fainas de Amarra e Carga', 'Amarra').replace('Auxílio à Navegação', 'Aux. navegação');
 function rmBarras(lab, P, C) {
@@ -37,7 +37,7 @@ function resumoMesHTML() {
   fal.forEach(o => { const s = rmSis(o.sistema); cnt[s] = (cnt[s] || 0) + 1; });
   const E = Object.entries(cnt).sort((a, b) => b[1] - a[1]);
   const cab = `<div class="ab4-sec rm-sec"><h2>Resumo do mês · ${esc(tit.charAt(0).toUpperCase() + tit.slice(1))}</h2><span class="sp"></span><div class="rk-f" style="margin:0">${MS.map(k => `<button data-rmm="${k}" class="${!todos && k === sel ? 'on' : ''}">${MESESL[k % 12].slice(0, 3).toLowerCase()}</button>`).join('')}<button data-rmm="todos" class="${todos ? 'on' : ''}">Todos os meses</button></div></div>`;
-  const c1 = `<div class="card rm" data-lk="OMs fechadas por embarcacao"><h2>O que foi feito · OMs fechadas por embarcação</h2><p class="rm-sub">Preventivas (azul) × corretivas (âmbar) · ${enc.length} OM${enc.length === 1 ? '' : 's'} fechada${enc.length === 1 ? '' : 's'}</p>${rmBarras(V.map(v => v.nome.replace(/^CJA /, '')), P, C)}</div>`;
+  const c1 = `<div class="card rm" data-lk="OMs fechadas por embarcacao"><h2>O que foi feito · OMs fechadas por empurrador</h2><p class="rm-sub">Preventivas (azul) × corretivas (âmbar) · ${enc.length} OM${enc.length === 1 ? '' : 's'} fechada${enc.length === 1 ? '' : 's'}</p>${rmBarras(V.map(v => v.nome.replace(/^CJA /, '')), P, C)}</div>`;
   const c2 = `<div class="card rm" data-lk="Pareto por sistema"><h2>O que mais quebrou · Pareto por sistema</h2><p class="rm-sub">Falhas registradas no período (${fal.length}) e % acumulado</p>${E.length ? rmPareto(E) : '<div class="note" style="padding:30px 0">Nenhuma falha registrada no período.</div>'}</div>`;
   return cab + `<div class="two">${c1}${c2}</div>`;
 }

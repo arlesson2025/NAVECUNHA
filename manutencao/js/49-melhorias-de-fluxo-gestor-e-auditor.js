@@ -3,7 +3,7 @@
    4 · links da cadeia de evidência (OM → PDF do FR 027_L de origem; saída → PDF do FR 027_L de saída)
    5 · histórico de cada OM visível (quem emitiu, avançou, devolveu, aprovou e quando)
    6 · Hoje: "O que precisa de você agora" no topo, em ordem de risco
-   (2 · horímetro recusado vira pendência · 3 · aviso de FR 027_L em duplicidade · 7 · nº de OM de outra embarcação: no bloco FR 027_L) */
+   (2 · horímetro recusado vira pendência · 3 · aviso de FR 027_L em duplicidade · 7 · nº de OM de outro empurrador: no bloco FR 027_L) */
 'use strict';
 function fr27Pend(vid) { return fr27s(vid).flatMap(r => fr27SemOM(r).map(x => Object.assign({ orig: 'FR 027_L', rec: r.id, date: r.date, mov: r.mov }, x))).concat(nokPend(vid), avPend(vid)); }   // falhas sem OM: NO do FR 027_L, NOK da preventiva e avaria em viagem   // embrulhada no bloco "Falhas sem OM" (NOK e avaria)
 const drivePdf = (id, txt) => id ? `<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${txt}</a>` : '<span class="note">PDF no Drive depois de sincronizar</span>';
@@ -27,7 +27,7 @@ function agoraLista() {
   const G = {}; oms().filter(o => o.tipo === 'P' && !o.excluido && ['emitida', 'abordo', 'executada', 'conferencia'].includes(o.status)).forEach(o => (G[o.grupo || o.id] = G[o.grupo || o.id] || []).push(o));
   Object.entries(G).forEach(([g, L]) => { const o = L[0], st = o.grupo ? grpStatus(omGrupo(g)) : o.status, link = o.grupo ? `#omg/${encodeURIComponent(g)}` : `#om/${o.id}`; if (foraOp(vessel(o.vessel) || {})) return;
     if (st === 'conferencia') add(2, `OM ${esc(o.num)} · ${esc(vName(o.vessel))} · lançada, falta conferir e aprovar`, `<a class="mbtn sm pri" href="${link}">Conferir</a>`);
-    else if (st === 'executada') add(2, `OM ${esc(o.num)} · ${esc(vName(o.vessel))} · executada, falta lançar o formulário que voltou`, `<a class="mbtn sm" href="${link}">Lançar</a>`);
+    else if (st === 'executada') add(2, `OM ${esc(o.num)} · ${esc(vName(o.vessel))} · executada, falta registrar a execução`, `<a class="mbtn sm" href="${link}">Lançar</a>`);
     else { const d = Math.floor((Date.now() - (Date.parse(o.emitAt || '') || o.createdAt || Date.now())) / 864e5); if (d >= 7) add(2, `OM ${esc(o.num)} · ${esc(vName(o.vessel))} · emitida há ${d} dias: o formulário já voltou? lançar`, `<a class="mbtn sm" href="${link}">Lançar</a>`); } });   /* sem os cliques Iniciar/Terminou: a OM vai de Emitida direto ao lançamento (decisão do Supervisor, 21/10/2026) */
   const hp = recs('horp').filter(r => !r.excluido).length; if (hp) add(2, `${hp} leitura(s) de horímetro esperando a sua confirmação`, `<a class="mbtn sm" href="#hor">Confirmar</a>`);
   const ol = lubDados().filter(x => !foraOp(x.v) && olStatus(x) === 'venc').length; if (ol) add(1, `${ol} troca(s) de óleo vencida(s)`, `<a class="mbtn sm" href="#oleo">Ver</a>`);

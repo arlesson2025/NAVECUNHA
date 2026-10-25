@@ -6,10 +6,10 @@ const eqNomeC = (v, e) => !e ? '' : e.key === 'inc' ? 'Motobomba de incêndio' :
 function olStatus(x) { if (x.s.st === 'sem' || x.horas == null) return 'sem'; if (x.horas < 0) return 'venc'; if (x.horas <= OL_ALERTA_H || (x.porData && x.dias != null && x.dias <= OL_ALERTA_D)) return 'aten'; return 'ok'; }
 function olValor(x) { if (x.horas == null) return '—'; if (x.porData && x.dias != null) { const d = Math.round(x.dias); return d < 0 ? 'vencido há ' + (-d) + ' d' : d === 0 ? 'vence hoje' : d + ' d'; } return x.horas < 0 ? nf(-x.horas) + ' h vencido' : nf(x.horas) + ' h'; }
 
-/* ---------- Barco: tudo de uma embarcação numa página ---------- */
+/* ---------- Barco: tudo de um empurrador numa página ---------- */
 const BR = { v: '' };
 function vBarco() {
-  const ativos = S.cfg.frota.filter(v => !foraOp(v)); const vid = ARG || BR.v || (ativos[0] || {}).id; BR.v = vid; const v = vessel(vid); if (!v) return '<div class="empty">Embarcação não encontrada.</div>';
+  const ativos = S.cfg.frota.filter(v => !foraOp(v)); const vid = ARG || BR.v || (ativos[0] || {}).id; BR.v = vid; const v = vessel(vid); if (!v) return '<div class="empty">Empurrador não encontrado.</div>';
   const x = rotinaDados().find(d => d.v === v) || { venc: [], viag: [], corr: [] }, s = situDe(v), LD = lubDados().filter(d => d.v === v && !d.saida).map(d => Object.assign(d, { st2: olStatus(d) }));
   const cor = { venc: '#C5221F', aten: '#E37400', ok: '#188038', sem: '#5F6368' };
   const mot = LD.filter(d => ['mcp', 'mca'].includes(d.e.g) || d.e.key === 'inc').map(d => { const h = horAtual(v.id, lubHp(v, d.e)); return `<div class="br-m"><b>${esc(d.e.g === 'mca' ? posCurtoE(v, d.e.pos) : d.e.nome)}</b><span class="br-h">${h ? nf(h.h) + ' h' : '—'}</span><small>${h ? 'lido ' + (h.est ? 'estimado' : brD(h.date)) : 'sem leitura'}</small><span style="color:${cor[d.st2]};font-weight:600">óleo: ${d.st2 === 'venc' ? 'vencido' : d.st2 === 'sem' ? 'sem histórico' : 'faltam ' + olValor(d)}</span></div>`; }).join('');

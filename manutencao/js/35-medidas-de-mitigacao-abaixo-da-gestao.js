@@ -8,7 +8,7 @@ function mitigHTML() {
     return (o.mitig || '').trim() ? '<span style="color:#64748B">Em observação</span>' : '—'; };
   const pz = o => o.mitigPrazo ? brD(o.mitigPrazo).slice(0, 5) : '—';
   return `<div class="card mg" data-lk="Medidas de mitigacao"><div class="row"><div><h2>Medidas de mitigação</h2><p class="mg-sub">Falha, causa, ação executada e se voltou a ocorrer depois da ação</p></div></div>
-  ${L.length ? `<div class="tw"><table class="mg-t"><thead><tr><th>Embarcação</th><th>Falha</th><th>Causa</th><th>Ação</th><th>Resp.</th><th>Prazo</th><th>Status</th><th>Reincidência</th></tr></thead><tbody>
+  ${L.length ? `<div class="tw"><table class="mg-t"><thead><tr><th>Empurrador</th><th>Falha</th><th>Causa</th><th>Ação</th><th>Resp.</th><th>Prazo</th><th>Status</th><th>Reincidência</th></tr></thead><tbody>
   ${L.map(o => { const s = mitigSit(o); return `<tr class="click" data-open="${o.id}" title="Abrir a OM ${esc(o.num || '')}"><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.descricao || '—')}</td><td>${esc(o.causa || '—')}</td><td>${esc(o.mitig || '—')}</td><td>${esc(o.mitigResp || '—')}</td><td>${pz(o)}</td><td><span class="mg-st ${cls[s.k]}">${esc(s.t.toUpperCase())}</span></td><td>${rei(o)}</td></tr>`; }).join('')}
   </tbody></table></div>` : '<div class="note">Nenhuma falha registrada nos últimos 12 meses.</div>'}
   <div class="note" style="margin-top:8px">Últimos ${FALPER} meses · clique numa linha para abrir a OM · a medida é registrada na própria corretiva (campo A9 · Análise) · reincidência = mesma falha no mesmo empurrador depois da ação.</div></div>`;

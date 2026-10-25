@@ -11,7 +11,7 @@ function trilha(v, pos, t) {
   return 'cal';
 }
 
-/* ---------- linhas do cronograma de uma embarcação ---------- */
+/* ---------- linhas do cronograma de um empurrador ---------- */
 const PAC_H = [[1000, 'revisão 500 h'], [2000, 'revisão 1.000 h'], [4000, 'revisão 2.000 h'], [1e9, 'grandes revisões (4.000 h ou mais)']];
 const PAC_M = m => m <= 3 ? 'Trimestral' : m <= 6 ? 'Semestral' : m <= 12 ? 'Anual' : 'Longo prazo (2 a 10 anos)';
 function cronoLinhas(v) {
@@ -23,7 +23,7 @@ function cronoLinhas(v) {
     if (tr === 'bordo') { const e = lubEquip(v).find(x => x.pos === pos && x.itens.includes(t.id)) || lubEquip(v).find(x => x.pos === pos && (x.g === 'mcp' || x.g === 'mca'));
       const g = e ? e.key : pos; return add('b|' + g, { tr, ord: 10 + ['mcp1', 'mcp2', 'crp1', 'crp2', 'mca1', 'mca2', 'inc', 'hid'].indexOf(g), nome: 'Troca de óleo · ' + (e ? e.nome : mot), sub: 'FR 049_B · em viagem: tripulação · no porto: equipe + CTF/MFM' }, t, pos); }
     if (tr === 'janela') { const i = PAC_H.findIndex(([lim]) => iv.h < lim); return add('j|' + pos + '|' + i, { tr, ord: 30 + posicoes(v).indexOf(pos) * 5 + i, nome: mot + ' · ' + PAC_H[i][1], sub: 'janela em Manaus · equipe de terra' }, t, pos); }
-    const p = PAC_M(iv.m || 12); add('c|' + p, { tr, ord: 70 + ['Trimestral', 'Semestral', 'Anual', 'Longo prazo (2 a 10 anos)'].indexOf(p), nome: p, sub: 'calendário · embarcação e propulsão' }, t, pos);
+    const p = PAC_M(iv.m || 12); add('c|' + p, { tr, ord: 70 + ['Trimestral', 'Semestral', 'Anual', 'Longo prazo (2 a 10 anos)'].indexOf(p), nome: p, sub: 'calendário · empurrador e propulsão' }, t, pos);
   }));
   const out = [];   // uma linha por equipamento dentro de cada pacote
   Object.values(L).sort((a, b) => a.ord - b.ord).forEach(l => { const G = {}; l.its.forEach(x => { const k = x.t.eq === 'MBINC' && v.mca && v.mca.MCA3 ? 'MCA|MCA3' : eqKeyDe(x.pos, x.t); (G[k] = G[k] || []).push(x); });   // CJA XX: bomba de incêndio e o motor dela (MCA 3) numa linha só

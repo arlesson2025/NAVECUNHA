@@ -26,7 +26,7 @@ const nomeLongo = n => String(n || '').replace(/^CJA /, 'Cap. José Alecrim ');
 const nomeCurto = n => String(n || '').replace(/^Cap\. José Alecrim /, 'CJA ');
 const vesselPorNome = n => S.cfg.frota.find(v => v.nome === nomeCurto(n));
 
-/* ---------- equipamentos lubrificados de cada embarcação (ligados aos itens do Anexo I) ---------- */
+/* ---------- equipamentos lubrificados de cada empurrador (ligados aos itens do Anexo I) ---------- */
 const planoRow = f => LUB_PLANO.find(f);
 const REV_PLANO = { HITACHI: 'Hitachi', MASSON: 'Masson', REINTJES: 'Reintjes' };
 const REV_ITENS = { HITACHI: ['1.5.1'], MASSON: ['1.6.1', '1.6.2'], REINTJES: ['1.7.2'] };
@@ -80,7 +80,7 @@ function lubDados() {
 function lubLanc() {
   const o = [];
   recs('lub').forEach(r => {
-    const nome = r.vessel ? vName(r.vessel) : nomeCurto(r.vNome || 'Sem embarcação');
+    const nome = r.vessel ? vName(r.vessel) : nomeCurto(r.vNome || 'Sem empurrador');
     if (r.tipo === 'fr049') (r.eq || []).forEach(q => { if (q.status !== 'T') return; const L = litros(q.qtd); if (L) o.push({ r, vid: r.vessel, nome, date: r.date, tipo: 'troca', oleo: tipoOleo(q.oil), L, key: q.key }); });
     else if (r.tipo === 'comp') { const L = +r.L || 0; if (L) o.push({ r, vid: r.vessel, nome, date: r.date, tipo: 'comp', oleo: tipoOleo(r.oleo), L, key: r.key }); }
   });
@@ -154,7 +154,7 @@ function vLubCons() {
   const queim = res.reduce((a, r) => a + r.oleo, 0), sem016 = res.reduce((a, r) => a + r.sem016, 0);
   const fotos4 = F.filter(r => (r.fotos || {}).antes >= 2 && (r.fotos || {}).depois >= 2).length;
   const empurradores = [...new Set(S.cfg.frota.map(v => v.nome).concat(lubLanc().map(x => x.nome)))];
-  return `<div class="vh"><div><h1>Consumo de lubrificantes e OLUC</h1><p>Litros usados nas trocas (FR 049_B) e nos complementos, por tipo de óleo, por mês e por embarcação; OLUC (óleo lubrificante usado) gerado e rastreabilidade pelo FR 016_E (NP 5.7 · CONAMA 362/2005).</p></div><span class="sp"></span><button class="mbtn" data-act="lubFr016">🖨 FR 016_E em branco</button></div>
+  return `<div class="vh"><div><h1>Consumo de lubrificantes e OLUC</h1><p>Litros usados nas trocas (FR 049_B) e nos complementos, por tipo de óleo, por mês e por empurrador; OLUC (óleo lubrificante usado) gerado e rastreabilidade pelo FR 016_E (NP 5.7 · CONAMA 362/2005).</p></div><span class="sp"></span><button class="mbtn" data-act="lubFr016">🖨 FR 016_E em branco</button></div>
   <div class="card"><div class="g"><label class="f s2">Período<select id="lcM">${[6, 12, 24].map(m => `<option value="${m}"${LC.meses === m ? ' selected' : ''}>Últimos ${m} meses</option>`).join('')}</select></label><label class="f s3">Empurrador<select id="lcB"><option value="">Frota toda</option>${empurradores.map(b => `<option${LC.barco === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></label></div></div>
   <div class="kgrid six">
    <div class="card mini"><b>${nf(tot)} L</b><span>de óleo no período</span></div>
@@ -166,7 +166,7 @@ function vLubCons() {
   </div>
   <div class="card"><div class="row"><h2>A · Consumo mensal por tipo de lubrificante (L)</h2></div>${stackChart(ms.map(m => m.lab), serie, ' L')}${legOleos(tipos)}</div>
   <div class="two">
-   <div class="card"><div class="row"><h2>B · Consumo de lubrificante por embarcação</h2><span class="sp"></span><span class="note">trocas + complementos</span></div>${hbar(rk.slice(0, 14).map(([n, L]) => [n, Math.round(L)]), ' L')}
+   <div class="card"><div class="row"><h2>B · Consumo de lubrificante por empurrador</h2><span class="sp"></span><span class="note">trocas + complementos</span></div>${hbar(rk.slice(0, 14).map(([n, L]) => [n, Math.round(L)]), ' L')}
     ${rk.length > 2 ? `<p class="note">${(() => { let a = 0, k = 0; for (const [, L] of rk) { a += L; k++; if (a >= tot * 0.8) break; } return k + ' de ' + rk.length + ' empurradores respondem por ~80% do óleo.'; })()}</p>` : ''}</div>
    <div class="card"><div class="row"><h2>C · Geração de OLUC por mês</h2></div>
     <div class="tw"><table class="t"><thead><tr><th>Mês</th><th class="c">FR 049_B</th><th class="c">OLUC</th><th class="c">Filtros</th><th>FR 016_E</th></tr></thead><tbody>${res.slice().reverse().map((r, i) => `<tr><td>${ms[ms.length - 1 - i].lab}</td><td class="c">${r.n || '–'}</td><td class="c mono">${r.oleo ? nf(r.oleo) + ' L' : '–'}</td><td class="c mono">${r.flt ? nf(r.flt) : '–'}</td><td class="note">${r.fr016.length ? `<span data-tip="${esc(r.fr016.join(', '))}">${r.fr016.length > 3 ? r.fr016.slice(0, 2).map(esc).join(', ') + ' +' + (r.fr016.length - 2) : r.fr016.map(esc).join(', ')}</span>` : '–'}${r.sem016 ? ` <span class="pill p-warn">${r.sem016} sem nº</span>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
@@ -189,7 +189,7 @@ function vLubReg() {
   }).join('');
   return `<div class="vh"><div><h1>Registros de lubrificação</h1><p>Todos os FR 049_B salvos (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e os complementos de óleo.</p></div><span class="sp"></span><button class="mbtn" data-act="lubComp">＋ Complemento de óleo</button><button class="mbtn pri" data-act="lubForm">📝 Preencher FR 049_B</button></div>
   <div class="card"><div class="g"><label class="f s3">Empurrador<select id="lrB"><option value="">Todos</option>${empurradores.map(b => `<option${LR.barco === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></label><label class="f s2">Mês<select id="lrM"><option value="">Todos</option>${ms.map(m => `<option value="${m.k}"${LR.mes === m.k ? ' selected' : ''}>${m.lab}</option>`).join('')}</select></label></div>
-   ${rows ? `<div class="tw"><table class="t"><thead><tr><th>Data</th><th>Embarcação</th><th>Registro</th><th>Local</th><th>Equipamentos trocados</th><th>Litros</th><th>Anexo II-B</th><th>Fotos</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${L.length > 300 ? '<p class="note">Mostrando os 300 mais recentes. Use os filtros.</p>' : ''}` : '<div class="note">Nenhum registro neste filtro.</div>'}</div>`;
+   ${rows ? `<div class="tw"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Registro</th><th>Local</th><th>Equipamentos trocados</th><th>Litros</th><th>Anexo II-B</th><th>Fotos</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${L.length > 300 ? '<p class="note">Mostrando os 300 mais recentes. Use os filtros.</p>' : ''}` : '<div class="note">Nenhum registro neste filtro.</div>'}</div>`;
 }
 AFTER.lubreg = () => { const m = $('#main');
   m.onchange = e => { if (e.target.id === 'lrB') { LR.barco = e.target.value; render(); } if (e.target.id === 'lrM') { LR.mes = e.target.value; render(); } };
@@ -251,7 +251,7 @@ function lubCompModal(vid) {
   if (!precisa(false)) return;
   const v0 = vid || S.cfg.frota[0].id;
   const eqs = v => lubEquip(v).filter(e => ['mcp', 'crp', 'mca', 'hid'].includes(e.g) || e.key === 'inc');
-  const draw = id => { const v = vessel(id); return `<label class="f">Embarcação<select id="cV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
+  const draw = id => { const v = vessel(id); return `<label class="f">Empurrador<select id="cV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
    <div class="g"><label class="f s3">Equipamento<select id="cE">${eqs(v).map(e => `<option value="${e.key}">${esc(e.nome)} · ${esc(e.mod || '')}</option>`).join('')}</select></label><label class="f s3">Data<input id="cD" type="date" value="${isoD(hoje())}"></label>
    <label class="f s2">Litros repostos<input id="cL" inputmode="decimal" placeholder="ex.: 8"></label><label class="f s2">Horímetro (h)<input id="cH" inputmode="numeric" placeholder="${(() => { const e = eqs(v)[0], h = e && horAtual(v.id, lubHp(v, e)); return h ? 'últ. ' + nf(h.h) : ''; })()}"></label><label class="f s2">Óleo<input id="cO" list="lubOleos" value="${esc((eqs(v)[0] || {}).oleo || 'SAE 15W-40')}"></label>
    <label class="f s6">Observação<input id="cX" placeholder="opcional: vazamento visto, fumaça, etc."></label></div>`; };

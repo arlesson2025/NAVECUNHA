@@ -15,7 +15,7 @@ function padTela(view, cfg) {
   const a0 = AFTER[view]; AFTER[view] = function () { a0 && a0.apply(this, arguments); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_' + view + '_lay', '[data-padreset="' + view + '"]'); };
 }
 const padGrupos = f => { const G = new Set(); return oms().filter(o => !o.excluido && f(o)).filter(o => { const g = o.grupo || o.id; if (G.has(g)) return false; G.add(g); return true; }).length; };
-padTela('oms', { titulo: 'Executar e lançar · Preventivas', desc: 'OMs preventivas abertas no Sankhya: lançar o formulário que voltou assinado',
+padTela('oms', { titulo: 'Executar e lançar · Preventivas', desc: 'OMs preventivas abertas no Sankhya: registrar a execução da OM',
   resumo: () => [['Em aberto', padGrupos(o => o.tipo !== 'C' && o.status !== 'encerrada')], ['Para lançar', padGrupos(o => o.tipo !== 'C' && ['emitida', 'abordo', 'executada'].includes(o.status))], ['Em conferência', padGrupos(o => o.tipo !== 'C' && o.status === 'conferencia')]] });
 padTela('omconf', { titulo: 'Conferir e encerrar', desc: 'Conferir e aprovar no SMF · depois anexar o PDF e encerrar a OM no Sankhya',
   resumo: () => [['Esperando conferência', padGrupos(o => o.status === 'conferencia')], ['Falta anexar no Sankhya', typeof skPend === 'function' ? skPend().length : 0, 'var(--warnt)']] });

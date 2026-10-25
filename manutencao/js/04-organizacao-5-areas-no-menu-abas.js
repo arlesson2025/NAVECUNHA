@@ -15,7 +15,7 @@ const SECOES = [
   { id: 'inicio', nome: 'Visão geral', views: [['geral', 'Visão geral']] },
   { id: 'oms', nome: 'Ordens de manutenção', views: [['acomp', 'Em execução'], ['emitir', 'Programação'], ['prev', 'Preventivas · II-B'], ['corr', 'Corretivas · II-A'], ['hist', 'Histórico']], extra: ['om'] },
   { id: 'lub', nome: 'Lubrificação', views: [['lub', 'Controle de trocas'], ['lubreg', 'Registros FR 049_B'], ['lubcons', 'Consumo e OLUC'], ['plano', 'Plano de lubrificação']] },
-  { id: 'cond', nome: 'Condição da frota', views: [['frota', 'Vencimentos por embarcação'], ['calib', 'Calibração do MCP'], ['over', 'MBC · MCP'], ['doca', 'Docagem'], ['hor', 'Horímetros'], ['falhas', 'Análise de falhas e ações de bloqueio']] },
+  { id: 'cond', nome: 'Condição da frota', views: [['frota', 'Vencimentos por empurrador'], ['calib', 'Calibração do MCP'], ['over', 'MBC · MCP'], ['doca', 'Docagem'], ['hor', 'Horímetros'], ['falhas', 'Análise de falhas e ações de bloqueio']] },
   { id: 'ger', nome: 'Indicadores e relatório', views: [['kpi', 'Indicadores de desempenho (KPI) · NP 055'], ['rel', 'Relatório mensal']] },
   { id: 'ref', nome: 'Plano de manutenção · Anexo I', views: [['matriz', 'Plano de manutenção · Anexo I']], cfg: true },
   { id: 'adm', nome: 'Administração', views: [['admin', 'Administração']], cfg: true },

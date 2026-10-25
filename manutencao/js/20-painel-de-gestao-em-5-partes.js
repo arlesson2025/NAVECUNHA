@@ -12,7 +12,7 @@
 
 /* ---------- montagem ---------- */
 VX.geral = vGeral;
-// docagem: o clique nas embarcações do cronograma também vale no painel
+// docagem: o clique nos empurradores do cronograma também vale no painel
 document.addEventListener('click', e => { if (VIEW !== 'geral') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
   if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);
 // layout do painel: em ordem (sem misturar as partes) e começa organizado uma vez
@@ -32,14 +32,14 @@ kvGet('layout').then(v => { if (v && !v._pn5) { delete v.geral; v._pn5 = 1; LAY 
 /* ===== Relatório mensal na mesma sequência do Painel: 1 Indicadores · 2 Riscos · 3 Resumo do mês · 4 Praça de máquinas · 5 Docagem · 6 Plano de ação · 7 Evidências · anexos ===== */
 'use strict';
 /* =====================================================================
-   Gráficos novos: troca de óleo em barras horizontais por embarcação, calibração do MCP
+   Gráficos novos: troca de óleo em barras horizontais por empurrador, calibração do MCP
    em quadro (em dia / atenção / vencidos + detalhe do motor + mapa da frota) e gráficos
    do relatório mais limpos.
    ===================================================================== */
 'use strict';
 
 
-/* ---------- 4.1 troca de óleo: barras horizontais (uma por sistema, por embarcação) ---------- */
+/* ---------- 4.1 troca de óleo: barras horizontais (uma por sistema, por empurrador) ---------- */
 
 /* ---------- 4.2 calibração do MCP: quadro + motor + mapa da frota ---------- */
 

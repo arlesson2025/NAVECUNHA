@@ -41,7 +41,7 @@ function laudoModal(vid, pos) {
   vid = vid || S.cfg.frota[0].id; pos = pos || mpos(vid);
   const h = horAtual(vid, pos);
   modal(`<h2>Registrar laudo de análise de óleo</h2><p class="note">Item 1.1.29 do Anexo I. O laudo conta como a coleta do programa de amostragem e entra na saúde do MCP. Deixe em branco o que o laboratório não mediu.</p>
-   <div class="g"><label class="f s2">Embarcação<select id="lV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label><label class="f s1">Motor<select id="lP">${mcpPos(vessel(vid)).map(p => `<option value="${p}"${p === pos ? ' selected' : ''}>${p === 'CE' ? 'Central' : p}</option>`).join('')}</select></label>
+   <div class="g"><label class="f s2">Empurrador<select id="lV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label><label class="f s1">Motor<select id="lP">${mcpPos(vessel(vid)).map(p => `<option value="${p}"${p === pos ? ' selected' : ''}>${p === 'CE' ? 'Central' : p}</option>`).join('')}</select></label>
    <label class="f s1">Data da coleta<input id="lD" type="date" value="${isoD(hoje())}"></label><label class="f s1">Horímetro<input id="lH" inputmode="numeric" value="${h ? h.h : ''}"></label><label class="f s1">Horas do óleo<input id="lO" inputmode="numeric" placeholder="desde a troca"></label>
    <label class="f s3">Laboratório<input id="lL"></label><label class="f s3">Nº do laudo<input id="lN"></label>
    ${LAUDO_P.map(p => `<label class="f s1">${esc(p[1])} (${p[2]})<input data-lp="${p[0]}" inputmode="decimal"></label>`).join('')}
@@ -176,7 +176,7 @@ function vMatriz() {
    <div class="a1-leg"><button class="mbtn sm" data-a1all="1">＋ Expandir todos</button><button class="mbtn sm" data-a1all="0">− Recolher todos</button><span style="width:10px"></span>Prioridade (NP 055 · 5.5.1): <span class="a1-p cr">Crítica</span><span class="a1-p al">Alta</span><span class="a1-p me">Média</span><span class="a1-p ba">Baixa</span></div>
    <div class="a1-lista">${grupos.length ? grupos.map(g => { const n = parseInt(g.sis), filtro = !!(q || MX.sis || MX.prio), ab = filtro || MX.ab.has(n); return `<section class="a1-sis${ab ? ' ab' : ''}"><header data-a1s="${n}" role="button" aria-expanded="${ab}" tabindex="0"><span class="a1-num">${n}</span><h3>${esc(g.sis.replace(/^\d+\.\s*/, ''))}</h3><span class="note">${g.eqs.length} equipamento(s) · ${g.eqs.reduce((a, e) => a + e.itens.length, 0)} itens${g.eqs.some(e => e.itens.some(t => t.prio === 'Crítica')) ? ` · <span class="a1-crn">${g.eqs.reduce((a, e) => a + e.itens.filter(t => t.prio === 'Crítica').length, 0)} críticos</span>` : ''}</span><span class="a1-tg">${ab ? '−' : '+'}</span></header>${!ab ? '' : `
      ${g.eqs.map(e => `<div class="a1-eq"><div class="a1-eqh"><span class="a1-code">${esc(e.eq)}</span><div><b>${esc(e.eqn)}</b>${e.eqd ? `<div class="note">${esc(e.eqd)}</div>` : ''}</div></div>
-      <table class="a1-t"><thead><tr><th style="width:70px">Nº</th><th style="width:170px">Frequência</th><th>Item · checklist</th><th style="width:96px">Prioridade</th><th style="width:170px">Registros</th><th style="width:28px"></th></tr></thead><tbody>${e.itens.map(linha).join('')}</tbody></table></div>`).join('')}`}</section>`; }).join('') : '<div class="card note">Nenhum item com esse filtro.</div>'}</div></div>`;
+      <table class="a1-t"><thead><tr><th style="width:70px">Nº</th><th style="width:170px">Frequência</th><th>Item · serviço</th><th style="width:96px">Prioridade</th><th style="width:170px">Registros</th><th style="width:28px"></th></tr></thead><tbody>${e.itens.map(linha).join('')}</tbody></table></div>`).join('')}`}</section>`; }).join('') : '<div class="card note">Nenhum item com esse filtro.</div>'}</div></div>`;
 }
 AFTER.matriz = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'mxQ') { MX.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#mxQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); } };
@@ -197,7 +197,7 @@ function a1Imprimir(completo) {
   const fq = t => { const ov = (S.cfg.intervalos || {})[t.id], iv = intervalo(t); return esc(t.freq) + (ov ? `<br><i>ajustado: ${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' meses' : ''].filter(Boolean).join(' ou ')}</i>` : ''); };
   const linhas = e => e.itens.map(t => `<tr><td class="n">${t.id}</td><td class="fq">${fq(t)}</td><td><b>${esc(t.item)}</b><br>${esc(t.chk)}</td><td><span class="p ${pc[t.prio] || ''}">${esc(t.prio)}</span></td><td class="pg">${esc(t.pag)}</td><td class="rg">${t.regs.map(r => r.toUpperCase()).join(' · ')}</td></tr>
      ${completo ? `<tr class="det"><td></td><td colspan="5"><div class="dg"><div><h5>Descrição / ação</h5><p>${esc(t.desc)}</p></div><div><h5>Método executivo</h5><ol>${t.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol><h5>Base normativa</h5><p class="mut">${esc(t.norm)}</p></div></div></td></tr>` : ''}`).join('');
-  const corpo = G.map(g => `<section><h2><span>${parseInt(g.sis)}</span>${esc(g.sis.replace(/^\d+\.\s*/, ''))}</h2>${g.eqs.map(e => `<table><thead><tr><th colspan="6" class="eq"><b>${esc(e.eq)}</b> ${esc(e.eqn)}${e.eqd ? ` <em>· ${esc(e.eqd)}</em>` : ''}</th></tr><tr><th style="width:6%">Nº</th><th style="width:13%">Frequência</th><th>Item · checklist</th><th style="width:8%">Prioridade</th><th style="width:16%">Página do manual</th><th style="width:12%">Registros</th></tr></thead><tbody>${linhas(e)}</tbody></table>`).join('')}</section>`).join('');
+  const corpo = G.map(g => `<section><h2><span>${parseInt(g.sis)}</span>${esc(g.sis.replace(/^\d+\.\s*/, ''))}</h2>${g.eqs.map(e => `<table><thead><tr><th colspan="6" class="eq"><b>${esc(e.eq)}</b> ${esc(e.eqn)}${e.eqd ? ` <em>· ${esc(e.eqd)}</em>` : ''}</th></tr><tr><th style="width:6%">Nº</th><th style="width:13%">Frequência</th><th>Item · serviço</th><th style="width:8%">Prioridade</th><th style="width:16%">Página do manual</th><th style="width:12%">Registros</th></tr></thead><tbody>${linhas(e)}</tbody></table>`).join('')}</section>`).join('');
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Anexo I · NP Navecunha 055 · Plano de Manutenção</title><style>
 @page{size:A4 landscape;margin:12mm 10mm 14mm}
 *{box-sizing:border-box}body{margin:0;font:9pt/1.35 "Segoe UI",Arial,sans-serif;color:#1D2730;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -226,7 +226,7 @@ ${corpo}
 }
 VX.matriz = vMatriz;
 
-/* ---------- 12 · Horímetro do MCP por embarcação: colunas vitrificadas com 3 visões ---------- */
+/* ---------- 12 · Horímetro do MCP por empurrador: colunas vitrificadas com 3 visões ---------- */
 
 /* ---------- 13 · "Rio do ciclo de óleo": cada MCP é um empurrador navegando até a próxima troca ---------- */
 

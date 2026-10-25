@@ -60,7 +60,7 @@ function prFrota(ano, pdf) {
    <tr class="pr-tot"><td colspan="2">Frota · realizado</td>${tot.map((x, i) => `<td class="pr-c">${i > hm ? '' : x.r}</td>`).join('')}<td class="pr-t">${tot.reduce((a, x) => a + x.r, 0)}</td></tr>
    <tr class="pr-tot"><td colspan="2">Aderência</td>${tot.map((x, i) => `<td class="pr-c"><b>${i <= hm && x.den ? Math.round(x.ok / x.den * 100) + '%' : ''}</b></td>`).join('')}<td class="pr-t"></td></tr>`;
   return `<table class="pr-t"><colgroup><col style="width:120px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:46px"><col style="width:150px"><col style="width:80px"></colgroup>
-   <thead><tr><th>Embarcação</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Falta fazer</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`;
+   <thead><tr><th>Empurrador</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Falta fazer</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`;
 }
 // ---- frota toda no layout "uma linha por empurrador": realizado / previsto por mês, mês atual com barra, carga prevista nos meses seguintes ----
 // filtro de meses cumulativo (PRV.ms: lista de meses marcados; vazio = ano todo) · blocos como janelas · colunas com largura ajustável
@@ -118,7 +118,7 @@ function prFrotaV2(ano) {
   const sit = d => (d.venc ? `<span class="cf-p ms" title="ocorrências do cronograma vencidas nos meses marcados">${d.venc} vencida${d.venc > 1 ? 's' : ''}</span>` : '<span class="cf-p ok">em dia</span>') + (d.mesFalta ? `<small>${d.mesFalta} a vencer em ${MESES[hm]}</small>` : '');
   const linha = (d, tot) => `<tr class="${tot ? 'cf-tot' : ''}"><td class="cf-n">${tot ? `<b>Consolidado da frota</b><small class="fs-sm">${D.length} empurradores</small>` : `<a href="#cxr" data-prv="${d.v.id}">${esc(d.v.nome)}</a>`}</td>${sel.map(i => cel(d, i, tot)).join('')}
      <td class="cf-c cf-tt"><span class="cf-fr"><i class="cf-d" style="background:${d.venc ? '#C5221F' : '#188038'}"></i><b>${d.tR}</b> / ${d.tP}</span></td><td class="cf-s">${sit(d)}</td><td class="cf-a" style="color:${corAd(d.ad)}">${d.ad == null ? '—' : d.ad + '%'}</td></tr>`;
-  const head = `<tr><th class="cf-n" data-ck="n">Embarcação</th>${sel.map(i => `<th class="${i === hm ? 'cf-hj' : ''}" data-ck="m${i}">${MESES[i].toUpperCase()}${i === hm ? ' · ATUAL' : ''}</th>`).join('')}<th data-ck="t">Total</th><th data-ck="s">Situação</th><th data-ck="a">Aderência</th></tr>`;
+  const head = `<tr><th class="cf-n" data-ck="n">Empurrador</th>${sel.map(i => `<th class="${i === hm ? 'cf-hj' : ''}" data-ck="m${i}">${MESES[i].toUpperCase()}${i === hm ? ' · ATUAL' : ''}</th>`).join('')}<th data-ck="t">Total</th><th data-ck="s">Situação</th><th data-ck="a">Aderência</th></tr>`;
   return { html: `<table class="cf-t"><thead>${head}</thead><tbody>${D.map(d => linha(d)).join('')}${linha(F, true)}</tbody></table>`, F, hm, sel };
 }
 function prKpis(F, hm, ano, sel) {
@@ -168,7 +168,7 @@ function prTelaFrota(ativos, ano, nAp, anos) {
   const chips = `<div class="cf-ms"><span>Meses</span><button data-cfm="todos" class="${todos ? 'on' : ''}">Ano todo</button>${hm >= 0 && hm < 12 ? `<button data-cfm="ate" class="${!todos && sel.length === hm + 1 && sel[0] === 0 ? 'on' : ''}">Até ${MESES[hm]}</button>` : ''}<i></i>${MESES.map((m, i) => `<button data-cfm="${i}" class="cf-mm${!todos && sel.includes(i) ? ' on' : ''}${i === hm ? ' hj' : ''}" title="Clique para marcar ou desmarcar · Shift+clique marca um intervalo">${m.toUpperCase()}</button>`).join('')}<small>${todos ? 'ano todo' : sel.length + (sel.length === 1 ? ' mês' : ' meses') + ' somados'}</small></div>`;
   return `<div class="cm-v"><div class="vh"><div><h1>Cronograma preventivo</h1></div><span class="sp"></span><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(T.F, hm, ano, sel)}
    <div class="cf-bt"><a class="mbtn" href="#audit">Histórico e evidências</a><button class="mbtn" data-prpdf="resumo">PDF desta tela</button><button class="mbtn" data-prpdf="frota">PDF completo</button><button class="mbtn" data-prmural>Mural (1 folha)</button>${can.admin() ? `<button class="mbtn pri" data-prapr>${nAp ? 'Revisar aprovação' : 'Aprovar o previsto de ' + ano}</button>` : ''}</div>
-   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota" selected>Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></label>
+   <div class="cf-fl"><label>Empurrador <select id="prV"><option value="frota" selected>Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></label>
     <label>Ano <select id="prA">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
     <span class="cf-seg"><button data-prord="crit" class="${PRV.ord !== 'nome' ? 'on' : ''}">Criticidade</button><button data-prord="nome" class="${PRV.ord === 'nome' ? 'on' : ''}">Nome</button></span><span class="cf-p ${nAp === ativos.length ? 'ok' : 'lt'}">${nAp}/${ativos.length} aprovados</span></div>${chips}
    <div class="cm-ws">
@@ -235,7 +235,7 @@ function prTelaEmp(v, ativos, ano, B, anos) {
   const chips = `<div class="cf-ms"><span>Meses</span><button data-cfm="todos" class="${todos ? 'on' : ''}">Ano todo</button>${hm >= 0 && hm < 12 ? `<button data-cfm="ate" class="${!todos && sel.length === hm + 1 && sel[0] === 0 ? 'on' : ''}">Até ${MESES[hm]}</button>` : ''}<i></i>${MESES.map((m, i) => `<button data-cfm="${i}" class="cf-mm${!todos && sel.includes(i) ? ' on' : ''}${i === hm ? ' hj' : ''}" title="Clique para marcar ou desmarcar · Shift+clique marca um intervalo">${m.toUpperCase()}</button>`).join('')}<small>${todos ? 'ano todo' : sel.length + (sel.length === 1 ? ' mês' : ' meses') + ' somados'}</small></div>`;
   return `<div class="cm-v"><div class="vh"><div><h1>Cronograma · ${esc(v.nome)}</h1></div><span class="sp"></span><a class="mbtn" href="#cxr" data-prv="frota">← Consolidado da frota</a><a class="mbtn" href="#rotina" data-fsgo="${v.id}">Situação de hoje</a><a class="mbtn" href="#crono" data-prit="${v.id}">Item por item (Anexo I)</a><button class="mbtn" data-cfreset title="Volta os blocos e as colunas ao padrão">Reorganizar</button></div>${prKpis(F, hm, ano, sel)}
    <div class="cf-bt"><a class="mbtn" href="#audit">Histórico e evidências</a><button class="mbtn" data-prpdf="um">PDF desta tela</button><button class="mbtn" data-prpdf="frota">PDF completo</button><button class="mbtn" data-prmural>Mural (1 folha)</button>${can.admin() ? `<button class="mbtn pri" data-prapr>${B ? 'Revisar aprovação da frota' : 'Aprovar o previsto de ' + ano + ' (frota)'}</button>` : ''}</div>
-   <div class="cf-fl"><label>Embarcação <select id="prV"><option value="frota">Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select></label>
+   <div class="cf-fl"><label>Empurrador <select id="prV"><option value="frota">Consolidado da frota</option>${ativos.map(a => `<option value="${a.id}"${a.id === v.id ? ' selected' : ''}>${esc(a.nome)}</option>`).join('')}</select></label>
     <label>Ano <select id="prA">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
     ${B ? `<span class="cf-p ok">Previsto aprovado · ${esc(B.aprovBy)} · ${brD(B.aprovAt)} · rev. ${B.rev}</span>` : '<span class="cf-p lt">Previsto ainda não aprovado</span>'}</div>${chips}
    <div class="cm-ws">
@@ -250,7 +250,7 @@ function vPR() {
   const t = document.createElement('div');
   t.innerHTML = !v ? prTelaFrota(ativos, ano, nAp, anos)   // frota toda: uma linha por empurrador
     : prTelaEmp(v, ativos, ano, B, anos);                   // um empurrador: uma linha por serviço (o PDF continua no formato P/R)
-  /* acabamento (antes era uma camada à parte): subtítulo, Resumo como primeiro bloco e "Empurrador" no lugar de "Embarcação" */
+  /* acabamento (antes era uma camada à parte): subtítulo, Resumo como primeiro bloco e "Empurrador" no lugar de "Empurrador" */
   const vh = t.querySelector('.vh'), ws = t.querySelector('.cm-ws'); if (!vh || !ws) return t.innerHTML;
   const d = vh.querySelector(':scope > div'); if (d && !d.querySelector('p')) d.insertAdjacentHTML('beforeend', '<p>Previsto × realizado por empurrador e mês · plano do Anexo I da NP 055</p>');
   const ks = t.querySelector('.cf-ks'); if (ks) { ks.remove(); ws.insertAdjacentHTML('afterbegin', `<div class="card cf-card"><h2>Resumo</h2>${ks.outerHTML}</div>`); }

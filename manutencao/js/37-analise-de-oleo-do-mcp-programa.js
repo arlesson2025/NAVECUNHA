@@ -28,6 +28,6 @@ function amoCard() {
     <td>${x.ul ? (x.ls.alertas.length ? '<span style="color:' + (x.ls.st === 'venc' ? '#C5221F' : '#B06000') + '">' + x.ls.alertas.slice(0, 2).map(a => a.nome.split(' (')[0] + ' ' + nf(a.v, a.v < 10 ? 1 : 0)).join(', ') + '</span>' : '<span style="color:#188038">normal</span>') : '<span class="mut">sem laudo</span>'}</td>
     <td>${x.c.taxa != null ? nf(x.c.taxa, 2) + ' L/100 h' : '<span class="mut">sem complementos</span>'}</td><td>${sit(x)}</td></tr>`).join('')}
    </tbody></table></div>
-   <p class="note">Regra: amostra de cada MCP a cada 1.000 h ou 12 meses, colhida na troca de óleo mais próxima (a cada ~3 trocas de 350 h), junto com a revisão dos bicos e o ensaio de compressão (item 1.1.12) — o mesmo pacote de condição. Coleta extra na próxima troca quando o laudo anterior tem alerta ou há suspeita (consumo de óleo, fumaça, água ou combustível no óleo). O fabricante recomenda analisar a cada troca (O&M 6-2). Clique num motor para ver os laudos.</p></div>`;
+   <p class="note">Regra: amostra de cada MCP a cada 1.000 h ou 12 meses, colhida na troca de óleo mais próxima (a cada ~3 trocas de 350 h), junto com a revisão dos bicos e o ensaio de compressão (item 1.1.12) — o mesmo conjunto de ensaios de condição. Coleta extra na próxima troca quando o laudo anterior tem alerta ou há suspeita (consumo de óleo, fumaça, água ou combustível no óleo). O fabricante recomenda analisar a cada troca (O&M 6-2). Clique num motor para ver os laudos.</p></div>`;
 }
 

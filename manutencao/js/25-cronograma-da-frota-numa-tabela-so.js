@@ -1,4 +1,4 @@
-/* ===== Cronograma da frota numa tabela só: Embarcação · Equipamento · Criticidade · Serviços · jan…dez (planejado × realizado) ===== */
+/* ===== Cronograma da frota numa tabela só: Empurrador · Equipamento · Criticidade · Serviços · jan…dez (planejado × realizado) ===== */
 'use strict';
 const eqGrp = e => e === 'MCP' ? 'MCP' : (e === 'MWM' || e === 'YANMAR') ? 'MCA' : ['HITACHI', 'MASSON', 'REINTJES'].includes(e) ? 'REV' : e;
 const eqKeyDe = (pos, t) => eqGrp(t.eq) + '|' + (isMcp(pos) || t.eq === 'RACOR' ? 'MCP' : pos);   // BB e BE (ou Central) numa linha só: "MCP BB/BE", "Caixa de mar BB/BE"
