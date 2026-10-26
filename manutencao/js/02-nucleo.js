@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '2.0';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '2.1';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -528,7 +528,7 @@ function render() {
   const V = { geral: vGeral, calib: vCalib, doca: vDoca, hor: vHor, kpi: vKpi, emitir: vEmitir, acomp: () => { setTimeout(() => location.replace('#oms')); return ''; },   /* a tela antiga de OMs em execução saiu (25/10/2026): Executar e lançar */ om: vOM, matriz: vMatriz, admin: vAdmin, ...(typeof VX !== 'undefined' ? VX : {}) }[VIEW] || vGeral;
   const m = $('#main'); m.onclick = m.oninput = m.onchange = null;
   m.style.removeProperty('--ws-esq'); m.style.removeProperty('--ws-larg');   // janelas livres da tela anterior
-  m.innerHTML = banners() + V();
+  m.innerHTML = banners() + (typeof opPassos === 'function' ? opPassos() : '') + V();   // faixa de passos da operação (js/84)
   (AFTER[VIEW] || (() => { }))();
   try { layApply(); } catch (er) { console.error(er); }
   try { vidrificar($('#main')); } catch (e) { }
