@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '1.1';
+const VERSAO_APP = '2.0';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -487,13 +487,13 @@ function renderNav() {   // menu num lugar só (24/10/2026): antes eram 6 camada
     return `<a href="#${ULT[s.id] || s.views[0][0]}" class="${s === cur ? 'on' : ''}">${ico(s.id)}<span>${s.nome}</span>${n ? `<span class="n${red ? '' : ' blue'}">${n}</span>` : ''}</a>`; };
   const nav = document.getElementById('nav'), frSel = `<label class="fr-tipo"><span>Frota</span><select id="frTipo">${Object.entries(FROTA_TIPOS).map(([k, n]) => `<option value="${k}"${k === FROTA_TIPO ? ' selected' : ''}>${n}</option>`).join('')}</select></label>`;
   if (FROTA_TIPO === 'bal' && !ehOperador() && typeof balNav === 'function') { nav.innerHTML = frSel + balNav(); return; }   // frota de balsas: menu próprio (js/83)
-  nav.innerHTML = frSel + '<div class="grp-t grp-trab">Operação</div>' + SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Acompanhamento</div>' + SECOES.filter(s => s.cfg).map(item).join('');
+  nav.innerHTML = frSel + '<div class="grp-t grp-trab">Operação</div>' + SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Controle</div>' + SECOES.filter(s => s.cfg).map(item).join('');
   if (solta && h) { ULT[h.id] = u0; const a1 = document.querySelector('#nav > a'); if (a1) { a1.setAttribute('href', '#' + (u0 || h.views[0][0])); a1.classList.remove('on'); } }
   const A = [...nav.querySelectorAll(':scope > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
   L.forEach((s, i) => { const sp = A[i] && A[i].querySelector('span'); if (s.sub && sp && !sp.querySelector('.nav-sub')) sp.insertAdjacentHTML('beforeend', `<small class="nav-sub">${esc(s.sub)}</small>`); });
   if (ehOperador()) { nav.innerHTML = `<a href="#rotina" class="on">${ico('hoje')}<span>Chegada e saída</span></a>`; return; }
   L.forEach((s, i) => { const a = A[i]; if (!a) return; if (['prev2', 'omsv2', 'conf2'].includes(s.id)) a.classList.toggle('nav-zero', !a.querySelector('.n') && !a.classList.contains('on')); });
-  const i = L.findIndex(s => s.id === 'regs2'); if (i >= 0 && A[i]) A[i].insertAdjacentHTML('beforebegin', '<div class="grp-t grp-apoio">Suporte</div>');
+  const i = L.findIndex(s => s.id === 'regs2'); if (i >= 0 && A[i]) A[i].insertAdjacentHTML('beforebegin', '<div class="grp-t grp-apoio">Apoio</div>');
   L.forEach((s, k) => { const x = A[k]; if (x && s.id === 'relm' && (!can.admin() || (typeof menuOculto === 'function' && menuOculto('relm'))) && !x.classList.contains('on')) x.style.display = 'none'; });   /* Relatório mensal: só o Supervisor, e pode ficar oculto neste aparelho (js/82) */
 }
 function omTipo() { const o = S.recs.get(ARG); return o ? o.tipo : ''; }
@@ -536,7 +536,9 @@ function render() {
   gate();
   RENDER_ULTV = VIEW;
   if (mesma && y > 0 && (VIEW === 'controle' || VIEW === 'geral' || PAG1.has(VIEW))) { scrollTo(0, y); requestAnimationFrame(() => scrollTo(0, y)); setTimeout(() => scrollTo(0, y), 450); }
-  try { if (!(typeof ehOperador === 'function' && ehOperador())) { const t = NP_TAG[VIEW], h = document.querySelector('#main .vh h1'); if (t && h && !h.querySelector('.np-tag')) h.insertAdjacentHTML('beforeend', `<span class="np-tag">NP 055 · ${t}</span>`); } } catch (e) { }   // item da NP ao lado do título
+  try { if (!(typeof ehOperador === 'function' && ehOperador())) { const h = document.querySelector('#main .vh h1'), tt = typeof TITULO !== 'undefined' && !ARG ? TITULO[VIEW] : null;   // título = nome da aba (js/84)
+    if (h && tt) { [...h.childNodes].filter(n => n.nodeType === 3).forEach(n => n.remove()); h.insertBefore(document.createTextNode(tt), h.firstChild); }
+    const t = NP_TAG[VIEW]; if (t && h && !h.querySelector('.np-tag')) h.insertAdjacentHTML('beforeend', `<span class="np-tag">${/^NP /.test(t) ? t : 'NP 055 · ' + t}</span>`); } } catch (e) { }   // item da norma ao lado do título
 }
 const AFTER = {};
 function banners() {
@@ -1343,6 +1345,11 @@ async function aprovarOM(o) {
    DOCUMENTOS A4 · paginação, prévia e PDF
    ===================================================================== */
 const HDR = () => `<div class="hdr"><div><img class="ln" src="${LOGOS.nav}" alt=""></div><div class="c"><b>ANEXO II – REGISTRO DE MANUTENÇÃO</b><span>Empurradores Fluviais</span><span class="np">NP Navecunha 055 · Anexo II · Rev. 00</span></div><div><img class="lv" src="${LOGOS.vda}" alt=""></div></div>`;
+// cabeçalho único dos impressos abertos em janela própria (mesmo desenho do Anexo II): logo · título, assunto e norma · logo; rodapé com a versão e a folha (padrão de 25/10/2026)
+const DOC_CAB_CSS = `.dc{display:grid;grid-template-columns:130px 1fr 130px;border:1px solid #1F2A44;margin:0 0 8px;break-inside:avoid}.dc>div{display:flex;align-items:center;justify-content:center;padding:5px 8px}.dc>div+div{border-left:1px solid #1F2A44}.dc .t{flex-direction:column;text-align:center;gap:1px}.dc .t b{font-size:13px;color:#1F2A44;letter-spacing:.02em}.dc .t span{font-size:9.5px;color:#3C4043}.dc img{max-height:36px;max-width:112px}
+@page{margin-bottom:12mm;@bottom-left{content:"Documento controlado pelo SGI · gerado pelo SMF ${VERSAO_APP}";font:8px Arial;color:#5F6368}@bottom-right{content:"Folha " counter(page) " de " counter(pages);font:8px Arial;color:#5F6368}}`;
+const docLogo = k => (typeof LOGO64 !== 'undefined' && LOGO64[k]) || new URL(LOGOS[k], location.href);   // logo embutido (js/84): a janela de impressão nem sempre busca arquivos
+const docCab = (tit, sub, ref) => `<div class="dc"><div><img src="${docLogo('nav')}" alt=""></div><div class="t"><b>${tit}</b>${sub ? `<span>${sub}</span>` : ''}<span>${ref}</span></div><div><img src="${docLogo('vda')}" alt=""></div></div>`;
 const FOOT = n => `<div class="sf"><span>Documento controlado pelo SGI · gerado pelo SMF ${VERSAO_APP}</span><span>Página <b>${n}</b> de <b>@N</b></span></div>`;
 const dv = (lab, v, span) => `<div${span ? ` style="grid-column:span ${span}"` : ''}><span class="fl">${lab}</span><div class="v">${esc(v == null ? '' : v) || '&nbsp;'}</div></div>`;
 const blk = (code, t, r, inner) => `<div class="fs"><h4><code>${code}</code>${t}${r ? `<span class="r">${r}</span>` : ''}</h4>${inner}</div>`;
@@ -1450,7 +1457,7 @@ function vAdmin() {
     ${temExemplo() ? `<button class="mbtn bad" data-act="limparEx" ${a ? '' : 'disabled'}>Limpar dados de exemplo</button>` : `<button class="mbtn" data-act="carregarEx" ${a ? '' : 'disabled'}>Carregar dados de exemplo</button>`}
     <button class="mbtn" data-act="exportar">⬇ Cópia de segurança (JSON)</button><label class="mbtn" style="position:relative" ${a ? '' : 'onclick="toast(\'Entre como Supervisor (botão Entrar, embaixo à esquerda) para importar.\')"'}>⬆ Importar / restaurar (JSON)<input type="file" id="adImp" accept=".json,application/json,text/plain,*/*" style="position:absolute;inset:0;opacity:0" ${a ? '' : 'disabled'}></label>
     <button class="mbtn" data-act="instalar" id="btnInstall" ${window._bip ? '' : 'hidden'}>📲 Instalar app</button></div>
-    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML() + (typeof admMenuHTML === 'function' ? admMenuHTML() : '');   /* fora de operação e marco zero ficam nos blocos deles */
+    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML() + (typeof admMenuHTML === 'function' ? admMenuHTML() : '') + (typeof versoesHTML === 'function' ? versoesHTML() : '');   /* fora de operação e marco zero ficam nos blocos deles */
 }
 AFTER.admin = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'adQ') { ADM.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#adQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 350); } };

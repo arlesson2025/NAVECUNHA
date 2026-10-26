@@ -114,7 +114,7 @@ const balIvTx = t => t.doca ? 'na docagem (CSN)' : [t.h ? nf(t.h) + ' h' : '', t
 const balMotTx = b => `${BAL_MOTOR[b.mot]}`;
 // ---------- telas ----------
 const BAL_VIEWS = [['bal', 'Situação das balsas'], ['balcr', 'Cronograma'], ['balpl', 'Plano preventivo'], ['baldoca', 'Docagem'], ['balcal', 'Plano de calibração'], ['balcmp', 'Compressão dos motores'], ['balkpi', 'Indicadores'], ['balft', 'Ficha técnica']];
-const balCab = (tit, sub, bt) => `<div class="vh"><div><h1>${esc(tit)}<span class="np-tag">NP 024</span></h1><p>${sub}</p></div><span class="sp"></span>${bt || ''}</div>`;
+const balCab = (tit, sub, bt) => `<div class="vh"><div><h1>${esc(tit)}</h1><p>${sub}</p></div><span class="sp"></span>${bt || ''}</div>`;
 const BALF = { f: 'todas', q: '' };
 function vBal() {
   const E = BALSAS.map(balEstado), cnt = k => E.filter(e => e.st === k).length;
@@ -177,7 +177,7 @@ function vBalCr() {
     return `<tr class="pr-p"><td class="pr-sv" rowspan="2"><a href="#balcr" data-balcrb="${b.id}"><b>${esc(b.nome)}</b></a><small>${esc(BAL_MOTOR[b.mot])}</small></td><td class="pr-l">P</td>${cP}<td class="pr-t">${d.P.reduce((x, y2) => x + y2, 0)}</td><td class="pr-fa" rowspan="2">${venc ? `<b style="color:#C5221F">${venc} não realizado${venc > 1 ? 's' : ''}</b>` : '<span style="color:#188038">nada vencido</span>'}</td><td class="pr-ad" rowspan="2"><b style="color:${adCor(a)}">${a == null ? '—' : a + '%'}</b></td></tr>
      <tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${d.R.reduce((x, y2) => x + y2, 0)}</td></tr>`; }).join('');
   const okT = tot.reduce((a, t) => a + t.ok, 0), dT = tot.reduce((a, t) => a + t.den, 0), aT = ad(okT, dT);
-  return balCab('Cronograma das balsas', 'Previsto × realizado mês a mês · aderência = feito no prazo ÷ o que já venceu · clique na balsa para ver serviço por serviço', anoBt)
+  return balCab('Cronograma', 'Previsto × realizado mês a mês · aderência = feito no prazo ÷ o que já venceu · clique na balsa para ver serviço por serviço', anoBt)
    + `<div class="card"><div class="cm-chips"><span class="cm-chip on">Aderência no prazo <b style="color:${adCor(aT)}">${aT == null ? '—' : aT + '%'}</b></span><span class="cm-chip">Serviços preventivos não realizados dentro do prazo <b>${tF}</b></span><span class="cm-chip">Previsto no ano <b>${tot.reduce((a, t) => a + t.p, 0)}</b></span></div>
      <div class="tw"><table class="pr-t"><colgroup><col style="width:150px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:46px"><col style="width:150px"><col style="width:80px"></colgroup>
      <thead><tr><th>Balsa</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>No prazo</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody>
@@ -195,7 +195,7 @@ function vBalDoca() {
   const D = BALSAS.map(balDocaSit).sort((a, b) => (a.dias == null ? 1e9 : a.dias) - (b.dias == null ? 1e9 : b.dias)), y0 = hoje().getFullYear(), anos = [0, 1, 2, 3, 4].map(k => y0 + k), c = k => D.filter(d => d.st === k).length;
   const par = h => h && h.saida ? Math.max(0, Math.round((pD(h.saida) - pD(h.date)) / 864e5)) + ' d' : h ? 'no estaleiro' : '—';
   const proj = d => anos.map(a => { const hit = d.s.alvoD && d.s.alvoD.getFullYear() === a; return `<td class="c${hit ? (d.st === 'venc' ? ' bal-dv' : ' bal-dp') : ''}">${hit ? MESES[d.s.alvoD.getMonth()] : ''}</td>`; }).join('');
-  return balCab('Docagem das balsas', 'Vistoria em seco · vale a data-limite do CSN lançada; sem ela, 5 anos depois da última docagem (critério interno) · a revisão das válvulas de gaveta e a recertificação da PSV vão junto', '')
+  return balCab('Docagem', 'Vistoria em seco · vale a data-limite do CSN lançada; sem ela, 5 anos depois da última docagem (critério interno) · a revisão das válvulas de gaveta e a recertificação da PSV vão junto', '')
    + `<div class="cm-chips">${[['venc', 'Vencidas'], ['prox', 'Programar (até 12 meses)'], ['ok', 'Em dia'], ['sem', 'Sem data']].map(([k, t]) => `<span class="cm-chip">${t} <b>${c(k)}</b></span>`).join('')}</div>
    <div class="card"><h2>Situação e projeção</h2><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th><th>Última docagem</th><th>Estaleiro</th><th class="r">Parada</th><th class="r">Custo (R$ mil)</th><th>CSN até</th><th>Situação</th>${anos.map(a => `<th class="c">${a}</th>`).join('')}<th></th></tr></thead><tbody>
    ${D.map(d => `<tr><td><a href="#balft/${d.b.id}"><b>${esc(d.b.nome)}</b></a></td><td>${d.u ? brD(d.u.date) : '—'}</td><td>${esc(d.u && d.u.estaleiro || '—')}</td><td class="r">${par(d.u)}</td><td class="r">${d.u && d.u.custo != null && d.u.custo !== '' ? nf(d.u.custo) : '—'}</td><td>${d.csn && d.csn.date ? brD(d.csn.date) : '<span class="mut">não lançado</span>'}</td><td>${balPil(BAL_DST, d.st)}<div class="note">${d.dias == null ? '' : d.dias < 0 ? (-d.dias) + ' dias vencida' : 'faltam ' + d.dias + ' dias'}</div></td>${proj(d)}<td class="nowrap"><button class="mbtn sm pri" data-baldoca="${d.b.id}">Registrar docagem</button> <button class="mbtn sm" data-balcsn="${d.b.id}">CSN</button></td></tr>`).join('')}</tbody></table></div>
@@ -222,7 +222,7 @@ function vBalCal() {
   const cel = (b, k) => { const id = k === 'inj' ? balInj(b) : k, t = BA1M[id], s = balSit(b, t), L = s.L;
     return `<td>${balPil(BAL_SIT, s.st)}<div class="note">${L ? brD(L.date) + (L.cert ? ' · cert. ' + esc(L.cert) : '') : 'sem registro'}${s.txt && L ? '<br>' + esc(s.txt) : ''}</div></td>`; };
   const E = BALSAS.map(b => ({ b, S: BAL_CAL.map(([k]) => balSit(b, BA1M[k === 'inj' ? balInj(b) : k]).st) })), n = st => E.reduce((a, e) => a + e.S.filter(x => x === st).length, 0);
-  return balCab('Plano de calibração das balsas', 'PSV e válvula de alívio: anual (NP 024 8.2.5) · manômetro da rede de carga: anual (critério interno) · bicos e bomba injetora: na revisão de 1.000 h · cada calibração com nº do certificado (NP 024 6.5)', '')
+  return balCab('Plano de calibração', 'PSV e válvula de alívio: anual (NP 024 8.2.5) · manômetro da rede de carga: anual (critério interno) · bicos e bomba injetora: na revisão de 1.000 h · cada calibração com nº do certificado (NP 024 6.5)', '')
    + `<div class="cm-chips"><span class="cm-chip">Vencidas <b>${n('venc')}</b></span><span class="cm-chip">Em até 30 dias ou 50 h <b>${n('prox')}</b></span><span class="cm-chip">Em dia <b>${n('ok')}</b></span><span class="cm-chip">Sem registro <b>${n('sem')}</b></span></div>
    <div class="card"><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th>${BAL_CAL.map(([k, n2]) => `<th>${n2}<div class="note">${k === 'inj' ? '1.000 h' : 'anual'}</div></th>`).join('')}<th></th></tr></thead><tbody>
    ${E.map(({ b }) => `<tr><td><a href="#balft/${b.id}"><b>${esc(b.nome)}</b></a><div class="note">${esc(BAL_MOTOR[b.mot])}</div></td>${BAL_CAL.map(([k]) => cel(b, k)).join('')}<td><button class="mbtn sm pri" data-balcal="${b.id}">Registrar calibração</button></td></tr>`).join('')}</tbody></table></div>
@@ -260,7 +260,7 @@ function balCmpSit(b) {
 const BAL_CST = { fora: ['p-bad', 'Abaixo do mínimo'], aten: ['p-warn', 'Atenção'], ok: ['p-ok', 'Normal'], sem: ['p-mut', 'Sem ensaio'] };
 function vBalCmp() {
   const D = BALSAS.map(balCmpSit).sort((a, b) => ({ fora: 0, aten: 1, sem: 3, ok: 2 })[a.st] - ({ fora: 0, aten: 1, sem: 3, ok: 2 })[b.st] || (a.u ? a.u.min : 99) - (b.u ? b.u.min : 99)), c = k => D.filter(d => d.st === k).length;
-  return balCab('Compressão dos motores das balsas', `Motor-bomba · ensaio na revisão de 1.000 h · MWM: mínimo ${BAL_CMP.min} bar e diferença máxima de ${BAL_CMP.dif} bar entre cilindros (novo ${BAL_CMP.novo} bar) · Cummins: sem valor do fabricante, critério interno de diferença até 10% da média e queda de 10%, com o blow-by registrado junto`, '')
+  return balCab('Compressão dos motores', `Motor-bomba · ensaio na revisão de 1.000 h · MWM: mínimo ${BAL_CMP.min} bar e diferença máxima de ${BAL_CMP.dif} bar entre cilindros (novo ${BAL_CMP.novo} bar) · Cummins: sem valor do fabricante, critério interno de diferença até 10% da média e queda de 10%, com o blow-by registrado junto`, '')
    + `<div class="cm-chips"><span class="cm-chip">Abaixo do mínimo <b>${c('fora')}</b></span><span class="cm-chip">Atenção <b>${c('aten')}</b></span><span class="cm-chip">Normal <b>${c('ok')}</b></span><span class="cm-chip">Sem ensaio <b>${c('sem')}</b></span><span class="cm-chip">Ensaio vencido <b>${D.filter(d => d.vencida).length}</b></span></div>
    <div class="card"><h2>Matriz de compressão das balsas</h2><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th><th class="r">Horímetro</th><th>Último ensaio</th><th class="r">Menor cil.</th><th class="r">Dif. cil.</th><th>Blow-by</th><th class="r">Até o mínimo</th><th class="r">Próximo ensaio</th><th>Situação</th><th></th></tr></thead><tbody>
    ${D.map(d => `<tr title="${esc(d.mot.join(' · ') || 'sem alerta')}"><td><a href="#balft/${d.b.id}"><b>${esc(d.b.nome)}</b></a><div class="note">${esc(BAL_MOTOR[d.b.mot])}${d.b.mot === 'm229' ? ' · limite a confirmar' : ''}</div></td><td class="r">${d.hr ? nf(d.hr.h) + ' h' : '—'}</td><td>${d.u ? brD(d.u.date) + (d.u.h != null ? '<div class="note">' + nf(d.u.h) + ' h</div>' : '') : '—'}</td>
@@ -326,7 +326,7 @@ function vBalKpi() {
   const eq = {}; K.fal.forEach(a => { const k = a.sis || 'Não informado'; (eq[k] = eq[k] || []).push(a); });
   const E = Object.entries(eq).map(([k, L]) => [k, L.length]).sort((a, b) => b[1] - a[1]);
   const det = RM_DET && RM_DET.t === 'par' && eq[RM_DET.k] ? eq[RM_DET.k] : null;
-  return balCab('Indicadores das balsas', `${P.tx} · ${brD(isoD(P.ini))} a ${brD(isoD(new Date(Math.min(+P.fim, Date.now()) - 1)))} · metas da NP 024 item 10 · anterior = período de mesmo tamanho logo antes`,
+  return balCab('Indicadores', `${P.tx} · ${brD(isoD(P.ini))} a ${brD(isoD(new Date(Math.min(+P.fim, Date.now()) - 1)))} · metas da NP 024 item 10 · anterior = período de mesmo tamanho logo antes`,
     `<div class="seg">${[['mes', 'Este mês'], ['ant', 'Mês passado'], ['tri', '3 meses'], ['ano', 'Ano']].map(([k, t]) => `<button data-balkp="${k}" class="${BALK.p === k ? 'on' : ''}">${t}</button>`).join('')}</div>`)
    + `<div class="bal-kg">${card('Disponibilidade da frota', K.disp, ant.disp, pc, '≥ 95%', v => v >= 95, 'Horas sem falha Crítica aberta ÷ horas do período, média das 29 balsas. Serviço vencido não entra.')}
      ${card('MTBF', K.mtbf, ant.mtbf, hh, '≥ 500 h', v => v >= 500, `Horas do motor-bomba (${nf(K.hMB)} h) ÷ falhas registradas (${K.fal.length}).${K.fal.length && !K.hMB ? ' Sem leitura de horímetro no período.' : ''}`)}
@@ -351,7 +351,7 @@ function balCmpGraf(b) {
   return `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block">${g}</svg><p class="note">Azul = menor cilindro · cinza tracejado = maior cilindro · bar × horímetro do motor-bomba.</p>`; }
 function vBalPl() {
   const G = [...new Set(BA1.map(t => t.eq))], n = mot => BALSAS.filter(b => !mot || b.mot === mot).length;
-  return balCab('Plano preventivo das balsas', 'NP Navecunha 024 itens 7 e 8, com as correções aprovadas em 25/10/2026 · o diário e o semanal ficam no FR 027_A e na rotina da tripulação · extintores e salvatagem com o SESMT (FR 022_C)')
+  return balCab('Plano preventivo', 'NP Navecunha 024 itens 7 e 8, com as correções aprovadas em 25/10/2026 · o diário e o semanal ficam no FR 027_A e na rotina da tripulação · extintores e salvatagem com o SESMT (FR 022_C)')
    + G.map(g => { const L = BA1.filter(t => t.eq === g), mot = L[0].mot; return `<div class="card"><h2>${esc(g)} <span class="note">${n(mot)} balsa${n(mot) === 1 ? '' : 's'}${mot ? ': ' + BALSAS.filter(b => b.mot === mot).map(b => esc(b.nome.replace('VDA ', ''))).join(', ') : ''}</span></h2>
      <div class="tw"><table class="t"><thead><tr><th>Item</th><th>Serviço</th><th>Intervalo</th><th>Criticidade</th><th>Quem executa</th><th>Referência</th></tr></thead><tbody>${L.map(t => `<tr><td class="nowrap"><b>${t.id}</b></td><td>${esc(t.serv)}</td><td class="nowrap">${balIvTx(t)}</td><td><span class="pill ${t.prio === 'Crítica' ? 'p-bad' : 'p-warn'}">${t.prio}</span></td><td>${esc(t.exec)}</td><td class="note">${esc(t.ref)}</td></tr>`).join('')}</tbody></table></div></div>`; }).join('')
    + `<div class="card"><h2>Fontes e decisões</h2><ul class="bal-ag"><li><b>MWM 6.10 TCA:</b> manual de oficina MWM Série 10, tabela dos motores estacionários (p. 3-9): óleo e filtros a 250 h, filtro de ar a 500 h, revisão a 1.000 h, óleo no máximo a cada 6 meses; folga de válvulas 0,20 mm a frio (p. 9-25). A NP 024 dizia 500 h.</li>
@@ -360,7 +360,7 @@ function vBalPl() {
 }
 function vBalFt() {
   const b = balsaDe(ARG);
-  if (!b) return balCab('Ficha técnica das balsas', 'Planilha de características principais · clique numa balsa para ver o plano, o histórico e registrar')
+  if (!b) return balCab('Ficha técnica', 'Planilha de características principais · clique numa balsa para ver o plano, o histórico e registrar')
    + `<div class="card"><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th><th class="r">Ano</th><th class="r">Capacidade</th><th class="r">Tanques</th><th>Motor (planilha)</th><th>Plano adotado</th><th class="r">Potência</th><th class="r">Rotação</th><th class="r">Bomba</th><th>Baterias (motor · alarme)</th><th class="r">Tanque de consumo</th><th>Cabeços</th><th class="r">Boias</th><th class="r">Extintores</th><th class="r">Machados</th></tr></thead><tbody>
      ${BALSAS.map(b => `<tr class="click" data-balft="${b.id}"><td><b>${esc(b.nome)}</b>${b.nota ? ' <span class="pill p-warn" title="' + esc(b.nota) + '">conferir</span>' : ''}</td><td class="r">${b.ano || '—'}</td><td class="r">${nf(b.cap, 2)}</td><td class="r">${b.tanques}</td><td>${esc(b.marca + ' ' + b.modelo)}</td><td>${esc(BAL_MOTOR[b.mot])}</td><td class="r">${b.hp ? nf(b.hp, 1).replace(',0', '') + ' HP' : '—'}</td><td class="r">${b.rpm ? nf(b.rpm) : '—'}</td><td class="r">${b.vazao ? b.vazao + ' m³/h' : '—'}</td><td>${esc([b.batM, b.batA].filter(Boolean).join(' · ') || '—')}</td><td class="r">${b.tqCons ? b.tqCons + ' m³' : '—'}</td><td>${b.cabQ ? esc(b.cabQ + ' · ' + b.cabT) : '—'}</td><td class="r">${b.boias ?? '—'}</td><td class="r">${b.ext ?? '—'}</td><td class="r">${b.mach ?? '—'}</td></tr>`).join('')}</tbody></table></div>
      <p class="note">“Conferir” = dado da planilha que não fecha (passe o mouse). Capacidade e ano vêm do ClickUp; a unidade da capacidade não está na lista.</p></div>`;
@@ -441,12 +441,18 @@ function balAfter() {
     if (d.balano !== undefined) { BALCR.ano = +d.balano; return render(); }
     if (d.balft !== undefined) go('#balft/' + d.balft); };
 }
-Object.assign(VX, { bal: vBal, balcr: vBalCr, balpl: vBalPl, baldoca: vBalDoca, balcal: vBalCal, balcmp: vBalCmp, balkpi: vBalKpi, balft: vBalFt }); BAL_VIEWS.forEach(([k]) => { AFTER[k] = balAfter; });
+// janelas livres (padrão único, Supervisor 25/10/2026): cabeçalho com Reorganizar e cada quadro uma janela; pares lado a lado viram duas janelas
+function balJan(k, fn) { return () => { const t = document.createElement('div'); t.innerHTML = fn(); const vh = t.querySelector(':scope > .vh'); if (vh) { vh.remove(); vh.insertAdjacentHTML('beforeend', `<button class="mbtn" data-balreset="${k}" title="Volta os blocos à posição e ao tamanho original">Reorganizar</button>`); }
+  const C = []; [...t.children].forEach(c => { if (c.classList.contains('rl-2c')) [...c.children].forEach(x => C.push(x.outerHTML)); else if (c.classList.contains('card')) C.push(c.outerHTML);
+    else C.push(`<div class="card">${c.classList.contains('cm-chips') ? '<h2>Resumo</h2>' : c.classList.contains('bal-kg') ? '<h2>Indicadores da NP 024</h2>' : ''}${c.outerHTML}</div>`); });
+  return `<div class="cm-v">${vh ? vh.outerHTML : ''}<div class="cm-ws">${C.join('')}</div></div>`; }; }
+Object.entries({ bal: vBal, balcr: vBalCr, balpl: vBalPl, baldoca: vBalDoca, balcal: vBalCal, balcmp: vBalCmp, balkpi: vBalKpi, balft: vBalFt }).forEach(([k, fn]) => { VX[k] = balJan(k, fn); });
+BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'balft' && ARG ? '1' : '') + '_lay', '[data-balreset="' + k + '"]'); }; });
 // menu da frota de balsas (renderNav chama quando FROTA_TIPO = 'bal')
 function balNav() {
   const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${k === 'bal' ? (n2 => n2 ? `<span class="n">${n2}</span>` : '')(BALSAS.filter(b => balEstado(b).st === 'bloq').length) : ''}</a>`;
-  return '<div class="grp-t grp-trab">Balsas petroleiras</div>' + it('bal', 'Situação das balsas', 'hoje') + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr') + it('balkpi', 'Indicadores', 'graf') + it('balft', 'Ficha técnica', 'barcos')
-    + '<div class="grp-t grp-apoio">Suporte</div>' + it('bib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }
+  return '<div class="grp-t grp-trab">Operação</div>' + it('bal', 'Situação das balsas', 'hoje') + '<div class="grp-t">Controle</div>' + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr') + it('balkpi', 'Indicadores', 'graf') + it('balft', 'Ficha técnica', 'barcos')
+    + '<div class="grp-t grp-apoio">Apoio</div>' + it('bib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }
 // ---------- dados de exemplo das balsas (seed: some em “Limpar dados de exemplo”) ----------
 async function balExemplo() {
   if (!temExemplo() || S.recs.has('ex-bal-v5')) return;
