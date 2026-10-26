@@ -37,6 +37,6 @@ AFTER.barco = function () { const m = $('#main');
  .ol-v{white-space:nowrap}.ol-v b{font-size:15px}.ol-v small{display:block;color:#5F6368;margin-left:18px}
  
  
- .br-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}.br-m{border:1px solid #E8EAED;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}.br-h{font-size:22px;font-weight:700}.br-m small{color:#5F6368}`; document.head.appendChild(st); }
+ `; document.head.appendChild(st); }
 if (!location.hash || location.hash === '#rotina') { try { history.replaceState(null, '', '#rotina'); } catch (e) { } }
 

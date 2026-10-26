@@ -1,7 +1,5 @@
 /* ===== Vencimentos: lista da frota (esquerda) + detalhe do empurrador ou da frota toda (direita) ===== */
-let FS_SEL = 'frota';
 { const st = document.createElement('style'); st.textContent = `
-.card.fs-card{padding:0;overflow:hidden}
 
 
 

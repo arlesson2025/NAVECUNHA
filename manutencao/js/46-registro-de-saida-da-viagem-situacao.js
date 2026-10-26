@@ -69,4 +69,4 @@ function saidaModal(vid, fr) {
 // Hoje · em viagem: como saiu (situação registrada na saída)
 
 { const st = document.createElement('style'); st.textContent = `.sai-l{list-style:none;padding:0;margin:4px 0;display:flex;flex-direction:column;gap:5px;font-size:13.5px;max-height:240px;overflow:auto}
- .sai-tag{border:0;cursor:pointer;font:inherit;font-size:11.5px;font-weight:600;margin-left:6px}`; document.head.appendChild(st); }
+ `; document.head.appendChild(st); }

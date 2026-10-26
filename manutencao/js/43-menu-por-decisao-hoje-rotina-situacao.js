@@ -6,7 +6,6 @@
 let OL_IR = 0;   // veio de #lubreg: rolar até o bloco das trocas
 VX.lubreg = () => { OL_IR = Date.now(); location.replace('#oleo'); return ''; };
 // links cruzados: situação → cronograma do empurrador · cronograma → situação de hoje
-document.addEventListener('click', e => { const a = e.target.closest('[data-fsgo]'); if (!a) return; FS_SEL = a.dataset.fsgo; setTimeout(() => { const c = document.querySelector('#main .fs-card'); if (c) c.scrollIntoView({ block: 'start' }); }, 350); }, true);
 // Controle: sem a parte de vencimentos (agora no Hoje)
 { const by = id => SECOES.find(s => s.id === id), oleo = by('oleo'), compr = by('compr'), graf = by('graf'), adm = by('adm');
   const cond = { id: 'cond2', nome: 'Condição', views: [...(oleo ? oleo.views.filter(x => x[0] !== 'lubreg') : []), ['anoleo', 'Análise de óleo'], ...(compr ? compr.views : []), ['controle', 'Calibração e docagem']], extra: [...(oleo && oleo.extra || []), ...(compr && compr.extra || []), 'lubreg'] };

@@ -147,7 +147,6 @@ function frotaMatriz() {
 
 /* ---------- 8 · cronograma de manutenção (projetado do Anexo I) ---------- */
 const CRONO_FORA = ['11.1.2', '11.3.2'];   // motor de popa e motobomba 5 HP: troca a cada saída, fora do cronograma
-let CR = { v: '', prio: '', sis: '' };
 
 
 /* ---------- 9 · menu na ordem do ciclo de gestão (PDCA) ---------- */

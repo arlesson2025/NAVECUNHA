@@ -60,4 +60,4 @@ function agoraLista() {
   S.cfg.frota.forEach(v => { const P = popaPend(v); if (P.length) sem.push({ p: 2, txt: `<b>${esc(v.nome)}</b> · trocar o óleo ${P.map(popaDo).join(' e ')} antes de sair (a cada saída · sem isso a saída fica com restrição)`, btn: `<a class="mbtn sm" href="#oleo">FR 049_B</a>` }); });   // motor de popa e motobomba 5 HP
   return sem.sort((a, b) => a.p - b.p);
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-agfs]'); if (!b) return; e.preventDefault(); e.stopPropagation(); FS_SEL = b.dataset.agfs; render(); setTimeout(() => { const c = document.querySelector('#main .fs-card'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 350); }, true);
+document.addEventListener('click', e => { const b = e.target.closest('[data-agfs]'); if (!b) return; e.preventDefault(); e.stopPropagation(); location.hash = '#barco/' + encodeURIComponent(b.dataset.agfs); }, true);   // abre a ficha do empurrador

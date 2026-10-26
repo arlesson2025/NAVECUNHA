@@ -506,8 +506,7 @@ function renderUser() {
 function go(h) { location.hash = h; }
 window.addEventListener('hashchange', route);
 function route() { const h = location.hash.slice(1) || 'geral'; const [v, a] = h.split('/'); VIEW = v; ARG = a ? decodeURIComponent(a) : ''; document.body.classList.remove('menu'); render(); window.scrollTo(0, 0); }
-let dirty = false;
-function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { dirty = true; renderNav(); return; } render(); }
+function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { renderNav(); return; } render(); }
 /* montagem da página num lugar só (24/10/2026): antes eram 11 camadas por cima de render, aplicadas nesta mesma ordem */
 let RENDER_ULTV = '';
 document.addEventListener('change', e => { const s = e.target.closest('#frTipo'); if (!s) return; FROTA_TIPO = s.value === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } location.hash = FROTA_TIPO === 'bal' ? '#bal' : '#rotina'; });
@@ -807,7 +806,7 @@ AFTER.doca = () => { $('#main').onclick = e => { const b = e.target.closest('[da
    Pareto por sistema, componentes com maior frequência de falha, reincidência e
    acompanhamento das medidas de mitigação (campo A9)
    ===================================================================== */
-let FALPER = 12, FALMED = 'abertas';
+let FALPER = 12;
 const REINC_DIAS = 180;
 const pDT = s => { if (!s) return null; const d = pD(s); return d; };
 function falhasDados(meses) {
@@ -834,11 +833,6 @@ function mitigSit(o) {
   if (o.mitigPrazo && pD(o.mitigPrazo) < hoje()) return { k: 'atraso', t: 'Atrasada', c: 'p-bad' };
   return { k: 'and', t: o.mitigSt === 'Em andamento' ? 'Em andamento' : 'Pendente', c: 'p-warn' };
 }
-AFTER.falhas = () => { $('#main').onclick = e => {
-  const p = e.target.closest('[data-falper]'); if (p) { FALPER = +p.dataset.falper; render(); return; }
-  const m = e.target.closest('[data-falmed]'); if (m) { FALMED = m.dataset.falmed; render(); return; }
-  const o = e.target.closest('[data-open]'); if (o) { go('om/' + o.dataset.open); return; }
-}; };
 // dados de exemplo: mais corretivas (com repetições) e medidas de mitigação
 const EX_MITIG = {
   'Mangueira de alta pressão do governo com vazamento': ['Mangueira de alta pressão do governo', 'Mangueira vencida (mais de 4 anos)', 'Trocar as mangueiras do governo com mais de 4 anos em toda a frota', 'Encarregado de oficina', 'Concluída'],
@@ -1100,23 +1094,6 @@ function fichaModal(o) {   // Anexo II-B da OM preventiva para imprimir (só é 
    ACOMPANHAR (quadro)
    ===================================================================== */
 
-/* =====================================================================
-   HISTÓRICO
-   ===================================================================== */
-const HI = { q: '', tipo: 'todas', v: '' };
-AFTER.hist = () => { const m = $('#main');
-  m.oninput = e => { if (e.target.id === 'hiQ') { HI.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#hiQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); } };
-  m.onchange = e => { if (e.target.id === 'hiV') { HI.v = e.target.value; render(); } };
-  m.onclick = async e => { const b = e.target.closest('button'); if (b && b.dataset.hit) { HI.tipo = b.dataset.hit; render(); return; }
-    if (b && b.dataset.pdf) { e.stopPropagation(); abrirPdfNuvem(S.recs.get(b.dataset.pdf)); return; }
-    if (b && b.dataset.regen) { e.stopPropagation(); const o = S.recs.get(b.dataset.regen); await baixarPDF(o.tipo === 'C' ? docIIA(o) : docIIB(o), nomePdf(o)); return; } }; };
-async function abrirPdfNuvem(o) {
-  toast('Buscando o PDF no Drive…');
-  try { const j = await api('getFile', { fileId: o.pdfFileId }); if (!j.ok) return toast('Não foi possível abrir: ' + j.error);
-    const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([u], { type: 'application/pdf' })); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.download = nomePdf(o); document.body.appendChild(a); a.click(); a.remove();
-  } catch (e) { toast('Sem conexão com a nuvem.'); }
-}
 
 /* =====================================================================
    MATRIZ ANEXO I (consulta)
@@ -1431,7 +1408,7 @@ async function baixarPDF(pages, nome) { toast('Gerando PDF…', 1800); try { con
 function vKpi() {
   const K = kpis();
   const labs = K.ms.map(x => x.lab), di = K.disp[5], mtbf = K.mtbfNow, mttr = K.mttr[5], bk = K.bk, pr = K.pred[3], ft = K.fotosSem;
-  return `<div class="vh"><div><h1>Indicadores de desempenho (KPI) · NP 055</h1><p>KPIs do item 9, calculados das OMs, dos horímetros e das corretivas registradas no SMF. Passe o mouse nos gráficos para ver os valores.</p></div><span class="sp"></span><a class="mbtn" href="#rel">Relatório mensal</a></div>
+  return `<div class="vh"><div><h1>Indicadores de desempenho (KPI) · NP 055</h1><p>KPIs do item 9, calculados das OMs, dos horímetros e das corretivas registradas no SMF. Passe o mouse nos gráficos para ver os valores.</p></div><span class="sp"></span></div>
   <div class="kgrid">
    ${kpiCard('Disponibilidade da frota', di, '%', '≥ 95%', di >= 95, lineChart(K.disp, labs, 95, '%', 1), '(h calendário − h indisponíveis por manutenção) ÷ h calendário × 100. Indisponível: da interdição à liberação, mais as horas paradas em preventiva.', 'Mensal')}
    ${kpiCard('MTBF', mtbf.v, ' h', '≥ 500 h', mtbf.v >= 500, lineChart(K.mtbf, labs, 500, ' h', 0), `${nf(mtbf.h)} h de operação ÷ ${mtbf.f} falhas (Crítica/Alta) em 12 meses. Horas: horímetro do MCP BB (FR 027_L).`, 'Mensal · janela de 12 meses', 0)}

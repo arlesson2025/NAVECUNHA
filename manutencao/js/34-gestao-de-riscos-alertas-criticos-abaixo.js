@@ -48,7 +48,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-rkf]
 .card.rk h2{margin:0;font-size:16px}.rk-sec .seg{margin:0}.rk-sec{align-items:center!important;flex-wrap:wrap}.card.rk .rk-h{margin-bottom:6px;padding-right:62px}
 
 
-.rk-h b {font-size:15px;font-weight:700;color:#0F172A}
+.rk-h b{font-size:15px;font-weight:700;color:#0F172A}
 .rk-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .rk-big{display:flex;align-items:baseline;gap:12px;margin:8px 0 12px}.rk-big span{font-size:46px;font-weight:800;line-height:1}.rk-big em{font-style:normal;color:#64748B;font-size:13px}
 .rk-emp{display:flex;align-items:flex-start;gap:12px;padding:9px 12px;margin:0 0 8px;border:1px solid #FECACA;background:#FEF2F2;border-radius:8px;text-decoration:none;color:#0F172A}.rk-emp b{font-size:14px;min-width:84px}.rk-emp span{flex:1;font-size:13px;color:#7F1D1D}.rk-emp i{font-style:normal;color:#DC2626;font-size:18px;line-height:1}.rk-emp:hover{background:#FEE2E2}
