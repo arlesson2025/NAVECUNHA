@@ -16,7 +16,7 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
 function enxNav() {
   const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
   let v = 0; try { v = enxDados().reduce((a, x) => a + x.venc.length, 0); } catch (e) { }
-  return '<div class="grp-t grp-trab">Manutenção</div>' + it('enxhor', '1 · Horímetros', 'hoje') + it('enxcr', '2 · Cronograma', 'crono') + it('enx', '3 · Executar', 'prev2', v) + it('enxcor', '4 · Corretivas', 'omsv2') + it('enxrel', '5 · Relatório de preventiva', 'relm')
+  return '<div class="grp-t grp-trab">Manutenção</div>' + it('enxhor', '1 · Horímetros', 'hoje') + it('enxcr', '2 · Cronograma', 'crono') + it('enx', '3 · Executar', 'prev2', v) + it('enxcor', '4 · Corretivas', 'omsv2') + it('enxrel', '5 · Relatório mensal', 'relm')
     + '<div class="grp-t">Condição</div>' + it('oleo', 'Óleo', 'oleo') + it('compr', 'Compressão do MCP', 'compr')
     + '<div class="grp-t grp-apoio">Apoio</div>' + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm');
 }
@@ -102,12 +102,12 @@ function vEnxHor() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), idade = v => { const h = horAtual(v.id, mpos(v.id)); return h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : 999; };
   if (!V.some(v => v.id === ENXH.v)) ENXH.v = (V.slice().sort((a, b) => idade(b) - idade(a))[0] || {}).id;   // abre no que está há mais tempo sem leitura
   const lin = v => posicoes(v).filter(p => p !== 'UN').map((p, i) => { const h = horAtual(v.id, p), d = h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
-    return `<tr>${i ? '<td></td>' : `<td><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td><td>${h ? brD(h.date) : '—'}${d != null && d > 14 ? ` <span class="pill p-warn">há ${d} dias</span>` : ''}</td><td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"></td></tr>`; }).join('');
+    return `<tr>${i ? '<td></td>' : `<td><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td><td>${h ? brD(h.date) : '—'}${d != null && d > 14 ? ` <span class="pill p-warn">há ${d} dias</span>` : ''}</td><td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"> ${h && !h.est ? `<button class="mbtn sm" data-ehno="${v.id}|${p}" title="Motor parado: repete a última leitura (0 h no período)">Não operou</button>` : ''}</td></tr>`; }).join('');
   return enxCab('Horímetros', 'Escolha o empurrador que chegou e lance as leituras dos motores · os serviços por horas vencem por estas leituras · em âmbar, os que estão há mais de 14 dias sem leitura', '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Leituras</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Salvar leituras</button></div>
      <div class="cm-chips" style="margin-bottom:8px">${V.map(v => { const d = idade(v); return `<button class="cm-chip${v.id === ENXH.v ? ' on' : ''}" data-ehv="${v.id}">${esc(v.nome)}${d > 14 ? ` <b style="color:var(--warnt)">${d === 999 ? 'sem leitura' : d + ' d'}</b>` : ''}</button>`; }).join('')}</div>
      <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.filter(v => v.id === ENXH.v).map(lin).join('')}</tbody></table></div>
-     <p class="note">Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div></div></div>`;
+     <p class="note">Motor que não rodou: “Não operou” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div></div></div>`;
 }
 async function enxHorSalvar() {
   if (!S.session) return loginModal(); const d = $('#ehD').value; if (!d || d > isoD(hoje())) return toast('Data inválida.');
@@ -119,24 +119,7 @@ async function enxHorSalvar() {
     if (await lubHor(v.id, p, h, d, 'Horímetros')) ok++; }
   toast(ok + ' leitura' + (ok === 1 ? '' : 's') + ' salva' + (ok === 1 ? '' : 's') + (erro.length ? ' · ' + erro.length + ' recusada' + (erro.length === 1 ? '' : 's') : '') + '.', 6000);
   if (erro.length) modal(`<h2>Leituras recusadas</h2><ul>${erro.map(e => `<li>${esc(e)}</li>`).join('')}</ul><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`); render(); }
-// ---------- 3 · Relatório de preventiva (mês), emitido e congelado ----------
-const ENXR = { ym: isoD(hoje()).slice(0, 7) };
-function enxRelDados(ym) {
-  const [y, m] = ym.split('-').map(Number), mi = m - 1, hm = hoje().getFullYear() === y ? hoje().getMonth() : y < hoje().getFullYear() ? 12 : -1, V = S.cfg.frota.filter(v => !foraOp(v));
-  const por = V.map(v => { const r = prResumo(v, y, hm, [mi]), a = prResumo(v, y, hm, [...Array(mi + 1).keys()]); return { nome: v.nome, prev: r.tP, ok: r.Ok[mi], late: r.Lt[mi], miss: r.Ms[mi], ad: r.ad, adAno: a.ad, aprov: !!cronoBase(y, v.id) }; });
-  const ini = `${ym}-01`, fim = isoD(new Date(y, m, 0)), B = recs('base').filter(r => r.date >= ini && r.date <= fim && !r.excluido && vessel(r.vessel) && A1M[r.item]);
-  // cópia compacta (códigos; os nomes são montados na impressão): o registro congelado tem de caber numa célula da planilha (50 mil caracteres)
-  const feitos = B.filter(r => !r.nf).sort((a, b) => a.date < b.date ? -1 : 1).map(r => [r.date, r.vessel, r.pos, r.item, r.om || '', r.quem || '']);
-  const nfs = B.filter(r => r.nf).map(r => [r.date, r.vessel, r.item, r.motivo || '']);
-  const D = enxDados(), venc = D.flatMap(x => x.venc.map(y => [x.v.id, y.pos, y.t.id, y.s.txt || ''])), mes = D.flatMap(x => x.mes.map(y => [x.v.id, y.pos, y.t.id, y.s.txt || '']));
-  const T = por.reduce((a, p) => ({ prev: a.prev + p.prev, ok: a.ok + p.ok, late: a.late + p.late, miss: a.miss + p.miss }), { prev: 0, ok: 0, late: 0, miss: 0 }), den = T.ok + T.late + T.miss;
-  const A12 = Array.from({ length: 12 }, () => ({ ok: 0, d: 0 })); V.forEach(v => { const r = prResumo(v, y, hm, [...Array(12).keys()]); for (let i = 0; i <= Math.min(hm, 11); i++) { A12[i].ok += r.Ok[i]; A12[i].d += r.Ok[i] + r.Lt[i] + r.Ms[i]; } });
-  const ads = A12.map((a, i) => i <= hm && a.d ? Math.round(a.ok / a.d * 100) : null);
-  const hP = o => o.abertura && o.liberacao ? Math.max(0, (new Date(o.liberacao) - new Date(o.abertura)) / 36e5) : null;
-  const cor = oms().filter(o => o.tipo === 'C' && !o.excluido && String(o.abertura || '').slice(0, 7) === ym).sort((a, b) => a.abertura < b.abertura ? -1 : 1).map(o => [String(o.abertura).slice(0, 10), o.vessel, o.num || '', o.equip || o.sistema || '', o.classe || '', hP(o)]);
-  const lib = cor.filter(c => c[5] != null), mttr = lib.length ? lib.reduce((a, c) => a + c[5], 0) / lib.length : null, hPar = lib.reduce((a, c) => a + c[5], 0);
-  return { ym, ref: MESES[mi] + '/' + y, por, T, ad: den ? Math.round(T.ok / den * 100) : null, ads, ano: y, feitos, nfs, venc, mes, cor, mttr, hPar, semHist: D.reduce((a, x) => a + x.sem.length, 0), geradoEm: new Date().toLocaleString('pt-BR') };
-}
+// ---------- relatórios de preventiva emitidos antes da 3.5 (só a reimpressão; o relatório mensal está em js/86) ----------
 function enxRelHTML(R, emi) {
   const pc = (vid, pos) => { const v = vessel(vid); return v ? posCurtoE(v, pos) : pos; }, sv = id => A1M[id] ? enxServ(A1M[id]) : id;
   const t = (cab, L, w) => L.length ? `<table class="t"><thead><tr>${cab.map((c, i) => `<th${w && w[i] ? ` style="width:${w[i]}"` : ''}>${c}</th>`).join('')}</tr></thead><tbody>${L.map(l => `<tr>${l.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum.</p>';
@@ -154,30 +137,15 @@ function enxRelHTML(R, emi) {
    ${emi ? `<p class="note">Emitido em ${esc(emi.em)} por ${esc(emi.por)} · ${esc(emi.num)} · cópia congelada: não muda se os registros forem corrigidos depois.</p><table class="rl-ass"><tr><th>Elaborado por</th><th>Aprovado por</th></tr><tr><td>Supervisor de Manutenção</td><td>Gerência</td></tr><tr><td class="rl-lin">Assinatura e data</td><td class="rl-lin">Assinatura e data</td></tr></table>` : ''}</div>`;
 }
 const enxEmitidos = () => recs('snap').filter(s => s.tipo === 'relprev' && !s.excluido).sort((a, b) => (b.at || 0) - (a.at || 0));
-function vEnxRel() {
-  const R = enxRelDados(ENXR.ym), E = enxEmitidos(), meses = [...Array(12).keys()].map(k => { const d = new Date(hoje().getFullYear(), hoje().getMonth() - k, 1); return isoD(d).slice(0, 7); });
-  return enxCab('Relatório de preventiva', 'O resumo do mês · “Emitir e imprimir” gera o relatório completo, numerado e congelado, para assinatura e auditoria',
-     `<select id="erM" style="width:auto">${meses.map(m => `<option value="${m}"${m === ENXR.ym ? ' selected' : ''}>${MESES[+m.slice(5) - 1]}/${m.slice(0, 4)}</option>`).join('')}</select><button class="mbtn pri" data-erem>Emitir e imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
-   + `<div class="card"><h2>Resumo · ${esc(R.ref)}</h2><div class="f2-ks">${[['Aderência no mês', R.ad == null ? '—' : R.ad + '%', R.ad == null ? '' : R.ad >= 90 ? 'var(--okt)' : 'var(--badt)'], ['Serviços feitos', R.feitos.length], ['Não feitos (com motivo)', R.nfs.length, R.nfs.length ? 'var(--warnt)' : ''], ['Vencidos hoje', R.venc.length, R.venc.length ? 'var(--badt)' : ''], ['Vencem no mês', R.mes.length], ['Corretivas no mês', R.cor.length, R.cor.length ? 'var(--warnt)' : ''], ['MTTR', R.mttr == null ? '—' : nf(R.mttr, 1) + ' h', R.mttr == null ? '' : R.mttr <= 8 ? 'var(--okt)' : 'var(--badt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>
-     <p class="note">A lista completa (serviço × OM do Sankhya, não feitos, vencidos e do mês) sai no relatório emitido.${R.semHist ? ` <span class="rl-ruim">${R.semHist} serviços sem histórico não entram na conta.</span>` : ''}</p></div>
-   <div class="card"><h2>Aderência mês a mês · ${R.ano}</h2>${balBarras(R.ads.map((a, i) => [MESES[i], a]), v => Math.round(v) + '%', 90, true)}<p class="note">Feito no prazo ÷ o que venceu em cada mês · referência 90%.</p></div>
-   <div class="card"><h2>Por empurrador</h2><table class="t"><thead><tr><th>Empurrador</th><th class="r">Previsto</th><th class="r">No prazo</th><th class="r">Com atraso</th><th class="r">Não feito</th><th class="r">Aderência mês</th><th class="r">Aderência ano</th></tr></thead><tbody>${R.por.map(q => `<tr><td><b>${esc(q.nome)}</b></td><td class="r">${q.prev}</td><td class="r">${q.ok}</td><td class="r">${q.late}</td><td class="r">${q.miss}</td><td class="r">${q.ad == null ? '—' : q.ad + '%'}</td><td class="r">${q.adAno == null ? '—' : q.adAno + '%'}</td></tr>`).join('')}</tbody></table></div>
-   <div class="card"><h2>Relatórios emitidos · ${E.length}</h2>${E.length ? `<table class="t"><thead><tr><th>Nº</th><th>Referência</th><th>Emitido em</th><th>Por</th><th></th></tr></thead><tbody>${E.map(s => `<tr><td><b>${esc(s.num)}</b></td><td>${esc(s.dados.ref)}</td><td>${esc(s.em)}</td><td>${esc(s.por)}</td><td><button class="mbtn sm" data-erimp="${s.id}">Imprimir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum emitido ainda.</p>'}</div></div></div>`;
-}
 function enxRelImprimir(s) {
   const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
   w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(s.num)}</title><style>@page{size:A4;margin:10mm}${DOC_CAB_CSS}body{font:11px Arial,sans-serif;color:#202124;margin:0}h3{font-size:12px;color:#1F2A44;margin:12px 0 4px}.enx-gr svg{max-height:170px;width:100%}table{width:100%;border-collapse:collapse;margin-bottom:4px}th,td{border:1px solid #CBD5E1;padding:3px 5px;text-align:left;vertical-align:top}th{background:#16244A;color:#fff;font-size:10px}.r{text-align:right}.note{color:#5F6368;font-size:10px}.rl-ruim{color:#C5221F}.rl-ass th{width:50%}.rl-lin{height:34px;vertical-align:bottom;color:#5F6368}tr{page-break-inside:avoid}thead{display:table-header-group}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
    ${docCab('RELATÓRIO DE MANUTENÇÃO PREVENTIVA', `Empurradores fluviais · ${esc(s.dados.ref)} · ${esc(s.num)}`, 'NP Navecunha 055 · itens 7.3 e 9 · Anexo I')}${enxRelHTML(s.dados, s)}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
 }
-async function enxRelEmitir() {
-  if (!can.admin()) return toast('Só o Supervisor emite o relatório.'); const R = enxRelDados(ENXR.ym), n = enxEmitidos().filter(s => s.dados.ym === R.ym).length;
-  const s = { id: uid('snap'), kind: 'snap', tipo: 'relprev', date: isoD(hoje()), at: Date.now(), num: 'RP-' + R.ym + (n ? '-r' + n : ''), em: new Date().toLocaleString('pt-BR'), por: S.session.name, dados: R };
-  if (JSON.stringify(s).length > 45000) return toast('Relatório grande demais para guardar congelado (limite da planilha). Avise o desenvolvimento.');
-  await saveRec(s); enxRelImprimir(s); render(); }
 // ---------- Modo completo (só o Supervisor, neste aparelho) ----------
 function enxAdminHTML() {
   if (!can.admin()) return '';
-  return `<div class="card"><h2>Modo do SMF neste aparelho</h2><p class="note">O SMF abre no modo enxuto: Horímetros, Cronograma, Relatório de preventiva, Óleo e Compressão. O modo completo mostra de novo todas as telas antigas (OMs, Anexo II, falhas, FR 027_L, indicadores…). Nada foi apagado.</p>
+  return `<div class="card"><h2>Modo do SMF neste aparelho</h2><p class="note">O SMF abre no modo enxuto: Horímetros, Cronograma, Executar, Corretivas, Relatório mensal, Óleo, Compressão e Biblioteca. O modo completo mostra de novo todas as telas antigas (OMs, Anexo II, falhas, FR 027_L, indicadores…). Nada foi apagado.</p>
     <label class="row" style="gap:8px"><input type="checkbox" data-enxmc${enxModoCompleto() ? ' checked' : ''}> Modo completo neste aparelho</label></div>`;
 }
 // ---------- Anexo II simples = relatório de serviço realizado, uma folha (Supervisor, 27/10/2026) ----------
@@ -316,7 +284,7 @@ async function enxCrAprovar(id) {
 .ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
     if (d.ebib !== undefined) { const x = ENXB_DOCS[+d.ebib][3]; return x === 'iib' ? enxIIBBranco() : x === 'iia' ? enxIIABranco() : window.open(x, '_blank', 'noopener'); }
     if (d.ebibdoc !== undefined) return abrirDoc(S.recs.get(d.ebibdoc));
     if (d.ebibnovo !== undefined) return docModal(null, 'manual');
@@ -326,6 +294,7 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.ecraprov !== undefined) return enxCrAprovar(d.ecraprov);
     if (d.enxir !== undefined) { e.preventDefault(); ENX.v = d.enxir; ENX.abertos = new Set(); location.hash = '#enx'; return; }
     if (d.enxv !== undefined) { ENX.v = d.enxv; ENX.abertos = new Set(); return render(); }
+    if (d.ehno !== undefined) { const [vid, p] = d.ehno.split('|'), h = horAtual(vid, p), i = $$('#main .ehH').find(x => x.dataset.v === vid && x.dataset.p === p); if (h && i) { i.value = String(h.h).replace('.', ','); toast('Mesma leitura preenchida (0 h). Clique em Salvar leituras.'); } return; }
     if (d.ehv !== undefined) { ENXH.v = d.ehv; return render(); }
     if (d.enxabre !== undefined) { $$('#main details.enx-g').forEach(g => { g.open = true; ENX.abertos.add(g.dataset.enxg); }); return; }
     if (d.enx2b !== undefined) return enxIIB(ENX.v, d.enx2b);
@@ -336,12 +305,11 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.enxnf !== undefined) return enxNFModal();
     if (d.enxtodos !== undefined) { const D = enxDados().find(x => x.v.id === ENX.v), ks = new Set([...D.venc, ...D.mes].map(y => y.pos + '|' + y.t.id)); $$('#main .enx-ck').forEach(i => { i.checked = ks.has(i.value); if (i.checked) { const g = i.closest('details'); if (g) { g.open = true; ENX.abertos.add(g.dataset.enxg); } } }); return; }
     if (d.ehsalvar !== undefined) return enxHorSalvar();
-    if (d.erem !== undefined) return enxRelEmitir();
     if (d.erimp !== undefined) { const s = S.recs.get(d.erimp); if (s) enxRelImprimir(s); } };
   if (!m._enxTg) m._enxTg = m.addEventListener('toggle', e => { const g = e.target; if (g.matches && g.matches('details.enx-g')) { if (g.open) ENX.abertos.add(g.dataset.enxg); else ENX.abertos.delete(g.dataset.enxg); } }, true) || 1;   // um ouvinte só no #main
-  m.onchange = e => { if (e.target.id === 'enxEmDia') { ENX.emDia = e.target.checked; render(); } if (e.target.id === 'erM') { ENXR.ym = e.target.value; render(); } if (e.target.id === 'ecrPapel') ENXC.papel = e.target.value; };
+  m.onchange = e => { if (e.target.id === 'enxEmDia') { ENX.emDia = e.target.checked; render(); } if (e.target.id === 'ecrPapel') ENXC.papel = e.target.value; };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'enx' && ENX.v ? '1' : '') + (k === 'enxcr' && ENXC.v ? '1' : '') + '_lay', '[data-enxreset]'); };
-Object.assign(VX, { enx: vEnx, enxcr: vEnxCr, enxhor: vEnxHor, enxcor: vEnxCor, enxrel: vEnxRel, enxbib: vEnxBib }); ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxbib'].forEach(k => { AFTER[k] = enxAfter(k); });
+Object.assign(VX, { enx: vEnx, enxcr: vEnxCr, enxhor: vEnxHor, enxcor: vEnxCor, enxbib: vEnxBib }); ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxbib'].forEach(k => { AFTER[k] = enxAfter(k); });
 Object.assign(NP_TAG, { enxcr: '7.3 · Anexo I', enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9', enxbib: '8' });
 document.addEventListener('change', e => { const c = e.target.closest('[data-enxmc]'); if (!c) return; try { localStorage.setItem(ENX_MC, c.checked ? '1' : '0'); } catch (er) { } toast(c.checked ? 'Modo completo ligado neste aparelho.' : 'Modo enxuto.'); render(); });
 { const st = document.createElement('style'); st.textContent = `.enx-rel h3{font-size:14px;margin:14px 0 6px;color:#1F2A44}.enx-gr svg{max-height:200px}.enx-ck{width:18px;height:18px}.enx-g{border:1px solid #E3E8EF;border-radius:8px;margin:0 0 8px;background:#fff}.enx-g>summary{display:flex;align-items:center;gap:6px;padding:9px 12px;cursor:pointer;list-style:none}.enx-g>summary::-webkit-details-marker{display:none}.enx-g>summary::before{content:'▸';color:#5F6368;margin-right:4px}.enx-g[open]>summary::before{content:'▾'}.enx-g[open]>summary{border-bottom:1px solid #E3E8EF}.enx-g table{margin:0}`; document.head.appendChild(st); }
