@@ -100,9 +100,9 @@ function rmeGraf(L, o) {
   o = o || {}; const n = L.length, longo = L.some(x => String(x[0]).length > 6), soma = o.acum === 'soma', W = Math.max(640, n * 62), H = longo ? 236 : soma ? 226 : 210, E = 40, D = o.acum === 'pareto' ? 46 : 12, T = 22, B = longo ? 46 : soma ? 40 : 26;
   const gw = (W - E - D) / Math.max(1, n), bw = Math.min(16, gw * .28), mx = o.pct ? 100 : Math.max(1, ...L.map(x => x[1] || 0)), Y = v => T + (H - T - B) * (1 - v / mx), X = i => E + i * gw + gw / 2;
   const inteiro = L.every(x => x[1] == null || Number.isInteger(x[1])), tk = o.pct ? [0, 50, 100] : inteiro && mx <= 5 ? [...Array(mx + 1).keys()] : [0, inteiro ? Math.round(mx / 2) : mx / 2, mx], NV = '#16244A', AC = '#B06000';
-  let g = tk.map(t => `<line x1="${E}" x2="${W - D}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E3E8EF" stroke-width=".7"/><text x="${E - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${o.pct ? t + '%' : nf(t)}</text>`).join('');
-  g += `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#1F2A44" stroke-width=".8"/>`;
-  if (o.meta != null) g += `<line x1="${E}" x2="${W - D}" y1="${Y(o.meta)}" y2="${Y(o.meta)}" stroke="${AC}" stroke-dasharray="4 3" stroke-width=".9"/><text x="${W - D}" y="${Y(o.meta) - 4}" text-anchor="end" font-size="9" fill="${AC}">referência ${o.meta}%</text>`;
+  let g = tk.map(t => `<line x1="${E}" x2="${W - D}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E3E8EF" stroke-width=".5"/><text x="${E - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${o.pct ? t + '%' : nf(t)}</text>`).join('');
+  g += `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#1F2A44" stroke-width=".5"/>`;
+  if (o.meta != null) g += `<line x1="${E}" x2="${W - D}" y1="${Y(o.meta)}" y2="${Y(o.meta)}" stroke="${AC}" stroke-dasharray="4 3" stroke-width=".7"/><text x="${W - D}" y="${Y(o.meta) - 4}" text-anchor="end" font-size="9" fill="${AC}">referência ${o.meta}%</text>`;
   L.forEach(([lab, v], i) => { const cx = X(i), ruim = o.meta != null && v != null && v < o.meta;
     if (v) g += `<rect x="${cx - bw / 2}" y="${Y(v)}" width="${bw}" height="${Y(0) - Y(v)}" fill="${ruim ? '#C5221F' : NV}"/><text x="${cx}" y="${Y(v) - 4}" text-anchor="middle" font-size="9" fill="#202124">${o.fmt ? o.fmt(v) : nf(v)}</text>`;
     const ls = typeof rmQuebra === 'function' && longo ? rmQuebra(lab, 12).slice(0, 2) : [lab];
@@ -110,7 +110,7 @@ function rmeGraf(L, o) {
   if (o.acum) { let s = 0; const tot = L.reduce((a, x) => a + (x[1] || 0), 0) || 1, P = L.map(x => (s += x[1] || 0));
     const top = o.acum === 'pareto' ? tot : Math.max(1, s), Ya = v => T + (H - T - B) * (1 - v / top), pts = P.map((v, i) => [X(i), Ya(v), v]).filter((p, i) => o.acum === 'pareto' || L.slice(0, i + 1).some(x => x[1]));
     if (!soma) g += `<text x="${W - D + 6}" y="${Y(mx) + 3}" font-size="9" fill="${AC}">100%</text><text x="${W - D + 6}" y="${Y(0) + 3}" font-size="9" fill="${AC}">0%</text>`;
-    g += `<polyline points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" fill="none" stroke="${AC}" stroke-width="1.2"/>` + pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="#fff" stroke="${AC}" stroke-width="1.2"/>` + (soma ? `<text x="${p[0]}" y="${H - 8}" text-anchor="middle" font-size="8.5" fill="${AC}">${o.fmt ? o.fmt(p[2]) : nf(p[2])}</text>` : `<text x="${p[0] + 5}" y="${p[1] + 12}" font-size="8.5" fill="${AC}">${Math.round(p[2] / tot * 100)}%</text>`)).join('');
+    g += `<polyline points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" fill="none" stroke="${AC}" stroke-width=".9"/>` + pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="#fff" stroke="${AC}" stroke-width=".9"/>` + (soma ? `<text x="${p[0]}" y="${H - 8}" text-anchor="middle" font-size="8.5" fill="${AC}">${o.fmt ? o.fmt(p[2]) : nf(p[2])}</text>` : `<text x="${p[0] + 5}" y="${p[1] + 12}" font-size="8.5" fill="${AC}">${Math.round(p[2] / tot * 100)}%</text>`)).join('');
     if (soma) g += `<text x="${E - 6}" y="${H - 8}" text-anchor="end" font-size="8.5" fill="${AC}">acum.</text>`; }
   const leg = [[NV, o.leg || 'no mês']].concat(o.acum ? [[AC, o.acum === 'pareto' ? '% acumulado' : 'acumulado no ano']] : []).map(([c, t]) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:10px;height:${c === NV ? 8 : 2}px;background:${c}"></i>${t}</span>`).join('');
   return `<div class="gr"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg><div class="lg2">${leg}</div></div>`;
@@ -200,7 +200,11 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
   .capa .dd{margin:0 auto 10mm;width:70%;border-collapse:collapse}.capa .dd td{border:0;border-bottom:1px solid #E0E4EA;padding:6px;font-size:11.5px}.capa .dd td:first-child{color:#5F6368;width:42%;text-align:right}.capa .dd td:last-child{text-align:left;font-weight:700}
  .capa .fx{border:1px solid #1F2A44;color:#1F2A44;padding:8px;font-size:12px;letter-spacing:.12em;font-weight:700}.prev{color:#C5221F;font-weight:700;font-size:13px;margin-top:6mm}
  .ix{width:100%;margin-top:6mm}.ix td{border:0;border-bottom:1px dotted #9AA0A6;padding:7px 4px;font-size:12px}.ix td:last-child{text-align:right;width:15%;font-weight:700}.ix .n{width:8%;color:#16244A;font-weight:700}
- .cv{justify-content:flex-end}.cv table td:first-child{width:32%;background:#F4F6F9;font-weight:600}.ft{border-top:.6px solid #1F2A44}`;
+ .cv{justify-content:flex-end}.cv table td:first-child{width:32%;background:#F4F6F9;font-weight:600}
+ /* linhas finas em tudo (pedido do Supervisor, 27/10/2026): 0,5 px */
+ /* abaixo de 1 px o navegador arredonda a borda para 1 px: os quadros escuros usam sombra de 0,5 px (sai fina na tela e no PDF) e as linhas de tabela ficam claras */
+ .dc{border:0;box-shadow:inset 0 0 0 .5px #1F2A44}.dc>div+div{border-left:0;box-shadow:inset .5px 0 0 #1F2A44}h2{border:0;box-shadow:inset 0 0 0 .5px #1F2A44}.capa .fx{border:0;box-shadow:inset 0 0 0 .5px #1F2A44}
+ .ft{border-top:0;box-shadow:inset 0 .5px 0 #1F2A44}h3{border-bottom:0;box-shadow:inset 0 -.5px 0 #AEB8C6}th,td{border-color:#D5DCE5}.an{border:0;box-shadow:inset 0 0 0 .5px #C3CCD8,inset 1.5px 0 0 #1F2A44}.tx{border-color:#D5DCE5}.capa .dd td{border-bottom-color:#E6EAF0}.ix td{border-bottom-color:#C3CCD8}`;
 // documento completo: as folhas são montadas na janela de impressão (o script mede e quebra as tabelas)
 function rmeDoc(R, plano, emi) {
   const num = emi ? emi.num : 'PRÉVIA', per = `${brD(R.ini)} a ${brD(R.fim)}`, sec = rmeSecoes(R, plano), cab = docCab('RELATÓRIO MENSAL DE MANUTENÇÃO DA FROTA', `Empurradores fluviais · ${per} · ${esc(num)}`, 'NP Navecunha 055 · itens 7.3 e 9');
