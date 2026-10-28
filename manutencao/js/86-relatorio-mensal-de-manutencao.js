@@ -54,7 +54,7 @@ function rmeNums(V, I, ini, fim) {
   const T = rmeTrocas(ini, fim), rows = T.flatMap(r => (r.eq || []).filter(q => q.status === 'T'));
   const comp = recs('lub').filter(r => r.tipo === 'comp' && !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim);
   let hMcp = 0, sem = 0; V.forEach(v => rmeMot(v).forEach(p => { const h = rmeHoras(I, v.id, p, ini, fim); if (isMcp(p)) hMcp += h.h; if (h.sem) sem++; }));
-  return { serv: F.length, oms: new Set(F.map(r => r.vessel + '|' + (r.om || ''))).size, nf: B.length - F.length, ad: rmeAd(V, ini, fim), cor: C.length, hPar, mttr: lib.length ? hPar / lib.length : null,
+  return { serv: F.length, oms: new Set(F.map(r => r.vessel + '|' + (r.om || ''))).size, semOm: F.filter(r => !r.om).length, nf: B.length - F.length, ad: rmeAd(V, ini, fim), cor: C.length, hPar, mttr: lib.length ? hPar / lib.length : null,
     disp: tot > 0 ? Math.max(0, (tot - parado) / tot * 100) : null, trocas: rows.length, litros: rows.reduce((a, q) => a + litros(q.qtd), 0), filtros: rows.filter(q => (q.filters || []).length).length,
     compL: comp.reduce((a, r) => a + litros(r.L), 0), hMcp, sem, ensaios: recs('comp').filter(r => !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim).length };
 }
@@ -145,6 +145,22 @@ function rmeBarH(L, lim, mxF) {   // L = [rótulo, valor, cor, texto]; barras ho
     if (v != null) g += `<rect x="${E}" y="${y + 1}" width="${Math.max(1.5, X(v) - E)}" height="10" fill="${cor}"/>`; g += `<text x="${(v != null ? X(v) : E) + 5}" y="${y + 9}" font-size="9" fill="#3C4043">${esc(tx)}</text>`; });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg>`;
 }
+// preventiva × corretiva em OMs (uma OM = uma intervenção; Supervisor, 28/10/2026): por serviço a corretiva some (uma OM preventiva junta
+// dezenas de serviços) e por horas não dá (a preventiva não registra duração); barra 100% do período e do ano, com os serviços ao lado
+function rmePxC(R) {
+  const L = [['No período', R.N.per], ['Acumulado no ano', R.N.ano]], W = 700, E = 120, D = 150, lh = 30, H = 10 + L.length * lh, X = f => E + (W - E - D) * f, NV = '#16244A', AC = '#B06000';
+  let g = '';
+  L.forEach(([lab, n], i) => { const y = 8 + i * lh, tot = n.oms + n.cor, fp = tot ? n.oms / tot : 0, pp = Math.round(fp * 100);
+    g += `<text x="${E - 8}" y="${y + 13}" text-anchor="end" font-size="9.5" fill="#202124">${lab}</text>`;
+    if (!tot) { g += `<text x="${E}" y="${y + 13}" font-size="9" fill="#80868B">sem OMs registradas</text>`; return; }
+    const xm = X(fp), seg = (x0, x1, cor, t) => x1 - x0 < 0.5 ? '' : `<rect x="${x0}" y="${y + 2}" width="${x1 - x0}" height="16" fill="${cor}"/>` + (x1 - x0 >= 70 ? `<text x="${(x0 + x1) / 2}" y="${y + 13.5}" text-anchor="middle" font-size="9" fill="#fff">${t}</text>` : '');
+    g += seg(E, xm, NV, `${n.oms} OMs · ${pp}%`) + seg(xm, X(1), AC, `${n.cor} OMs · ${100 - pp}%`);
+    const fora = [xm - E < 70 && n.oms ? `preventiva ${n.oms} · ${pp}%` : '', X(1) - xm < 70 && n.cor ? `corretiva ${n.cor} · ${100 - pp}%` : ''].filter(Boolean).join(' · ');
+    g += `<text x="${X(1) + 6}" y="${y + 13}" font-size="9" fill="#3C4043">${fora || `${tot} OMs`}</text><text x="${X(1) + 6}" y="${y + 23}" font-size="8" fill="#5F6368">${nf(n.serv)} serviços preventivos</text>`; });
+  const leg = [[NV, 'preventiva'], [AC, 'corretiva']].map(([c, t]) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:10px;height:8px;background:${c}"></i>${t}</span>`).join('');
+  const sem = R.N.ano.semOm ? `<p class="fo">${nf(R.N.ano.semOm)} serviços do ano sem nº de OM (registros antigos ou de exemplo) contam como uma OM por empurrador.</p>` : '';
+  return `<div class="gr"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg><div class="lg2">${leg}</div>${sem}</div>`;
+}
 const rmeTab = (cab, L, w, cls) => `<table class="${cls || ''}"><thead><tr>${cab.map((c, i) => `<th${w && w[i] ? ` style="width:${w[i]}"` : ''}>${c}</th>`).join('')}</tr></thead><tbody>${L.length ? L.map(l => `<tr>${l.map(c => `<td>${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cab.length}" class="mut">Nenhum registro.</td></tr>`}</tbody></table>`;
 const rmeAn = s => `<p class="an"><b>Análise:</b> ${s}</p>`;
 const rmeFonte = s => `<p class="fo">Fonte: ${s}</p>`;
@@ -176,8 +192,9 @@ function rmeGerencial(R, plano, FT) {
       + k('Horas de operação · motores principais', nf(p.hMcp) + ' h', `ano ${nf(a.hMcp)} h`, '')}</div>
     <div class="g2"><div><h3>1.1 Aderência ao cronograma de manutenção preventiva</h3>${rmeGraf(R.mesLab.map((l, i) => [l, R.ads[i]]), { pct: true, meta: 90, fmt: v => Math.round(v) + '%', leg: 'aderência no mês' })}</div>
       <div><h3>1.2 Horas de operação dos empurradores</h3>${rmeGraf(totMes, { acum: 'soma', leg: 'horas no mês' })}</div></div>
-    <h3>1.3 Principais constatações</h3><ol class="cc">${rmeConclusoes(R).map(x => `<li>${x}</li>`).join('')}</ol>
-    ${(plano.conc || '').trim() ? `<h3>1.4 Comentário do Supervisor</h3><div class="tx">${esc(plano.conc).replace(/\n/g, '<br>')}</div>` : ''}`;
+    <h3>1.3 Manutenção preventiva × corretiva · ordens de manutenção (OMs)</h3>${rmePxC(R)}${rmeAn(p.oms + p.cor ? `${rmeP(p.oms / (p.oms + p.cor) * 100)} das intervenções do período foram preventivas (${p.oms} de ${p.oms + p.cor} OMs; ano: ${rmeP(a.oms + a.cor ? a.oms / (a.oms + a.cor) * 100 : null)}). A unidade é a OM porque cada uma é uma intervenção: contar por serviço esconderia a corretiva (uma OM preventiva reúne dezenas de serviços) e a preventiva não registra duração para comparar em horas.` : 'sem OMs registradas no período.')}
+    <h3>1.4 Principais constatações</h3><ol class="cc">${rmeConclusoes(R).map(x => `<li>${x}</li>`).join('')}</ol>
+    ${(plano.conc || '').trim() ? `<h3>1.5 Comentário do Supervisor</h3><div class="tx">${esc(plano.conc).replace(/\n/g, '<br>')}</div>` : ''}`;
   // seções separadas por tipo de manutenção (Supervisor, 27/10/2026: pendência de preventiva fica na preventiva, não junto da corretiva)
   const C = R.cor.slice(0, 8), pend = [];
   R.venc.slice().sort((x, y) => y[1] - x[1]).slice(0, 6).forEach(x => pend.push(['Serviços do plano vencidos', V(x[0]), `${x[1]} serviço${x[1] > 1 ? 's' : ''}: ${esc(x[2])}${x[1] > 5 ? '…' : ''}`]));
