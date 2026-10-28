@@ -202,36 +202,28 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  table{width:100%;border-collapse:collapse;margin:2px 0 4px}th,td{border:.6px solid #CBD5E1;padding:3px 5px;text-align:left;vertical-align:top}th{background:#16244A;color:#fff;font-size:9.5px;font-weight:600}table.sm td{font-size:9.3px}
  .mut{color:#80868B}.ruim{color:#C5221F}.an{border:.6px solid #CBD5E1;border-left:2px solid #1F2A44;padding:4px 8px;font-size:10px}.gr{margin:2px 0}.lg2{font-size:8.5px;color:#5F6368;text-align:right;margin-top:-2px}.fo{color:#5F6368;font-size:8.8px}.cc li{margin:3px 0;line-height:1.4}
  .tx{border:1px solid #CBD5E1;padding:6px 8px;min-height:60px;line-height:1.45}.tx.vazio{min-height:120px}.ass th{width:50%}.ass .lin{height:60px;vertical-align:bottom;color:#5F6368}
- .capa{padding:9mm 12mm 7mm}.cp{flex:1;display:flex;flex-direction:column;box-shadow:inset 0 0 0 .5px #1F2A44}.cp .ln{display:grid;box-shadow:inset 0 -.5px 0 #1F2A44}.cp .sp{box-shadow:inset .5px 0 0 #1F2A44}
- .cp .cl{padding:6px 10px}.cp .cl i{display:block;font-style:normal;font-size:8.5px;letter-spacing:.06em;color:#5F6B7A;text-transform:uppercase}.cp .cl b{font-size:12px;font-weight:600;color:#1F2A44}
- .cp .mi{flex:1;padding:22mm 16mm 0}.cp .t1{font-size:34px;font-weight:700;color:#1F2A44;line-height:1.1}.cp .t2{font-size:20px;color:#1F2A44;margin-top:10px}
- .cp .bd2{display:flex;gap:12px;align-items:center;margin-top:16mm}.cp .bd2 span{background:#1F2A44;color:#fff;font-weight:700;font-size:11px;padding:4px 10px}.cp .bd2 b{font-size:14px;color:#1F2A44;font-weight:400}.cp .bd2 small{display:block;font-size:10px;color:#5F6B7A}
- .cp .dt{font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#1F2A44;margin-top:16mm}.cp table.dr{margin-top:6px}.cp table.dr td{border:1px solid #D5DCE5;padding:6px 8px;width:33.3%}.cp table.dr td i{display:block;font-style:normal;font-size:8.5px;color:#5F6B7A;text-transform:uppercase}.cp table.dr td b{font-size:12px;font-weight:400;color:#202124}
- .dc .t b{font-size:12px}table.hv>tbody>tr>td{padding:0 5px;vertical-align:middle}table.hv>tbody>tr>td:first-child{background:#F4F6F9;text-align:center;font-size:11px}table.hv>tbody>tr:nth-child(even)>td:not(:first-child){background:#FBFCFD}
- .mr>div{padding:2.5px 0;box-shadow:inset 0 -.5px 0 #E6EAF0;white-space:nowrap}.mr>div:last-child{box-shadow:none;border-top:.5px solid #AEB8C6}
- .cp .lgl{font-size:9px;color:#5F6B7A;margin-top:14mm}.prev{color:#C5221F;font-weight:700;font-size:12px;margin-top:6mm}
- .ix{width:100%;margin-top:6mm}.ix td{border:0;border-bottom:1px dotted #9AA0A6;padding:7px 4px;font-size:12px}.ix td:last-child{text-align:right;width:15%;font-weight:700}.ix .n{width:8%;color:#16244A;font-weight:700}
+ .dc .t b{font-size:12px}table.hv>tbody>tr>td{padding:0;vertical-align:middle}table.hv>tbody>tr>td:first-child{background:#F4F6F9;text-align:center;font-size:11px;padding:0 5px}table.hv>tbody>tr:nth-child(even)>td:not(:first-child){background:#FBFCFD}
+ .mr>div{padding:2.5px 5px;box-shadow:inset 0 -.5px 0 #E6EAF0;white-space:nowrap}.mr>div:last-child{box-shadow:none;border-top:.5px solid #AEB8C6}
+ .capa{justify-content:space-between;padding:12mm 16mm 10mm}.capa .lg{display:flex;justify-content:space-between;align-items:center}.capa .lg img{max-height:64px;max-width:190px}
+ .capa .tt{text-align:center}.capa .tt h1{font-size:30px;color:#1F2A44;margin:0;line-height:1.2;font-weight:700}.capa .tt .s{font-size:18px;color:#1F2A44;margin-top:8px}
+ .capa table.dd{width:100%;margin:0}.capa table.dd td{padding:7px 10px;font-size:11.5px}.capa table.dd td:first-child{width:34%;background:#F4F6F9;color:#3C4043}.capa table.dd td:last-child{font-weight:700;color:#1F2A44}
+ .capa .lgl{font-size:9px;color:#5F6B7A;margin-top:4mm}.prev{color:#C5221F;font-weight:700;font-size:12px;margin-top:6mm}
+ .ix{width:100%;margin-top:6mm}.ix td{border:0;border-bottom:.5px solid #D5DCE5;padding:7px 4px;font-size:12px}.ix td:last-child{text-align:right;width:15%;font-weight:700}.ix .n{width:8%;color:#16244A;font-weight:700}
  .cv{justify-content:flex-end}.cv table td:first-child{width:32%;background:#F4F6F9;font-weight:600}
  /* linhas finas em tudo (pedido do Supervisor, 27/10/2026): 0,5 px */
  /* abaixo de 1 px o navegador arredonda a borda para 1 px: os quadros escuros usam sombra de 0,5 px (sai fina na tela e no PDF) e as linhas de tabela ficam claras */
  .dc{border:0;box-shadow:inset 0 0 0 .5px #1F2A44}.dc>div+div{border-left:0;box-shadow:inset .5px 0 0 #1F2A44}h2{border:0;box-shadow:inset 0 0 0 .5px #1F2A44}
- .ft{border-top:0;box-shadow:inset 0 .5px 0 #1F2A44}h3{border-bottom:0;box-shadow:inset 0 -.5px 0 #AEB8C6}th,td{border-color:#D5DCE5}.an{border:0;box-shadow:inset 0 0 0 .5px #C3CCD8,inset 1.5px 0 0 #1F2A44}.tx{border-color:#D5DCE5}.ix td{border-bottom-color:#C3CCD8}`;
+ .ft{border-top:0;box-shadow:inset 0 .5px 0 #1F2A44}h3{border-bottom:0;box-shadow:inset 0 -.5px 0 #AEB8C6}th,td{border-color:#D5DCE5}.an{border:0;box-shadow:inset 0 0 0 .5px #C3CCD8,inset 1.5px 0 0 #1F2A44}.tx{border-color:#D5DCE5}`;
 // documento completo: as folhas são montadas na janela de impressão (o script mede e quebra as tabelas)
 function rmeDoc(R, plano, emi) {
   const num = emi ? emi.num : 'PRÉVIA', per = `${brD(R.ini)} a ${brD(R.fim)}`, sec = rmeSecoes(R, plano), cab = docCab('RELATÓRIO MENSAL DE MANUTENÇÃO · FROTA DE EMPURRADORES', `${per} · ${esc(num)}`, 'NP Navecunha 055 · itens 7.3 e 9');
   const foot = `Plano de Gestão de Manutenção · Empurradores Fluviais · ${esc(num)}`;
-  const cl = (lab, v, x) => `<div class="cl${x ? ' sp' : ''}"><i>${lab}</i><b>${v}</b></div>`, dado = (lab, v) => `<td><i>${lab}</i><b>${v || '&nbsp;'}</b></td>`;
-  const capa = `<div class="pg capa"><div class="cp">
-    <div class="ln" style="grid-template-columns:1.1fr 1.6fr 1.1fr"><div style="display:flex;gap:14px;align-items:center;justify-content:center;padding:8px"><img src="${docLogo('vda')}" style="height:46px" alt=""><img src="${docLogo('nav')}" style="height:42px" alt=""></div><div class="sp" style="display:flex;align-items:center;justify-content:center;font-size:20px;letter-spacing:.3em;font-weight:600;color:#1F2A44">RELATÓRIO</div>${cl('Doc. nº', 'NP Navecunha 055 – item 9', 1)}</div>
-    <div class="ln" style="grid-template-columns:2.7fr 1.1fr">${cl('Título', 'Relatório Mensal de Manutenção – Frota de Empurradores')}${cl('Página', '<span class="fn1">1</span>', 1)}</div>
-    <div class="ln" style="grid-template-columns:1.35fr 1.35fr 1.1fr">${cl('Período', per)}${cl('Acumulado do ano', `01/01/${R.ano} a ${brD(R.fim)}`, 1)}${cl('Relatório nº', esc(num), 1)}</div>
-    <div class="ln" style="grid-template-columns:2.7fr 1.1fr">${cl('Origem', 'NBR ISO 9001:2015, ISO 14001:2015 e ISO 45001:2018')}${cl('Aplicável à', 'Navegação Cunha Ltda.', 1)}</div>
-    <div class="mi"><div class="t1">Relatório Mensal de Manutenção</div><div class="t2">Frota de Empurradores</div>${emi ? '' : '<div class="prev">PRÉVIA · documento não emitido</div>'}
-      <div class="bd2"><span>${esc(num)}</span><div><b>Período de ${per}</b><small>Atividades do período e acumulado do ano · NP Navecunha 055 · itens 7.3 e 9</small></div></div>
-      <div class="dt">DADOS DO RELATÓRIO</div>
-      <table class="dr"><tr>${dado('Relatório nº', esc(num))}${dado('Período', per)}${dado('Acumulado do ano', `01/01/${R.ano} a ${brD(R.fim)}`)}</tr><tr>${dado('Elaborado por', esc(emi ? emi.por : (S.session || {}).name || ''))}${dado('Função', 'Supervisor de Manutenção')}${dado('Data de emissão', esc(emi ? emi.em : 'não emitido'))}</tr><tr>${dado('Base normativa', 'NP Navecunha 055 · itens 7.3 e 9')}${dado('Frota', R.frota + ' empurradores')}${dado('Distribuição', 'Gerência')}</tr></table>
-      <p class="lgl">Documento controlado pelo SGI. Propriedade da Navegação Cunha Ltda. É proibida a reprodução, a cessão a terceiros ou o uso fora da finalidade a que se destina sem autorização. Cópia impressa não controlada.</p></div>
-    <div class="ln" style="grid-template-columns:1.2fr 1fr;box-shadow:inset 0 .5px 0 #1F2A44">${cl('Área responsável', 'Manutenção')}<div class="sp" style="display:grid;grid-template-columns:1fr 1fr">${cl('Elaborado por', esc(emi ? emi.por : (S.session || {}).name || ''))}${cl('Aprovado por', 'Gerência', 1)}</div></div></div></div>`;
+  const capa = `<div class="pg capa"><div class="lg"><img src="${docLogo('nav')}" alt=""><img src="${docLogo('vda')}" alt=""></div>
+    <div class="tt"><h1>Relatório Mensal de Manutenção</h1><div class="s">Frota de Empurradores</div>${emi ? '' : '<div class="prev">PRÉVIA · documento não emitido</div>'}</div>
+    <div><table class="dd"><tr><td>Relatório nº</td><td>${esc(num)}</td></tr><tr><td>Período</td><td>${per}</td></tr><tr><td>Acumulado do ano</td><td>01/01/${R.ano} a ${brD(R.fim)}</td></tr>
+    <tr><td>Elaborado por</td><td>${esc(emi ? emi.por : (S.session || {}).name || '')} · Supervisor de Manutenção</td></tr><tr><td>Data de emissão</td><td>${esc(emi ? emi.em : 'não emitido')}</td></tr>
+    <tr><td>Base normativa</td><td>NP Navecunha 055 · itens 7.3 e 9</td></tr><tr><td>Distribuição</td><td>Gerência</td></tr></table>
+    <p class="lgl">Navegação Cunha Ltda. · Grupo VDA</p></div></div>`;
   const indice = `<div class="pg"><div class="bd">${cab}<h2>Índice</h2><table class="ix">${sec.map(s => `<tr><td class="n">${s[0]}</td><td>${esc(s[1])}</td><td data-ixs="${s[0]}"></td></tr>`).join('')}<tr><td class="n"></td><td>Controle do documento</td><td data-ixs="cv"></td></tr></table></div><div class="ft"><span>${foot}</span><span class="fn"></span></div></div>`;
   const contra = `<div class="pg cv" data-sec="cv"><div class="bd" style="display:flex;flex-direction:column">${cab}<div style="flex:1"></div><h2>Controle do documento</h2>
     <table><tr><td>Documento</td><td>Relatório Mensal de Manutenção da Frota · empurradores fluviais</td></tr><tr><td>Número</td><td>${esc(num)}</td></tr><tr><td>Período</td><td>${per} · acumulado do ano: 01/01/${R.ano} a ${brD(R.fim)}</td></tr>
@@ -240,7 +232,7 @@ function rmeDoc(R, plano, emi) {
     <tr><td>Fontes de dados</td><td>Registros do SMF: horímetros, serviços preventivos com nº da OM, corretivas, FR 049_B, ensaios de compressão e docagens. Evidências (Anexos II assinados, FR 049_B, fotos, relatórios de terceiros) anexadas nas OMs do Sankhya.</td></tr>
     <tr><td>Cópia emitida</td><td>${emi ? 'Congelada no SMF na data da emissão: correções posteriores nos registros não alteram este relatório.' : 'Prévia: os números mudam se os registros forem corrigidos.'}</td></tr>
     <tr><td>Distribuição</td><td>Gerência</td></tr></table>
-    <p class="fo" style="margin-top:6mm">Documento controlado pelo SGI. Cópia impressa não controlada. Navecunha · Grupo VDA.</p></div><div class="ft"><span>${foot}</span><span class="fn"></span></div></div>`;
+    <p class="fo" style="margin-top:6mm">Navegação Cunha Ltda. · Grupo VDA.</p></div><div class="ft"><span>${foot}</span><span class="fn"></span></div></div>`;
   const src = sec.map(s => `<div class="sc" data-n="${s[0]}"><h2>${s[0]} · ${esc(s[1])}</h2>${s[2]}</div>`).join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(num)} · Relatório mensal de manutenção</title><style>${RME_CSS}</style></head><body>${capa}${indice}<div id="out"></div>${contra}
    <div id="src" style="position:absolute;left:-9999px;top:0;width:186mm">${src}</div>
@@ -259,7 +251,7 @@ function rmeDoc(R, plano, emi) {
      for(i=0;i<K.length;i++){var el=K[i];if(el.tagName==='H3'&&K[i+1]){var nx=K[i+1];bd.appendChild(el);if(nx.tagName==='TABLE'&&nx.classList.contains('qb')){if(cheio()&&!vazio()){bd.removeChild(el);nova(n);bd.appendChild(el);}tabela(nx,n,el);i++;continue;}bd.appendChild(nx);if(cheio()&&!vazio()){bd.removeChild(nx);bd.removeChild(el);nova(n);bd.appendChild(el);bd.appendChild(nx);}i++;continue;}
        if(el.tagName==='TABLE'&&el.classList.contains('qb'))tabela(el,n);else poe(el,n);}});
    document.getElementById('src').remove();
-   var P=[].slice.call(document.querySelectorAll('.pg')),T=P.length;P.forEach(function(p,i){var f=p.querySelector('.fn');if(f)f.textContent='Folha '+(i+1)+' de '+T;});var c1=document.querySelector('.fn1');if(c1)c1.textContent='1 de '+T;
+   var P=[].slice.call(document.querySelectorAll('.pg')),T=P.length;P.forEach(function(p,i){var f=p.querySelector('.fn');if(f)f.textContent='Folha '+(i+1)+' de '+T;});
    [].slice.call(document.querySelectorAll('[data-ixs]')).forEach(function(c){var k=c.getAttribute('data-ixs');for(var i=0;i<P.length;i++)if(P[i].getAttribute('data-sec')===k){c.textContent=i+1;break;}});
    setTimeout(function(){window.print();},700);})();<\/script></body></html>`;
 }

@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.7';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.8';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -1533,7 +1533,9 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
   try { await snapshotBacklog(); } catch (e) { }
   setSync('', S.url ? 'Conectando…' : 'Modo local (sem nuvem)');
   syncNow(); setInterval(() => scheduleSync(10), 5 * 60e3);
-  if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude|claudeusercontent/.test(location.host)) { const tinha = !!navigator.serviceWorker.controller; navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => { });   /* versão nova assume e a tela recarrega uma vez sozinha (sem ficar na versão velha guardada) */
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (tinha && !sessionStorage.getItem('smf_recarregou')) { sessionStorage.setItem('smf_recarregou', '1'); location.reload(); } }); }
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude|claudeusercontent/.test(location.host)) { const tinha = !!navigator.serviceWorker.controller; navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => { r.update();   /* procura versão nova também com a tela aberta: a cada 10 min e ao voltar para a aba */
+      setInterval(() => r.update().catch(() => { }), 10 * 60e3); document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update().catch(() => { }); }); }).catch(() => { });
+    /* versão nova assume e a tela recarrega sozinha a cada publicação (antes só na primeira da aba: depois ficava na versão velha em memória); a trava de 30 s evita recarregar em laço */
+    navigator.serviceWorker.addEventListener('controllerchange', () => { const t = +sessionStorage.getItem('smf_recarregou') || 0; if (tinha && Date.now() - t > 30e3) { sessionStorage.setItem('smf_recarregou', String(Date.now())); location.reload(); } }); }
 })();
 
