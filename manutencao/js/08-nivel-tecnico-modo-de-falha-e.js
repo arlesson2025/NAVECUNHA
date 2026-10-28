@@ -89,7 +89,7 @@ async function fotosEnviar() {   // envia ao Drive as fotos deste aparelho que a
     for (const o of [...S.recs.values()]) {
       if (o.seed || o.excluido) continue; let mud = false;
       // OM em qualquer etapa: a foto não pode ficar só no celular até o encerramento
-      if (o.kind === 'om') for (const [i, f] of (o.fotos || []).entries()) { if (f.src && !f.fid) { const j = await api('foto', { recId: o.id, nome: vName(o.vessel) + '_OM' + o.num + '_' + f.tipo + '_' + (i + 1), vessel: o.vessel, b64: f.src.split(',')[1] }); if (j.ok) { f.fid = j.fileId; mud = true; } else break; } }
+      if (o.kind === 'om' || o.kind === 'base') for (const [i, f] of (o.fotos || []).entries()) { if (f.src && !f.fid) { const j = await api('foto', { recId: o.id, nome: vName(o.vessel) + '_OM' + (o.num || o.om) + '_' + f.tipo + '_' + (i + 1), vessel: o.vessel, b64: f.src.split(',')[1] }); if (j.ok) { f.fid = j.fileId; mud = true; } else break; } }
       if (o.kind === 'lub' && o.fotosLocais) { o.fotosFid = o.fotosFid || { a: [], d: [] }; for (const g of ['a', 'd']) for (const [i, src] of (o.fotosLocais[g] || []).entries()) { if (!o.fotosFid[g][i]) { const j = await api('foto', { recId: o.id, nome: vName(o.vessel) + '_FR049B_OM' + o.om + '_' + (g === 'a' ? 'ANTES' : 'DEPOIS') + '_' + (i + 1), vessel: o.vessel, b64: src.split(',')[1] }); if (j.ok) { o.fotosFid[g][i] = j.fileId; mud = true; } } } }
       if (mud) await saveRec(o);
     }

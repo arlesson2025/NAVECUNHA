@@ -93,7 +93,10 @@ function rmeDados(ini, fim) {
   // 6 · condição
   const ens = recs('comp').filter(r => !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim && (r.vals || []).length).sort((a, b) => a.date < b.date ? -1 : 1).map(r => { const L = r.vals.map(x => parseFloat(String(x).replace(',', '.'))).filter(x => x > 0), mn = Math.min(...L), mx = Math.max(...L); return L.length ? [r.date, r.vessel, r.pos, r.h, mn, mx, Math.round((mx - mn) * 100) / 100] : null; }).filter(Boolean);   // valores gravados com vírgula (“1,62”)
   const doca = V.map(v => docaVessel(v)).filter(d => d.due && (d.st === 'venc' || d.dias <= 365)).sort((a, b) => a.due - b.due).map(d => [d.v.id, isoD(d.due), d.st, d.fonte]);
-  return { ini, fim, iniA, ano: y, N, frota: V.length, hor, mesLab: meses.map(([a]) => MESES[+a.slice(5, 7) - 1]), feitos, nfs, porV, ads, venc, cor, cls, sisP, sisA, eqP, eqA, rep, trocas, lubV, lubMes, lubSitu, ens, doca, geradoEm: new Date().toLocaleString('pt-BR') };
+  const fotos = recs('base').filter(r => (r.fotos || []).length && !r.excluido && r.date >= ini && r.date <= fim && vessel(r.vessel)).flatMap(r => r.fotos.map((f, i) => [r.id, i, f.tipo || '', r.vessel, r.om || '', r.date, 'Preventiva']))
+    .concat(CP.filter(o => (o.fotos || []).length).flatMap(o => o.fotos.map((f, i) => [o.id, i, f.tipo || '', o.vessel, o.num || '', String(o.abertura).slice(0, 10), 'Corretiva · ' + rmeEqN(o.equip)])))
+    .sort((x, z) => x[5] < z[5] ? -1 : x[5] > z[5] ? 1 : x[0] < z[0] ? -1 : x[0] > z[0] ? 1 : x[1] - z[1]);
+  return { ini, fim, iniA, ano: y, N, fotos, frota: V.length, hor, mesLab: meses.map(([a]) => MESES[+a.slice(5, 7) - 1]), feitos, nfs, porV, ads, venc, cor, cls, sisP, sisA, eqP, eqA, rep, trocas, lubV, lubMes, lubSitu, ens, doca, geradoEm: new Date().toLocaleString('pt-BR') };
 }
 // ---------- textos e peças do documento ----------
 const rmeP = v => v == null ? '—' : Math.round(v) + '%';
@@ -135,7 +138,7 @@ function rmeConclusoes(R) {
 }
 // as seções: [nº, título, html]; tabelas com classe "qb" são quebradas entre folhas
 // ---------- relatório gerencial (Supervisor, 27/10/2026: “quem vai ler 20 páginas?”): 2 folhas depois da capa ----------
-function rmeGerencial(R, plano) {
+function rmeGerencial(R, plano, FT) {
   const per = `${brD(R.ini)} a ${brD(R.fim)}`, p = R.N.per, a = R.N.ano, b = R.N.ant, V = id => esc(vName(id)), pc = (id, pos) => { const v = vessel(id); return esc(v ? posCurtoE(v, pos) : pos); };
   const dp = v => v == null ? '—' : nf(v, 1) + '%', k = (l, v, sub, st) => `<div class="${st || ''}"><i>${l}</i><b>${v}</b><small>${sub}</small></div>`;
   const totMes = R.mesLab.map((l, i) => [l, R.hor.reduce((t, x) => t + x.mes[i], 0)]), dias = Math.round((pD(R.fim) - pD(R.ini)) / 864e5) + 1;
@@ -164,7 +167,12 @@ function rmeGerencial(R, plano) {
     <h3>2.3 Pendências na data da emissão</h3>${rmeTab(['Assunto', 'Empurrador', 'Situação'], pend, ['24%', '16%', '60%'])}
     <h3>2.4 Plano de ação</h3>${rmeTab(['Nº', 'Ação', 'Responsável', 'Prazo'], (A.length ? A : [['', '', ''], ['', '', ''], ['', '', '']]).map((x, i) => [i + 1, esc(x[0] || '') || '&nbsp;', esc(x[1] || ''), x[2] ? brD(x[2]) : '']), ['6%', '60%', '20%', '14%'])}
     <table class="ass"><thead><tr><th>Elaborado por · Supervisor de Manutenção</th><th>Aprovado por · Gerência</th></tr></thead><tbody><tr><td class="lin">Nome, assinatura e data</td><td class="lin">Nome, assinatura e data</td></tr></tbody></table>`;
-  return [[1, 'Painel do período', G1], [2, 'Pontos de atenção e decisões', G2]];
+  const L = R.fotos || [], fig = x => { const src = FT && FT[x[0] + '|' + x[1]];
+    return `<figure>${src ? `<img src="${src}" alt="">` : `<div class="ph">${(S.recs.get(x[0]) || {}).seed ? 'foto de exemplo' : FT ? 'foto ainda não sincronizada (está no aparelho que registrou)' : 'foto'}</div>`}<figcaption><b>${esc(x[2] || 'FOTO')}</b> · ${V(x[3])} · OM ${esc(x[4] || '—')} · ${brD(x[5])}<br>${esc(x[6])}</figcaption></figure>`; };
+  const grades = []; for (let i = 0; i < L.length; i += 9) grades.push(`<div class="fg">${L.slice(i, i + 9).map(fig).join('')}</div>`);
+  const nP = new Set(L.filter(x => x[6] === 'Preventiva').map(x => x[3] + '|' + x[4])).size, nC = new Set(L.filter(x => x[6] !== 'Preventiva').map(x => x[3] + '|' + x[4])).size;
+  const G3 = `<p class="fo">${L.length ? `${L.length} fotos de ${nP} OM${nP === 1 ? '' : 's'} preventiva${nP === 1 ? '' : 's'} e ${nC} corretiva${nC === 1 ? '' : 's'} do período, antes e depois, em ordem de data. Originais no Google Drive (pasta do empurrador) e na OM do Sankhya.` : 'Nenhuma foto registrada no período. As fotos de antes e de depois são anexadas ao registrar a preventiva feita (3 · Executar) e a corretiva (4 · Corretivas).'}</p>${grades.join('')}`;
+  return [[1, 'Painel do período', G1], [2, 'Pontos de atenção e decisões', G2], [3, 'Evidências fotográficas', G3]];
 }
 // anexo técnico (opcional): as tabelas completas, seções A1 a A5
 function rmeAnexo(R) {
@@ -225,7 +233,8 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  .capa .lgl{font-size:9px;color:#5F6B7A;margin-top:4mm}.prev{color:#C5221F;font-weight:700;font-size:12px;margin-top:6mm}
  .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 8px}.kp>div{border:1px solid #E1E6ED;border-left:3px solid #AEB8C6;padding:6px 8px}.kp>div.ok{border-left-color:#188038}.kp>div.bad{border-left-color:#C5221F}
  .kp i{display:block;font-style:normal;font-size:8.6px;color:#5F6368;text-transform:uppercase;letter-spacing:.03em}.kp b{display:block;font-size:19px;color:#1F2A44;margin:2px 0 1px}.kp .bad b{color:#C5221F}.kp small{font-size:8.6px;color:#5F6368}
- table.ass{margin-top:12px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g2 h3{margin-top:6px}
+ table.ass{margin-top:12px}.fg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}.fg figure{margin:0;border:1px solid #E1E6ED;padding:3px;break-inside:avoid}.fg img,.fg .ph{width:100%;height:56mm;object-fit:cover;display:block}.fg .ph{display:flex;align-items:center;justify-content:center;background:#F4F6F9;color:#80868B;font-size:9px;text-align:center;padding:8px}.fg figcaption{font-size:8.2px;color:#3C4043;padding-top:3px;line-height:1.3}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g2 h3{margin-top:6px}
  /* linhas finas (Supervisor, 27/10/2026): na impressão o navegador não faz linha abaixo de 1 px e a sombra de 0,5 px sai borrada;
  a leveza vem de réguas só horizontais em cinza bem claro, sem grade vertical nem quadro em volta */
  th,td{border:0;border-bottom:1px solid #E6EAF0}th{border-bottom:0}.capa table.dd td{border-bottom:1px solid #E6EAF0}
@@ -237,14 +246,14 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  h2 .nu{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;background:#1F2A44;color:#fff;font-size:14px}
  h3{font-size:11.8px;font-weight:700;color:#1F2A44;margin:13px 0 5px;padding:0;border:0}h3 .n3{color:#B06000;margin-right:7px}`;
 // documento completo: as folhas são montadas na janela de impressão (o script mede e quebra as tabelas)
-function rmeDoc(R, plano, emi, anexo) {
-  const num = emi ? emi.num : 'PRÉVIA', per = `${brD(R.ini)} a ${brD(R.fim)}`, sec = rmeGerencial(R, plano).concat(anexo ? rmeAnexo(R) : []), cab = docCab('RELATÓRIO GERENCIAL DE MANUTENÇÃO', `Frota de Empurradores · ${per} · ${esc(num)}`, 'NP Navecunha 055 · itens 7.3 e 9');
+function rmeDoc(R, plano, emi, anexo, FT) {
+  const num = emi ? emi.num : 'PRÉVIA', per = `${brD(R.ini)} a ${brD(R.fim)}`, sec = rmeGerencial(R, plano, FT).concat(anexo ? rmeAnexo(R) : []), cab = docCab('RELATÓRIO GERENCIAL DE MANUTENÇÃO', `Frota de Empurradores · ${per} · ${esc(num)}`, 'NP Navecunha 055 · itens 7.3 e 9');
   const foot = `Plano de Gestão de Manutenção · Empurradores Fluviais · ${esc(num)}`;
   const capa = `<div class="pg capa"><div class="lg"><img src="${docLogo('nav')}" alt=""><img src="${docLogo('vda')}" alt=""></div>
     <div class="tt"><h1>Relatório Gerencial de Manutenção</h1><div class="s">Frota de Empurradores</div>${emi ? '' : '<div class="prev">PRÉVIA · documento não emitido</div>'}</div>
     <div><table class="dd"><tr><td>Relatório nº</td><td>${esc(num)}</td></tr><tr><td>Período</td><td>${per}</td></tr><tr><td>Acumulado do ano</td><td>01/01/${R.ano} a ${brD(R.fim)}</td></tr>
     <tr><td>Elaborado por</td><td>${esc(emi ? emi.por : (S.session || {}).name || '')} · Supervisor de Manutenção</td></tr><tr><td>Data de emissão</td><td>${esc(emi ? emi.em : 'não emitido')}</td></tr>
-    <tr><td>Conteúdo</td><td>Painel do período · pontos de atenção e decisões${anexo ? ' · anexo técnico (A1 a A5)' : ''}</td></tr><tr><td>Base normativa</td><td>NP Navecunha 055 · itens 7.3 e 9</td></tr><tr><td>Distribuição</td><td>Gerência</td></tr></table>
+    <tr><td>Conteúdo</td><td>Painel do período · pontos de atenção e decisões · evidências fotográficas${anexo ? ' · anexo técnico (A1 a A5)' : ''}</td></tr><tr><td>Base normativa</td><td>NP Navecunha 055 · itens 7.3 e 9</td></tr><tr><td>Distribuição</td><td>Gerência</td></tr></table>
     <p class="lgl">Navegação Cunha Ltda. · Grupo VDA</p></div></div>`;
   const src = sec.map(s => `<div class="sc" data-n="${s[0]}"><h2><span class="nu">${s[0]}</span>${esc(s[1])}</h2>${s[2].replace(/<h3>(A?\d+\.\d+) /g, '<h3><span class="n3">$1</span>')}</div>`).join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq(num + ' - Relatorio gerencial de manutencao'))}</title><style>${RME_CSS}</style></head><body>${capa}<div id="out"></div>
@@ -267,7 +276,14 @@ function rmeDoc(R, plano, emi, anexo) {
    var P=[].slice.call(document.querySelectorAll('.pg')),T=P.length;P.forEach(function(p,i){var f=p.querySelector('.fn');if(f)f.textContent='Folha '+(i+1)+' de '+T;});
    setTimeout(function(){window.print();},700);})();<\/script></body></html>`;
 }
-function rmeAbrir(R, plano, emi, anexo) { const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para abrir o relatório.'); w.document.write(rmeDoc(R, plano, emi, anexo)); w.document.close(); }
+async function rmeFotos(R) {   // referência → imagem: a do registro (aparelho que fotografou) ou a cópia do Drive pelo servidor
+  const FT = {}; for (const x of R.fotos || []) { const r = S.recs.get(x[0]), f = r && (r.fotos || [])[x[1]]; if (!f) continue;
+    if (f.src) FT[x[0] + '|' + x[1]] = f.src;
+    else if (f.fid && S.url && S.session) { try { const j = await api('getFile', { fileId: f.fid }); if (j.ok) FT[x[0] + '|' + x[1]] = 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data; } catch (e) { } } }
+  return FT;
+}
+async function rmeAbrir(R, plano, emi, anexo) { const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para abrir o relatório.');
+  w.document.write('<p style="font:14px Arial;padding:24px">Montando o relatório e buscando as fotos…</p>'); const FT = await rmeFotos(R); w.document.open(); w.document.write(rmeDoc(R, plano, emi, anexo, FT)); w.document.close(); }
 // ---------- emitidos (congelados em partes) ----------
 const rmeEmitidos = () => recs('snap').filter(s => s.tipo === 'relmes' && !s.excluido).sort((a, b) => (b.at || 0) - (a.at || 0));
 function rmeLer(s) { const P = recs('snap').filter(x => x.tipo === 'relmes-p' && x.pai === s.id).sort((a, b) => a.i - b.i); if (P.length !== s.partes) return null; try { return JSON.parse(P.map(x => x.txt).join('')); } catch (e) { return null; } }
@@ -292,7 +308,7 @@ function vRme() {
    <div class="card"><h2>Comentário e plano de ação (folhas 2 e 3)</h2><p class="note">Escreva antes de emitir. Fica guardado neste aparelho para este período até a emissão; na emissão vai junto com a cópia congelada.</p>
      <label class="f">Comentário do Supervisor<textarea id="rmeC" rows="4" placeholder="o que os números mostram, causas, riscos e decisões">${esc(pl.conc || '')}</textarea></label>
      <table class="t"><thead><tr><th>Ação</th><th style="width:24%">Responsável</th><th style="width:16%">Prazo</th></tr></thead><tbody>${ac.map((x, i) => `<tr><td><input class="rmeA" data-i="${i}" data-c="0" value="${esc(x[0] || '')}"></td><td><input class="rmeA" data-i="${i}" data-c="1" value="${esc(x[1] || '')}"></td><td><input type="date" class="rmeA" data-i="${i}" data-c="2" value="${esc(x[2] || '')}"></td></tr>`).join('')}</tbody></table></div>
-   <div class="card"><h2>O que sai no relatório</h2><ol class="note" style="margin:0;padding-left:18px;line-height:1.6"><li><b>Capa</b> · nº, período, elaboração e distribuição</li><li><b>1 Painel do período</b> · 8 indicadores (período, ano e meta), aderência e horas de operação mês a mês, constatações e o seu comentário</li><li><b>2 Pontos de atenção e decisões</b> · corretivas do período, falhas mais frequentes no ano, pendências (preventiva e óleo vencidos, compressão, docagem), plano de ação e assinaturas</li><li class="mut">Anexo técnico (só se marcado): A1 operação por motor · A2 preventiva por OM · A3 corretiva · A4 lubrificação · A5 condição</li></ol></div>
+   <div class="card"><h2>O que sai no relatório</h2><ol class="note" style="margin:0;padding-left:18px;line-height:1.6"><li><b>Capa</b> · nº, período, elaboração e distribuição</li><li><b>1 Painel do período</b> · 8 indicadores (período, ano e meta), aderência e horas de operação mês a mês, constatações e o seu comentário</li><li><b>2 Pontos de atenção e decisões</b> · corretivas do período, falhas mais frequentes no ano, pendências (preventiva e óleo vencidos, compressão, docagem), plano de ação e assinaturas</li><li><b>3 Evidências fotográficas</b> · fotos de antes e depois das preventivas e corretivas do período, 9 por folha</li><li class="mut">Anexo técnico (só se marcado): A1 operação por motor · A2 preventiva por OM · A3 corretiva · A4 lubrificação · A5 condição</li></ol></div>
    <div class="card"><h2>Relatórios emitidos · ${E.length}</h2>${E.length ? `<table class="t"><thead><tr><th>Nº</th><th>Período</th><th>Emitido em</th><th>Por</th><th></th></tr></thead><tbody>${E.map(s => `<tr><td><b>${esc(s.num)}</b></td><td>${brD(s.ini)} a ${brD(s.fim)}</td><td>${esc(s.em)}</td><td>${esc(s.por)}</td><td><button class="mbtn sm" data-rmeimp="${s.id}">Imprimir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum emitido ainda.</p>'}
      ${O.length ? `<p class="note" style="margin-top:8px">Relatórios de preventiva emitidos antes da versão 3.5: ${O.map(s => `<a href="#" data-erimp="${s.id}">${esc(s.num)}</a>`).join(' · ')}</p>` : ''}</div></div></div>`;
 }

@@ -69,19 +69,26 @@ function enxCopiar() {
   try { navigator.clipboard.writeText(txt).catch(() => { }); } catch (e) { }
   modal(`<h2>Texto da OM · ${esc(v.nome)}</h2><p class="note">Já copiado. Cole na descrição da OM no Sankhya. Se não colou, selecione e copie daqui.</p><textarea rows="${Math.min(18, S0.length + 4)}" style="width:100%" readonly>${esc(txt)}</textarea><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`, true);
 }
+// fotos de evidência (Supervisor, 27/10/2026: “as evidências falam mais que palavras”): antes e depois, obrigatórias; sobem ao Drive (fotosEnviar) e vão para o relatório mensal
+const enxFotosCampos = () => `<div class="g"><label class="f s3">Fotos de antes<input type="file" id="fxA" accept="image/*" multiple></label><label class="f s3">Fotos de depois<input type="file" id="fxD" accept="image/*" multiple></label></div>`;
+async function enxFotosLer() {
+  const A = [...($('#fxA') || {}).files || []], D = [...($('#fxD') || {}).files || []]; if (!A.length || !D.length) return null;
+  const out = [], at = Date.now(); for (const [tipo, L] of [['ANTES', A], ['DEPOIS', D]]) for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out;
+}
 function enxFeitoModal() {
   if (!S.session) return loginModal(); const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços feitos.');
   const hp = [...new Set(S0.filter(y => intervalo(y.t, v, y.pos).h).map(y => posHor(y.pos, y.t, v.id)))];
   modal(`<h2>Registrar feito · ${esc(v.nome)} · ${S0.length} serviço${S0.length === 1 ? '' : 's'}</h2><p class="note">${S0.map(y => esc(enxServ(y.t)) + ' (' + esc(posCurtoE(v, y.pos)) + ')').join(' · ')}</p>
    <div class="g"><label class="f s3">Data da execução<input type="date" id="exD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM no Sankhya<input id="exO" inputmode="numeric"></label><label class="f s6">Quem executou<input id="exQ" placeholder="equipe de manutenção, CTF/MFM ou prestador"></label>
    ${hp.map(p => { const h = horAtual(v.id, p); return `<label class="f s3">Horímetro · ${esc(posCurtoE(v, p))}<input class="exH" data-pos="${p}" inputmode="decimal" value="${h ? h.h : ''}"></label>`; }).join('')}</div>
-   <div class="note" id="exE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="exOk">Registrar</button></div>`, true);
+   ${enxFotosCampos()}<div class="note" id="exE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="exOk">Registrar</button></div>`, true);
   $('#exOk').onclick = async () => { const d = $('#exD').value, om = $('#exO').value.replace(/\D/g, ''), quem = $('#exQ').value.trim(), H = {}, E = $('#exE');
     if (!d || d > isoD(hoje())) return E.textContent = 'Data inválida (não pode ser futura).'; if (om.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya (rastreabilidade).'; if (!quem) return E.textContent = 'Informe quem executou.';
     for (const i of $$('#modal .exH')) { const h = +i.value.replace(',', '.'), a = horAtual(v.id, i.dataset.pos); if (!(h > 0)) return E.textContent = 'Informe o horímetro de ' + posCurtoE(v, i.dataset.pos) + '.'; if (a && !a.est && a.date <= d && h < a.h) return E.textContent = 'Horímetro de ' + posCurtoE(v, i.dataset.pos) + ' menor que a última leitura (' + nf(a.h) + ' h).'; H[i.dataset.pos] = h; }
     for (const y of S0) { const L0 = y.s ? y.s.L : ultimoServico(v.id, y.pos, y.t.id); if (L0 && L0.date > d) return E.textContent = enxServ(y.t) + ': já há registro mais novo (' + brD(L0.date) + ').'; }
+    E.textContent = 'Preparando as fotos…'; const fotos = await enxFotosLer(); if (!fotos) return E.textContent = 'Anexe ao menos uma foto de antes e uma de depois (evidência da execução).';
     const by = S.session.name, at = Date.now();
-    for (const y of S0) { const hp1 = posHor(y.pos, y.t, v.id); await saveRec({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: H[hp1] ?? null, date: d, om, quem, by, enx: true, createdAt: at }); }
+    for (const [k, y] of S0.entries()) { const hp1 = posHor(y.pos, y.t, v.id); await saveRec(Object.assign({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: H[hp1] ?? null, date: d, om, quem, by, enx: true, createdAt: at }, k ? {} : { fotos })); }   // as fotos ficam no primeiro serviço da OM
     for (const [p, h] of Object.entries(H)) await lubHor(v.id, p, h, d, 'OM ' + om);
     closeModal(); toast(S0.length + ' serviço' + (S0.length === 1 ? '' : 's') + ' registrado' + (S0.length === 1 ? '' : 's') + ' com a OM ' + om + '.'); render(); enxIIB(v.id, om); };
 }
@@ -221,6 +228,7 @@ function vEnxCor() {
       <label class="f s3">Início do reparo<input type="datetime-local" id="ecI" max="${agora}"></label><label class="f s3">Liberação<input type="datetime-local" id="ecL" max="${agora}"></label>
       <label class="f s6">O que aconteceu<textarea id="ecD" rows="2"></textarea></label><label class="f s6">O que foi feito<textarea id="ecF" rows="2"></textarea></label>
       <label class="f s3">Executado por<input id="ecQ" placeholder="equipe de manutenção ou prestador"></label><label class="f s3">Observação<input id="ecX"></label></div>
+     ${enxFotosCampos()}
      <div class="note" id="ecErr" style="color:var(--badt)"></div><div class="row end"><button class="mbtn pri" data-ecsalvar>Registrar e imprimir o Anexo II-A</button></div></div>
    <div class="card"><h2>Corretivas registradas</h2><div class="tw"><table class="t"><thead><tr><th>Início</th><th>Empurrador</th><th>OM</th><th>Equipamento</th><th>O que aconteceu</th><th>Classe</th><th class="r">Parado</th><th></th></tr></thead><tbody>
    ${L.map(o => { const h = o.abertura && o.liberacao ? Math.max(0, (new Date(o.liberacao) - new Date(o.abertura)) / 36e5) : null; return `<tr><td class="nowrap">${brD(String(o.abertura || '').slice(0, 10))}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.num || '—')}</td><td>${esc(o.equip || o.sistema || '—')}</td><td>${esc(String(o.descricao || '').slice(0, 90))}</td><td>${esc(o.classe || '—')}</td><td class="r">${h == null ? '<span class="mut">em aberto</span>' : nf(h, 1) + ' h'}</td><td><button class="mbtn sm" data-ec2a="${o.id}">Anexo II-A</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Nenhuma corretiva registrada.</td></tr>'}</tbody></table></div></div></div></div>`;
@@ -230,8 +238,9 @@ async function enxCorSalvar() {
   if (num.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya.'; if (oms().some(o => o.num === num)) return E.textContent = 'A OM ' + num + ' já está registrada.';
   if (!ini || !lib) return E.textContent = 'Informe o início e a liberação (data e hora).'; if (lib < ini) return E.textContent = 'A liberação não pode ser antes do início.';
   if (!g('ecD') || !g('ecF') || !g('ecQ')) return E.textContent = 'Preencha o que aconteceu, o que foi feito e quem executou.';
+  E.textContent = 'Preparando as fotos…'; const fotos = await enxFotosLer(); if (!fotos) return E.textContent = 'Anexe ao menos uma foto de antes e uma de depois (evidência do reparo).'; E.textContent = '';
   const o = { id: uid('om'), kind: 'om', tipo: 'C', num, vessel: $('#ecV').value, pos: 'UN', status: 'encerrada', classe: $('#ecC').value, sistema: $('#ecS').value, equip: g('ecE'), descricao: g('ecD'), servicos: g('ecF'), execn: g('ecQ'), obsEnx: g('ecX'),
-    abertura: ini, deteccao: ini, inicio: ini, termino: lib, liberacao: lib, interd: 'N/A', resultado: 'Conforme', fotos: [], fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()), enx: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Registrada no modo enxuto' }] };
+    abertura: ini, deteccao: ini, inicio: ini, termino: lib, liberacao: lib, interd: 'N/A', resultado: 'Conforme', fotos, fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()), enx: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Registrada no modo enxuto' }] };
   await saveRec(o); toast('Corretiva ' + num + ' registrada.'); enxIIA(o); render(); }
 // ---------- Cronograma corporativo (Supervisor, 27/10/2026: “sem visão clara, sem poder imprimir”) ----------
 // Frota: empurradores × 12 meses (feito/previsto com cor) · empurrador: serviço × 12 meses (grade clássica prTabela) · imprimir A4/A3 paisagem · aprovar o ano.
