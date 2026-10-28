@@ -210,10 +210,16 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  .capa .lgl{font-size:9px;color:#5F6B7A;margin-top:4mm}.prev{color:#C5221F;font-weight:700;font-size:12px;margin-top:6mm}
  .ix{width:100%;margin-top:6mm}.ix td{border:0;border-bottom:.5px solid #D5DCE5;padding:7px 4px;font-size:12px}.ix td:last-child{text-align:right;width:15%;font-weight:700}.ix .n{width:8%;color:#16244A;font-weight:700}
  .cv{justify-content:flex-end}.cv table td:first-child{width:32%;background:#F4F6F9;font-weight:600}
- /* linhas finas em tudo (pedido do Supervisor, 27/10/2026): 0,5 px */
- /* abaixo de 1 px o navegador arredonda a borda para 1 px: os quadros escuros usam sombra de 0,5 px (sai fina na tela e no PDF) e as linhas de tabela ficam claras */
- .dc{border:0;box-shadow:inset 0 0 0 .5px #1F2A44}.dc>div+div{border-left:0;box-shadow:inset .5px 0 0 #1F2A44}h2{border:0;box-shadow:inset 0 0 0 .5px #1F2A44}
- .ft{border-top:0;box-shadow:inset 0 .5px 0 #1F2A44}h3{border-bottom:0;box-shadow:inset 0 -.5px 0 #AEB8C6}th,td{border-color:#D5DCE5}.an{border:0;box-shadow:inset 0 0 0 .5px #C3CCD8,inset 1.5px 0 0 #1F2A44}.tx{border-color:#D5DCE5}`;
+ /* linhas finas (Supervisor, 27/10/2026): na impressão o navegador não faz linha abaixo de 1 px e a sombra de 0,5 px sai borrada;
+ a leveza vem de réguas só horizontais em cinza bem claro, sem grade vertical nem quadro em volta */
+ th,td{border:0;border-bottom:1px solid #E6EAF0}th{border-bottom:0}.cv table td,.capa table.dd td{border-bottom:1px solid #E6EAF0}
+ .dc{border:1px solid #CFD6E0;box-shadow:none}.dc>div+div{border-left:1px solid #CFD6E0;box-shadow:none}.ft{border-top:1px solid #CFD6E0}
+ .an{border:0;background:#F5F7FA;border-left:2px solid #1F2A44}.tx{border:1px solid #E1E6ED}.mr>div{box-shadow:none;border-bottom:1px solid #EEF1F5}.mr>div:last-child{border-bottom:0;border-top:1px solid #CFD6E0}
+ table.hv>tbody>tr>td{border-bottom:1px solid #CFD6E0}.ix td{border-bottom:1px solid #E6EAF0}
+ /* títulos: seção com número em quadro azul-marinho e régua; subtítulo com o número em destaque, sem linha */
+ h2{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:#1F2A44;margin:4px 0 10px;padding:0 0 6px;border:0;border-bottom:1px solid #1F2A44;letter-spacing:0}
+ h2 .nu{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;background:#1F2A44;color:#fff;font-size:14px}
+ h3{font-size:11.8px;font-weight:700;color:#1F2A44;margin:13px 0 5px;padding:0;border:0}h3 .n3{color:#B06000;margin-right:7px}`;
 // documento completo: as folhas são montadas na janela de impressão (o script mede e quebra as tabelas)
 function rmeDoc(R, plano, emi) {
   const num = emi ? emi.num : 'PRÉVIA', per = `${brD(R.ini)} a ${brD(R.fim)}`, sec = rmeSecoes(R, plano), cab = docCab('RELATÓRIO MENSAL DE MANUTENÇÃO · FROTA DE EMPURRADORES', `${per} · ${esc(num)}`, 'NP Navecunha 055 · itens 7.3 e 9');
@@ -233,7 +239,7 @@ function rmeDoc(R, plano, emi) {
     <tr><td>Cópia emitida</td><td>${emi ? 'Congelada no SMF na data da emissão: correções posteriores nos registros não alteram este relatório.' : 'Prévia: os números mudam se os registros forem corrigidos.'}</td></tr>
     <tr><td>Distribuição</td><td>Gerência</td></tr></table>
     <p class="fo" style="margin-top:6mm">Navegação Cunha Ltda. · Grupo VDA.</p></div><div class="ft"><span>${foot}</span><span class="fn"></span></div></div>`;
-  const src = sec.map(s => `<div class="sc" data-n="${s[0]}"><h2>${s[0]} · ${esc(s[1])}</h2>${s[2]}</div>`).join('');
+  const src = sec.map(s => `<div class="sc" data-n="${s[0]}"><h2><span class="nu">${s[0]}</span>${esc(s[1])}</h2>${s[2].replace(/<h3>(\d+\.\d+) /g, '<h3><span class="n3">$1</span>')}</div>`).join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(num)} · Relatório mensal de manutenção</title><style>${RME_CSS}</style></head><body>${capa}${indice}<div id="out"></div>${contra}
    <div id="src" style="position:absolute;left:-9999px;top:0;width:186mm">${src}</div>
    <template id="cab">${cab}</template>
