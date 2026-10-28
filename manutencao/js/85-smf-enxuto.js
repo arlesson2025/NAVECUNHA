@@ -21,7 +21,7 @@ function enxNav() {
     + '<div class="grp-t grp-apoio">Apoio</div>' + it('admin', 'Administração', 'adm');
 }
 // ---------- dados do cronograma ----------
-const ENX = { v: '', emDia: false };
+const ENX = { v: '', emDia: false, abertos: new Set() };   // abertos = grupos de equipamento abertos na lista do empurrador
 const enxServ = t => t.chk || t.item, enxEq = t => EQN[t.eq] || t.eq;
 const enxIv = (t, v, pos) => { const iv = intervalo(t, v, pos); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + (iv.m === 1 ? ' mês' : ' meses') : ''].filter(Boolean).join(' ou ') || '—'; };
 const enxNF = (vid, pos, item) => { let b = null; recs('base').forEach(r => { if (r.nf && r.vessel === vid && r.pos === pos && r.item === item && !r.excluido && (!b || r.date > b.date)) b = r; }); return b; };
@@ -48,13 +48,17 @@ function vEnx() {
   }
   const x = D.find(y => y.v === v), ord = { venc: 0, mes: 1, sem: 2 }, L = x.P.filter(y => ENX.emDia || ['venc', 'mes', 'sem'].includes(y.g)).sort((a, b) => (ord[a.g] ?? 3) - (ord[b.g] ?? 3) || a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true }));
   const lin = y => { const nfr = enxNF(v.id, y.pos, y.t.id), k = y.pos + '|' + y.t.id, L0 = y.s.L;
-    return `<tr><td><input type="checkbox" class="enx-ck" value="${k}"></td><td><b>${esc(enxServ(y.t))}</b><div class="note">${esc(enxEq(y.t))} · ${esc(posCurtoE(v, y.pos))}${y.t.prio === 'Crítica' ? ' · <span class="rl-ruim">Crítica</span>' : ''}</div></td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
+    return `<tr><td><input type="checkbox" class="enx-ck" value="${k}"></td><td><b>${esc(enxServ(y.t))}</b>${y.t.prio === 'Crítica' ? ' <span class="note rl-ruim">Crítica</span>' : ''}</td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
       <td class="nowrap">${L0 ? brD(L0.date) + (L0.h != null ? '<div class="note">' + nf(L0.h) + ' h</div>' : '') : '—'}</td><td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div>${nfr && (!L0 || nfr.date > L0.date) ? `<div class="note rl-ruim">não feito em ${brD(nfr.date)}: ${esc(nfr.motivo || '')}</div>` : ''}</td></tr>`; };
   return enxCab(`Cronograma · ${esc(v.nome)}`, 'Marque os serviços · “Copiar texto da OM” para abrir a OM no Sankhya com a lista · depois “Registrar feito” com o nº dessa OM, ou “Não feito” com o motivo',
       `<button class="mbtn" data-enxv="">← Frota</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Serviços · ${x.venc.length} vencido${x.venc.length === 1 ? '' : 's'} · ${x.mes.length} no mês</h2>
-     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Marcar vencidos e do mês</button><button class="mbtn" data-enxcopiar>📋 Copiar texto da OM</button><button class="mbtn pri" data-enxfeito>✓ Registrar feito</button><button class="mbtn" data-enxnf>Não feito</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> mostrar os em dia</label></div>
-     <div class="tw"><table class="t"><thead><tr><th></th><th>Serviço</th><th>A cada</th><th>Último</th><th>Situação</th></tr></thead><tbody>${L.map(lin).join('') || '<tr><td colspan="5" class="note">Nada vencido nem vencendo no mês.</td></tr>'}</tbody></table></div>
+     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Marcar vencidos e do mês</button><button class="mbtn" data-enxabre>Abrir todos os grupos</button><button class="mbtn" data-enxcopiar>📋 Copiar texto da OM</button><button class="mbtn pri" data-enxfeito>✓ Registrar feito</button><button class="mbtn" data-enxnf>Não feito</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> mostrar os em dia</label></div>
+     ${(() => { const G = {}; L.forEach(y => { const k = enxEq(y.t) + ' · ' + posCurtoE(v, y.pos); (G[k] = G[k] || []).push(y); });
+       const ks = Object.keys(G).sort((a, b) => G[b].filter(y => y.g === 'venc').length - G[a].filter(y => y.g === 'venc').length || a.localeCompare(b, 'pt-BR'));
+       return ks.length ? ks.map(k => { const g = G[k], nv = g.filter(y => y.g === 'venc').length, nm = g.filter(y => y.g === 'mes').length, ns = g.filter(y => y.g === 'sem').length;
+         return `<details class="enx-g"${ENX.abertos.has(k) ? ' open' : ''} data-enxg="${esc(k)}"><summary><b>${esc(k)}</b><span class="sp"></span>${nv ? `<span class="pill p-bad">${nv} vencido${nv === 1 ? '' : 's'}</span>` : ''}${nm ? `<span class="pill p-warn">${nm} no mês</span>` : ''}${ns ? `<span class="pill p-mut">${ns} sem histórico</span>` : ''}${!nv && !nm && !ns ? `<span class="pill p-ok">${g.length} em dia</span>` : ''}</summary>
+           <table class="t"><thead><tr><th></th><th>Serviço</th><th>A cada</th><th>Último</th><th>Situação</th></tr></thead><tbody>${g.map(lin).join('')}</tbody></table></details>`; }).join('') : '<p class="note">Nada vencido nem vencendo no mês.</p>'; })()}
      <p class="note">Rastreabilidade: o texto copiado vai na OM do Sankhya, e o mesmo nº de OM fica em cada serviço registrado aqui; o relatório lista serviço × OM para conferência. Fotos e encerramento ficam na OM do Sankhya.</p></div>
    <div class="card"><h2>OMs preventivas registradas</h2>${(() => { const G = enxOMsDe(v.id).slice(0, 12); return G.length ? `<table class="t"><thead><tr><th>OM</th><th>Data</th><th class="r">Serviços</th><th></th></tr></thead><tbody>${G.map(g => `<tr><td><b>${esc(g.om)}</b></td><td>${brD(g.date)}</td><td class="r">${g.n}</td><td><button class="mbtn sm" data-enx2b="${esc(g.om)}">Anexo II-B</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhuma ainda.</p>'; })()}</div></div></div>`;
 }
@@ -93,12 +97,16 @@ function enxNFModal() {
     closeModal(); toast('Registrado como não feito.'); render(); };
 }
 // ---------- 1 · Horímetros ----------
+const ENXH = { v: '' };
 function vEnxHor() {
-  const V = S.cfg.frota.filter(v => !foraOp(v)), lin = v => posicoes(v).filter(p => p !== 'UN').map((p, i) => { const h = horAtual(v.id, p), d = h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
+  const V = S.cfg.frota.filter(v => !foraOp(v)), idade = v => { const h = horAtual(v.id, mpos(v.id)); return h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : 999; };
+  if (!V.some(v => v.id === ENXH.v)) ENXH.v = (V.slice().sort((a, b) => idade(b) - idade(a))[0] || {}).id;   // abre no que está há mais tempo sem leitura
+  const lin = v => posicoes(v).filter(p => p !== 'UN').map((p, i) => { const h = horAtual(v.id, p), d = h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
     return `<tr>${i ? '<td></td>' : `<td><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td><td>${h ? brD(h.date) : '—'}${d != null && d > 14 ? ` <span class="pill p-warn">há ${d} dias</span>` : ''}</td><td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"></td></tr>`; }).join('');
-  return enxCab('Horímetros', 'Lance na chegada de cada empurrador · os serviços por horas vencem por estas leituras', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+  return enxCab('Horímetros', 'Escolha o empurrador que chegou e lance as leituras dos motores · os serviços por horas vencem por estas leituras · em âmbar, os que estão há mais de 14 dias sem leitura', '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Leituras</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Salvar leituras</button></div>
-     <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.map(lin).join('')}</tbody></table></div>
+     <div class="cm-chips" style="margin-bottom:8px">${V.map(v => { const d = idade(v); return `<button class="cm-chip${v.id === ENXH.v ? ' on' : ''}" data-ehv="${v.id}">${esc(v.nome)}${d > 14 ? ` <b style="color:var(--warnt)">${d === 999 ? 'sem leitura' : d + ' d'}</b>` : ''}</button>`; }).join('')}</div>
+     <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.filter(v => v.id === ENXH.v).map(lin).join('')}</tbody></table></div>
      <p class="note">Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div></div></div>`;
 }
 async function enxHorSalvar() {
@@ -138,9 +146,11 @@ function enxRelHTML(R, emi) {
 const enxEmitidos = () => recs('snap').filter(s => s.tipo === 'relprev' && !s.excluido).sort((a, b) => (b.at || 0) - (a.at || 0));
 function vEnxRel() {
   const R = enxRelDados(ENXR.ym), E = enxEmitidos(), meses = [...Array(12).keys()].map(k => { const d = new Date(hoje().getFullYear(), hoje().getMonth() - k, 1); return isoD(d).slice(0, 7); });
-  return enxCab('Relatório de preventiva', 'Mês a mês: aderência, serviços feitos com o nº da OM, não feitos com motivo, vencidos e o que vence · “Emitir” congela a cópia para assinatura e auditoria',
-     `<select id="erM">${meses.map(m => `<option value="${m}"${m === ENXR.ym ? ' selected' : ''}>${MESES[+m.slice(5) - 1]}/${m.slice(0, 4)}</option>`).join('')}</select><button class="mbtn pri" data-erem>Emitir e imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
-   + `<div class="card"><h2>Prévia · ${esc(R.ref)}</h2>${enxRelHTML(R)}</div>
+  return enxCab('Relatório de preventiva', 'O resumo do mês · “Emitir e imprimir” gera o relatório completo, numerado e congelado, para assinatura e auditoria',
+     `<select id="erM" style="width:auto">${meses.map(m => `<option value="${m}"${m === ENXR.ym ? ' selected' : ''}>${MESES[+m.slice(5) - 1]}/${m.slice(0, 4)}</option>`).join('')}</select><button class="mbtn pri" data-erem>Emitir e imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+   + `<div class="card"><h2>Resumo · ${esc(R.ref)}</h2><div class="f2-ks">${[['Aderência no mês', R.ad == null ? '—' : R.ad + '%', R.ad == null ? '' : R.ad >= 90 ? 'var(--okt)' : 'var(--badt)'], ['Serviços feitos', R.feitos.length], ['Não feitos (com motivo)', R.nfs.length, R.nfs.length ? 'var(--warnt)' : ''], ['Vencidos hoje', R.venc.length, R.venc.length ? 'var(--badt)' : ''], ['Vencem no mês', R.mes.length]].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>
+     <p class="note">A lista completa (serviço × OM do Sankhya, não feitos, vencidos e do mês) sai no relatório emitido.${R.semHist ? ` <span class="rl-ruim">${R.semHist} serviços sem histórico não entram na conta.</span>` : ''}</p></div>
+   <div class="card"><h2>Por empurrador</h2><table class="t"><thead><tr><th>Empurrador</th><th class="r">Previsto</th><th class="r">No prazo</th><th class="r">Com atraso</th><th class="r">Não feito</th><th class="r">Aderência mês</th><th class="r">Aderência ano</th></tr></thead><tbody>${R.por.map(q => `<tr><td><b>${esc(q.nome)}</b></td><td class="r">${q.prev}</td><td class="r">${q.ok}</td><td class="r">${q.late}</td><td class="r">${q.miss}</td><td class="r">${q.ad == null ? '—' : q.ad + '%'}</td><td class="r">${q.adAno == null ? '—' : q.adAno + '%'}</td></tr>`).join('')}</tbody></table></div>
    <div class="card"><h2>Relatórios emitidos · ${E.length}</h2>${E.length ? `<table class="t"><thead><tr><th>Nº</th><th>Referência</th><th>Emitido em</th><th>Por</th><th></th></tr></thead><tbody>${E.map(s => `<tr><td><b>${esc(s.num)}</b></td><td>${esc(s.dados.ref)}</td><td>${esc(s.em)}</td><td>${esc(s.por)}</td><td><button class="mbtn sm" data-erimp="${s.id}">Imprimir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum emitido ainda.</p>'}</div></div></div>`;
 }
 function enxRelImprimir(s) {
@@ -211,21 +221,24 @@ async function enxCorSalvar() {
   await saveRec(o); toast('Corretiva ' + num + ' registrada.'); enxIIA(o); render(); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a]'); if (!t) return; const d = t.dataset;
-    if (d.enxv !== undefined) { ENX.v = d.enxv; return render(); }
+  m.onclick = async e => { const t = e.target.closest('[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a]'); if (!t) return; const d = t.dataset;
+    if (d.enxv !== undefined) { ENX.v = d.enxv; ENX.abertos = new Set(); return render(); }
+    if (d.ehv !== undefined) { ENXH.v = d.ehv; return render(); }
+    if (d.enxabre !== undefined) { $$('#main details.enx-g').forEach(g => { g.open = true; ENX.abertos.add(g.dataset.enxg); }); return; }
     if (d.enx2b !== undefined) return enxIIB(ENX.v, d.enx2b);
     if (d.ecsalvar !== undefined) return enxCorSalvar();
     if (d.ec2a !== undefined) { const o = S.recs.get(d.ec2a); if (o) enxIIA(o); return; }
     if (d.enxcopiar !== undefined) return enxCopiar();
     if (d.enxfeito !== undefined) return enxFeitoModal();
     if (d.enxnf !== undefined) return enxNFModal();
-    if (d.enxtodos !== undefined) { const D = enxDados().find(x => x.v.id === ENX.v), ks = new Set([...D.venc, ...D.mes].map(y => y.pos + '|' + y.t.id)); $$('#main .enx-ck').forEach(i => { i.checked = ks.has(i.value); }); return; }
+    if (d.enxtodos !== undefined) { const D = enxDados().find(x => x.v.id === ENX.v), ks = new Set([...D.venc, ...D.mes].map(y => y.pos + '|' + y.t.id)); $$('#main .enx-ck').forEach(i => { i.checked = ks.has(i.value); if (i.checked) { const g = i.closest('details'); if (g) { g.open = true; ENX.abertos.add(g.dataset.enxg); } } }); return; }
     if (d.ehsalvar !== undefined) return enxHorSalvar();
     if (d.erem !== undefined) return enxRelEmitir();
     if (d.erimp !== undefined) { const s = S.recs.get(d.erimp); if (s) enxRelImprimir(s); } };
+  if (!m._enxTg) m._enxTg = m.addEventListener('toggle', e => { const g = e.target; if (g.matches && g.matches('details.enx-g')) { if (g.open) ENX.abertos.add(g.dataset.enxg); else ENX.abertos.delete(g.dataset.enxg); } }, true) || 1;   // um ouvinte só no #main
   m.onchange = e => { if (e.target.id === 'enxEmDia') { ENX.emDia = e.target.checked; render(); } if (e.target.id === 'erM') { ENXR.ym = e.target.value; render(); } };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'enx' && ENX.v ? '1' : '') + '_lay', '[data-enxreset]'); };
 Object.assign(VX, { enx: vEnx, enxhor: vEnxHor, enxcor: vEnxCor, enxrel: vEnxRel }); ['enx', 'enxhor', 'enxcor', 'enxrel'].forEach(k => { AFTER[k] = enxAfter(k); });
 Object.assign(NP_TAG, { enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9' });
 document.addEventListener('change', e => { const c = e.target.closest('[data-enxmc]'); if (!c) return; try { localStorage.setItem(ENX_MC, c.checked ? '1' : '0'); } catch (er) { } toast(c.checked ? 'Modo completo ligado neste aparelho.' : 'Modo enxuto.'); render(); });
-{ const st = document.createElement('style'); st.textContent = `.enx-rel h3{font-size:14px;margin:14px 0 6px;color:#1F2A44}.enx-ck{width:18px;height:18px}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = `.enx-rel h3{font-size:14px;margin:14px 0 6px;color:#1F2A44}.enx-ck{width:18px;height:18px}.enx-g{border:1px solid #E3E8EF;border-radius:8px;margin:0 0 8px;background:#fff}.enx-g>summary{display:flex;align-items:center;gap:6px;padding:9px 12px;cursor:pointer;list-style:none}.enx-g>summary::-webkit-details-marker{display:none}.enx-g>summary::before{content:'▸';color:#5F6368;margin-right:4px}.enx-g[open]>summary::before{content:'▾'}.enx-g[open]>summary{border-bottom:1px solid #E3E8EF}.enx-g table{margin:0}`; document.head.appendChild(st); }
