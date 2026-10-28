@@ -8,7 +8,7 @@
    Impressão: folhas A4 montadas na janela (paginação própria), para o índice ter o nº certo de cada seção.
    ===================================================================== */
 'use strict';
-const RME = { ini: isoD(new Date(hoje().getFullYear(), hoje().getMonth(), 1)), fim: isoD(hoje()) };
+const RME = { ini: isoD(new Date(hoje().getFullYear(), hoje().getMonth(), 1)), fim: isoD(hoje()), anexo: false };
 const rmeDia = (s, n) => { const d = pD(s); d.setDate(d.getDate() + n); return isoD(d); };
 const rmeMot = v => posicoes(v).filter(p => p !== 'UN');
 const rmePlanoK = () => 'smf_rme_' + RME.ini + '_' + RME.fim;
@@ -91,7 +91,7 @@ function rmeDados(ini, fim) {
   const lubMes = meses.map(([a, b]) => Math.round(TA.filter(r => r.date >= a && r.date <= b).flatMap(r => (r.eq || []).filter(q => q.status === 'T')).reduce((s, q) => s + litros(q.qtd), 0)));
   const lubSitu = lubDados().filter(x => x.s && !x.saida && (x.s.st === 'venc' || (x.horas != null && x.horas <= 50) || (x.dias != null && x.dias <= 15))).map(x => [x.v.id, x.e.nome, x.s.st === 'venc' ? 'vencida' : 'próxima', x.s.txt || '']);
   // 6 · condição
-  const ens = recs('comp').filter(r => !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim && (r.vals || []).length).sort((a, b) => a.date < b.date ? -1 : 1).map(r => { const L = r.vals.map(Number).filter(x => x > 0), mn = Math.min(...L), mx = Math.max(...L); return [r.date, r.vessel, r.pos, r.h, mn, mx, Math.round((mx - mn) * 100) / 100]; });
+  const ens = recs('comp').filter(r => !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim && (r.vals || []).length).sort((a, b) => a.date < b.date ? -1 : 1).map(r => { const L = r.vals.map(x => parseFloat(String(x).replace(',', '.'))).filter(x => x > 0), mn = Math.min(...L), mx = Math.max(...L); return L.length ? [r.date, r.vessel, r.pos, r.h, mn, mx, Math.round((mx - mn) * 100) / 100] : null; }).filter(Boolean);   // valores gravados com vírgula (“1,62”)
   const doca = V.map(v => docaVessel(v)).filter(d => d.due && (d.st === 'venc' || d.dias <= 365)).sort((a, b) => a.due - b.due).map(d => [d.v.id, isoD(d.due), d.st, d.fonte]);
   return { ini, fim, iniA, ano: y, N, frota: V.length, hor, mesLab: meses.map(([a]) => MESES[+a.slice(5, 7) - 1]), feitos, nfs, porV, ads, venc, cor, cls, sisP, sisA, eqP, eqA, rep, trocas, lubV, lubMes, lubSitu, ens, doca, geradoEm: new Date().toLocaleString('pt-BR') };
 }
@@ -134,21 +134,42 @@ function rmeConclusoes(R) {
   return L;
 }
 // as seções: [nº, título, html]; tabelas com classe "qb" são quebradas entre folhas
-function rmeSecoes(R, plano) {
+// ---------- relatório gerencial (Supervisor, 27/10/2026: “quem vai ler 20 páginas?”): 2 folhas depois da capa ----------
+function rmeGerencial(R, plano) {
+  const per = `${brD(R.ini)} a ${brD(R.fim)}`, p = R.N.per, a = R.N.ano, b = R.N.ant, V = id => esc(vName(id)), pc = (id, pos) => { const v = vessel(id); return esc(v ? posCurtoE(v, pos) : pos); };
+  const dp = v => v == null ? '—' : nf(v, 1) + '%', k = (l, v, sub, st) => `<div class="${st || ''}"><i>${l}</i><b>${v}</b><small>${sub}</small></div>`;
+  const totMes = R.mesLab.map((l, i) => [l, R.hor.reduce((t, x) => t + x.mes[i], 0)]), dias = Math.round((pD(R.fim) - pD(R.ini)) / 864e5) + 1;
+  const G1 = `<p class="fo">Período ${per} · acumulado de 01/01 a ${brD(R.fim)} · ${R.frota} empurradores · “anterior” = ${brD(rmeDia(R.ini, -dias))} a ${brD(rmeDia(R.ini, -1))}, mesmo número de dias</p>
+    <div class="kp">${k('Aderência ao cronograma', rmeP(p.ad.ad), `ano ${rmeP(a.ad.ad)} · meta ≥ 90%`, p.ad.ad == null ? '' : p.ad.ad >= 90 ? 'ok' : 'bad')
+      + k('Disponibilidade da frota', dp(p.disp), `ano ${dp(a.disp)} · meta ≥ 95%`, p.disp == null ? '' : p.disp >= 95 ? 'ok' : 'bad')
+      + k('MTTR', rmeH(p.mttr, 1), `ano ${rmeH(a.mttr, 1)} · meta ≤ 8 h`, p.mttr == null ? '' : p.mttr <= 8 ? 'ok' : 'bad')
+      + k('Corretivas', p.cor, `ano ${a.cor} · anterior ${b.cor}`, p.cor > b.cor ? 'bad' : '')
+      + k('Serviços preventivos feitos', p.serv, `ano ${a.serv} · fora do prazo ${p.ad.ms}`, p.ad.ms ? 'bad' : 'ok')
+      + k('Horas de reparo', rmeH(p.hPar, 1), `ano ${rmeH(a.hPar, 1)}`, '')
+      + k('Trocas de óleo', p.trocas, `${nf(p.litros)} L · ano ${a.trocas}`, '')
+      + k('Horas de operação · MCP', nf(p.hMcp) + ' h', `ano ${nf(a.hMcp)} h`, '')}</div>
+    <div class="g2"><div><h3>1.1 Aderência ao cronograma, mês a mês</h3>${rmeGraf(R.mesLab.map((l, i) => [l, R.ads[i]]), { pct: true, meta: 90, fmt: v => Math.round(v) + '%', leg: 'aderência' })}</div>
+      <div><h3>1.2 Horas de operação dos MCP, mês a mês</h3>${rmeGraf(totMes, { acum: 'soma', leg: 'horas no mês' })}</div></div>
+    <h3>1.3 Principais constatações</h3><ol class="cc">${rmeConclusoes(R).map(x => `<li>${x}</li>`).join('')}</ol>
+    ${(plano.conc || '').trim() ? `<h3>1.4 Comentário do Supervisor</h3><div class="tx">${esc(plano.conc).replace(/\n/g, '<br>')}</div>` : ''}`;
+  // pontos de atenção: corretivas, falhas que se repetem, pendências e o plano
+  const C = R.cor.slice(0, 8), pend = [];
+  R.venc.slice().sort((x, y) => y[1] - x[1]).slice(0, 5).forEach(x => pend.push(['Preventiva vencida', V(x[0]), `${x[1]} serviço${x[1] > 1 ? 's' : ''}: ${esc(x[2])}${x[1] > 5 ? '…' : ''}`]));
+  R.lubSitu.filter(x => x[2] === 'vencida').forEach(x => pend.push(['Troca de óleo vencida', V(x[0]), esc(x[1])]));
+  R.ens.filter(e => e[4] != null && e[4] < COMP.lim).forEach(e => pend.push(['Compressão abaixo do limite', V(e[1]), `${pc(e[1], e[2])}: menor cilindro ${nf(e[4], 2)} MPa (limite ${nf(COMP.lim, 2)})`]));
+  R.doca.filter(d => d[2] === 'venc' || (pD(d[1]) - pD(R.fim)) / 864e5 <= 180).forEach(d => pend.push([d[2] === 'venc' ? 'Docagem vencida' : 'Docagem a programar', V(d[0]), 'data-limite ' + brD(d[1])]));
+  const A = (plano.acoes || []).filter(x => x && (x[0] || '').trim());
+  const G2 = `<h3>2.1 Corretivas do período · ${R.cor.length}</h3>${rmeTab(['Início', 'Empurrador', 'OM', 'Equipamento', 'Classe', 'Reparo'], C.map(c => [brD(c[0].slice(0, 10)), V(c[1]), esc(c[2] || '—'), esc(c[4]), esc(c[5]), c[8] == null ? '<span class="mut">em aberto</span>' : rmeH(c[8], 1)]), ['11%', '15%', '11%', '37%', '12%', '14%'])}${R.cor.length > 8 ? `<p class="fo">E mais ${R.cor.length - 8} corretivas: lista completa no anexo técnico (A3).</p>` : ''}
+    <h3>2.2 Falhas mais frequentes no ano</h3>${rmeTab(['Equipamento', 'No período', 'No ano'], R.eqA.slice(0, 5).map(([e, n]) => [esc(e), (R.eqP.find(x => x[0] === e) || [0, 0])[1], `<b>${n}</b>`]), ['60%', '20%', '20%'])}${R.rep.length ? `<p class="fo">Repetição no mesmo empurrador (2 ou mais no ano): ${R.rep.map(x => `${V(x[0])} · ${esc(x[1])} (${x[2]})`).join('; ')}. Avaliar a causa e a revisão do plano preventivo (NP 055 5.12).</p>` : ''}
+    <h3>2.3 Pendências na data da emissão</h3>${rmeTab(['Assunto', 'Empurrador', 'Situação'], pend, ['24%', '16%', '60%'])}
+    <h3>2.4 Plano de ação</h3>${rmeTab(['Nº', 'Ação', 'Responsável', 'Prazo'], (A.length ? A : [['', '', ''], ['', '', ''], ['', '', '']]).map((x, i) => [i + 1, esc(x[0] || '') || '&nbsp;', esc(x[1] || ''), x[2] ? brD(x[2]) : '']), ['6%', '60%', '20%', '14%'])}
+    <table class="ass"><thead><tr><th>Elaborado por · Supervisor de Manutenção</th><th>Aprovado por · Gerência</th></tr></thead><tbody><tr><td class="lin">Nome, assinatura e data</td><td class="lin">Nome, assinatura e data</td></tr></tbody></table>`;
+  return [[1, 'Painel do período', G1], [2, 'Pontos de atenção e decisões', G2]];
+}
+// anexo técnico (opcional): as tabelas completas, seções A1 a A5
+function rmeAnexo(R) {
   const per = `${brD(R.ini)} a ${brD(R.fim)}`, ano = `01/01 a ${brD(R.fim)}`, p = R.N.per, a = R.N.ano, b = R.N.ant, V = id => esc(vName(id)), pc = (id, pos) => { const v = vessel(id); return esc(v ? posCurtoE(v, pos) : pos); };
   const sv = id => A1M[id] ? esc(enxServ(A1M[id])) : esc(id), S1 = [];
-  // 1 · resumo executivo
-  S1.push([1, 'Introdução e resumo executivo', `<h3>1.1 Objetivo e escopo</h3><p>Este relatório apresenta as atividades de manutenção da frota de ${R.frota} empurradores fluviais da Navecunha no período de <b>${per}</b> e o acumulado do ano (<b>${ano}</b>), conforme a NP Navecunha 055 (item 7.3 · cronograma preventivo e item 9 · indicadores de desempenho). Os dados vêm dos registros do SMF; as evidências (Anexos II assinados, FR 049_B, fotos e relatórios de terceiros) estão anexadas nas ordens de manutenção do Sankhya.</p>
-    <h3>1.2 Indicadores do período</h3>${rmeTab(['Indicador', 'Período', 'Período anterior', 'Variação', 'Acumulado no ano', 'Meta / referência'], [
-      ['Aderência ao cronograma preventivo', rmeP(p.ad.ad), rmeP(b.ad.ad), rmeVar(p.ad.ad, b.ad.ad, true), rmeP(a.ad.ad), '≥ 90%'],
-      ['Serviços preventivos executados', p.serv, b.serv, rmeVar(p.serv, b.serv), a.serv, '—'], ['OMs preventivas', p.oms, b.oms, rmeVar(p.oms, b.oms), a.oms, '—'],
-      ['Serviços preventivos não realizados', p.nf, b.nf, rmeVar(p.nf, b.nf, false), a.nf, '0'], ['Serviços não realizados dentro do prazo', p.ad.ms, b.ad.ms, rmeVar(p.ad.ms, b.ad.ms, false), a.ad.ms, '0'],
-      ['Manutenções corretivas', p.cor, b.cor, rmeVar(p.cor, b.cor, false), a.cor, '—'], ['Horas de reparo (corretiva)', rmeH(p.hPar, 1), rmeH(b.hPar, 1), rmeVar(p.hPar, b.hPar, false), rmeH(a.hPar, 1), '—'],
-      ['MTTR (tempo médio de reparo)', rmeH(p.mttr, 1), rmeH(b.mttr, 1), rmeVar(p.mttr, b.mttr, false), rmeH(a.mttr, 1), '≤ 8 h'], ['Disponibilidade da frota', p.disp == null ? '—' : nf(p.disp, 1) + '%', b.disp == null ? '—' : nf(b.disp, 1) + '%', rmeVar(p.disp, b.disp, true), a.disp == null ? '—' : nf(a.disp, 1) + '%', '≥ 95%'],
-      ['Trocas de óleo (FR 049_B)', p.trocas, b.trocas, rmeVar(p.trocas, b.trocas), a.trocas, '—'], ['Óleo utilizado nas trocas', nf(p.litros) + ' L', nf(b.litros) + ' L', rmeVar(p.litros, b.litros), nf(a.litros) + ' L', '—'],
-      ['Horas operadas · motores principais', rmeH(p.hMcp), rmeH(b.hMcp), rmeVar(p.hMcp, b.hMcp), rmeH(a.hMcp), '—']], ['30%', '12%', '13%', '11%', '14%', '20%'])}
-    <p class="fo">Período anterior: ${brD(rmeDia(R.ini, -(Math.round((pD(R.fim) - pD(R.ini)) / 864e5) + 1)))} a ${brD(rmeDia(R.ini, -1))} (mesmo número de dias). Aderência = feito no prazo ÷ o que venceu. Disponibilidade = horas sem corretiva em andamento ÷ horas do período × nº de empurradores. MTTR = início do reparo até a liberação.</p>
-    <h3>1.3 Principais constatações</h3><ol class="cc">${rmeConclusoes(R).map(s => `<li>${s}</li>`).join('')}</ol>`]);
   // 2 · operação
   const pil = L => `<div class="mr">${L.map(x => `<div>${x}</div>`).join('')}</div>`, obs = m => m[4] === 1 ? 'sem leitura' : m[4] === 3 ? 'leitura incoerente fora da soma' : m[4] === 2 ? 'desde a 1ª leitura' : '';
   const linH = R.hor.map(x => [`<b>${V(x.v)}</b>`, pil(x.M.map(m => pc(x.v, m[0]))), pil(x.M.map(m => rmeH(m[1]))), pil(x.M.map(m => rmeH(m[2]))),
@@ -185,12 +206,7 @@ function rmeSecoes(R, plano) {
   S1.push([6, 'Condição dos equipamentos', `<h3>6.1 Compressão dos motores principais</h3><p>Ensaios no período: <b>${p.ensaios}</b> · acumulado no ano: <b>${a.ensaios}</b>. Critério: padrão ${nf(COMP.pad, 2)} MPa e limite ${nf(COMP.lim, 2)} MPa (Service Manual S6R2, p. 2-3); atenção abaixo de ${nf(COMP.aten, 2)} MPa ou diferença entre cilindros acima de ${nf(CMP.dif, 2)} MPa (critério interno, Anexo I 1.1.12).</p>
     ${rmeTab(['Data', 'Empurrador', 'Motor', 'Horímetro', 'Menor cilindro', 'Maior cilindro', 'Diferença', 'Resultado'], R.ens.map(e => [brD(e[0]), V(e[1]), pc(e[1], e[2]), e[3] == null ? '—' : nf(e[3]) + ' h', nf(e[4], 2) + ' MPa', nf(e[5], 2) + ' MPa', nf(e[6], 2), res(e)]), null, 'qb sm')}
     <h3>6.2 Docagens nos próximos 12 meses</h3>${rmeTab(['Empurrador', 'Data-limite', 'Origem', 'Situação'], R.doca.map(d => [V(d[0]), brD(d[1]), esc(d[3]), d[2] === 'venc' ? '<b class="ruim">vencida</b>' : 'programar']), ['25%', '20%', '35%', '20%'], 'qb')}`]);
-  // 7 · conclusões e plano de ação (texto do Supervisor)
-  const A = (plano.acoes || []).filter(x => x && (x[0] || '').trim());
-  S1.push([7, 'Conclusões e plano de ação', `<h3>7.1 Conclusões</h3>${(plano.conc || '').trim() ? `<div class="tx">${esc(plano.conc).replace(/\n/g, '<br>')}</div>` : '<div class="tx vazio"></div>'}
-    <h3>7.2 Plano de ação</h3>${rmeTab(['Nº', 'Ação', 'Responsável', 'Prazo'], (A.length ? A : [['', '', ''], ['', '', ''], ['', '', '']]).map((x, i) => [i + 1, esc(x[0] || '') || '&nbsp;', esc(x[1] || ''), x[2] ? brD(x[2]) : '']), ['6%', '60%', '20%', '14%'], 'qb')}`]);
-  S1.push([8, 'Aprovação', `<p>Declaro que as informações deste relatório correspondem aos registros do SMF no período e que as evidências estão nas ordens de manutenção do Sankhya.</p><table class="ass"><thead><tr><th>Elaborado por</th><th>Aprovado por</th></tr></thead><tbody><tr><td>Supervisor de Manutenção</td><td>Gerência</td></tr><tr><td class="lin">Nome, assinatura e data</td><td class="lin">Nome, assinatura e data</td></tr></tbody></table>`]);
-  return S1;
+  return S1.map((x, k) => ['A' + (k + 1), x[1], x[2].replace(new RegExp('<h3>' + x[0] + '\\.', 'g'), '<h3>A' + (k + 1) + '.')]);
 }
 const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#E5E7EB;font:10.5px Arial,Helvetica,sans-serif;color:#202124}
  .pg{width:210mm;height:297mm;padding:9mm 12mm 7mm;background:#fff;margin:8px auto;box-shadow:0 1px 4px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden;page-break-after:always;break-after:page}
@@ -207,39 +223,31 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  .capa .tt{text-align:center}.capa .tt h1{font-size:30px;color:#1F2A44;margin:0;line-height:1.2;font-weight:700}.capa .tt .s{font-size:18px;color:#1F2A44;margin-top:8px}
  .capa table.dd{width:100%;margin:0}.capa table.dd td{padding:7px 10px;font-size:11.5px}.capa table.dd td:first-child{width:34%;background:#F4F6F9;color:#3C4043}.capa table.dd td:last-child{font-weight:700;color:#1F2A44}
  .capa .lgl{font-size:9px;color:#5F6B7A;margin-top:4mm}.prev{color:#C5221F;font-weight:700;font-size:12px;margin-top:6mm}
- .ix{width:100%;margin-top:6mm}.ix td{border:0;border-bottom:.5px solid #D5DCE5;padding:7px 4px;font-size:12px}.ix td:last-child{text-align:right;width:15%;font-weight:700}.ix .n{width:8%;color:#16244A;font-weight:700}
- .cv{justify-content:flex-end}.cv table td:first-child{width:32%;background:#F4F6F9;font-weight:600}
+ .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 8px}.kp>div{border:1px solid #E1E6ED;border-left:3px solid #AEB8C6;padding:6px 8px}.kp>div.ok{border-left-color:#188038}.kp>div.bad{border-left-color:#C5221F}
+ .kp i{display:block;font-style:normal;font-size:8.6px;color:#5F6368;text-transform:uppercase;letter-spacing:.03em}.kp b{display:block;font-size:19px;color:#1F2A44;margin:2px 0 1px}.kp .bad b{color:#C5221F}.kp small{font-size:8.6px;color:#5F6368}
+ table.ass{margin-top:12px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g2 h3{margin-top:6px}
  /* linhas finas (Supervisor, 27/10/2026): na impressão o navegador não faz linha abaixo de 1 px e a sombra de 0,5 px sai borrada;
  a leveza vem de réguas só horizontais em cinza bem claro, sem grade vertical nem quadro em volta */
- th,td{border:0;border-bottom:1px solid #E6EAF0}th{border-bottom:0}.cv table td,.capa table.dd td{border-bottom:1px solid #E6EAF0}
+ th,td{border:0;border-bottom:1px solid #E6EAF0}th{border-bottom:0}.capa table.dd td{border-bottom:1px solid #E6EAF0}
  .dc{border:1px solid #CFD6E0;box-shadow:none}.dc>div+div{border-left:1px solid #CFD6E0;box-shadow:none}.ft{border-top:1px solid #CFD6E0}
  .an{border:0;background:#F5F7FA;border-left:2px solid #1F2A44}.tx{border:1px solid #E1E6ED}.mr>div{box-shadow:none;border-bottom:1px solid #EEF1F5}.mr>div:last-child{border-bottom:0}
- table.hv>tbody>tr>td{border-bottom:1px solid #CFD6E0}.ix td{border-bottom:1px solid #E6EAF0}
+ table.hv>tbody>tr>td{border-bottom:1px solid #CFD6E0}
  /* títulos: seção com número em quadro azul-marinho e régua; subtítulo com o número em destaque, sem linha */
  h2{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:#1F2A44;margin:4px 0 10px;padding:0 0 6px;border:0;border-bottom:1px solid #1F2A44;letter-spacing:0}
  h2 .nu{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;background:#1F2A44;color:#fff;font-size:14px}
  h3{font-size:11.8px;font-weight:700;color:#1F2A44;margin:13px 0 5px;padding:0;border:0}h3 .n3{color:#B06000;margin-right:7px}`;
 // documento completo: as folhas são montadas na janela de impressão (o script mede e quebra as tabelas)
-function rmeDoc(R, plano, emi) {
-  const num = emi ? emi.num : 'PRÉVIA', per = `${brD(R.ini)} a ${brD(R.fim)}`, sec = rmeSecoes(R, plano), cab = docCab('RELATÓRIO MENSAL DE MANUTENÇÃO · FROTA DE EMPURRADORES', `${per} · ${esc(num)}`, 'NP Navecunha 055 · itens 7.3 e 9');
+function rmeDoc(R, plano, emi, anexo) {
+  const num = emi ? emi.num : 'PRÉVIA', per = `${brD(R.ini)} a ${brD(R.fim)}`, sec = rmeGerencial(R, plano).concat(anexo ? rmeAnexo(R) : []), cab = docCab('RELATÓRIO GERENCIAL DE MANUTENÇÃO', `Frota de Empurradores · ${per} · ${esc(num)}`, 'NP Navecunha 055 · itens 7.3 e 9');
   const foot = `Plano de Gestão de Manutenção · Empurradores Fluviais · ${esc(num)}`;
   const capa = `<div class="pg capa"><div class="lg"><img src="${docLogo('nav')}" alt=""><img src="${docLogo('vda')}" alt=""></div>
-    <div class="tt"><h1>Relatório Mensal de Manutenção</h1><div class="s">Frota de Empurradores</div>${emi ? '' : '<div class="prev">PRÉVIA · documento não emitido</div>'}</div>
+    <div class="tt"><h1>Relatório Gerencial de Manutenção</h1><div class="s">Frota de Empurradores</div>${emi ? '' : '<div class="prev">PRÉVIA · documento não emitido</div>'}</div>
     <div><table class="dd"><tr><td>Relatório nº</td><td>${esc(num)}</td></tr><tr><td>Período</td><td>${per}</td></tr><tr><td>Acumulado do ano</td><td>01/01/${R.ano} a ${brD(R.fim)}</td></tr>
     <tr><td>Elaborado por</td><td>${esc(emi ? emi.por : (S.session || {}).name || '')} · Supervisor de Manutenção</td></tr><tr><td>Data de emissão</td><td>${esc(emi ? emi.em : 'não emitido')}</td></tr>
-    <tr><td>Base normativa</td><td>NP Navecunha 055 · itens 7.3 e 9</td></tr><tr><td>Distribuição</td><td>Gerência</td></tr></table>
+    <tr><td>Conteúdo</td><td>Painel do período · pontos de atenção e decisões${anexo ? ' · anexo técnico (A1 a A5)' : ''}</td></tr><tr><td>Base normativa</td><td>NP Navecunha 055 · itens 7.3 e 9</td></tr><tr><td>Distribuição</td><td>Gerência</td></tr></table>
     <p class="lgl">Navegação Cunha Ltda. · Grupo VDA</p></div></div>`;
-  const indice = `<div class="pg"><div class="bd">${cab}<h2>Índice</h2><table class="ix">${sec.map(s => `<tr><td class="n">${s[0]}</td><td>${esc(s[1])}</td><td data-ixs="${s[0]}"></td></tr>`).join('')}<tr><td class="n"></td><td>Controle do documento</td><td data-ixs="cv"></td></tr></table></div><div class="ft"><span>${foot}</span><span class="fn"></span></div></div>`;
-  const contra = `<div class="pg cv" data-sec="cv"><div class="bd" style="display:flex;flex-direction:column">${cab}<div style="flex:1"></div><h2>Controle do documento</h2>
-    <table><tr><td>Documento</td><td>Relatório Mensal de Manutenção da Frota · empurradores fluviais</td></tr><tr><td>Número</td><td>${esc(num)}</td></tr><tr><td>Período</td><td>${per} · acumulado do ano: 01/01/${R.ano} a ${brD(R.fim)}</td></tr>
-    <tr><td>Emitido em</td><td>${esc(emi ? emi.em + ' por ' + emi.por : 'não emitido (prévia)')}</td></tr><tr><td>Sistema</td><td>SMF · Sistema de Manutenção da Frota · versão ${VERSAO_APP}</td></tr>
-    <tr><td>Base normativa</td><td>NP Navecunha 055 · Plano de Gestão de Manutenção (7.3 cronograma preventivo; 9 indicadores de desempenho); Anexo I; Anexos II-A e II-B; FR 049_B · ABNT NBR ISO 9001 (9.1 monitoramento, medição, análise e avaliação)</td></tr>
-    <tr><td>Fontes de dados</td><td>Registros do SMF: horímetros, serviços preventivos com nº da OM, corretivas, FR 049_B, ensaios de compressão e docagens. Evidências (Anexos II assinados, FR 049_B, fotos, relatórios de terceiros) anexadas nas OMs do Sankhya.</td></tr>
-    <tr><td>Cópia emitida</td><td>${emi ? 'Congelada no SMF na data da emissão: correções posteriores nos registros não alteram este relatório.' : 'Prévia: os números mudam se os registros forem corrigidos.'}</td></tr>
-    <tr><td>Distribuição</td><td>Gerência</td></tr></table>
-    <p class="fo" style="margin-top:6mm">Navegação Cunha Ltda. · Grupo VDA.</p></div><div class="ft"><span>${foot}</span><span class="fn"></span></div></div>`;
-  const src = sec.map(s => `<div class="sc" data-n="${s[0]}"><h2><span class="nu">${s[0]}</span>${esc(s[1])}</h2>${s[2].replace(/<h3>(\d+\.\d+) /g, '<h3><span class="n3">$1</span>')}</div>`).join('');
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq(num + ' - Relatorio mensal de manutencao'))}</title><style>${RME_CSS}</style></head><body>${capa}${indice}<div id="out"></div>${contra}
+  const src = sec.map(s => `<div class="sc" data-n="${s[0]}"><h2><span class="nu">${s[0]}</span>${esc(s[1])}</h2>${s[2].replace(/<h3>(A?\d+\.\d+) /g, '<h3><span class="n3">$1</span>')}</div>`).join('');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq(num + ' - Relatorio gerencial de manutencao'))}</title><style>${RME_CSS}</style></head><body>${capa}<div id="out"></div>
    <div id="src" style="position:absolute;left:-9999px;top:0;width:186mm">${src}</div>
    <template id="cab">${cab}</template>
    <script>(function(){var out=document.getElementById('out'),cab=document.getElementById('cab').innerHTML,foot=${JSON.stringify(foot)},pg,bd;
@@ -257,10 +265,9 @@ function rmeDoc(R, plano, emi) {
        if(el.tagName==='TABLE'&&el.classList.contains('qb'))tabela(el,n);else poe(el,n);}});
    document.getElementById('src').remove();
    var P=[].slice.call(document.querySelectorAll('.pg')),T=P.length;P.forEach(function(p,i){var f=p.querySelector('.fn');if(f)f.textContent='Folha '+(i+1)+' de '+T;});
-   [].slice.call(document.querySelectorAll('[data-ixs]')).forEach(function(c){var k=c.getAttribute('data-ixs');for(var i=0;i<P.length;i++)if(P[i].getAttribute('data-sec')===k){c.textContent=i+1;break;}});
    setTimeout(function(){window.print();},700);})();<\/script></body></html>`;
 }
-function rmeAbrir(R, plano, emi) { const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para abrir o relatório.'); w.document.write(rmeDoc(R, plano, emi)); w.document.close(); }
+function rmeAbrir(R, plano, emi, anexo) { const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para abrir o relatório.'); w.document.write(rmeDoc(R, plano, emi, anexo)); w.document.close(); }
 // ---------- emitidos (congelados em partes) ----------
 const rmeEmitidos = () => recs('snap').filter(s => s.tipo === 'relmes' && !s.excluido).sort((a, b) => (b.at || 0) - (a.at || 0));
 function rmeLer(s) { const P = recs('snap').filter(x => x.tipo === 'relmes-p' && x.pai === s.id).sort((a, b) => a.i - b.i); if (P.length !== s.partes) return null; try { return JSON.parse(P.map(x => x.txt).join('')); } catch (e) { return null; } }
@@ -268,24 +275,24 @@ async function rmeEmitir() {
   if (!can.admin()) return toast('Só o Supervisor emite o relatório.'); if (RME.ini > RME.fim) return toast('A data inicial é depois da final.');
   const R = rmeDados(RME.ini, RME.fim), pl = rmePlano(), base = 'RM-' + RME.fim.slice(0, 7), n = rmeEmitidos().filter(s => s.num.split('-r')[0] === base).length;
   const txt = JSON.stringify(R), id = uid('snap'), partes = Math.ceil(txt.length / 28000);
-  const s = { id, kind: 'snap', tipo: 'relmes', date: isoD(hoje()), at: Date.now(), num: base + (n ? '-r' + n : ''), ini: RME.ini, fim: RME.fim, em: new Date().toLocaleString('pt-BR'), por: S.session.name, partes, plano: pl };
+  const s = { id, kind: 'snap', tipo: 'relmes', date: isoD(hoje()), at: Date.now(), num: base + (n ? '-r' + n : ''), ini: RME.ini, fim: RME.fim, em: new Date().toLocaleString('pt-BR'), por: S.session.name, partes, plano: pl, anexo: !!RME.anexo };
   if (JSON.stringify(s).length > 45000) return toast('Texto das conclusões grande demais. Encurte e emita de novo.');
   for (let i = 0; i < partes; i++) await saveRec({ id: id + '-p' + i, kind: 'snap', tipo: 'relmes-p', pai: id, i, txt: txt.slice(i * 28000, (i + 1) * 28000), date: s.date });
-  await saveRec(s); rmeAbrir(R, pl, s); render();
+  await saveRec(s); rmeAbrir(R, pl, s, s.anexo); render();
 }
 // ---------- tela 5 · Relatório mensal ----------
 function vRme() {
   const R = rmeDados(RME.ini, RME.fim), p = R.N.per, a = R.N.ano, E = rmeEmitidos(), O = enxEmitidos(), pl = rmePlano(), ac = (pl.acoes || []).concat([[], [], [], [], []]).slice(0, Math.max(5, (pl.acoes || []).length + 1));
   const at = (k, t) => `<button class="cm-chip" data-rmeat="${k}">${t}</button>`, K = (l, x, y, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${x}</b><small class="note" style="display:block;margin-top:2px">no ano: ${y}</small></div>`;
-  return enxCab('Relatório mensal', 'Relatório de manutenção da frota com capa, índice, 8 seções e contracapa · cada número no período e no acumulado do ano · “Emitir” numera e congela a cópia para a gerência e a auditoria',
-     `<label class="f">De<input type="date" id="rmeI" value="${RME.ini}"></label><label class="f">Até<input type="date" id="rmeF" value="${RME.fim}" max="${isoD(hoje())}"></label><button class="mbtn" data-rmeprev>Prévia</button><button class="mbtn pri" data-rmeem>Emitir e imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+  return enxCab('Relatório mensal', 'Relatório gerencial para a Gerência: capa, painel do período e pontos de atenção (3 folhas) · cada número no período e no acumulado do ano · anexo técnico só quando marcado · “Emitir” numera e congela a cópia',
+     `<label class="f">De<input type="date" id="rmeI" value="${RME.ini}"></label><label class="f">Até<input type="date" id="rmeF" value="${RME.fim}" max="${isoD(hoje())}"></label><label class="row" style="gap:6px;align-self:end"><input type="checkbox" id="rmeX"${RME.anexo ? ' checked' : ''}> Incluir anexo técnico</label><button class="mbtn" data-rmeprev>Prévia</button><button class="mbtn pri" data-rmeem>Emitir e imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Período ${brD(R.ini)} a ${brD(R.fim)}</h2><div class="cm-chips" style="margin-bottom:8px">${at('mes', 'Este mês')}${at('ant', 'Mês passado')}${at('tri', 'Últimos 3 meses')}${at('ano', 'Ano até hoje')}</div>
      <div class="f2-ks">${K('Aderência ao cronograma', rmeP(p.ad.ad), rmeP(a.ad.ad), p.ad.ad == null ? '' : p.ad.ad >= 90 ? 'var(--okt)' : 'var(--badt)') + K('Serviços preventivos', p.serv, a.serv) + K('Não realizados', p.nf, a.nf, p.nf ? 'var(--warnt)' : '') + K('Corretivas', p.cor, a.cor, p.cor ? 'var(--warnt)' : '') + K('MTTR', rmeH(p.mttr, 1), rmeH(a.mttr, 1), p.mttr == null ? '' : p.mttr <= 8 ? 'var(--okt)' : 'var(--badt)') + K('Disponibilidade', p.disp == null ? '—' : nf(p.disp, 1) + '%', a.disp == null ? '—' : nf(a.disp, 1) + '%') + K('Trocas de óleo', p.trocas, a.trocas) + K('Horas de MCP', nf(p.hMcp), nf(a.hMcp))}</div>
      ${p.sem ? `<p class="note">${p.sem} motores sem leitura de horímetro no período entram com 0 h e o aviso “sem leitura”. Motor parado: lance a mesma leitura em <a href="#enxhor">1 · Horímetros</a> (“Não operou”).</p>` : ''}</div>
-   <div class="card"><h2>Conclusões e plano de ação (seção 7)</h2><p class="note">Escreva antes de emitir. Fica guardado neste aparelho para este período até a emissão; na emissão vai junto com a cópia congelada.</p>
-     <label class="f">Conclusões<textarea id="rmeC" rows="4" placeholder="o que os números mostram, causas, riscos e decisões">${esc(pl.conc || '')}</textarea></label>
+   <div class="card"><h2>Comentário e plano de ação (folhas 2 e 3)</h2><p class="note">Escreva antes de emitir. Fica guardado neste aparelho para este período até a emissão; na emissão vai junto com a cópia congelada.</p>
+     <label class="f">Comentário do Supervisor<textarea id="rmeC" rows="4" placeholder="o que os números mostram, causas, riscos e decisões">${esc(pl.conc || '')}</textarea></label>
      <table class="t"><thead><tr><th>Ação</th><th style="width:24%">Responsável</th><th style="width:16%">Prazo</th></tr></thead><tbody>${ac.map((x, i) => `<tr><td><input class="rmeA" data-i="${i}" data-c="0" value="${esc(x[0] || '')}"></td><td><input class="rmeA" data-i="${i}" data-c="1" value="${esc(x[1] || '')}"></td><td><input type="date" class="rmeA" data-i="${i}" data-c="2" value="${esc(x[2] || '')}"></td></tr>`).join('')}</tbody></table></div>
-   <div class="card"><h2>O que sai no relatório</h2><ol class="note" style="margin:0;padding-left:18px;line-height:1.6"><li>Capa · índice com a folha de cada seção</li><li>1 Introdução e resumo executivo · indicadores no período, período anterior e ano</li><li>2 Operação da frota · horas por motor (período, ano, horímetro total) e gráfico mês a mês</li><li>3 Manutenção preventiva · cronograma, aderência mês a mês, por empurrador, atividades por OM, não realizados, pendências</li><li>4 Manutenção corretiva · resultado, o que mais falhou (período e ano), por sistema, falhas repetidas, atividades</li><li>5 Lubrificação · trocas, litros, mês a mês, por empurrador, trocas realizadas e vencidas</li><li>6 Condição · compressão e docagens</li><li>7 Conclusões e plano de ação · 8 Aprovação · contracapa com o controle do documento</li></ol></div>
+   <div class="card"><h2>O que sai no relatório</h2><ol class="note" style="margin:0;padding-left:18px;line-height:1.6"><li><b>Capa</b> · nº, período, elaboração e distribuição</li><li><b>1 Painel do período</b> · 8 indicadores (período, ano e meta), aderência e horas de operação mês a mês, constatações e o seu comentário</li><li><b>2 Pontos de atenção e decisões</b> · corretivas do período, falhas mais frequentes no ano, pendências (preventiva e óleo vencidos, compressão, docagem), plano de ação e assinaturas</li><li class="mut">Anexo técnico (só se marcado): A1 operação por motor · A2 preventiva por OM · A3 corretiva · A4 lubrificação · A5 condição</li></ol></div>
    <div class="card"><h2>Relatórios emitidos · ${E.length}</h2>${E.length ? `<table class="t"><thead><tr><th>Nº</th><th>Período</th><th>Emitido em</th><th>Por</th><th></th></tr></thead><tbody>${E.map(s => `<tr><td><b>${esc(s.num)}</b></td><td>${brD(s.ini)} a ${brD(s.fim)}</td><td>${esc(s.em)}</td><td>${esc(s.por)}</td><td><button class="mbtn sm" data-rmeimp="${s.id}">Imprimir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum emitido ainda.</p>'}
      ${O.length ? `<p class="note" style="margin-top:8px">Relatórios de preventiva emitidos antes da versão 3.5: ${O.map(s => `<a href="#" data-erimp="${s.id}">${esc(s.num)}</a>`).join(' · ')}</p>` : ''}</div></div></div>`;
 }
@@ -300,11 +307,12 @@ VX.enxrel = vRme;
 AFTER.enxrel = () => { const m = $('#main');
   m.onclick = async e => { const t = e.target.closest('[data-rmeat],[data-rmeprev],[data-rmeem],[data-rmeimp],[data-erimp]'); if (!t) return; const d = t.dataset;
     if (d.rmeat !== undefined) { rmeAtalho(d.rmeat); return render(); }
-    if (d.rmeprev !== undefined) return rmeAbrir(rmeDados(RME.ini, RME.fim), rmePlano(), null);
+    if (d.rmeprev !== undefined) return rmeAbrir(rmeDados(RME.ini, RME.fim), rmePlano(), null, RME.anexo);
     if (d.rmeem !== undefined) return rmeEmitir();
-    if (d.rmeimp !== undefined) { const s = S.recs.get(d.rmeimp), R = s && rmeLer(s); return R ? rmeAbrir(R, s.plano || {}, s) : toast('Relatório ainda não chegou inteiro neste aparelho. Sincronize e tente de novo.'); }
+    if (d.rmeimp !== undefined) { const s = S.recs.get(d.rmeimp), R = s && rmeLer(s); return R ? rmeAbrir(R, s.plano || {}, s, s.anexo) : toast('Relatório ainda não chegou inteiro neste aparelho. Sincronize e tente de novo.'); }
     if (d.erimp !== undefined) { e.preventDefault(); const s = S.recs.get(d.erimp); if (s) enxRelImprimir(s); } };
   m.onchange = e => { const i = e.target;
+    if (i.id === 'rmeX') { RME.anexo = i.checked; return; }
     if (i.id === 'rmeI' || i.id === 'rmeF') { if (i.value) { RME[i.id === 'rmeI' ? 'ini' : 'fim'] = i.value; render(); } return; }
     if (i.id === 'rmeC' || i.classList.contains('rmeA')) { const p = rmePlano(); if (i.id === 'rmeC') p.conc = i.value; else { p.acoes = p.acoes || []; const k = +i.dataset.i; p.acoes[k] = p.acoes[k] || ['', '', '']; p.acoes[k][+i.dataset.c] = i.value; } rmePlanoSalvar(p); } };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxrel2_lay', '[data-enxreset]'); };
