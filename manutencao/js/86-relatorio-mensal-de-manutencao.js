@@ -101,8 +101,8 @@ const rmeH = (v, d) => v == null ? '—' : nf(v, d == null ? 0 : d) + ' h';
 const rmeVar = (a, b, maior) => { if (a == null || b == null) return '—'; const d = a - b; if (Math.abs(d) < 0.05) return '='; const bom = maior == null ? null : maior ? d > 0 : d < 0; return `<span style="color:${bom == null ? '#3C4043' : bom ? '#188038' : '#C5221F'}">${d > 0 ? '▲' : '▼'} ${nf(Math.abs(d), Math.abs(d) < 10 && d % 1 ? 1 : 0)}</span>`; };
 // gráfico do relatório no desenho do Anexo II: barras finas azul-marinho, linhas finas; acum: 'soma' (acumulado, eixo da direita) ou 'pareto' (% acumulado)
 function rmeGraf(L, o) {
-  o = o || {}; const n = L.length, longo = L.some(x => String(x[0]).length > 6), soma = o.acum === 'soma', W = Math.max(640, n * 62), H = longo ? 236 : soma ? 226 : 210, E = 40, D = o.acum === 'pareto' ? 46 : 12, T = 22, B = longo ? 46 : soma ? 40 : 26;
-  const gw = (W - E - D) / Math.max(1, n), bw = Math.min(16, gw * .28), mx = o.pct ? 100 : Math.max(1, ...L.map(x => x[1] || 0)), Y = v => T + (H - T - B) * (1 - v / mx), X = i => E + i * gw + gw / 2;
+  o = o || {}; const E0 = 40, n = L.length, longo = L.some(x => String(x[0]).length > 6), soma = o.acum === 'soma', gw = longo ? 64 : 44, W = E0 + (o.acum === 'pareto' ? 46 : 12) + n * gw, H = longo ? 236 : soma ? 226 : 210, E = 40, D = o.acum === 'pareto' ? 46 : 12, T = 22, B = longo ? 46 : soma ? 40 : 26;
+  const bw = 16, mx = o.pct ? 100 : Math.max(1, ...L.map(x => x[1] || 0)), Y = v => T + (H - T - B) * (1 - v / mx), X = i => E + i * gw + gw / 2;
   const inteiro = L.every(x => x[1] == null || Number.isInteger(x[1])), tk = o.pct ? [0, 50, 100] : inteiro && mx <= 5 ? [...Array(mx + 1).keys()] : [0, inteiro ? Math.round(mx / 2) : mx / 2, mx], NV = '#16244A', AC = '#B06000';
   let g = tk.map(t => `<line x1="${E}" x2="${W - D}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E3E8EF" stroke-width=".5"/><text x="${E - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${o.pct ? t + '%' : nf(t)}</text>`).join('');
   g += `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#1F2A44" stroke-width=".5"/>`;
@@ -117,7 +117,7 @@ function rmeGraf(L, o) {
     g += `<polyline points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" fill="none" stroke="${AC}" stroke-width=".9"/>` + pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="#fff" stroke="${AC}" stroke-width=".9"/>` + (soma ? `<text x="${p[0]}" y="${H - 8}" text-anchor="middle" font-size="8.5" fill="${AC}">${o.fmt ? o.fmt(p[2]) : nf(p[2])}</text>` : `<text x="${p[0] + 5}" y="${p[1] + 12}" font-size="8.5" fill="${AC}">${Math.round(p[2] / tot * 100)}%</text>`)).join('');
     if (soma) g += `<text x="${E - 6}" y="${H - 8}" text-anchor="end" font-size="8.5" fill="${AC}">acum.</text>`; }
   const leg = [[NV, o.leg || 'no mês']].concat(o.acum ? [[AC, o.acum === 'pareto' ? '% acumulado' : 'acumulado no ano']] : []).map(([c, t]) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:10px;height:${c === NV ? 8 : 2}px;background:${c}"></i>${t}</span>`).join('');
-  return `<div class="gr"><svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg><div class="lg2">${leg}</div></div>`;
+  return `<div class="gr"><svg viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${Math.round(W * 1.15)}px;max-width:100%">${g}</svg><div class="lg2" style="max-width:${Math.round(W * 1.15)}px;margin:0 auto">${leg}</div></div>`;
 }
 const rmeTab = (cab, L, w, cls) => `<table class="${cls || ''}"><thead><tr>${cab.map((c, i) => `<th${w && w[i] ? ` style="width:${w[i]}"` : ''}>${c}</th>`).join('')}</tr></thead><tbody>${L.length ? L.map(l => `<tr>${l.map(c => `<td>${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cab.length}" class="mut">Nenhum registro.</td></tr>`}</tbody></table>`;
 const rmeAn = s => `<p class="an"><b>Análise:</b> ${s}</p>`;
@@ -151,14 +151,13 @@ function rmeSecoes(R, plano) {
     <h3>1.3 Principais constatações</h3><ol class="cc">${rmeConclusoes(R).map(s => `<li>${s}</li>`).join('')}</ol>`]);
   // 2 · operação
   const pil = L => `<div class="mr">${L.map(x => `<div>${x}</div>`).join('')}</div>`, obs = m => m[4] === 1 ? 'sem leitura' : m[4] === 3 ? 'leitura incoerente fora da soma' : m[4] === 2 ? 'desde a 1ª leitura' : '';
-  const linH = R.hor.map(x => { const mc = x.M.filter(m => isMcp(m[0])), s = (L, k) => L.reduce((t, m) => t + (m[k] || 0), 0);
-    return [`<b>${V(x.v)}</b>`, pil(x.M.map(m => pc(x.v, m[0])).concat(['<b>Total MCP</b>'])), pil(x.M.map(m => rmeH(m[1])).concat([`<b>${rmeH(s(mc, 1))}</b>`])), pil(x.M.map(m => rmeH(m[2])).concat([`<b>${rmeH(s(mc, 2))}</b>`])),
-      pil(x.M.map(m => m[3] == null ? '—' : nf(m[3]) + ' h').concat(['&nbsp;'])), pil(x.M.map(m => obs(m) ? `<span class="mut">${obs(m)}</span>` : '&nbsp;').concat(['&nbsp;']))]; });
+  const linH = R.hor.map(x => [`<b>${V(x.v)}</b>`, pil(x.M.map(m => pc(x.v, m[0]))), pil(x.M.map(m => rmeH(m[1]))), pil(x.M.map(m => rmeH(m[2]))),
+    pil(x.M.map(m => m[3] == null ? '—' : nf(m[3]) + ' h')), pil(x.M.map(m => obs(m) ? `<span class="mut">${obs(m)}</span>` : '&nbsp;'))]);
   const totMes = R.mesLab.map((l, i) => [l, R.hor.reduce((s, x) => s + x.mes[i], 0)]);
   S1.push([2, 'Operação da frota', `<p>Horas operadas por motor, pela diferença entre as leituras de horímetro (NP 055 5.5.1). Motor sem leitura no período aparece com 0 h e o aviso “sem leitura”; o horímetro total é a última leitura até ${brD(R.fim)}.</p>
     <h3>2.1 Horas de motores principais da frota, mês a mês · ${R.ano}</h3>${rmeGraf(totMes, { acum: 'soma', leg: 'horas no mês' })}${rmeAn(`a frota somou ${nf(p.hMcp)} h de MCP no período e <b>${nf(a.hMcp)} h acumuladas no ano</b> (linha laranja)${totMes.filter(t => t[1]).length > 1 ? `; média de ${nf(a.hMcp / totMes.filter(t => t[1]).length)} h nos ${totMes.filter(t => t[1]).length} meses com leitura` : ''}.`)}${rmeFonte('leituras de horímetro (SMF · 1 Horímetros).')}
     <h3>2.2 Horas por empurrador e por motor</h3>${rmeTab(['Empurrador', 'Motor', 'No período', 'Acumulado no ano', 'Horímetro total', 'Observação'], linH, ['13%', '19%', '13%', '15%', '15%', '25%'], 'qb hv')}
-    <h3>2.3 Horas de MCP por mês · ${R.ano}</h3>${rmeTab(['Empurrador', ...R.mesLab, 'Ano'], R.hor.map(x => [`<b>${V(x.v)}</b>`, ...x.mes.map(h => h ? nf(h) : '0'), `<b>${nf(x.mes.reduce((s, h) => s + h, 0))}</b>`]).concat([['<b>Frota</b>', ...totMes.map(t => `<b>${nf(t[1])}</b>`), `<b>${nf(totMes.reduce((s, t) => s + t[1], 0))}</b>`]]), null, 'qb sm')}`]);
+    <h3>2.3 Horas de operação mensais · motores principais (MCP) · ${R.ano}</h3>${rmeTab(['Empurrador', ...R.mesLab, 'Ano'], R.hor.map(x => [`<b>${V(x.v)}</b>`, ...x.mes.map(h => h ? nf(h) : '0'), `<b>${nf(x.mes.reduce((s, h) => s + h, 0))}</b>`]).concat([['<b>Frota</b>', ...totMes.map(t => `<b>${nf(t[1])}</b>`), `<b>${nf(totMes.reduce((s, t) => s + t[1], 0))}</b>`]]), null, 'qb sm')}`]);
   // 3 · preventiva
   const G = {}; R.feitos.forEach(f => { const k = f[1] + '|' + f[4]; const g = G[k] = G[k] || { d: f[0], v: f[1], om: f[4], q: new Set(), E: {} }; if (f[0] > g.d) g.d = f[0]; if (f[5]) g.q.add(f[5]); const t = A1M[f[3]], e = (t ? enxEq(t) : '') + ' (' + pc(f[1], f[2]) + ')'; (g.E[e] = g.E[e] || []).push(sv(f[3])); });
   const OM = Object.values(G).sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : 0);
@@ -214,7 +213,7 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  a leveza vem de réguas só horizontais em cinza bem claro, sem grade vertical nem quadro em volta */
  th,td{border:0;border-bottom:1px solid #E6EAF0}th{border-bottom:0}.cv table td,.capa table.dd td{border-bottom:1px solid #E6EAF0}
  .dc{border:1px solid #CFD6E0;box-shadow:none}.dc>div+div{border-left:1px solid #CFD6E0;box-shadow:none}.ft{border-top:1px solid #CFD6E0}
- .an{border:0;background:#F5F7FA;border-left:2px solid #1F2A44}.tx{border:1px solid #E1E6ED}.mr>div{box-shadow:none;border-bottom:1px solid #EEF1F5}.mr>div:last-child{border-bottom:0;border-top:1px solid #CFD6E0}
+ .an{border:0;background:#F5F7FA;border-left:2px solid #1F2A44}.tx{border:1px solid #E1E6ED}.mr>div{box-shadow:none;border-bottom:1px solid #EEF1F5}.mr>div:last-child{border-bottom:0}
  table.hv>tbody>tr>td{border-bottom:1px solid #CFD6E0}.ix td{border-bottom:1px solid #E6EAF0}
  /* títulos: seção com número em quadro azul-marinho e régua; subtítulo com o número em destaque, sem linha */
  h2{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:#1F2A44;margin:4px 0 10px;padding:0 0 6px;border:0;border-bottom:1px solid #1F2A44;letter-spacing:0}
