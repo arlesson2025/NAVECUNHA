@@ -81,7 +81,15 @@ function enxCopiar() {
 const enxExecCampos = () => `<label class="f s3">Mão de obra<select id="fxT"><option value="Equipe própria">Equipe própria</option><option value="Terceiro">Terceiro (prestador)</option></select></label><label class="f s3">Prestador de serviço (se terceiro)<input id="fxE" list="fxEL" placeholder="nome do prestador"><datalist id="fxEL">${recs('terc').map(t => `<option value="${esc(t.empresa)}">`).join('')}</datalist></label>`;
 function enxExecLer() { const exec = ($('#fxT') || {}).value || 'Equipe própria', empresa = exec === 'Terceiro' ? (($('#fxE') || {}).value || '').trim() : ''; return exec === 'Terceiro' && !empresa ? null : { exec, empresa }; }
 const enxExecTxt = r => r && r.exec ? r.exec + (r.empresa ? ' · ' + r.empresa : '') : 'não informado';
-const enxFotosCampos = () => `<div class="g"><label class="f s3">Registro fotográfico · antes<input type="file" id="fxA" accept="image/*" multiple></label><label class="f s3">Registro fotográfico · depois<input type="file" id="fxD" accept="image/*" multiple></label></div>`;
+// campo de foto com miniaturas e “✕ Limpar” (3.24, Supervisor: “como faço pra limpar quando coloco foto errada?”)
+const enxFotoCampo = (id, lb) => `<div class="s3 fx-w"><label class="f">${lb}<input type="file" id="${id}" accept="image/*" multiple></label><div class="fx-pv" data-fxpv="${id}"></div></div>`;
+const enxFotosCampos = () => `<div class="g">${enxFotoCampo('fxA', 'Registro fotográfico · antes')}${enxFotoCampo('fxD', 'Registro fotográfico · depois')}</div>`;
+document.addEventListener('change', e => { const i = e.target; if (!i.matches || !i.matches('.fx-w input[type=file]')) return; const pv = document.querySelector(`[data-fxpv="${i.id}"]`); if (!pv) return;
+  pv.querySelectorAll('img').forEach(im => URL.revokeObjectURL(im.src)); const F = [...i.files].slice(0, 6);
+  pv.innerHTML = F.length ? F.map(f => `<img src="${URL.createObjectURL(f)}" alt="" title="${esc(f.name)}">`).join('') + `<span class="note">${F.length} foto${F.length > 1 ? 's' : ''}${i.files.length > 6 ? ' (só as 6 primeiras entram)' : ''}</span><button type="button" class="mbtn sm" data-fxlimpa="${i.id}">✕ Limpar</button>` : ''; });
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-fxlimpa]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+  const i = document.getElementById(b.dataset.fxlimpa), pv = b.closest('.fx-pv'); if (i) i.value = ''; if (pv) { pv.querySelectorAll('img').forEach(im => URL.revokeObjectURL(im.src)); pv.innerHTML = ''; } }, true);
+{ const st = document.createElement('style'); st.textContent = '.fx-w{display:flex;flex-direction:column;gap:6px;min-width:0}.fx-pv{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.fx-pv:empty{display:none}.fx-pv img{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #DADCE0}'; document.head.appendChild(st); }
 async function enxFotosLer() {
   const A = [...($('#fxA') || {}).files || []], D = [...($('#fxD') || {}).files || []]; if (!A.length || !D.length) return null;
   const out = [], at = Date.now(); for (const [tipo, L] of [['ANTES', A], ['DEPOIS', D]]) for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out;
@@ -248,7 +256,6 @@ function vEnxBib() {
 // Status: aberta (em reparo) → conferencia (liberada pela equipe, aguarda o Supervisor) → encerrada. Liberada pelo Supervisor vai direto a encerrada (o servidor só aceita “encerrada” do Supervisor).
 const enxCorSt = o => o.status === 'encerrada' ? ['p-ok', 'Encerrada'] : o.liberacao ? ['p-warn', 'Aguardando conferência'] : ['p-bad', 'Indisponível · em reparo'];
 const enxAgora = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
-const enxFotos1 = (id, lb) => `<label class="f s3">${lb}<input type="file" id="${id}" accept="image/*" multiple></label>`;
 async function enxFotosDe(id, tipo) { const L = [...($('#' + id) || {}).files || []], at = Date.now(), out = []; for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out; }
 function vEnxCor() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), T = oms().filter(o => o.tipo === 'C' && !o.excluido), ab = T.filter(o => o.status !== 'encerrada').sort((a, b) => (a.abertura || '') < (b.abertura || '') ? -1 : 1),
@@ -266,7 +273,7 @@ function vEnxCor() {
       <label class="f s3">Início da indisponibilidade (parada)<input type="datetime-local" id="ecI" max="${ag}" value="${ag}"></label><label class="f s3">Liberação <span class="note">(vazio = continua em reparo)</span><input type="datetime-local" id="ecL" max="${ag}"></label>
       <label class="f s6">Descrição da falha (sintoma observado)<textarea id="ecD" rows="2"></textarea></label><label class="f s6">Intervenção executada <span class="note">(na liberação)</span><textarea id="ecF" rows="2"></textarea></label>
       ${enxExecCampos()}<label class="f s3">Executante / responsável técnico<input id="ecQ" placeholder="nomes da equipe ou responsável técnico"></label><label class="f s3">Observação<input id="ecX"></label>
-      ${enxFotos1('fxA', 'Registro fotográfico · antes (obrigatório)')}${enxFotos1('fxD', 'Registro fotográfico · depois (na liberação)')}</div>
+      ${enxFotoCampo('fxA', 'Registro fotográfico · antes (obrigatório)')}${enxFotoCampo('fxD', 'Registro fotográfico · depois (na liberação)')}</div>
      <div class="note" id="ecErr" style="color:var(--badt)"></div><div class="row end"><button class="mbtn pri" data-ecsalvar>Abrir OM corretiva</button></div></div>
    <div class="card"><h2>OMs corretivas encerradas · últimas ${L.length}</h2>${tab(L, 'Nenhuma corretiva encerrada.')}</div></div></div>`;
 }
@@ -287,7 +294,7 @@ function enxCorLiberar(id) {
   const o = S.recs.get(id); if (!o) return; if (!S.session) return loginModal(); const ag = enxAgora(), temA = (o.fotos || []).some(f => f.tipo === 'ANTES');
   modal(`<h2>Liberação para operação · OM corretiva ${esc(o.num)} · ${esc(vName(o.vessel))}</h2><p class="note">${esc(o.equip || o.sistema || '')} · início ${brDT(o.abertura)} · ${esc(o.descricao || '')}</p>
    <div class="g"><label class="f s3">Liberação para operação (data e hora)<input type="datetime-local" id="lbL" max="${ag}" value="${ag}"></label>${enxExecCampos()}<label class="f s3">Executante / responsável técnico<input id="lbQ" value="${esc(o.execn || '')}"></label>
-   <label class="f s6">Intervenção executada<textarea id="lbF" rows="3">${esc(o.servicos || '')}</textarea></label>${temA ? '' : enxFotos1('fxA', 'Registro fotográfico · antes')}${enxFotos1('fxD', 'Registro fotográfico · depois')}</div>
+   <label class="f s6">Intervenção executada<textarea id="lbF" rows="3">${esc(o.servicos || '')}</textarea></label>${temA ? '' : enxFotoCampo('fxA', 'Registro fotográfico · antes')}${enxFotoCampo('fxD', 'Registro fotográfico · depois')}</div>
    <div class="note" id="lbE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="lbOk">Liberar para operação e emitir o Anexo II-A</button></div>`, true);
   $('#lbOk').onclick = async () => { const lib = $('#lbL').value, E = $('#lbE'), F = $('#lbF').value.trim(), Q = $('#lbQ').value.trim();
     if (!lib || lib > enxAgora()) return E.textContent = 'Informe a liberação (não pode ser no futuro).'; if (lib < o.abertura) return E.textContent = 'A liberação não pode ser antes do início (' + brDT(o.abertura) + ').';
