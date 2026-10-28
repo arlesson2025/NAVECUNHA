@@ -240,7 +240,7 @@ function rmeDoc(R, plano, emi) {
     <tr><td>Distribuição</td><td>Gerência</td></tr></table>
     <p class="fo" style="margin-top:6mm">Navegação Cunha Ltda. · Grupo VDA.</p></div><div class="ft"><span>${foot}</span><span class="fn"></span></div></div>`;
   const src = sec.map(s => `<div class="sc" data-n="${s[0]}"><h2><span class="nu">${s[0]}</span>${esc(s[1])}</h2>${s[2].replace(/<h3>(\d+\.\d+) /g, '<h3><span class="n3">$1</span>')}</div>`).join('');
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(num)} · Relatório mensal de manutenção</title><style>${RME_CSS}</style></head><body>${capa}${indice}<div id="out"></div>${contra}
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq(num + ' - Relatorio mensal de manutencao'))}</title><style>${RME_CSS}</style></head><body>${capa}${indice}<div id="out"></div>${contra}
    <div id="src" style="position:absolute;left:-9999px;top:0;width:186mm">${src}</div>
    <template id="cab">${cab}</template>
    <script>(function(){var out=document.getElementById('out'),cab=document.getElementById('cab').innerHTML,foot=${JSON.stringify(foot)},pg,bd;
