@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.27', data: '28/10/2026', itens: ['3.3 Calibração do MCP: gráfico de horas restantes por motor para folga de válvulas (1.1.11) e bicos injetores (1.1.12), o mesmo do relatório gerencial, menor saldo primeiro'] },
   { v: '3.26', data: '28/10/2026', itens: ['3.3 Calibração do MCP em matriz: uma linha por motor, uma coluna por serviço de ajuste (válvulas, bicos, ponto de injeção, rótulas, trocador de calor, caixa de mar), célula colorida com o restante; clique no empurrador abre as OMs preventivas dele'] },
   { v: '3.25', data: '28/10/2026', itens: ['Registro fotográfico: cada escolha acrescenta fotos ao campo (até 6), em vez de substituir; ✕ em cada miniatura tira só aquela foto; “Limpar todas” zera o campo'] },
   { v: '3.24', data: '28/10/2026', itens: ['Registro fotográfico (preventiva e corretiva): miniaturas das fotos escolhidas e botão “✕ Limpar” para trocar uma foto errada antes de salvar'] },
