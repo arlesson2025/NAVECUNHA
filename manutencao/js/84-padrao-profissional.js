@@ -11,6 +11,8 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.2', data: '27/10/2026', itens: ['Cronograma corporativo: grade anual da frota (empurradores × 12 meses, feito/previsto com cor, aderência, docagem, aprovação) e grade do empurrador serviço por serviço; impressão em A4 ou A3 paisagem com cabeçalho do SGI e assinaturas Elaborado · Aprovado · Data; aprovar o cronograma do ano na própria tela',
+    'A lista do que vence virou o passo 3 · Executar'] },
   { v: '3.1', data: '27/10/2026', itens: ['Telas sem planilhas gigantes: Relatório de preventiva mostra só o resumo do mês e a tabela por empurrador (a lista completa sai no relatório emitido); Horímetros um empurrador por vez; Cronograma do empurrador em grupos por equipamento, fechados, com a contagem de vencidos e do mês'] },
   { v: '3.0', data: '27/10/2026', itens: ['SMF enxuto (padrão): 1 Horímetros → 2 Cronograma → 3 Corretivas → 4 Relatório de preventiva, mais Óleo e Compressão; o resto das telas fica no Modo completo (Administração, só o Supervisor, por aparelho), nada foi apagado',
     'Cronograma: marcar serviços, copiar o texto da OM para o Sankhya, registrar feito (data, horímetro, nº da OM, quem) ou não feito com motivo (não reinicia o prazo)',

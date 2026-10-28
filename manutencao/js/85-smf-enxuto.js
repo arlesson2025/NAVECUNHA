@@ -8,7 +8,7 @@
 const ENX_MC = 'smf_modo_completo';
 const enxModoCompleto = () => { try { return localStorage.getItem(ENX_MC) === '1'; } catch (e) { return false; } };
 const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador()) && !enxModoCompleto();
-const ENX_OK = ['enx', 'enxhor', 'enxcor', 'enxrel', 'oleo', 'compr', 'cxr', 'admin'];   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
+const ENX_OK = ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'oleo', 'compr', 'cxr', 'admin'];   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
 function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da lista volta para o Cronograma
   if (!enxuto() || ENX_OK.includes(VIEW)) return;
   VIEW = 'enx'; ARG = ''; try { history.replaceState(null, '', '#enx'); } catch (e) { }
@@ -16,7 +16,7 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
 function enxNav() {
   const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
   let v = 0; try { v = enxDados().reduce((a, x) => a + x.venc.length, 0); } catch (e) { }
-  return '<div class="grp-t grp-trab">Manutenção</div>' + it('enxhor', '1 · Horímetros', 'hoje') + it('enx', '2 · Cronograma', 'crono', v) + it('enxcor', '3 · Corretivas', 'omsv2') + it('enxrel', '4 · Relatório de preventiva', 'relm')
+  return '<div class="grp-t grp-trab">Manutenção</div>' + it('enxhor', '1 · Horímetros', 'hoje') + it('enxcr', '2 · Cronograma', 'crono') + it('enx', '3 · Executar', 'prev2', v) + it('enxcor', '4 · Corretivas', 'omsv2') + it('enxrel', '5 · Relatório de preventiva', 'relm')
     + '<div class="grp-t">Condição</div>' + it('oleo', 'Óleo', 'oleo') + it('compr', 'Compressão do MCP', 'compr')
     + '<div class="grp-t grp-apoio">Apoio</div>' + it('admin', 'Administração', 'adm');
 }
@@ -36,10 +36,10 @@ function vEnx() {
   const D = enxDados(), v = vessel(ENX.v);
   if (!v) {
     const nSem = D.reduce((a, x) => a + x.sem.length, 0), ano = hoje().getFullYear(), aprov = D.filter(x => cronoBase(ano, x.v.id)).length;
-    return enxCab('Cronograma', 'O que venceu e o que vence no mês em cada empurrador · abra o empurrador, copie o texto da OM para o Sankhya e registre o que foi feito com o nº da OM', '<button class="mbtn" data-enxreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button>')
+    return enxCab('Executar', 'O que venceu e o que vence no mês em cada empurrador · abra o empurrador, copie o texto da OM para o Sankhya e registre o que foi feito com o nº da OM', '<button class="mbtn" data-enxreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button>')
      + `<div class="card"><h2>Resumo</h2><div class="f2-ks">${[['Vencidos', D.reduce((a, x) => a + x.venc.length, 0), 'var(--badt)'], ['Vencem no mês', D.reduce((a, x) => a + x.mes.length, 0), 'var(--warnt)'], ['Sem histórico', nSem, nSem ? 'var(--badt)' : ''], [`Cronograma ${ano} aprovado`, aprov + ' de ' + D.length, aprov < D.length ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>
        ${nSem ? `<p class="note" style="color:var(--badt)">${nSem} serviço${nSem === 1 ? '' : 's'} sem histórico não vence${nSem === 1 ? '' : 'm'} nunca: registre o último serviço ou defina o marco zero em Administração antes de usar o cronograma de verdade.</p>` : ''}
-       ${aprov < D.length ? `<p class="note">O previsto do ano só fica valendo para a aderência depois de aprovado: abra o <a href="#cxr">Cronograma preventivo</a>, escolha o empurrador e aprove o previsto de ${ano}.</p>` : ''}</div>
+       ${aprov < D.length ? `<p class="note">O previsto do ano só fica valendo para a aderência depois de aprovado: aprove em <a href="#enxcr">2 · Cronograma</a>.</p>` : ''}</div>
      <div class="card"><h2>Empurradores</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Onde está</th><th class="r">Vencidos</th><th class="r">Vencem no mês</th><th class="r">Sem histórico</th><th>Horímetro do MCP</th><th></th></tr></thead><tbody>
      ${D.sort((a, b) => b.venc.length - a.venc.length || b.mes.length - a.mes.length).map(x => { const s = situDe(x.v);
        return `<tr class="click" data-enxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${!s ? '<span class="mut">não informado</span>' : s.st === 'viagem' ? 'em viagem' : 'no porto'}</td><td class="r">${x.venc.length ? `<b class="rl-ruim">${x.venc.length}</b>` : '0'}</td><td class="r">${x.mes.length ? `<b class="rl-at">${x.mes.length}</b>` : '0'}</td><td class="r">${x.sem.length || '0'}</td>
@@ -50,7 +50,7 @@ function vEnx() {
   const lin = y => { const nfr = enxNF(v.id, y.pos, y.t.id), k = y.pos + '|' + y.t.id, L0 = y.s.L;
     return `<tr><td><input type="checkbox" class="enx-ck" value="${k}"></td><td><b>${esc(enxServ(y.t))}</b>${y.t.prio === 'Crítica' ? ' <span class="note rl-ruim">Crítica</span>' : ''}</td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
       <td class="nowrap">${L0 ? brD(L0.date) + (L0.h != null ? '<div class="note">' + nf(L0.h) + ' h</div>' : '') : '—'}</td><td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div>${nfr && (!L0 || nfr.date > L0.date) ? `<div class="note rl-ruim">não feito em ${brD(nfr.date)}: ${esc(nfr.motivo || '')}</div>` : ''}</td></tr>`; };
-  return enxCab(`Cronograma · ${esc(v.nome)}`, 'Marque os serviços · “Copiar texto da OM” para abrir a OM no Sankhya com a lista · depois “Registrar feito” com o nº dessa OM, ou “Não feito” com o motivo',
+  return enxCab(`Executar · ${esc(v.nome)}`, 'Marque os serviços · “Copiar texto da OM” para abrir a OM no Sankhya com a lista · depois “Registrar feito” com o nº dessa OM, ou “Não feito” com o motivo',
       `<button class="mbtn" data-enxv="">← Frota</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Serviços · ${x.venc.length} vencido${x.venc.length === 1 ? '' : 's'} · ${x.mes.length} no mês</h2>
      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Marcar vencidos e do mês</button><button class="mbtn" data-enxabre>Abrir todos os grupos</button><button class="mbtn" data-enxcopiar>📋 Copiar texto da OM</button><button class="mbtn pri" data-enxfeito>✓ Registrar feito</button><button class="mbtn" data-enxnf>Não feito</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> mostrar os em dia</label></div>
@@ -219,9 +219,65 @@ async function enxCorSalvar() {
   const o = { id: uid('om'), kind: 'om', tipo: 'C', num, vessel: $('#ecV').value, pos: 'UN', status: 'encerrada', classe: $('#ecC').value, sistema: $('#ecS').value, equip: g('ecE'), descricao: g('ecD'), servicos: g('ecF'), execn: g('ecQ'), obsEnx: g('ecX'),
     abertura: ini, deteccao: ini, inicio: ini, termino: lib, liberacao: lib, interd: 'N/A', resultado: 'Conforme', fotos: [], fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()), enx: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Registrada no modo enxuto' }] };
   await saveRec(o); toast('Corretiva ' + num + ' registrada.'); enxIIA(o); render(); }
+// ---------- Cronograma corporativo (Supervisor, 27/10/2026: “sem visão clara, sem poder imprimir”) ----------
+// Frota: empurradores × 12 meses (feito/previsto com cor) · empurrador: serviço × 12 meses (grade clássica prTabela) · imprimir A4/A3 paisagem · aprovar o ano.
+// Mesmas contas do cronograma de sempre (prResumo / prLinhas): os números batem com a aderência e com o relatório.
+const ENXC = { ano: hoje().getFullYear(), v: '', papel: 'A4' };
+function enxCrGrade(ano, imp) {
+  const V = S.cfg.frota.filter(v => !foraOp(v)), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1, sel = [...Array(12).keys()];
+  const T = Array.from({ length: 12 }, () => ({ p: 0, r: 0, ok: 0, lt: 0, ms: 0 })); let aOk = 0, aDen = 0;
+  const rows = V.map(v => { const r = prResumo(v, ano, hm, sel), B = cronoBase(ano, v.id), dc = typeof docaVessel === 'function' ? docaVessel(v) : null, dm = dc && dc.due && dc.due.getFullYear() === ano ? dc.due.getMonth() : -1;
+    aOk += r.ok; aDen += r.den;
+    const cel = i => { const p = r.P[i], rr = Math.min(p, r.R[i]) || r.R[i], ok = r.Ok[i], lt = r.Lt[i], ms = r.Ms[i]; T[i].p += p; T[i].r += r.R[i]; T[i].ok += ok; T[i].lt += lt; T[i].ms += ms;
+      const cls = i > hm ? 'fut' : i === hm ? (ms ? 'ms' : 'hj') : ms ? 'ms' : lt ? 'lt' : p || r.R[i] ? 'ok' : 'nd';
+      const tx = i > hm ? (p ? p : '') : (p || r.R[i] ? `${r.R[i]}<small>/${p}</small>` : ''), tip = `${MESES[i]}: ${p} previsto${p === 1 ? '' : 's'} · ${ok} no prazo · ${lt} com atraso · ${ms} não feito${ms === 1 ? '' : 's'}${i === dm ? ' · docagem' : ''}`;
+      return `<td class="ecr-c ${cls}" title="${tip}">${tx}${i === dm ? '<span class="ecr-dk" title="Docagem">⚓</span>' : ''}</td>`; };
+    const nome = imp ? `<b>${esc(v.nome)}</b>` : `<a href="#enxcr" data-ecrv="${v.id}"><b>${esc(v.nome)}</b></a>`;
+    return `<tr><td class="ecr-n">${nome}<small>${B ? 'aprovado ' + brD(B.aprovAt) + ' · rev. ' + B.rev : '<span style="color:#B06000">não aprovado</span>'}</small></td>${sel.map(cel).join('')}<td class="ecr-t">${r.tP}</td><td class="ecr-t"><b style="color:${r.ad == null ? '#5F6368' : r.ad >= 90 ? '#188038' : r.ad >= 75 ? '#B06000' : '#C5221F'}">${r.ad == null ? '—' : r.ad + '%'}</b></td></tr>`; }).join('');
+  const ad = aDen ? Math.round(aOk / aDen * 100) : null;
+  const foot = `<tr class="ecr-f"><td class="ecr-n"><b>Frota</b></td>${T.map((t, i) => `<td class="ecr-c">${i > hm ? t.p : `${t.r}<small>/${t.p}</small>`}</td>`).join('')}<td class="ecr-t">${T.reduce((a, t) => a + t.p, 0)}</td><td class="ecr-t"><b>${ad == null ? '—' : ad + '%'}</b></td></tr>
+    <tr class="ecr-f"><td class="ecr-n">Aderência no mês</td>${T.map((t, i) => { const d = t.ok + t.lt + t.ms; return `<td class="ecr-c">${i <= hm && d ? Math.round(t.ok / d * 100) + '%' : ''}</td>`; }).join('')}<td></td><td></td></tr>`;
+  return { html: `<table class="ecr"><thead><tr><th class="ecr-n">Empurrador</th>${MESES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`, ad, n: V.length, aprov: V.filter(v => cronoBase(ano, v.id)).length };
+}
+const ENX_LEG = '<div class="ecr-lg"><span><i class="ok"></i>feito no prazo</span><span><i class="lt"></i>feito com atraso</span><span><i class="ms"></i>venceu sem fazer</span><span><i class="hj"></i>mês atual</span><span><i class="fut"></i>previsto</span><span>⚓ docagem</span><span>número = feito/previsto no mês</span></div>';
+function vEnxCr() {
+  const ano = ENXC.ano, v = vessel(ENXC.v), anos = [ano - 1, ano, ano + 1], seg = `<div class="seg">${anos.map(a => `<button data-ecrano="${a}" class="${a === ano ? 'on' : ''}">${a}</button>`).join('')}</div>`;
+  const imp = `<select id="ecrPapel" style="width:auto">${['A4', 'A3'].map(p => `<option${p === ENXC.papel ? ' selected' : ''}>${p}</option>`).join('')}</select><button class="mbtn pri" data-ecrimp>🖨 Imprimir</button>`;
+  if (!v) { const G = enxCrGrade(ano);
+    return enxCab('Cronograma anual de manutenção preventiva', `Frota de empurradores · ${ano} · plano do Anexo I (NP Navecunha 055 item 7.3) · clique no empurrador para ver serviço por serviço`, seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
+     + `<div class="card"><h2>Resumo ${ano}</h2><div class="f2-ks">${[['Aderência no ano', G.ad == null ? '—' : G.ad + '%', G.ad == null ? '' : G.ad >= 90 ? 'var(--okt)' : 'var(--badt)'], ['Cronogramas aprovados', G.aprov + ' de ' + G.n, G.aprov < G.n ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>${can.admin() && G.aprov < G.n ? `<p class="note">Aprovar congela o previsto do ano (linha de base): a aderência passa a medir contra o plano aprovado. <button class="mbtn sm" data-ecraprov="todos">Aprovar o cronograma ${ano} da frota</button></p>` : ''}</div>
+     <div class="card"><h2>Cronograma ${ano} · frota</h2>${ENX_LEG}<div class="tw">${G.html}</div></div></div></div>`; }
+  const B = cronoBase(ano, v.id);
+  return enxCab(`Cronograma anual · ${esc(v.nome)}`, `${ano} · serviço por serviço: ● previsto · ✓ feito no prazo · ✓ âmbar com atraso · ✗ venceu sem fazer · passe o mouse para ver data e OM`, `<button class="mbtn" data-ecrv="">← Frota</button>` + seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + `<div class="card"><h2>Situação do cronograma</h2><p>${B ? `Previsto <b>aprovado</b> por ${esc(B.aprovBy)} em ${brD(B.aprovAt)} · rev. ${B.rev}` : '<b style="color:#B06000">Previsto ainda não aprovado</b> · a aderência mede contra o plano calculado, que muda conforme os serviços são feitos'}
+     ${can.admin() ? ` <button class="mbtn sm${B ? '' : ' pri'}" data-ecraprov="${v.id}">${B ? 'Aprovar de novo (nova revisão)' : 'Aprovar o cronograma ' + ano}</button>` : ''} <a class="mbtn sm" href="#enx" data-enxir="${v.id}">Executar: o que vence agora →</a></p></div>
+   <div class="card"><h2>Serviços · ${ano}</h2><div class="tw">${prTabela(v, ano)}</div></div></div></div>`;
+}
+function enxCrImprimir() {
+  const ano = ENXC.ano, v = vessel(ENXC.v); if (v) return prPDF([v], ano, false);
+  const G = enxCrGrade(ano, true), css = [...document.querySelectorAll('style')].map(x => x.textContent).filter(x => x.includes('.ecr{')).join('\n'), w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma ${ano}</title><style>${css}${DOC_CAB_CSS}@page{size:${ENXC.papel} landscape;margin:8mm}body{margin:0;font-family:Arial,sans-serif;color:#202124}.ecr{font-size:${ENXC.papel === 'A3' ? 12 : 10}px}
+   .ass{display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;margin-top:26px}.ass div{border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
+   ${docCab(`CRONOGRAMA ANUAL DE MANUTENÇÃO PREVENTIVA · ${ano}`, `Frota de empurradores · ${G.aprov} de ${G.n} cronogramas aprovados · aderência no ano ${G.ad == null ? '—' : G.ad + '%'} · emitido em ${hoje().toLocaleDateString('pt-BR')}`, 'NP Navecunha 055 · item 7.3 · plano: Anexo I')}
+   ${ENX_LEG}${G.html}<div class="ass"><div>Elaborado por · Supervisor de Manutenção</div><div>Aprovado por · Gerência</div><div>Data</div></div><script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
+}
+async function enxCrAprovar(id) {
+  if (!can.admin()) return toast('Só o Supervisor aprova o cronograma.'); const ano = ENXC.ano, vs = id === 'todos' ? S.cfg.frota.filter(v => !foraOp(v)) : [vessel(id)];
+  confirmar(`Aprovar o cronograma ${ano} de ${id === 'todos' ? 'toda a frota' : vs[0].nome}? O previsto fica congelado como linha de base (nova revisão se já houver).`, async () => { await prAprovar(vs, ano); toast('Cronograma aprovado.'); render(); });
+}
+{ const st = document.createElement('style'); st.textContent = `.ecr{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}.ecr th{background:#1F2A44;color:#fff;font-weight:600;padding:6px 4px;font-size:11px;letter-spacing:.04em;text-align:center}.ecr th.hj{background:#1967D2}.ecr th.ecr-n{text-align:left;padding-left:10px}
+.ecr td{border:1px solid #E3E8EF;padding:5px 3px;text-align:center;position:relative}.ecr td.ecr-n{text-align:left;padding:5px 10px;white-space:nowrap}.ecr td.ecr-n small{display:block;font-size:10.5px;color:#5F6368}.ecr td.ecr-n a{color:inherit;text-decoration:none}.ecr td.ecr-n a:hover{color:#1967D2;text-decoration:underline}
+.ecr-c small{color:inherit;opacity:.7;font-size:.85em}.ecr-c.ok{background:#E6F4EA;color:#137333;font-weight:600}.ecr-c.lt{background:#FEF3E0;color:#B06000;font-weight:600}.ecr-c.ms{background:#FCE8E6;color:#C5221F;font-weight:700}.ecr-c.hj{background:#E8F0FE;color:#174EA6;font-weight:700;box-shadow:inset 0 0 0 2px #1967D2}.ecr-c.fut{background:#F5F8FE;color:#5F6368}.ecr-c.nd{background:#fff}
+.ecr-t{font-weight:600;background:#F8F9FA}.ecr-f td{background:#F1F3F4;font-weight:600}.ecr-dk{position:absolute;top:1px;right:2px;font-size:10px}
+.ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a]'); if (!t) return; const d = t.dataset;
+    if (d.ecrv !== undefined) { e.preventDefault(); ENXC.v = d.ecrv; return render(); }
+    if (d.ecrano !== undefined) { ENXC.ano = +d.ecrano; return render(); }
+    if (d.ecrimp !== undefined) return enxCrImprimir();
+    if (d.ecraprov !== undefined) return enxCrAprovar(d.ecraprov);
+    if (d.enxir !== undefined) { e.preventDefault(); ENX.v = d.enxir; ENX.abertos = new Set(); location.hash = '#enx'; return; }
     if (d.enxv !== undefined) { ENX.v = d.enxv; ENX.abertos = new Set(); return render(); }
     if (d.ehv !== undefined) { ENXH.v = d.ehv; return render(); }
     if (d.enxabre !== undefined) { $$('#main details.enx-g').forEach(g => { g.open = true; ENX.abertos.add(g.dataset.enxg); }); return; }
@@ -236,9 +292,9 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.erem !== undefined) return enxRelEmitir();
     if (d.erimp !== undefined) { const s = S.recs.get(d.erimp); if (s) enxRelImprimir(s); } };
   if (!m._enxTg) m._enxTg = m.addEventListener('toggle', e => { const g = e.target; if (g.matches && g.matches('details.enx-g')) { if (g.open) ENX.abertos.add(g.dataset.enxg); else ENX.abertos.delete(g.dataset.enxg); } }, true) || 1;   // um ouvinte só no #main
-  m.onchange = e => { if (e.target.id === 'enxEmDia') { ENX.emDia = e.target.checked; render(); } if (e.target.id === 'erM') { ENXR.ym = e.target.value; render(); } };
-  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'enx' && ENX.v ? '1' : '') + '_lay', '[data-enxreset]'); };
-Object.assign(VX, { enx: vEnx, enxhor: vEnxHor, enxcor: vEnxCor, enxrel: vEnxRel }); ['enx', 'enxhor', 'enxcor', 'enxrel'].forEach(k => { AFTER[k] = enxAfter(k); });
-Object.assign(NP_TAG, { enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9' });
+  m.onchange = e => { if (e.target.id === 'enxEmDia') { ENX.emDia = e.target.checked; render(); } if (e.target.id === 'erM') { ENXR.ym = e.target.value; render(); } if (e.target.id === 'ecrPapel') ENXC.papel = e.target.value; };
+  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'enx' && ENX.v ? '1' : '') + (k === 'enxcr' && ENXC.v ? '1' : '') + '_lay', '[data-enxreset]'); };
+Object.assign(VX, { enx: vEnx, enxcr: vEnxCr, enxhor: vEnxHor, enxcor: vEnxCor, enxrel: vEnxRel }); ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel'].forEach(k => { AFTER[k] = enxAfter(k); });
+Object.assign(NP_TAG, { enxcr: '7.3 · Anexo I', enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9' });
 document.addEventListener('change', e => { const c = e.target.closest('[data-enxmc]'); if (!c) return; try { localStorage.setItem(ENX_MC, c.checked ? '1' : '0'); } catch (er) { } toast(c.checked ? 'Modo completo ligado neste aparelho.' : 'Modo enxuto.'); render(); });
 { const st = document.createElement('style'); st.textContent = `.enx-rel h3{font-size:14px;margin:14px 0 6px;color:#1F2A44}.enx-ck{width:18px;height:18px}.enx-g{border:1px solid #E3E8EF;border-radius:8px;margin:0 0 8px;background:#fff}.enx-g>summary{display:flex;align-items:center;gap:6px;padding:9px 12px;cursor:pointer;list-style:none}.enx-g>summary::-webkit-details-marker{display:none}.enx-g>summary::before{content:'▸';color:#5F6368;margin-right:4px}.enx-g[open]>summary::before{content:'▾'}.enx-g[open]>summary{border-bottom:1px solid #E3E8EF}.enx-g table{margin:0}`; document.head.appendChild(st); }
