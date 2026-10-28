@@ -8,7 +8,7 @@
 const ENX_MC = 'smf_modo_completo';
 const enxModoCompleto = () => { try { return localStorage.getItem(ENX_MC) === '1'; } catch (e) { return false; } };
 const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador()) && !enxModoCompleto();
-const ENX_OK = ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'oleo', 'compr', 'cxr', 'admin'];   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
+const ENX_OK = ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxbib', 'oleo', 'compr', 'cxr', 'admin'];   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
 function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da lista volta para o Cronograma
   if (!enxuto() || ENX_OK.includes(VIEW)) return;
   VIEW = 'enx'; ARG = ''; try { history.replaceState(null, '', '#enx'); } catch (e) { }
@@ -18,7 +18,7 @@ function enxNav() {
   let v = 0; try { v = enxDados().reduce((a, x) => a + x.venc.length, 0); } catch (e) { }
   return '<div class="grp-t grp-trab">Manutenção</div>' + it('enxhor', '1 · Horímetros', 'hoje') + it('enxcr', '2 · Cronograma', 'crono') + it('enx', '3 · Executar', 'prev2', v) + it('enxcor', '4 · Corretivas', 'omsv2') + it('enxrel', '5 · Relatório de preventiva', 'relm')
     + '<div class="grp-t">Condição</div>' + it('oleo', 'Óleo', 'oleo') + it('compr', 'Compressão do MCP', 'compr')
-    + '<div class="grp-t grp-apoio">Apoio</div>' + it('admin', 'Administração', 'adm');
+    + '<div class="grp-t grp-apoio">Apoio</div>' + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm');
 }
 // ---------- dados do cronograma ----------
 const ENX = { v: '', emDia: false, abertos: new Set() };   // abertos = grupos de equipamento abertos na lista do empurrador
@@ -207,6 +207,39 @@ function enxIIA(o) {
 }
 // OMs preventivas registradas de um empurrador (para reimprimir o II-B)
 const enxOMsDe = vid => { const G = {}; recs('base').forEach(r => { if (r.vessel === vid && r.om && !r.excluido && A1M[r.item]) { const g = G[r.om] = G[r.om] || { om: r.om, date: r.date, n: 0 }; g.n++; if (r.date > g.date) g.date = r.date; } }); return Object.values(G).sort((a, b) => a.date < b.date ? 1 : -1); };
+// ---------- Biblioteca do enxuto: formulários padrão, NP, Anexo I e Matriz técnica (Supervisor, 27/10/2026) ----------
+// Formulários em branco para imprimir; os preenchidos saem das próprias telas (Executar, Corretivas, Óleo).
+const ENXB_DOCS = [
+  ['form', 'Anexo II-B · Relatório de serviço realizado · preventiva', 'Em branco, uma folha. Preenchido, sai em 3 · Executar → Registrar feito', 'iib'],
+  ['form', 'Anexo II-A · Relatório de serviço realizado · corretiva', 'Em branco, uma folha. Preenchido, sai em 4 · Corretivas', 'iia'],
+  ['form', 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', 'Preencher pelo SMF (Óleo) ou imprimir em branco', 'forms/FR_049_B.html'],
+  ['form', 'FR 027_L Rev.05 · Check-list de chegada e saída', 'Operador de Medição / Líder, CTF e Coordenador de Operações', 'forms/FR_027_L.html'],
+  ['form', 'FR 016_E · Controle de materiais Classe I e II', 'Entrega de resíduos ao SGI (NP 5.7)', 'forms/FR_016_E.html'],
+  ['ref', 'Matriz técnica de equipamentos e lubrificação', 'Modelos, óleos, volumes e intervalos da frota', '../docs/Matriz_tecnica.atual17.10.26.html'],
+  ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/Anexo_I_NP_055_visual_matriz.html'],
+  ['ref', 'NP Navecunha 055 · Plano de Gestão de Manutenção', 'Procedimento vigente (revisão em aprovação)', '../docs/NP_Navecunha_055_corrigida.html'],
+];
+function enxIIBBranco() {
+  const L = n => Array.from({ length: n }, () => '<tr><td style="height:22px"></td><td></td><td style="width:9%"></td><td style="width:9%"></td></tr>').join('');
+  enxDoc('ANEXO II-B · RELATÓRIO DE SERVIÇO REALIZADO · PREVENTIVA', 'Formulário em branco',
+    enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Data', ''], ['Horímetro', 'MCP BB: ______ h · MCP BE: ______ h · MCA 1: ______ h · MCA 2: ______ h'], ['Executado por', '']])
+    + `<h3>Serviços</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th><th>Feito</th><th>Não feito</th></tr></thead><tbody>${L(14)}</tbody></table>`
+    + '<h3>Motivo dos não feitos e observações</h3><table><tr><td style="height:54px"></td></tr></table>' + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
+}
+function enxIIABranco() {
+  enxDoc('ANEXO II-A · RELATÓRIO DE SERVIÇO REALIZADO · CORRETIVA', 'Formulário em branco',
+    enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Classe', 'Crítica ☐ · Alta ☐ · Média ☐ · Baixa ☐'], ['Sistema / equipamento', ''], ['Início do reparo', '____/____/______ às ____:____'], ['Liberação', '____/____/______ às ____:____'], ['Executado por', '']])
+    + '<h3>O que aconteceu</h3><table><tr><td style="height:80px"></td></tr></table><h3>O que foi feito</h3><table><tr><td style="height:120px"></td></tr></table><h3>Observações</h3><table><tr><td style="height:50px"></td></tr></table>'
+    + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
+}
+function vEnxBib() {
+  const item = (d, i) => `<tr><td><b>${esc(d[1])}</b><div class="note">${esc(d[2])}</div></td><td style="width:1%;white-space:nowrap"><button class="mbtn sm pri" data-ebib="${i}">${d[3].length < 4 ? '🖨 Imprimir' : 'Abrir'}</button></td></tr>`;
+  const sec = (k, t) => `<div class="card"><h2>${t}</h2><table class="t"><tbody>${ENXB_DOCS.map((d, i) => d[0] === k ? item(d, i) : '').join('')}</tbody></table></div>`;
+  const D = recs('doc').sort((a, b) => a.titulo.localeCompare(b.titulo));
+  return enxCab('Biblioteca', 'Formulários padrão para imprimir, a Matriz técnica, o Anexo I e a NP 055 · manuais e catálogos enviados ficam no Google Drive', `<button class="mbtn" data-ebibnovo>＋ Adicionar documento</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+   + sec('form', 'Formulários padrão') + sec('ref', 'Normas e matrizes')
+   + `<div class="card"><h2>Manuais e documentos enviados · ${D.length}</h2>${D.length ? `<table class="t"><tbody>${D.map(r => `<tr><td><b>${esc(r.titulo)}</b><div class="note">${esc([r.desc, r.equip ? EQN[r.equip] || r.equip : '', r.rev ? 'Rev. ' + r.rev : ''].filter(Boolean).join(' · '))}</div></td><td style="width:1%;white-space:nowrap"><button class="mbtn sm pri" data-ebibdoc="${r.id}">Abrir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum ainda. Use “Adicionar documento” para manuais de fabricante, catálogos e procedimentos (arquivo até 10 MB ou link).</p>'}</div></div></div>`;
+}
 // ---------- Corretivas: registro de uma tela, com início e liberação (MTTR) e o Anexo II-A ----------
 function vEnxCor() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), L = oms().filter(o => o.tipo === 'C' && !o.excluido).sort((a, b) => (b.abertura || '') < (a.abertura || '') ? -1 : 1).slice(0, 40), agora = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
@@ -283,7 +316,10 @@ async function enxCrAprovar(id) {
 .ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
+    if (d.ebib !== undefined) { const x = ENXB_DOCS[+d.ebib][3]; return x === 'iib' ? enxIIBBranco() : x === 'iia' ? enxIIABranco() : window.open(x, '_blank', 'noopener'); }
+    if (d.ebibdoc !== undefined) return abrirDoc(S.recs.get(d.ebibdoc));
+    if (d.ebibnovo !== undefined) return docModal(null, 'manual');
     if (d.ecrv !== undefined) { e.preventDefault(); ENXC.v = d.ecrv; return render(); }
     if (d.ecrano !== undefined) { ENXC.ano = +d.ecrano; return render(); }
     if (d.ecrimp !== undefined) return enxCrImprimir();
@@ -305,7 +341,7 @@ const enxAfter = k => () => { const m = $('#main');
   if (!m._enxTg) m._enxTg = m.addEventListener('toggle', e => { const g = e.target; if (g.matches && g.matches('details.enx-g')) { if (g.open) ENX.abertos.add(g.dataset.enxg); else ENX.abertos.delete(g.dataset.enxg); } }, true) || 1;   // um ouvinte só no #main
   m.onchange = e => { if (e.target.id === 'enxEmDia') { ENX.emDia = e.target.checked; render(); } if (e.target.id === 'erM') { ENXR.ym = e.target.value; render(); } if (e.target.id === 'ecrPapel') ENXC.papel = e.target.value; };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'enx' && ENX.v ? '1' : '') + (k === 'enxcr' && ENXC.v ? '1' : '') + '_lay', '[data-enxreset]'); };
-Object.assign(VX, { enx: vEnx, enxcr: vEnxCr, enxhor: vEnxHor, enxcor: vEnxCor, enxrel: vEnxRel }); ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel'].forEach(k => { AFTER[k] = enxAfter(k); });
-Object.assign(NP_TAG, { enxcr: '7.3 · Anexo I', enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9' });
+Object.assign(VX, { enx: vEnx, enxcr: vEnxCr, enxhor: vEnxHor, enxcor: vEnxCor, enxrel: vEnxRel, enxbib: vEnxBib }); ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxbib'].forEach(k => { AFTER[k] = enxAfter(k); });
+Object.assign(NP_TAG, { enxcr: '7.3 · Anexo I', enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9', enxbib: '8' });
 document.addEventListener('change', e => { const c = e.target.closest('[data-enxmc]'); if (!c) return; try { localStorage.setItem(ENX_MC, c.checked ? '1' : '0'); } catch (er) { } toast(c.checked ? 'Modo completo ligado neste aparelho.' : 'Modo enxuto.'); render(); });
 { const st = document.createElement('style'); st.textContent = `.enx-rel h3{font-size:14px;margin:14px 0 6px;color:#1F2A44}.enx-gr svg{max-height:200px}.enx-ck{width:18px;height:18px}.enx-g{border:1px solid #E3E8EF;border-radius:8px;margin:0 0 8px;background:#fff}.enx-g>summary{display:flex;align-items:center;gap:6px;padding:9px 12px;cursor:pointer;list-style:none}.enx-g>summary::-webkit-details-marker{display:none}.enx-g>summary::before{content:'▸';color:#5F6368;margin-right:4px}.enx-g[open]>summary::before{content:'▾'}.enx-g[open]>summary{border-bottom:1px solid #E3E8EF}.enx-g table{margin:0}`; document.head.appendChild(st); }

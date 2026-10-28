@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.4', data: '27/10/2026', itens: ['Biblioteca no menu enxuto (Apoio): formulários padrão para imprimir (Anexo II-B e II-A em branco, FR 049_B, FR 027_L, FR 016_E), Matriz técnica, Anexo I, NP 055 e os manuais enviados'] },
   { v: '3.3', data: '27/10/2026', itens: ['Relatório de preventiva com gráfico da aderência mês a mês do ano e a seção Corretivas do mês (lista, horas paradas e MTTR); impresso curto: uma linha por OM preventiva (o detalhe está no Anexo II-B) e uma linha por empurrador nos vencidos'] },
   { v: '3.2', data: '27/10/2026', itens: ['Cronograma corporativo: grade anual da frota (empurradores × 12 meses, feito/previsto com cor, aderência, docagem, aprovação) e grade do empurrador serviço por serviço; impressão em A4 ou A3 paisagem com cabeçalho do SGI e assinaturas Elaborado · Aprovado · Data; aprovar o cronograma do ano na própria tela',
     'A lista do que vence virou o passo 3 · Executar'] },
