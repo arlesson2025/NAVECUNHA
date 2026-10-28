@@ -74,7 +74,7 @@ function cmpDetalhe(D) {
   const H = x.H.slice().reverse(), ud = cmpUsoDia(x.v.id, x.pos);
   const cel = (v, p) => v == null ? '<td class="mut r">—</td>' : `<td class="mono r" style="color:${v < COMP.lim ? 'var(--badt)' : v === p.min && p.max - p.min > CMP.dif ? 'var(--warnt)' : 'inherit'};font-weight:${v === p.min ? 700 : 400}" title="${fMPa(v)} MPa {${kgf(v)} kgf/cm²}">${fMPa(v)}</td>`;
   const tab = H.length ? `<table class="t cm-t"><thead><tr><th>Data</th><th class="r">Horímetro</th><th class="r">rpm</th>${[1, 2, 3, 4, 5, 6].map(i => `<th class="r">C${i}</th>`).join('')}<th>Origem</th></tr></thead><tbody>${H.map(p => `<tr><td>${brD(p.date)}</td><td class="mono r">${p.h != null && p.h !== '' ? nf(+p.h) : '—'}</td><td class="mono r">${p.rpm || '—'}</td>${[0, 1, 2, 3, 4, 5].map(i => cel(p.vals[i], p)).join('')}<td>${p.om ? `<a href="#om/${p.om}">${esc(p.src)}</a>` : esc(p.src)}</td></tr>`).join('')}</tbody></table>` : '<div class="note">Nenhum ensaio registrado para este motor.</div>';
-  return `<div class="card"><div class="row"><h2>Detalhe por cilindro</h2><span class="sp"></span>${sel}<button class="mbtn sm" data-novacomp="${x.v.id}|${x.pos}">＋ Registrar compressão</button></div>
+  return `<div class="card"><div class="row"><h2>Detalhe por cilindro</h2><span class="sp"></span>${sel}<button class="mbtn sm" data-novacomp="${x.v.id}|${x.pos}">＋ Registrar ensaio</button></div>
    <div class="row" style="gap:8px;margin:2px 0 8px"><span class="pill ${CMP_ST[x.st][0]}">${CMP_ST[x.st][1]}</span>${x.vencida ? '<span class="pill p-bad">Ensaio vencido</span>' : ''}<span class="note">Horímetro ${x.hr ? nf(x.hr.h) + ' h' : '—'}${ud ? ' · ' + nf(ud, 1) + ' h/dia' : ''}</span></div>
    <div class="cm-det"><div class="tw">${tab}<div class="cm-diag">${esc(cmpDiag(x))}</div></div><div>${cmpGrafDet(x)}<p class="note">Azul: pior cilindro · cinza: demais cilindros · laranja: projeção · vermelho: limite 1,27 MPa (SM p. 2-3). Passe o mouse nos pontos para ver os valores.</p></div></div></div>`;
 }
@@ -132,7 +132,7 @@ function cmpParam() {
 }
 function vCompr() {
   const D = cmpDados();
-  return `<div class="cm-v"><div class="vh"><div><h1>Controle de compressão · MCP</h1><p>Mitsubishi S6R2 · padrão 1,8 MPa {18,5 kgf/cm²} · limite 1,27 MPa {13 kgf/cm²} @ ~120 rpm (SM p. 2-3) · ensaio a cada 1.000 h</p></div><span class="sp"></span><button class="mbtn" data-cmreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn pri" data-novacomp>＋ Nova medição</button></div>`
+  return `<div class="cm-v"><div class="vh"><div><h1>Controle de compressão · MCP</h1><p>Mitsubishi S6R2 · padrão 1,8 MPa {18,5 kgf/cm²} · limite 1,27 MPa {13 kgf/cm²} @ ~120 rpm (SM p. 2-3) · ensaio a cada 1.000 h</p></div><span class="sp"></span><button class="mbtn" data-cmreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn pri" data-novacomp>＋ Novo ensaio de compressão</button></div>`
     + '<div class="cm-ws">' + cmpMatriz(D) + cmpDetalhe(D) + cmpHist(D) + cmpParam() + '</div></div>';
 }
 VX.compr = vCompr;
