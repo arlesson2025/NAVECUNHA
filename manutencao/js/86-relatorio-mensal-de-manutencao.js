@@ -137,12 +137,12 @@ function rmeGraf(L, o) {
   const leg = [[NV, o.leg || 'no mês']].concat(o.acum ? [[AC, o.acum === 'pareto' ? '% acumulado' : 'acumulado no ano']] : []).map(([c, t]) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:10px;height:${c === NV ? 8 : 2}px;background:${c}"></i>${t}</span>`).join('');
   return `<div class="gr"><svg viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${Math.round(W * 1.15)}px;max-width:100%">${g}</svg><div class="lg2" style="max-width:${Math.round(W * 1.15)}px;margin:0 auto">${leg}</div></div>`;
 }
-function rmeBarH(L, lim, mxF) {   // L = [rótulo, valor, cor, texto]; barras horizontais finas, ordem dada
-  const W = 700, E = 150, D = 150, lh = 18, H = 26 + L.length * lh, mx = mxF || Math.max(1, (lim || 0) * 5), X = v => E + (W - E - D) * Math.min(1, v / mx);   // escala até 5× a referência: o motor com dezenas de milhares de horas não esmaga os outros
+function rmeBarH(L, lim, mxF) {   // L = [rótulo, valor, cor, texto]; barras horizontais finas e juntas (Supervisor, 28/10/2026), ordem dada
+  const W = 700, E = 150, D = 150, lh = 11, H = 24 + L.length * lh, mx = mxF || Math.max(1, (lim || 0) * 5), X = v => E + (W - E - D) * Math.min(1, v / mx);   // escala até 5× a referência: o motor com dezenas de milhares de horas não esmaga os outros
   let g = `<line x1="${E}" x2="${E}" y1="16" y2="${H - 4}" stroke="#1F2A44" stroke-width=".8"/>`;
   if (lim) g += `<line x1="${X(lim)}" x2="${X(lim)}" y1="14" y2="${H - 4}" stroke="#B06000" stroke-dasharray="4 3" stroke-width=".8"/><text x="${X(lim)}" y="10" text-anchor="middle" font-size="8.5" fill="#B06000">critério de programação: ${nf(lim)} h</text>`;
-  L.forEach(([lab, v, cor, tx], i) => { const y = 18 + i * lh; g += `<text x="${E - 6}" y="${y + 9}" text-anchor="end" font-size="9.5" fill="#202124">${esc(lab)}</text>`;
-    if (v != null) g += `<rect x="${E}" y="${y + 1}" width="${Math.max(1.5, X(v) - E)}" height="10" fill="${cor}"/>`; g += `<text x="${(v != null ? X(v) : E) + 5}" y="${y + 9}" font-size="9" fill="#3C4043">${esc(tx)}</text>`; });
+  L.forEach(([lab, v, cor, tx], i) => { const y = 18 + i * lh; g += `<text x="${E - 6}" y="${y + 7.5}" text-anchor="end" font-size="8.5" fill="#202124">${esc(lab)}</text>`;
+    if (v != null) g += `<rect x="${E}" y="${y + 1}" width="${Math.max(1.5, X(v) - E)}" height="7.5" fill="${cor}"/>`; g += `<text x="${(v != null ? X(v) : E) + 5}" y="${y + 7.5}" font-size="8.5" fill="#3C4043">${esc(tx)}</text>`; });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg>`;
 }
 // preventiva × corretiva em OMs (uma OM = uma intervenção; Supervisor, 28/10/2026): por serviço a corretiva some (uma OM preventiva junta
