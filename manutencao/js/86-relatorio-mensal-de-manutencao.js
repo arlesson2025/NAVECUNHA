@@ -101,6 +101,8 @@ function rmeDados(ini, fim) {
   const terc = PO.filter(x => x.ex === 'Terceiro' && x.d >= ini).map(x => [x.d, x.v, x.om, 'Preventiva', x.emp, x.n + ' serviço' + (x.n > 1 ? 's' : '') + ' do plano'])
     .concat(CO.filter(x => x.ex === 'Terceiro' && x.d >= ini).map(x => [x.d, x.v, x.om, 'Corretiva', x.emp, rmeTxt(x.eq + ': ' + x.sv, 120)])).sort((x, z) => x[0] < z[0] ? -1 : 1);
   const fotos = recs('base').filter(r => (r.fotos || []).length && !r.excluido && r.date >= ini && r.date <= fim && vessel(r.vessel)).flatMap(r => r.fotos.map((f, i) => [r.id, i, f.tipo || '', r.vessel, r.om || '', r.date, 'Preventiva']))
+    .concat(rmeTrocas(ini, fim).filter(r => r.fotosLocais || r.fotosFid).flatMap(r => ['a', 'd'].flatMap(g => { const n = Math.max(((r.fotosLocais || {})[g] || []).length, ((r.fotosFid || {})[g] || []).length);
+      return Array.from({ length: n }, (_, i) => [r.id, g + i, g === 'a' ? 'ANTES' : 'DEPOIS', r.vessel, r.om || r.num || '', r.date, 'Preventiva · troca de óleo (FR 049_B)']); })))
     .concat(CP.filter(o => (o.fotos || []).length).flatMap(o => o.fotos.map((f, i) => [o.id, i, f.tipo || '', o.vessel, o.num || '', String(o.abertura).slice(0, 10), 'Corretiva · ' + rmeEqN(o.equip)])))
     .sort((x, z) => x[5] < z[5] ? -1 : x[5] > z[5] ? 1 : x[0] < z[0] ? -1 : x[0] > z[0] ? 1 : x[1] - z[1]);
   // o que mais falhou: por equipamento, com sistema, falhas no período e no ano, horas de reparo e MTTR no ano
@@ -199,10 +201,11 @@ function rmeGerencial(R, plano, FT) {
   const L = R.fotos || [], fig = x => { const src = FT && FT[x[0] + '|' + x[1]];
     return `<figure>${src ? `<img src="${src}" alt="">` : `<div class="ph">${(S.recs.get(x[0]) || {}).seed ? 'foto de exemplo' : FT ? 'foto ainda não sincronizada (está no aparelho que registrou)' : 'foto'}</div>`}<figcaption><b>${esc(x[2] || 'FOTO')}</b> · ${V(x[3])} · OM ${esc(x[4] || '—')} · ${brD(x[5])}<br>${esc(x[6])}</figcaption></figure>`; };
   const PV = {}, grades = []; L.forEach(x => (PV[x[3]] = PV[x[3]] || []).push(x));   // por empurrador (ordem do nome) e, dentro dele, por data
-  Object.keys(PV).sort((x, z) => vName(x).localeCompare(vName(z), 'pt-BR', { numeric: true })).forEach(vid => { const F = PV[vid].sort((x, z) => x[5] < z[5] ? -1 : x[5] > z[5] ? 1 : x[1] - z[1]);
-    for (let i = 0; i < F.length; i += 9) grades.push(`<h3>${V(vid)} · ${F.length} foto${F.length > 1 ? 's' : ''}${i ? ' (continuação)' : ''}</h3><div class="fg">${F.slice(i, i + 9).map(fig).join('')}</div>`); });
-  const nP = new Set(L.filter(x => x[6] === 'Preventiva').map(x => x[3] + '|' + x[4])).size, nC = new Set(L.filter(x => x[6] !== 'Preventiva').map(x => x[3] + '|' + x[4])).size;
-  const G3 = `<p class="fo">${L.length ? `${L.length} fotos de ${nP} OM${nP === 1 ? '' : 's'} preventiva${nP === 1 ? '' : 's'} e ${nC} corretiva${nC === 1 ? '' : 's'} do período, antes e depois, por empurrador e em ordem de data. Originais no Google Drive (pasta do empurrador) e na OM do Sankhya.` : 'Nenhuma foto registrada no período. As fotos de antes e de depois são anexadas ao registrar a preventiva feita (3 · Executar) e a corretiva (4 · Corretivas).'}</p>${grades.join('')}`;
+  Object.keys(PV).sort((x, z) => vName(x).localeCompare(vName(z), 'pt-BR', { numeric: true })).forEach(vid => { const ord = (x, z) => x[5] < z[5] ? -1 : x[5] > z[5] ? 1 : String(x[1]).localeCompare(String(z[1]), 'en', { numeric: true });
+    [['Manutenção preventiva', PV[vid].filter(x => x[6].startsWith('Preventiva'))], ['Manutenção corretiva', PV[vid].filter(x => !x[6].startsWith('Preventiva'))]].forEach(([tp, F]) => { F.sort(ord);   // por empurrador, separado em preventiva (inclui troca de óleo) e corretiva, em ordem de data
+      for (let i = 0; i < F.length; i += 9) grades.push(`<h3>${V(vid)} · ${tp} · ${F.length} foto${F.length > 1 ? 's' : ''}${i ? ' (continuação)' : ''}</h3><div class="fg">${F.slice(i, i + 9).map(fig).join('')}</div>`); }); });
+  const nP = new Set(L.filter(x => x[6].startsWith('Preventiva')).map(x => x[3] + '|' + x[4])).size, nC = new Set(L.filter(x => !x[6].startsWith('Preventiva')).map(x => x[3] + '|' + x[4])).size;
+  const G3 = `<p class="fo">${L.length ? `${L.length} fotos de ${nP} OM${nP === 1 ? '' : 's'} preventiva${nP === 1 ? '' : 's'} e ${nC} corretiva${nC === 1 ? '' : 's'} do período (preventiva inclui as trocas de óleo do FR 049_B), antes e depois, por empurrador, separadas em preventiva e corretiva, em ordem de data. Originais no Google Drive (pasta do empurrador) e na OM do Sankhya.` : 'Nenhuma foto registrada no período. As fotos de antes e de depois são anexadas ao registrar a preventiva feita (3 · Executar) e a corretiva (4 · Corretivas).'}</p>${grades.join('')}`;
   const CM = (R.cmp || []).slice(), cor = st => st === 'fora' ? '#C5221F' : st === 'prog' ? '#B06000' : st === 'aten' ? '#E8A33D' : '#16244A', ST = { fora: 'Abaixo do limite de serviço', prog: 'Programar overhaul', aten: 'Em observação', ok: 'Dentro do especificado', sem: 'Sem ensaio registrado' };
   const comp = CM.filter(x => x[2] != null).sort((x, z) => (x[5] < 0 ? 1e9 : x[5] == null ? 9e8 : x[5]) - (z[5] < 0 ? 1e9 : z[5] == null ? 9e8 : z[5]) || x[2] - z[2]);
   const G4 = CM.length ? `<p class="fo">Último ensaio de compressão de cada motor de combustão principal (Mitsubishi S6R2). Pressão padrão ${nf(COMP.pad, 2)} MPa · limite de serviço ${nf(COMP.lim, 2)} MPa (Service Manual p. 2-3; abaixo dele, inspeção de overhaul, p. 4-4) · em observação abaixo de ${nf(COMP.aten, 2)} MPa ou com variação entre cilindros acima de ${nf(CMP.dif, 2)} MPa (critério interno, Anexo I 1.1.12). Vida remanescente estimada = regressão linear das três últimas medições da pressão mínima em função do horímetro, extrapolada até o limite de serviço.</p>
@@ -326,7 +329,8 @@ function rmeDoc(R, plano, emi, anexo, FT) {
    setTimeout(function(){window.print();},700);})();<\/script></body></html>`;
 }
 async function rmeFotos(R) {   // referência → imagem: a do registro (aparelho que fotografou) ou a cópia do Drive pelo servidor
-  const FT = {}; for (const x of R.fotos || []) { const r = S.recs.get(x[0]), f = r && (r.fotos || [])[x[1]]; if (!f) continue;
+  const FT = {}; for (const x of R.fotos || []) { const r = S.recs.get(x[0]); if (!r) continue;
+    const g = typeof x[1] === 'string' ? x[1][0] : null, i = g ? +x[1].slice(1) : x[1], f = g ? { src: ((r.fotosLocais || {})[g] || [])[i], fid: ((r.fotosFid || {})[g] || [])[i] } : (r.fotos || [])[i]; if (!f) continue;
     if (f.src) FT[x[0] + '|' + x[1]] = f.src;
     else if (f.fid && S.url && S.session) { try { const j = await api('getFile', { fileId: f.fid }); if (j.ok) FT[x[0] + '|' + x[1]] = 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data; } catch (e) { } } }
   return FT;
