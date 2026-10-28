@@ -290,7 +290,7 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  /* linhas finas (Supervisor, 27/10/2026): na impressão o navegador não faz linha abaixo de 1 px e a sombra de 0,5 px sai borrada;
  a leveza vem de réguas só horizontais em cinza bem claro, sem grade vertical nem quadro em volta */
  th,td{border:0;border-bottom:1px solid #E6EAF0}th{border-bottom:0}.capa table.dd td{border-bottom:1px solid #E6EAF0}
- .dc{border:1px solid #CFD6E0;box-shadow:none}.dc>div+div{border-left:1px solid #CFD6E0;box-shadow:none}.ft{border-top:1px solid #CFD6E0}
+ .dc{border:1px solid #CFD6E0;box-shadow:none;margin:0 0 7mm}.dc>div+div{border-left:1px solid #CFD6E0;box-shadow:none}.ft{border-top:1px solid #CFD6E0}
  .an{border:0;background:#F5F7FA;border-left:2px solid #1F2A44}.tx{border:1px solid #E1E6ED}.mr>div{box-shadow:none;border-bottom:1px solid #EEF1F5}.mr>div:last-child{border-bottom:0}
  table.hv>tbody>tr>td{border-bottom:1px solid #CFD6E0}
  /* títulos: seção com número em quadro azul-marinho e régua; subtítulo com o número em destaque, sem linha */
