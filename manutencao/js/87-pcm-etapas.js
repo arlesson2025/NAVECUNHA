@@ -6,8 +6,8 @@
    · checklist de fechamento mensal (pcmChecklist): mostrado na 4.2 e conferido na emissão do relatório
    · faixa das etapas no topo (pcmFaixa, pelo opPassos do js/84) e títulos técnicos (PCM_TIT, pelo render) */
 'use strict';
-const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejamento', ['enxcr', 'enx', 'cxr']], ['3', 'Condição', ['oleo', 'compr', 'enxcal']], ['4', 'Fechamento', ['enxacao', 'enxrel']]];
-const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Compressão do MCP · manutenção preditiva' };
+const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejamento', ['enxcr', 'enx', 'cxr']], ['3', 'Condição', ['oleo', 'compr', 'enxcal', 'anoleo']], ['4', 'Fechamento', ['enxacao', 'enxrel']]];
+const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Compressão do MCP · manutenção preditiva', anoleo: '3.4 Análise de óleo do MCP · manutenção preditiva' };
 function pcmFaixa() {
   if (!PCM_ETAPAS.some(e => e[2].includes(VIEW)) && VIEW !== 'enxhoje') return '';
   return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Painel</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
