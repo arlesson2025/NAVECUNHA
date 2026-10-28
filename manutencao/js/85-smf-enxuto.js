@@ -70,6 +70,10 @@ function enxCopiar() {
   modal(`<h2>Texto da OM · ${esc(v.nome)}</h2><p class="note">Já copiado. Cole na descrição da OM no Sankhya. Se não colou, selecione e copie daqui.</p><textarea rows="${Math.min(18, S0.length + 4)}" style="width:100%" readonly>${esc(txt)}</textarea><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`, true);
 }
 // fotos de evidência (Supervisor, 27/10/2026: “as evidências falam mais que palavras”): antes e depois, obrigatórias; sobem ao Drive (fotosEnviar) e vão para o relatório mensal
+// execução por equipe própria ou por terceiro (Supervisor, 27/10/2026: “o gerente precisa saber o que foi feito por terceiros e o que foi feito com equipe própria”)
+const enxExecCampos = () => `<label class="f s3">Execução<select id="fxT"><option value="Equipe própria">Equipe própria</option><option value="Terceiro">Terceiro (prestador)</option></select></label><label class="f s3">Empresa (se terceiro)<input id="fxE" list="fxEL" placeholder="nome do prestador"><datalist id="fxEL">${recs('terc').map(t => `<option value="${esc(t.empresa)}">`).join('')}</datalist></label>`;
+function enxExecLer() { const exec = ($('#fxT') || {}).value || 'Equipe própria', empresa = exec === 'Terceiro' ? (($('#fxE') || {}).value || '').trim() : ''; return exec === 'Terceiro' && !empresa ? null : { exec, empresa }; }
+const enxExecTxt = r => r && r.exec ? r.exec + (r.empresa ? ' · ' + r.empresa : '') : 'não informado';
 const enxFotosCampos = () => `<div class="g"><label class="f s3">Fotos de antes<input type="file" id="fxA" accept="image/*" multiple></label><label class="f s3">Fotos de depois<input type="file" id="fxD" accept="image/*" multiple></label></div>`;
 async function enxFotosLer() {
   const A = [...($('#fxA') || {}).files || []], D = [...($('#fxD') || {}).files || []]; if (!A.length || !D.length) return null;
@@ -79,16 +83,17 @@ function enxFeitoModal() {
   if (!S.session) return loginModal(); const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços feitos.');
   const hp = [...new Set(S0.filter(y => intervalo(y.t, v, y.pos).h).map(y => posHor(y.pos, y.t, v.id)))];
   modal(`<h2>Registrar feito · ${esc(v.nome)} · ${S0.length} serviço${S0.length === 1 ? '' : 's'}</h2><p class="note">${S0.map(y => esc(enxServ(y.t)) + ' (' + esc(posCurtoE(v, y.pos)) + ')').join(' · ')}</p>
-   <div class="g"><label class="f s3">Data da execução<input type="date" id="exD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM no Sankhya<input id="exO" inputmode="numeric"></label><label class="f s6">Quem executou<input id="exQ" placeholder="equipe de manutenção, CTF/MFM ou prestador"></label>
+   <div class="g"><label class="f s3">Data da execução<input type="date" id="exD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM no Sankhya<input id="exO" inputmode="numeric"></label>${enxExecCampos()}<label class="f s6">Quem executou (nomes ou responsável técnico)<input id="exQ" placeholder="nomes da equipe ou responsável técnico do prestador"></label>
    ${hp.map(p => { const h = horAtual(v.id, p); return `<label class="f s3">Horímetro · ${esc(posCurtoE(v, p))}<input class="exH" data-pos="${p}" inputmode="decimal" value="${h ? h.h : ''}"></label>`; }).join('')}</div>
    ${enxFotosCampos()}<div class="note" id="exE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="exOk">Registrar</button></div>`, true);
   $('#exOk').onclick = async () => { const d = $('#exD').value, om = $('#exO').value.replace(/\D/g, ''), quem = $('#exQ').value.trim(), H = {}, E = $('#exE');
     if (!d || d > isoD(hoje())) return E.textContent = 'Data inválida (não pode ser futura).'; if (om.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya (rastreabilidade).'; if (!quem) return E.textContent = 'Informe quem executou.';
     for (const i of $$('#modal .exH')) { const h = +i.value.replace(',', '.'), a = horAtual(v.id, i.dataset.pos); if (!(h > 0)) return E.textContent = 'Informe o horímetro de ' + posCurtoE(v, i.dataset.pos) + '.'; if (a && !a.est && a.date <= d && h < a.h) return E.textContent = 'Horímetro de ' + posCurtoE(v, i.dataset.pos) + ' menor que a última leitura (' + nf(a.h) + ' h).'; H[i.dataset.pos] = h; }
     for (const y of S0) { const L0 = y.s ? y.s.L : ultimoServico(v.id, y.pos, y.t.id); if (L0 && L0.date > d) return E.textContent = enxServ(y.t) + ': já há registro mais novo (' + brD(L0.date) + ').'; }
+    const ex = enxExecLer(); if (!ex) return E.textContent = 'Execução por terceiro: informe a empresa.';
     E.textContent = 'Preparando as fotos…'; const fotos = await enxFotosLer(); if (!fotos) return E.textContent = 'Anexe ao menos uma foto de antes e uma de depois (evidência da execução).';
     const by = S.session.name, at = Date.now();
-    for (const [k, y] of S0.entries()) { const hp1 = posHor(y.pos, y.t, v.id); await saveRec(Object.assign({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: H[hp1] ?? null, date: d, om, quem, by, enx: true, createdAt: at }, k ? {} : { fotos })); }   // as fotos ficam no primeiro serviço da OM
+    for (const [k, y] of S0.entries()) { const hp1 = posHor(y.pos, y.t, v.id); await saveRec(Object.assign({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: H[hp1] ?? null, date: d, om, quem, exec: ex.exec, empresa: ex.empresa, by, enx: true, createdAt: at }, k ? {} : { fotos })); }   // as fotos ficam no primeiro serviço da OM
     for (const [p, h] of Object.entries(H)) await lubHor(v.id, p, h, d, 'OM ' + om);
     closeModal(); toast(S0.length + ' serviço' + (S0.length === 1 ? '' : 's') + ' registrado' + (S0.length === 1 ? '' : 's') + ' com a OM ' + om + '.'); render(); enxIIB(v.id, om); };
 }
@@ -170,7 +175,7 @@ function enxIIB(vid, om) {
   const v = vessel(vid), B = recs('base').filter(r => r.vessel === vid && r.om === om && !r.excluido && A1M[r.item]); if (!B.length) return toast('Nenhum serviço com a OM ' + om + '.');
   const F = B.filter(r => !r.nf), N = B.filter(r => r.nf), d = F.concat(N).map(r => r.date).sort().pop(), hs = [...new Set(F.filter(r => r.h != null).map(r => posCurtoE(v, posHor(r.pos, A1M[r.item], vid)) + ': ' + nf(r.h) + ' h'))];
   enxDoc('ANEXO II-B · RELATÓRIO DE SERVIÇO REALIZADO · PREVENTIVA', `${esc(v.nome)} · OM ${esc(om)}`,
-    enxK([['Empurrador', esc(v.nome)], ['OM (Sankhya)', esc(om)], ['Data', brD(d)], ['Horímetro', esc(hs.join(' · ') || '—')], ['Executado por', esc([...new Set(F.map(r => r.quem).filter(Boolean))].join(', ') || '—')]])
+    enxK([['Empurrador', esc(v.nome)], ['OM (Sankhya)', esc(om)], ['Data', brD(d)], ['Horímetro', esc(hs.join(' · ') || '—')], ['Execução', esc(enxExecTxt(F[0]))], ['Executado por', esc([...new Set(F.map(r => r.quem).filter(Boolean))].join(', ') || '—')]])
     + `<h3>Serviços realizados · ${F.length}</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th></tr></thead><tbody>${F.map(r => `<tr><td>${esc(enxEq(A1M[r.item]))} · ${esc(posCurtoE(v, r.pos))}</td><td>${esc(enxServ(A1M[r.item]))}</td></tr>`).join('')}</tbody></table>`
     + (N.length ? `<h3>Não realizados · ${N.length}</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th><th style="width:30%">Motivo</th></tr></thead><tbody>${N.map(r => `<tr><td>${esc(enxEq(A1M[r.item]))}</td><td>${esc(enxServ(A1M[r.item]))}</td><td>${esc(r.motivo || '')}</td></tr>`).join('')}</tbody></table>` : '')
     + '<h3>Observações</h3><table><tr><td style="height:44px"></td></tr></table>' + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
@@ -178,7 +183,7 @@ function enxIIB(vid, om) {
 function enxIIA(o) {
   const v = vessel(o.vessel), dt = s => s ? brD(String(s).slice(0, 10)) + (String(s).length > 10 ? ' ' + String(s).slice(11, 16) : '') : '—';
   enxDoc('ANEXO II-A · RELATÓRIO DE SERVIÇO REALIZADO · CORRETIVA', `${esc(v ? v.nome : o.vessel)} · OM ${esc(o.num || '—')}`,
-    enxK([['Empurrador', esc(v ? v.nome : o.vessel)], ['OM (Sankhya)', esc(o.num || '—')], ['Classe', esc(o.classe || '—')], ['Sistema / equipamento', esc([o.sistema, o.equip].filter(Boolean).join(' · ') || '—')], ['Início do reparo', dt(o.abertura)], ['Liberação', dt(o.liberacao)], ['Executado por', esc(o.execn || '—')]])
+    enxK([['Empurrador', esc(v ? v.nome : o.vessel)], ['OM (Sankhya)', esc(o.num || '—')], ['Classe', esc(o.classe || '—')], ['Sistema / equipamento', esc([o.sistema, o.equip].filter(Boolean).join(' · ') || '—')], ['Início do reparo', dt(o.abertura)], ['Liberação', dt(o.liberacao)], ['Execução', esc(enxExecTxt(o))], ['Executado por', esc(o.execn || '—')]])
     + `<h3>O que aconteceu</h3><table><tr><td style="height:40px">${esc(o.descricao || '')}</td></tr></table><h3>O que foi feito</h3><table><tr><td style="height:60px">${esc(o.servicos || '')}</td></tr></table><h3>Observações</h3><table><tr><td style="height:36px">${esc(o.obsEnx || '')}</td></tr></table>`
     + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
 }
@@ -199,13 +204,13 @@ const ENXB_DOCS = [
 function enxIIBBranco() {
   const L = n => Array.from({ length: n }, () => '<tr><td style="height:22px"></td><td></td><td style="width:9%"></td><td style="width:9%"></td></tr>').join('');
   enxDoc('ANEXO II-B · RELATÓRIO DE SERVIÇO REALIZADO · PREVENTIVA', 'Formulário em branco',
-    enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Data', ''], ['Horímetro', 'MCP BB: ______ h · MCP BE: ______ h · MCA 1: ______ h · MCA 2: ______ h'], ['Executado por', '']])
+    enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Data', ''], ['Horímetro', 'MCP BB: ______ h · MCP BE: ______ h · MCA 1: ______ h · MCA 2: ______ h'], ['Execução', 'Equipe própria ☐ · Terceiro ☐ · empresa: ____________________'], ['Executado por', '']])
     + `<h3>Serviços</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th><th>Feito</th><th>Não feito</th></tr></thead><tbody>${L(14)}</tbody></table>`
     + '<h3>Motivo dos não feitos e observações</h3><table><tr><td style="height:54px"></td></tr></table>' + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
 }
 function enxIIABranco() {
   enxDoc('ANEXO II-A · RELATÓRIO DE SERVIÇO REALIZADO · CORRETIVA', 'Formulário em branco',
-    enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Classe', 'Crítica ☐ · Alta ☐ · Média ☐ · Baixa ☐'], ['Sistema / equipamento', ''], ['Início do reparo', '____/____/______ às ____:____'], ['Liberação', '____/____/______ às ____:____'], ['Executado por', '']])
+    enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Classe', 'Crítica ☐ · Alta ☐ · Média ☐ · Baixa ☐'], ['Sistema / equipamento', ''], ['Início do reparo', '____/____/______ às ____:____'], ['Liberação', '____/____/______ às ____:____'], ['Execução', 'Equipe própria ☐ · Terceiro ☐ · empresa: ____________________'], ['Executado por', '']])
     + '<h3>O que aconteceu</h3><table><tr><td style="height:80px"></td></tr></table><h3>O que foi feito</h3><table><tr><td style="height:120px"></td></tr></table><h3>Observações</h3><table><tr><td style="height:50px"></td></tr></table>'
     + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
 }
@@ -227,7 +232,7 @@ function vEnxCor() {
       <label class="f s3">Sistema<select id="ecS">${SISTEMAS.map(s => `<option>${esc(s)}</option>`).join('')}</select></label><label class="f s3">Equipamento<input id="ecE" placeholder="ex.: bomba de água salgada do MCA"></label>
       <label class="f s3">Início do reparo<input type="datetime-local" id="ecI" max="${agora}"></label><label class="f s3">Liberação<input type="datetime-local" id="ecL" max="${agora}"></label>
       <label class="f s6">O que aconteceu<textarea id="ecD" rows="2"></textarea></label><label class="f s6">O que foi feito<textarea id="ecF" rows="2"></textarea></label>
-      <label class="f s3">Executado por<input id="ecQ" placeholder="equipe de manutenção ou prestador"></label><label class="f s3">Observação<input id="ecX"></label></div>
+      ${enxExecCampos()}<label class="f s3">Executado por (nomes)<input id="ecQ" placeholder="nomes da equipe ou responsável técnico"></label><label class="f s3">Observação<input id="ecX"></label></div>
      ${enxFotosCampos()}
      <div class="note" id="ecErr" style="color:var(--badt)"></div><div class="row end"><button class="mbtn pri" data-ecsalvar>Registrar e imprimir o Anexo II-A</button></div></div>
    <div class="card"><h2>Corretivas registradas</h2><div class="tw"><table class="t"><thead><tr><th>Início</th><th>Empurrador</th><th>OM</th><th>Equipamento</th><th>O que aconteceu</th><th>Classe</th><th class="r">Parado</th><th></th></tr></thead><tbody>
@@ -238,8 +243,9 @@ async function enxCorSalvar() {
   if (num.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya.'; if (oms().some(o => o.num === num)) return E.textContent = 'A OM ' + num + ' já está registrada.';
   if (!ini || !lib) return E.textContent = 'Informe o início e a liberação (data e hora).'; if (lib < ini) return E.textContent = 'A liberação não pode ser antes do início.';
   if (!g('ecD') || !g('ecF') || !g('ecQ')) return E.textContent = 'Preencha o que aconteceu, o que foi feito e quem executou.';
+  const ex = enxExecLer(); if (!ex) return E.textContent = 'Execução por terceiro: informe a empresa.';
   E.textContent = 'Preparando as fotos…'; const fotos = await enxFotosLer(); if (!fotos) return E.textContent = 'Anexe ao menos uma foto de antes e uma de depois (evidência do reparo).'; E.textContent = '';
-  const o = { id: uid('om'), kind: 'om', tipo: 'C', num, vessel: $('#ecV').value, pos: 'UN', status: 'encerrada', classe: $('#ecC').value, sistema: $('#ecS').value, equip: g('ecE'), descricao: g('ecD'), servicos: g('ecF'), execn: g('ecQ'), obsEnx: g('ecX'),
+  const o = { id: uid('om'), kind: 'om', tipo: 'C', num, vessel: $('#ecV').value, pos: 'UN', status: 'encerrada', classe: $('#ecC').value, sistema: $('#ecS').value, equip: g('ecE'), descricao: g('ecD'), servicos: g('ecF'), execn: g('ecQ'), exec: ex.exec, empresa: ex.empresa, obsEnx: g('ecX'),
     abertura: ini, deteccao: ini, inicio: ini, termino: lib, liberacao: lib, interd: 'N/A', resultado: 'Conforme', fotos, fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()), enx: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Registrada no modo enxuto' }] };
   await saveRec(o); toast('Corretiva ' + num + ' registrada.'); enxIIA(o); render(); }
 // ---------- Cronograma corporativo (Supervisor, 27/10/2026: “sem visão clara, sem poder imprimir”) ----------
