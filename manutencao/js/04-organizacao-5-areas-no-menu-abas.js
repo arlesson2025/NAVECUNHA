@@ -25,6 +25,7 @@ const ULT = {};   // última aba aberta em cada área
 const ico = k => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
 function numBadge(k) { const h = badge(k); const m = h.match(/>(\d+)</); return m ? +m[1] : 0; }
 function abasHtml() {
+  if (typeof enxuto === 'function' && enxuto()) return '';   // modo enxuto: a navegação é o menu em etapas e a faixa do PCM (js/85 e js/87); as abas levavam a telas fora dele
   const s = secDe(VIEW); if (s.views.length < 2) return '';
   const on = VIEW === 'om' ? (omTipo() === 'C' ? 'corr' : 'prev') : VIEW;
   return `<nav class="abas" aria-label="${esc(s.nome)}"><span class="abas-t">${esc(s.nome)}</span>${s.views.map(([k, l]) => `<a href="#${k}" class="${k === on ? 'on' : ''}">${l}${badge(k)}</a>`).join('')}</nav>`;
