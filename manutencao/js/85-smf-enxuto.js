@@ -262,12 +262,16 @@ function enxCrGrade(ano, imp) {
       const tx = i > hm ? (p ? p : '') : (p || r.R[i] ? `${r.R[i]}<small>/${p}</small>` : ''), tip = `${MESES[i]}: ${p} previsto${p === 1 ? '' : 's'} · ${ok} no prazo · ${lt} com atraso · ${ms} não feito${ms === 1 ? '' : 's'}${i === dm ? ' · docagem' : ''}`;
       return `<td class="ecr-c ${cls}" title="${tip}">${tx}${i === dm ? '<span class="ecr-dk" title="Docagem">⚓</span>' : ''}</td>`; };
     const nome = imp ? `<b>${esc(v.nome)}</b>` : `<a href="#enxcr" data-ecrv="${v.id}"><b>${esc(v.nome)}</b></a>`;
-    return `<tr><td class="ecr-n">${nome}<small>${B ? 'aprovado ' + brD(B.aprovAt) + ' · rev. ' + B.rev : '<span style="color:#B06000">não aprovado</span>'}</small></td>${sel.map(cel).join('')}<td class="ecr-t">${r.tP}</td><td class="ecr-t"><b style="color:${r.ad == null ? '#5F6368' : r.ad >= 90 ? '#188038' : r.ad >= 75 ? '#B06000' : '#C5221F'}">${r.ad == null ? '—' : r.ad + '%'}</b></td></tr>`; }).join('');
+    return `<tr><td class="ecr-n">${nome}</td>${sel.map(cel).join('')}<td class="ecr-t">${r.tP}</td><td class="ecr-t"><b style="color:${r.ad == null ? '#5F6368' : r.ad >= 90 ? '#188038' : r.ad >= 75 ? '#B06000' : '#C5221F'}">${r.ad == null ? '—' : r.ad + '%'}</b></td></tr>`; }).join('');
   const ad = aDen ? Math.round(aOk / aDen * 100) : null;
   const foot = `<tr class="ecr-f"><td class="ecr-n"><b>Frota</b></td>${T.map((t, i) => `<td class="ecr-c">${i > hm ? t.p : `${t.r}<small>/${t.p}</small>`}</td>`).join('')}<td class="ecr-t">${T.reduce((a, t) => a + t.p, 0)}</td><td class="ecr-t"><b>${ad == null ? '—' : ad + '%'}</b></td></tr>
     <tr class="ecr-f"><td class="ecr-n">Aderência no mês</td>${T.map((t, i) => { const d = t.ok + t.lt + t.ms; return `<td class="ecr-c">${i <= hm && d ? Math.round(t.ok / d * 100) + '%' : ''}</td>`; }).join('')}<td></td><td></td></tr>`;
-  return { html: `<table class="ecr"><thead><tr><th class="ecr-n">Empurrador</th>${MESES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`, ad, n: V.length, aprov: V.filter(v => cronoBase(ano, v.id)).length };
+  return { html: `<table class="ecr"><thead><tr><th class="ecr-n">Empurrador</th>${MESES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`, ad, n: V.length, aprov: V.filter(v => cronoBase(ano, v.id)).length, aprovTxt: enxCrAprovTxt(V, ano) };
 }
+// aprovação do cronograma da frota numa linha só (Supervisor, 27/10/2026: tira a data de cada empurrador e põe embaixo do título)
+function enxCrAprovTxt(V, ano) { const B = V.map(v => cronoBase(ano, v.id)).filter(Boolean); if (!B.length) return 'Cronograma ainda não aprovado';
+  const u = B.slice().sort((a, b) => String(a.aprovAt) < String(b.aprovAt) ? 1 : -1)[0], rev = Math.max(...B.map(b => +b.rev || 0));
+  return (B.length === V.length ? 'Aprovado' : `Aprovado para ${B.length} de ${V.length} empurradores ·`) + ` por ${u.aprovBy || '—'} em ${brD(u.aprovAt)} · rev. ${rev}`; }
 const ENX_LEG = '<div class="ecr-lg"><span><i class="ok"></i>feito no prazo</span><span><i class="lt"></i>feito com atraso</span><span><i class="ms"></i>venceu sem fazer</span><span><i class="hj"></i>mês atual</span><span><i class="fut"></i>previsto</span><span>⚓ docagem</span><span>número = feito/previsto no mês</span></div>';
 function vEnxCr() {
   const ano = ENXC.ano, v = vessel(ENXC.v), anos = [ano - 1, ano, ano + 1], seg = `<div class="seg">${anos.map(a => `<button data-ecrano="${a}" class="${a === ano ? 'on' : ''}">${a}</button>`).join('')}</div>`;
@@ -275,7 +279,7 @@ function vEnxCr() {
   if (!v) { const G = enxCrGrade(ano);
     return enxCab('Cronograma anual de manutenção preventiva', `Frota de empurradores · ${ano} · plano do Anexo I (NP Navecunha 055 item 7.3) · clique no empurrador para ver serviço por serviço`, seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
      + `<div class="card"><h2>Resumo ${ano}</h2><div class="f2-ks">${[['Aderência no ano', G.ad == null ? '—' : G.ad + '%', G.ad == null ? '' : G.ad >= 90 ? 'var(--okt)' : 'var(--badt)'], ['Cronogramas aprovados', G.aprov + ' de ' + G.n, G.aprov < G.n ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>${can.admin() && G.aprov < G.n ? `<p class="note">Aprovar congela o previsto do ano (linha de base): a aderência passa a medir contra o plano aprovado. <button class="mbtn sm" data-ecraprov="todos">Aprovar o cronograma ${ano} da frota</button></p>` : ''}</div>
-     <div class="card"><h2>Cronograma ${ano} · frota</h2>${ENX_LEG}<div class="tw">${G.html}</div></div></div></div>`; }
+     <div class="card"><h2>Cronograma da Frota de Empurradores ${ano}</h2><p class="note" style="margin:-4px 0 8px">${esc(G.aprovTxt)}</p>${ENX_LEG}<div class="tw">${G.html}</div></div></div></div>`; }
   const B = cronoBase(ano, v.id);
   return enxCab(`Cronograma anual · ${esc(v.nome)}`, `${ano} · serviço por serviço: ● previsto · ✓ feito no prazo · ✓ âmbar com atraso · ✗ venceu sem fazer · passe o mouse para ver data e OM`, `<button class="mbtn" data-ecrv="">← Frota</button>` + seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Situação do cronograma</h2><p>${B ? `Previsto <b>aprovado</b> por ${esc(B.aprovBy)} em ${brD(B.aprovAt)} · rev. ${B.rev}` : '<b style="color:#B06000">Previsto ainda não aprovado</b> · a aderência mede contra o plano calculado, que muda conforme os serviços são feitos'}
@@ -285,9 +289,9 @@ function vEnxCr() {
 function enxCrImprimir() {
   const ano = ENXC.ano, v = vessel(ENXC.v); if (v) return prPDF([v], ano, false);
   const G = enxCrGrade(ano, true), css = [...document.querySelectorAll('style')].map(x => x.textContent).filter(x => x.includes('.ecr{')).join('\n'), w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma ${ano}</title><style>${css}${DOC_CAB_CSS}@page{size:${ENXC.papel} landscape;margin:8mm}body{margin:0;font-family:Arial,sans-serif;color:#202124}.ecr{font-size:${ENXC.papel === 'A3' ? 12 : 10}px}
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma da frota de empurradores ${ano}</title><style>${css}${DOC_CAB_CSS}@page{size:${ENXC.papel} landscape;margin:8mm}body{margin:0;font-family:Arial,sans-serif;color:#202124}.ecr{font-size:${ENXC.papel === 'A3' ? 12 : 10}px}
    .ass{display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;margin-top:26px}.ass div{border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
-   ${docCab(`CRONOGRAMA ANUAL DE MANUTENÇÃO PREVENTIVA · ${ano}`, `Frota de empurradores · ${G.aprov} de ${G.n} cronogramas aprovados · aderência no ano ${G.ad == null ? '—' : G.ad + '%'} · emitido em ${hoje().toLocaleDateString('pt-BR')}`, 'NP Navecunha 055 · item 7.3 · plano: Anexo I')}
+   ${docCab(`CRONOGRAMA DA FROTA DE EMPURRADORES ${ano}`, `${esc(G.aprovTxt)} · aderência no ano ${G.ad == null ? '—' : G.ad + '%'} · emitido em ${hoje().toLocaleDateString('pt-BR')}`, 'NP Navecunha 055 · item 7.3 · plano: Anexo I')}
    ${ENX_LEG}${G.html}<div class="ass"><div>Elaborado por · Supervisor de Manutenção</div><div>Aprovado por · Gerência</div><div>Data</div></div><script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
 }
 async function enxCrAprovar(id) {
