@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.20';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.22';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -538,7 +538,7 @@ function render() {
   gate();
   RENDER_ULTV = VIEW;
   if (mesma && y > 0 && (VIEW === 'controle' || VIEW === 'geral' || PAG1.has(VIEW))) { scrollTo(0, y); requestAnimationFrame(() => scrollTo(0, y)); setTimeout(() => scrollTo(0, y), 450); }
-  try { if (!(typeof ehOperador === 'function' && ehOperador())) { const h = document.querySelector('#main .vh h1'), tt = typeof TITULO !== 'undefined' && !ARG ? TITULO[VIEW] : null;   // título = nome da aba (js/84)
+  try { if (!(typeof ehOperador === 'function' && ehOperador())) { const h = document.querySelector('#main .vh h1'), tt = typeof TITULO !== 'undefined' && !ARG ? (typeof enxuto === 'function' && enxuto() && typeof PCM_TIT !== 'undefined' && PCM_TIT[VIEW]) || TITULO[VIEW] : null;   // título = nome da aba (js/84)
     if (h && tt) { [...h.childNodes].filter(n => n.nodeType === 3).forEach(n => n.remove()); h.insertBefore(document.createTextNode(tt), h.firstChild); }
     const t = NP_TAG[VIEW]; if (t && h && !h.querySelector('.np-tag')) h.insertAdjacentHTML('beforeend', `<span class="np-tag">${/^NP /.test(t) ? t : 'NP 055 · ' + t}</span>`); } } catch (e) { }   // item da norma ao lado do título
 }
@@ -715,7 +715,7 @@ function compModal(vid, pos) {
   if (!precisa(false)) return;
   vid = vid || S.cfg.frota[0].id; pos = pos || mpos(vid);
   const h = horAtual(vid, pos);
-  modal(`<h2>Registrar ensaio de compressão</h2><p class="note">Use para testes feitos fora do SMF ou antes dele. O teste feito junto com a calibração dos bicos é lançado na própria OM do item 1.1.12.</p>
+  modal(`<h2>Registrar ensaio de compressão</h2><p class="note">${typeof enxuto === 'function' && enxuto() ? 'Lance aqui todo ensaio de compressão, inclusive o feito junto com a calibração dos bicos (1.1.12), com o horímetro do dia do teste.' : 'Use para testes feitos fora do SMF ou antes dele. O teste feito junto com a calibração dos bicos é lançado na própria OM do item 1.1.12.'}</p>
    <div class="g"><label class="f s3">Empurrador<select id="cV">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
    <label class="f s3">Motor<select id="cP">${mcpPos(vessel(vid)).map(p => `<option value="${p}"${p === pos ? ' selected' : ''}>${p === 'CE' ? 'Central' : p}</option>`).join('')}</select></label>
    <label class="f s3">Data do teste<input id="cD" type="date" value="${isoD(hoje())}"></label><label class="f s3">Horímetro<input id="cH" inputmode="numeric" value="${h ? h.h : ''}"></label>

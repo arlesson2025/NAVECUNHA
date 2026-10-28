@@ -8,12 +8,19 @@
    Impressão: folhas A4 montadas na janela (paginação própria), para o índice ter o nº certo de cada seção.
    ===================================================================== */
 'use strict';
-const RME = { ini: isoD(new Date(hoje().getFullYear(), hoje().getMonth(), 1)), fim: isoD(hoje()), anexo: false };
+// período inicial: até o dia 10 abre no mês passado (fechamento mensal); depois, no mês corrente
+const RME = (() => { const h = hoje(), y = h.getFullYear(), m = h.getMonth(); return h.getDate() <= 10 ? { ini: isoD(new Date(y, m - 1, 1)), fim: isoD(new Date(y, m, 0)), anexo: false } : { ini: isoD(new Date(y, m, 1)), fim: isoD(h), anexo: false }; })();
 const rmeDia = (s, n) => { const d = pD(s); d.setDate(d.getDate() + n); return isoD(d); };
 const rmeMot = v => posicoes(v).filter(p => p !== 'UN');
 const rmePlanoK = () => 'smf_rme_' + RME.ini + '_' + RME.fim;
-function rmePlano() { try { return JSON.parse(localStorage.getItem(rmePlanoK()) || 'null') || { conc: '', acoes: [] }; } catch (e) { return { conc: '', acoes: [] }; } }
-function rmePlanoSalvar(p) { try { localStorage.setItem(rmePlanoK(), JSON.stringify(p)); } catch (e) { } }
+// comentário do Supervisor: gravado na planilha por período (snap tipo 'rmecom'; desde a 3.22 — antes ficava só no aparelho); ações: plano de ação (js/87)
+const rmeComId = () => 'snap-rmecom-' + RME.ini + '_' + RME.fim;
+function rmePlano() { const r = S.recs.get(rmeComId()); let conc = r && !r.excluido ? r.txt || '' : null;
+  if (conc == null) try { conc = (JSON.parse(localStorage.getItem(rmePlanoK()) || 'null') || {}).conc || ''; } catch (e) { conc = ''; }
+  return { conc, acoes: typeof pcmAcoesNoPeriodo === 'function' ? pcmAcoesNoPeriodo(RME.ini, RME.fim) : [] }; }
+let RME_T = 0;
+function rmePlanoSalvar(p) { try { localStorage.setItem(rmePlanoK(), JSON.stringify({ conc: p.conc })); } catch (e) { }
+  const id = rmeComId(), ini = RME.ini, fim = RME.fim; clearTimeout(RME_T); RME_T = setTimeout(() => { if (S.session) saveRec({ id, kind: 'snap', tipo: 'rmecom', ini, fim, txt: p.conc, date: isoD(hoje()), por: S.session.name }); }, 600); }
 // horas operadas entre ini e fim pelas leituras: última leitura do intervalo − última antes dele (sem leitura antes: a primeira do intervalo)
 function rmeHorIdx() {
   const I = {}; recs('hor').forEach(r => { if (r.est || r.excluido || r.h == null) return; (I[r.vessel + '|' + r.pos] = I[r.vessel + '|' + r.pos] || []).push(r); });
@@ -22,10 +29,14 @@ function rmeHorIdx() {
 // soma leitura a leitura: só conta o que subiu e coube no tempo (horas ≤ dias × 24); leitura que desce ou salta demais (horímetro trocado,
 // registro antigo fora de ordem) não soma e é marcada; a leitura “última − primeira” dava 0 h ou o horímetro inteiro com um registro desses
 function rmeHoras(I, vid, pos, ini, fim) {
-  const L = I[vid + '|' + pos] || []; let ant = null, h = 0, n = 0, inc = false, ult = null;
-  L.forEach(r => { if (r.date < ini) { ant = r; return; } if (r.date > fim) return; ult = r; n++;
-    if (ant) { const d = r.h - ant.h, lim = Math.max(1, (pD(r.date) - pD(ant.date)) / 864e5) * 24 + 1; if (d >= 0 && d <= lim) h += d; else inc = true; }
-    ant = r; });
+  // ant = última leitura coerente; alt = leitura incoerente pendente (se a seguinte casar com ela, foi horímetro trocado e a conta segue dela;
+  // se casar com ant, a incoerente era digitação errada e é só ignorada — antes ela derrubava também a leitura certa seguinte)
+  const L = I[vid + '|' + pos] || []; let ant = null, alt = null, h = 0, n = 0, inc = false, ult = null;
+  const casa = (a, r) => { if (!a) return null; const d = r.h - a.h, lim = Math.max(1, (pD(r.date) - pD(a.date)) / 864e5) * 24 + 1; return d >= 0 && d <= lim ? d : null; };
+  L.forEach(r => { if (r.date > fim) return; const dentro = r.date >= ini; if (dentro) { ult = r; n++; }
+    if (!ant) { ant = r; return; }
+    let d = casa(ant, r); if (d == null && alt) d = casa(alt, r);
+    if (d != null) { if (dentro) h += d; ant = r; alt = null; } else { if (dentro) inc = true; alt = r; } });
   if (!n) return { h: 0, sem: true, tot: ant ? ant.h : null };
   return { h: Math.round(h * 10) / 10, parcial: !L.some(r => r.date < ini), inc, tot: ult.h };
 }
@@ -116,7 +127,6 @@ function rmeDados(ini, fim) {
 // ---------- textos e peças do documento ----------
 const rmeP = v => v == null ? '—' : Math.round(v) + '%';
 const rmeH = (v, d) => v == null ? '—' : nf(v, d == null ? 0 : d) + ' h';
-const rmeVar = (a, b, maior) => { if (a == null || b == null) return '—'; const d = a - b; if (Math.abs(d) < 0.05) return '='; const bom = maior == null ? null : maior ? d > 0 : d < 0; return `<span style="color:${bom == null ? '#3C4043' : bom ? '#188038' : '#C5221F'}">${d > 0 ? '▲' : '▼'} ${nf(Math.abs(d), Math.abs(d) < 10 && d % 1 ? 1 : 0)}</span>`; };
 // gráfico do relatório no desenho do Anexo II: barras finas azul-marinho, linhas finas; acum: 'soma' (acumulado, eixo da direita) ou 'pareto' (% acumulado)
 function rmeGraf(L, o) {
   o = o || {}; const E0 = 40, n = L.length, longo = L.some(x => String(x[0]).length > 6), soma = o.acum === 'soma', gw = longo ? 64 : 44, W = E0 + (o.acum === 'pareto' ? 46 : 12) + n * gw, H = longo ? 236 : soma ? 226 : 210, E = 40, D = o.acum === 'pareto' ? 46 : 12, T = 22, B = longo ? 46 : soma ? 40 : 26;
@@ -213,7 +223,10 @@ function rmeGerencial(R, plano, FT) {
       <div><p class="fo"><b>Acumulado no ano</b> · número de falhas por equipamento (Pareto)</p>${R.eqA.length ? rmeGraf(R.eqA.slice(0, 6), { acum: 'pareto', leg: 'número de falhas' }) : '<p class="mut">Sem corretivas no ano.</p>'}</div></div>
     ${R.eqT ? rmeTab(['Equipamento', 'Sistema', 'Falhas no período', 'Falhas no ano', 'Tempo de reparo no ano', 'MTTR no ano', 'Empurradores'], R.eqT.map(x => [`<b>${esc(x[0])}</b>`, esc(x[1] || '—'), x[2], `<b>${x[3]}</b>`, rmeH(x[4], 1), rmeH(x[5], 1), esc(x[6])]), ['20%', '17%', '9%', '9%', '11%', '9%', '25%']) : ''}
     ${R.rep.length ? rmeAn(`recorrência de falha no mesmo empurrador indica causa raiz não eliminada (NP 055 5.12): ${R.rep.map(x => `${V(x[0])} · ${esc(x[1])} (${x[2]} no ano)`).join('; ')}. Requer análise de causa raiz e revisão do plano preventivo.`) : ''}`;
-  const G6 = `<h3>6.1 Plano de ação</h3>${rmeTab(['Nº', 'Ação', 'Responsável', 'Prazo'], (A.length ? A : [['', '', ''], ['', '', ''], ['', '', '']]).map((x, i) => [i + 1, esc(x[0] || '') || '&nbsp;', esc(x[1] || ''), x[2] ? brD(x[2]) : '']), ['6%', '60%', '20%', '14%'])}
+  const sit = x => !x[3] ? '' : x[3] === 'atrasada' ? '<b class="ruim">Atrasada</b>' : x[3] === 'concluida' ? 'Concluída em ' + brD(x[5]) : 'No prazo';   // x = [ação, responsável, prazo, situação, nº, conclusão, evidência]
+  const G6 = `<h3>6.1 Plano de ação · acompanhamento (PDCA)</h3>${A.some(x => x[3]) ? rmeTab(['Nº', 'Ação', 'Responsável', 'Prazo', 'Situação'], A.map(x => [esc(x[4] || ''), esc(x[0]) + (x[6] ? `<div class="mut">evidência: ${esc(x[6])}</div>` : ''), esc(x[1] || ''), x[2] ? brD(x[2]) : '', sit(x)]), ['11%', '47%', '16%', '10%', '16%'])
+      + rmeAn(`${A.filter(x => x[3] === 'concluida').length} concluída(s), ${A.filter(x => x[3] === 'aberta').length} no prazo e ${A.filter(x => x[3] === 'atrasada').length} atrasada(s) na data de fechamento.`)
+    : rmeTab(['Nº', 'Ação', 'Responsável', 'Prazo'], (A.length ? A : [['', '', ''], ['', '', ''], ['', '', '']]).map((x, i) => [i + 1, esc(x[0] || '') || '&nbsp;', esc(x[1] || ''), x[2] ? brD(x[2]) : '']), ['6%', '60%', '20%', '14%'])}
     <h3>6.2 Aprovação</h3><table class="ass"><thead><tr><th>Elaborado por · Supervisor de Manutenção</th><th>Aprovado por · Gerência</th></tr></thead><tbody><tr><td class="lin">Nome, assinatura e data</td><td class="lin">Nome, assinatura e data</td></tr></tbody></table>`;
   const L = R.fotos || [], fig = x => { const src = FT && FT[x[0] + '|' + x[1]];
     return `<figure>${src ? `<img src="${src}" alt="">` : `<div class="ph">${(S.recs.get(x[0]) || {}).seed ? 'foto de exemplo' : FT ? 'foto ainda não sincronizada (está no aparelho que registrou)' : 'foto'}</div>`}<figcaption><b>${esc(x[2] || 'FOTO')}</b> · ${V(x[3])} · OM ${esc(x[4] || '—')} · ${brD(x[5])}<br>${esc(x[6])}</figcaption></figure>`; };
@@ -357,27 +370,31 @@ async function rmeAbrir(R, plano, emi, anexo) { const w = window.open('', '_blan
 // ---------- emitidos (congelados em partes) ----------
 const rmeEmitidos = () => recs('snap').filter(s => s.tipo === 'relmes' && !s.excluido).sort((a, b) => (b.at || 0) - (a.at || 0));
 function rmeLer(s) { const P = recs('snap').filter(x => x.tipo === 'relmes-p' && x.pai === s.id).sort((a, b) => a.i - b.i); if (P.length !== s.partes) return null; try { return JSON.parse(P.map(x => x.txt).join('')); } catch (e) { return null; } }
-async function rmeEmitir() {
+async function rmeEmitir(forcar) {
   if (!can.admin()) return toast('Só o Supervisor emite o relatório.'); if (RME.ini > RME.fim) return toast('A data inicial é depois da final.');
+  const CK = pcmChecklist(RME.ini, RME.fim).filter(c => !c.ok);
+  if (CK.length && !forcar) { modal(`<h2>Checklist de fechamento · ${CK.length} pendência${CK.length > 1 ? 's' : ''}</h2><p class="note">O relatório sai com os dados como estão. Resolva antes ou emita assim mesmo (as pendências ficam registradas na emissão).</p>
+    <ul>${CK.map(c => `<li><b>${esc(c.t)}</b>: ${c.d}</li>`).join('')}</ul><div class="row end"><button class="mbtn" data-close>Voltar e tratar</button><button class="mbtn pri" id="rmeForca">Emitir com pendências</button></div>`); $('#rmeForca').onclick = () => { closeModal(); rmeEmitir(true); }; return; }
   const R = rmeDados(RME.ini, RME.fim), pl = rmePlano(), base = 'RM-' + RME.fim.slice(0, 7), n = rmeEmitidos().filter(s => s.num.split('-r')[0] === base).length;
   const txt = JSON.stringify(R), id = uid('snap'), partes = Math.ceil(txt.length / 28000);
-  const s = { id, kind: 'snap', tipo: 'relmes', date: isoD(hoje()), at: Date.now(), num: base + (n ? '-r' + n : ''), ini: RME.ini, fim: RME.fim, em: new Date().toLocaleString('pt-BR'), por: S.session.name, partes, plano: pl, anexo: !!RME.anexo };
+  const s = { id, kind: 'snap', tipo: 'relmes', date: isoD(hoje()), at: Date.now(), num: base + (n ? '-r' + n : ''), ini: RME.ini, fim: RME.fim, em: new Date().toLocaleString('pt-BR'), por: S.session.name, partes, plano: pl, anexo: !!RME.anexo, pend: CK.map(c => c.t + ': ' + c.d.replace(/<[^>]+>/g, '')) };
   if (JSON.stringify(s).length > 45000) return toast('Texto das conclusões grande demais. Encurte e emita de novo.');
   for (let i = 0; i < partes; i++) await saveRec({ id: id + '-p' + i, kind: 'snap', tipo: 'relmes-p', pai: id, i, txt: txt.slice(i * 28000, (i + 1) * 28000), date: s.date });
   await saveRec(s); rmeAbrir(R, pl, s, s.anexo); render();
 }
 // ---------- tela 5 · Relatório mensal ----------
 function vRme() {
-  const R = rmeDados(RME.ini, RME.fim), p = R.N.per, a = R.N.ano, E = rmeEmitidos(), O = enxEmitidos(), pl = rmePlano(), ac = (pl.acoes || []).concat([[], [], [], [], []]).slice(0, Math.max(5, (pl.acoes || []).length + 1));
+  const R = rmeDados(RME.ini, RME.fim), p = R.N.per, a = R.N.ano, E = rmeEmitidos(), O = enxEmitidos(), pl = rmePlano();
   const at = (k, t) => `<button class="cm-chip" data-rmeat="${k}">${t}</button>`, K = (l, x, y, c) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${x}</b><small class="note" style="display:block;margin-top:2px">no ano: ${y}</small></div>`;
-  return enxCab('Relatório mensal', 'Relatório gerencial para a Gerência: capa, painel do período e pontos de atenção (3 folhas) · cada número no período e no acumulado do ano · anexo técnico só quando marcado · “Emitir” numera e congela a cópia',
+  return enxCab('4.2 Relatório gerencial mensal', 'Relatório gerencial para a Gerência: capa, painel do período e pontos de atenção (3 folhas) · cada número no período e no acumulado do ano · anexo técnico só quando marcado · “Emitir” numera e congela a cópia',
      `<label class="f">De<input type="date" id="rmeI" value="${RME.ini}"></label><label class="f">Até<input type="date" id="rmeF" value="${RME.fim}" max="${isoD(hoje())}"></label><label class="row" style="gap:6px;align-self:end"><input type="checkbox" id="rmeX"${RME.anexo ? ' checked' : ''}> Incluir anexo técnico</label><button class="mbtn" data-rmeprev>Prévia</button><button class="mbtn pri" data-rmeem>Emitir e imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Período ${brD(R.ini)} a ${brD(R.fim)}</h2><div class="cm-chips" style="margin-bottom:8px">${at('mes', 'Este mês')}${at('ant', 'Mês passado')}${at('tri', 'Últimos 3 meses')}${at('ano', 'Ano até hoje')}</div>
      <div class="f2-ks">${K('Aderência ao cronograma', rmeP(p.ad.ad), rmeP(a.ad.ad), p.ad.ad == null ? '' : p.ad.ad >= 90 ? 'var(--okt)' : 'var(--badt)') + K('Serviços preventivos', p.serv, a.serv) + K('Não realizados', p.nf, a.nf, p.nf ? 'var(--warnt)' : '') + K('Corretivas', p.cor, a.cor, p.cor ? 'var(--warnt)' : '') + K('MTTR', rmeH(p.mttr, 1), rmeH(a.mttr, 1), p.mttr == null ? '' : p.mttr <= 8 ? 'var(--okt)' : 'var(--badt)') + K('Disponibilidade', p.disp == null ? '—' : nf(p.disp, 1) + '%', a.disp == null ? '—' : nf(a.disp, 1) + '%') + K('Trocas de óleo', p.trocas, a.trocas) + K('Horas de MCP', nf(p.hMcp), nf(a.hMcp))}</div>
-     ${p.sem ? `<p class="note">${p.sem} motores sem leitura de horímetro no período entram com 0 h e o aviso “sem leitura”. Motor parado: lance a mesma leitura em <a href="#enxhor">1 · Horímetros</a> (“Não operou”).</p>` : ''}</div>
-   <div class="card"><h2>Comentário e plano de ação (folhas 2 e 3)</h2><p class="note">Escreva antes de emitir. Fica guardado neste aparelho para este período até a emissão; na emissão vai junto com a cópia congelada.</p>
-     <label class="f">Comentário do Supervisor<textarea id="rmeC" rows="4" placeholder="o que os números mostram, causas, riscos e decisões">${esc(pl.conc || '')}</textarea></label>
-     <table class="t"><thead><tr><th>Ação</th><th style="width:24%">Responsável</th><th style="width:16%">Prazo</th></tr></thead><tbody>${ac.map((x, i) => `<tr><td><input class="rmeA" data-i="${i}" data-c="0" value="${esc(x[0] || '')}"></td><td><input class="rmeA" data-i="${i}" data-c="1" value="${esc(x[1] || '')}"></td><td><input type="date" class="rmeA" data-i="${i}" data-c="2" value="${esc(x[2] || '')}"></td></tr>`).join('')}</tbody></table></div>
+     ${p.sem ? `<p class="note">${p.sem} motores sem leitura de horímetro no período entram com 0 h e o aviso “sem leitura”. Motor parado: lance a mesma leitura em <a href="#enxhor">1 · Horímetros</a> (“Sem operação”).</p>` : ''}</div>
+   ${pcmChecklistCard(RME.ini, RME.fim, R)}
+   <div class="card"><h2>Comentário do Supervisor e plano de ação</h2><p class="note">O comentário fica gravado na planilha para este período (qualquer aparelho) e vai congelado na emissão.</p>
+     <label class="f">Comentário do Supervisor (análise crítica do período)<textarea id="rmeC" rows="4" placeholder="o que os números mostram, causas, riscos e decisões">${esc(pl.conc || '')}</textarea></label>
+     <p class="note">Plano de ação no relatório: ${pl.acoes.length ? `${pl.acoes.length} ação(ões) · ${pl.acoes.filter(x => x[3] === 'atrasada').length} atrasada(s)` : 'nenhuma ação no período'} · cadastre e conclua em <a href="#enxacao">4.1 Plano de ação</a>.</p></div>
    <div class="card"><h2>O que sai no relatório</h2><ol class="note" style="margin:0;padding-left:18px;line-height:1.6"><li><b>Capa</b> · nº, período, elaboração e distribuição</li><li><b>1 Painel do período</b> · 8 indicadores (período, ano e meta), aderência e horas de operação, constatações e o seu comentário</li><li><b>2 Manutenção preventiva</b> · resultado do cronograma, execução por equipe própria e prestador, pendências (serviços do plano e óleo vencidos, docagem)</li><li><b>3 Manutenção corretiva</b> · corretivas do período, tempo de reparo, MTTR, disponibilidade, execução por equipe própria e prestador, equipamentos com maior número de falhas (período e ano), recorrência</li><li><b>4 Compressão</b> · vida remanescente até o overhaul de cada MCP</li><li><b>5 Calibração</b> · horas restantes de válvulas e bicos injetores</li><li><b>6 Plano de ação e aprovação</b></li><li><b>7 Evidências fotográficas</b> · antes e depois, por empurrador e por data</li><li class="mut">Anexo técnico (só se marcado): A1 operação por motor · A2 preventiva por OM · A3 corretiva · A4 lubrificação · A5 condição</li></ol></div>
    <div class="card"><h2>Relatórios emitidos · ${E.length}</h2>${E.length ? `<table class="t"><thead><tr><th>Nº</th><th>Período</th><th>Emitido em</th><th>Por</th><th></th></tr></thead><tbody>${E.map(s => `<tr><td><b>${esc(s.num)}</b></td><td>${brD(s.ini)} a ${brD(s.fim)}</td><td>${esc(s.em)}</td><td>${esc(s.por)}</td><td><button class="mbtn sm" data-rmeimp="${s.id}">Imprimir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum emitido ainda.</p>'}
      ${O.length ? `<p class="note" style="margin-top:8px">Relatórios de preventiva emitidos antes da versão 3.5: ${O.map(s => `<a href="#" data-erimp="${s.id}">${esc(s.num)}</a>`).join(' · ')}</p>` : ''}</div></div></div>`;
@@ -400,5 +417,5 @@ AFTER.enxrel = () => { const m = $('#main');
   m.onchange = e => { const i = e.target;
     if (i.id === 'rmeX') { RME.anexo = i.checked; return; }
     if (i.id === 'rmeI' || i.id === 'rmeF') { if (i.value) { RME[i.id === 'rmeI' ? 'ini' : 'fim'] = i.value; render(); } return; }
-    if (i.id === 'rmeC' || i.classList.contains('rmeA')) { const p = rmePlano(); if (i.id === 'rmeC') p.conc = i.value; else { p.acoes = p.acoes || []; const k = +i.dataset.i; p.acoes[k] = p.acoes[k] || ['', '', '']; p.acoes[k][+i.dataset.c] = i.value; } rmePlanoSalvar(p); } };
+    if (i.id === 'rmeC') { const p = rmePlano(); p.conc = i.value; rmePlanoSalvar(p); } };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxrel2_lay', '[data-enxreset]'); };

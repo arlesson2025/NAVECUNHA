@@ -8,17 +8,22 @@
 const ENX_MC = 'smf_modo_completo';
 const enxModoCompleto = () => { try { return localStorage.getItem(ENX_MC) === '1'; } catch (e) { return false; } };
 const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador()) && !enxModoCompleto();
-const ENX_OK = ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxbib', 'oleo', 'compr', 'cxr', 'admin'];   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
-function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da lista volta para o Cronograma
+const ENX_OK = ['enxhoje', 'enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxacao', 'enxcal', 'enxbib', 'oleo', 'compr', 'cxr', 'admin'];   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
+function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da lista volta para o Painel de pendências (js/87)
   if (!enxuto() || ENX_OK.includes(VIEW)) return;
-  VIEW = 'enx'; ARG = ''; try { history.replaceState(null, '', '#enx'); } catch (e) { }
+  VIEW = 'enxhoje'; ARG = ''; try { history.replaceState(null, '', '#enxhoje'); } catch (e) { }
 }
+// menu em 4 etapas do PCM (SMF 3.22, Supervisor: “sequência, etapas, nomes técnicos”; “não deixa ruim de operar”)
+const PCM_MENU = [['', [['enxhoje', 'Painel de pendências', 'hoje']]],
+  ['1 · Recebimento da embarcação', [['enxhor', '1.1 Horímetros', 'hoje'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
+  ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2']]],
+  ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação (FR 049_B)', 'oleo'], ['compr', '3.2 Compressão do MCP', 'compr'], ['enxcal', '3.3 Calibração do MCP', 'compr']]],
+  ['4 · Fechamento mensal', [['enxacao', '4.1 Plano de ação', 'relm'], ['enxrel', '4.2 Relatório gerencial', 'relm']]],
+  ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];
 function enxNav() {
   const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
-  let v = 0; try { v = enxDados().reduce((a, x) => a + x.venc.length, 0); } catch (e) { }
-  return '<div class="grp-t grp-trab">Manutenção</div>' + it('enxhor', '1 · Horímetros', 'hoje') + it('enxcr', '2 · Cronograma', 'crono') + it('enx', '3 · Executar', 'prev2', v) + it('enxcor', '4 · Corretivas', 'omsv2') + it('enxrel', '5 · Relatório mensal', 'relm')
-    + '<div class="grp-t">Condição</div>' + it('oleo', 'Óleo', 'oleo') + it('compr', 'Compressão do MCP', 'compr')
-    + '<div class="grp-t grp-apoio">Apoio</div>' + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm');
+  let C = {}; try { C = typeof pcmContagem === 'function' ? pcmContagem() : {}; } catch (e) { }
+  return PCM_MENU.map(([g, L]) => (g ? `<div class="grp-t${g === 'Apoio' ? ' grp-apoio' : ''}">${g}</div>` : '') + L.map(([k, n, ic]) => it(k, n, ic, C[k])).join('')).join('');
 }
 // ---------- dados do cronograma ----------
 const ENX = { v: '', emDia: false, abertos: new Set() };   // abertos = grupos de equipamento abertos na lista do empurrador
@@ -29,18 +34,18 @@ function enxDados() {
   return S.cfg.frota.filter(v => !foraOp(v)).map(v => { const P = painelVessel(v).filter(x => x.t.kind === 'prog' && !(typeof CRONO_FORA !== 'undefined' && CRONO_FORA.includes(x.t.id)));
     const g = P.map(x => Object.assign(x, { g: emGrp(v, x) })), hp = mpos(v.id), hr = horAtual(v.id, hp), dias = hr && !hr.est ? Math.floor((hoje() - pD(hr.date)) / 864e5) : null;
     return { v, P: g, venc: g.filter(x => x.g === 'venc'), mes: g.filter(x => x.g === 'mes'), sem: g.filter(x => x.g === 'sem'), hr, dias }; }); }
-const ENX_GR = { venc: ['p-bad', 'Vencido'], mes: ['p-warn', 'Vence no mês'], sem: ['p-mut', 'Sem histórico'], ok: ['p-ok', 'Em dia'], emb: ['p-ok', 'Em dia'], adi: ['p-ok', 'Em dia'] };
+const ENX_GR = { venc: ['p-bad', 'Vencido'], mes: ['p-warn', 'Vencimento no mês'], sem: ['p-mut', 'Sem referência'], ok: ['p-ok', 'Dentro do prazo'], emb: ['p-ok', 'Dentro do prazo'], adi: ['p-ok', 'Dentro do prazo'] };
 const enxCab = (tit, sub, bt) => `<div class="cm-v"><div class="vh"><div><h1>${tit}</h1><p>${sub}</p></div><span class="sp"></span>${bt || ''}</div><div class="cm-ws">`;
 // ---------- 2 · Cronograma ----------
 function vEnx() {
   const D = enxDados(), v = vessel(ENX.v);
   if (!v) {
     const nSem = D.reduce((a, x) => a + x.sem.length, 0), ano = hoje().getFullYear(), aprov = D.filter(x => cronoBase(ano, x.v.id)).length;
-    return enxCab('Executar', 'O que venceu e o que vence no mês em cada empurrador · abra o empurrador, copie o texto da OM para o Sankhya e registre o que foi feito com o nº da OM', '<button class="mbtn" data-enxreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button>')
-     + `<div class="card"><h2>Resumo</h2><div class="f2-ks">${[['Vencidos', D.reduce((a, x) => a + x.venc.length, 0), 'var(--badt)'], ['Vencem no mês', D.reduce((a, x) => a + x.mes.length, 0), 'var(--warnt)'], ['Sem histórico', nSem, nSem ? 'var(--badt)' : ''], [`Cronograma ${ano} aprovado`, aprov + ' de ' + D.length, aprov < D.length ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>
+    return enxCab('2.2 Backlog e OM preventiva', 'Backlog = serviços do plano vencidos e a vencer no mês · selecione o empurrador, gere o descritivo da OM para o Sankhya e aponte o que foi feito com o nº da OM', '<button class="mbtn" data-enxreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button>')
+     + `<div class="card"><h2>Resumo</h2><div class="f2-ks">${[['Vencidos', D.reduce((a, x) => a + x.venc.length, 0), 'var(--badt)'], ['Vencimento no mês', D.reduce((a, x) => a + x.mes.length, 0), 'var(--warnt)'], ['Sem histórico', nSem, nSem ? 'var(--badt)' : ''], [`Cronograma ${ano} aprovado`, aprov + ' de ' + D.length, aprov < D.length ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>
        ${nSem ? `<p class="note" style="color:var(--badt)">${nSem} serviço${nSem === 1 ? '' : 's'} sem histórico não vence${nSem === 1 ? '' : 'm'} nunca: registre o último serviço ou defina o marco zero em Administração antes de usar o cronograma de verdade.</p>` : ''}
        ${aprov < D.length ? `<p class="note">O previsto do ano só fica valendo para a aderência depois de aprovado: aprove em <a href="#enxcr">2 · Cronograma</a>.</p>` : ''}</div>
-     <div class="card"><h2>Empurradores</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Onde está</th><th class="r">Vencidos</th><th class="r">Vencem no mês</th><th class="r">Sem histórico</th><th>Horímetro do MCP</th><th></th></tr></thead><tbody>
+     <div class="card"><h2>Empurradores</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Situação operacional</th><th class="r">Vencidos</th><th class="r">Vencem no mês</th><th class="r">Sem referência</th><th>Horímetro do MCP</th><th></th></tr></thead><tbody>
      ${D.sort((a, b) => b.venc.length - a.venc.length || b.mes.length - a.mes.length).map(x => { const s = situDe(x.v);
        return `<tr class="click" data-enxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${!s ? '<span class="mut">não informado</span>' : s.st === 'viagem' ? 'em viagem' : 'no porto'}</td><td class="r">${x.venc.length ? `<b class="rl-ruim">${x.venc.length}</b>` : '0'}</td><td class="r">${x.mes.length ? `<b class="rl-at">${x.mes.length}</b>` : '0'}</td><td class="r">${x.sem.length || '0'}</td>
          <td>${x.hr ? nf(x.hr.h) + ' h · ' + brD(x.hr.date) + (x.dias != null && x.dias > 14 ? ` <span class="pill p-warn">há ${x.dias} dias</span>` : '') : '<span class="pill p-bad">sem leitura</span>'}</td><td><button class="mbtn sm pri" data-enxv="${x.v.id}">Abrir</button></td></tr>`; }).join('')}</tbody></table></div>
@@ -49,32 +54,32 @@ function vEnx() {
   const x = D.find(y => y.v === v), ord = { venc: 0, mes: 1, sem: 2 }, L = x.P.filter(y => ENX.emDia || ['venc', 'mes', 'sem'].includes(y.g)).sort((a, b) => (ord[a.g] ?? 3) - (ord[b.g] ?? 3) || a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true }));
   const lin = y => { const nfr = enxNF(v.id, y.pos, y.t.id), k = y.pos + '|' + y.t.id, L0 = y.s.L;
     return `<tr><td><input type="checkbox" class="enx-ck" value="${k}"></td><td><b>${esc(enxServ(y.t))}</b>${y.t.prio === 'Crítica' ? ' <span class="note rl-ruim">Crítica</span>' : ''}</td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
-      <td class="nowrap">${L0 ? brD(L0.date) + (L0.h != null ? '<div class="note">' + nf(L0.h) + ' h</div>' : '') : '—'}</td><td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div>${nfr && (!L0 || nfr.date > L0.date) ? `<div class="note rl-ruim">não feito em ${brD(nfr.date)}: ${esc(nfr.motivo || '')}</div>` : ''}</td></tr>`; };
-  return enxCab(`Executar · ${esc(v.nome)}`, 'Marque os serviços · “Copiar texto da OM” para abrir a OM no Sankhya com a lista · depois “Registrar feito” com o nº dessa OM, ou “Não feito” com o motivo',
+      <td class="nowrap">${L0 ? brD(L0.date) + (L0.h != null ? '<div class="note">' + nf(L0.h) + ' h</div>' : '') : '—'}</td><td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div>${nfr && (!L0 || nfr.date > L0.date) ? `<div class="note rl-ruim">não executado em ${brD(nfr.date)}: ${esc(nfr.motivo || '')}</div>` : ''}</td></tr>`; };
+  return enxCab(`2.2 OM preventiva · ${esc(v.nome)}`, 'Selecione os itens · “Gerar descritivo da OM” para abrir a OM no Sankhya com a lista · depois “Apontar execução” com o nº dessa OM, ou “Apontar não execução” com o motivo',
       `<button class="mbtn" data-enxv="">← Frota</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Serviços · ${x.venc.length} vencido${x.venc.length === 1 ? '' : 's'} · ${x.mes.length} no mês</h2>
-     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Marcar vencidos e do mês</button><button class="mbtn" data-enxabre>Abrir todos os grupos</button><button class="mbtn" data-enxcopiar>📋 Copiar texto da OM</button><button class="mbtn pri" data-enxfeito>✓ Registrar feito</button><button class="mbtn" data-enxnf>Não feito</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> mostrar os em dia</label></div>
+     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Selecionar backlog (vencidos e do mês)</button><button class="mbtn" data-enxabre>Expandir todos</button><button class="mbtn" data-enxcopiar>📋 Gerar descritivo da OM</button><button class="mbtn pri" data-enxfeito>✓ Apontar execução</button><button class="mbtn" data-enxnf>Apontar não execução</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> exibir itens dentro do prazo</label></div>
      ${(() => { const G = {}; L.forEach(y => { const k = enxEq(y.t) + ' · ' + posCurtoE(v, y.pos); (G[k] = G[k] || []).push(y); });
        const ks = Object.keys(G).sort((a, b) => G[b].filter(y => y.g === 'venc').length - G[a].filter(y => y.g === 'venc').length || a.localeCompare(b, 'pt-BR'));
        return ks.length ? ks.map(k => { const g = G[k], nv = g.filter(y => y.g === 'venc').length, nm = g.filter(y => y.g === 'mes').length, ns = g.filter(y => y.g === 'sem').length;
-         return `<details class="enx-g"${ENX.abertos.has(k) ? ' open' : ''} data-enxg="${esc(k)}"><summary><b>${esc(k)}</b><span class="sp"></span>${nv ? `<span class="pill p-bad">${nv} vencido${nv === 1 ? '' : 's'}</span>` : ''}${nm ? `<span class="pill p-warn">${nm} no mês</span>` : ''}${ns ? `<span class="pill p-mut">${ns} sem histórico</span>` : ''}${!nv && !nm && !ns ? `<span class="pill p-ok">${g.length} em dia</span>` : ''}</summary>
-           <table class="t"><thead><tr><th></th><th>Serviço</th><th>A cada</th><th>Último</th><th>Situação</th></tr></thead><tbody>${g.map(lin).join('')}</tbody></table></details>`; }).join('') : '<p class="note">Nada vencido nem vencendo no mês.</p>'; })()}
+         return `<details class="enx-g"${ENX.abertos.has(k) ? ' open' : ''} data-enxg="${esc(k)}"><summary><b>${esc(k)}</b><span class="sp"></span>${nv ? `<span class="pill p-bad">${nv} vencido${nv === 1 ? '' : 's'}</span>` : ''}${nm ? `<span class="pill p-warn">${nm} no mês</span>` : ''}${ns ? `<span class="pill p-mut">${ns} sem histórico</span>` : ''}${!nv && !nm && !ns ? `<span class="pill p-ok">${g.length} dentro do prazo</span>` : ''}</summary>
+           <table class="t"><thead><tr><th></th><th>Serviço</th><th>Periodicidade</th><th>Última execução</th><th>Situação</th></tr></thead><tbody>${g.map(lin).join('')}</tbody></table></details>`; }).join('') : '<p class="note">Nada vencido nem vencendo no mês.</p>'; })()}
      <p class="note">Rastreabilidade: o texto copiado vai na OM do Sankhya, e o mesmo nº de OM fica em cada serviço registrado aqui; o relatório lista serviço × OM para conferência. Fotos e encerramento ficam na OM do Sankhya.</p></div>
-   <div class="card"><h2>OMs preventivas registradas</h2>${(() => { const G = enxOMsDe(v.id).slice(0, 12); return G.length ? `<table class="t"><thead><tr><th>OM</th><th>Data</th><th class="r">Serviços</th><th></th></tr></thead><tbody>${G.map(g => `<tr><td><b>${esc(g.om)}</b></td><td>${brD(g.date)}</td><td class="r">${g.n}</td><td><button class="mbtn sm" data-enx2b="${esc(g.om)}">Anexo II-B</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhuma ainda.</p>'; })()}</div></div></div>`;
+   <div class="card"><h2>OMs preventivas apontadas</h2>${(() => { const G = enxOMsDe(v.id).slice(0, 12); return G.length ? `<table class="t"><thead><tr><th>OM</th><th>Data</th><th class="r">Serviços</th><th></th></tr></thead><tbody>${G.map(g => `<tr><td><b>${esc(g.om)}</b></td><td>${brD(g.date)}</td><td class="r">${g.n}</td><td><button class="mbtn sm" data-enx2b="${esc(g.om)}">Anexo II-B</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhuma ainda.</p>'; })()}</div></div></div>`;
 }
 const enxSel = () => $$('#main .enx-ck:checked').map(i => { const [pos, item] = i.value.split('|'); return { pos, t: A1M[item] }; }).filter(y => y.t);
 function enxCopiar() {
   const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços primeiro.');
   const txt = `PREVENTIVA · ${v.nome} · ${brD(isoD(hoje()))}\nServiços (Anexo I · NP Navecunha 055):\n` + S0.map(y => `- ${enxEq(y.t)} · ${posCurtoE(v, y.pos)}: ${enxServ(y.t)} (a cada ${enxIv(y.t, v, y.pos)})`).join('\n') + '\nRegistrar a execução no SMF com o nº desta OM.';
   try { navigator.clipboard.writeText(txt).catch(() => { }); } catch (e) { }
-  modal(`<h2>Texto da OM · ${esc(v.nome)}</h2><p class="note">Já copiado. Cole na descrição da OM no Sankhya. Se não colou, selecione e copie daqui.</p><textarea rows="${Math.min(18, S0.length + 4)}" style="width:100%" readonly>${esc(txt)}</textarea><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`, true);
+  modal(`<h2>Descritivo da OM · ${esc(v.nome)}</h2><p class="note">Já copiado. Cole na descrição da OM no Sankhya. Se não colou, selecione e copie daqui.</p><textarea rows="${Math.min(18, S0.length + 4)}" style="width:100%" readonly>${esc(txt)}</textarea><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`, true);
 }
 // fotos de evidência (Supervisor, 27/10/2026: “as evidências falam mais que palavras”): antes e depois, obrigatórias; sobem ao Drive (fotosEnviar) e vão para o relatório mensal
 // execução por equipe própria ou por terceiro (Supervisor, 27/10/2026: “o gerente precisa saber o que foi feito por terceiros e o que foi feito com equipe própria”)
-const enxExecCampos = () => `<label class="f s3">Execução<select id="fxT"><option value="Equipe própria">Equipe própria</option><option value="Terceiro">Terceiro (prestador)</option></select></label><label class="f s3">Empresa (se terceiro)<input id="fxE" list="fxEL" placeholder="nome do prestador"><datalist id="fxEL">${recs('terc').map(t => `<option value="${esc(t.empresa)}">`).join('')}</datalist></label>`;
+const enxExecCampos = () => `<label class="f s3">Mão de obra<select id="fxT"><option value="Equipe própria">Equipe própria</option><option value="Terceiro">Terceiro (prestador)</option></select></label><label class="f s3">Prestador de serviço (se terceiro)<input id="fxE" list="fxEL" placeholder="nome do prestador"><datalist id="fxEL">${recs('terc').map(t => `<option value="${esc(t.empresa)}">`).join('')}</datalist></label>`;
 function enxExecLer() { const exec = ($('#fxT') || {}).value || 'Equipe própria', empresa = exec === 'Terceiro' ? (($('#fxE') || {}).value || '').trim() : ''; return exec === 'Terceiro' && !empresa ? null : { exec, empresa }; }
 const enxExecTxt = r => r && r.exec ? r.exec + (r.empresa ? ' · ' + r.empresa : '') : 'não informado';
-const enxFotosCampos = () => `<div class="g"><label class="f s3">Fotos de antes<input type="file" id="fxA" accept="image/*" multiple></label><label class="f s3">Fotos de depois<input type="file" id="fxD" accept="image/*" multiple></label></div>`;
+const enxFotosCampos = () => `<div class="g"><label class="f s3">Registro fotográfico · antes<input type="file" id="fxA" accept="image/*" multiple></label><label class="f s3">Registro fotográfico · depois<input type="file" id="fxD" accept="image/*" multiple></label></div>`;
 async function enxFotosLer() {
   const A = [...($('#fxA') || {}).files || []], D = [...($('#fxD') || {}).files || []]; if (!A.length || !D.length) return null;
   const out = [], at = Date.now(); for (const [tipo, L] of [['ANTES', A], ['DEPOIS', D]]) for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out;
@@ -82,27 +87,42 @@ async function enxFotosLer() {
 function enxFeitoModal() {
   if (!S.session) return loginModal(); const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços feitos.');
   const hp = [...new Set(S0.filter(y => intervalo(y.t, v, y.pos).h).map(y => posHor(y.pos, y.t, v.id)))];
-  modal(`<h2>Registrar feito · ${esc(v.nome)} · ${S0.length} serviço${S0.length === 1 ? '' : 's'}</h2><p class="note">${S0.map(y => esc(enxServ(y.t)) + ' (' + esc(posCurtoE(v, y.pos)) + ')').join(' · ')}</p>
-   <div class="g"><label class="f s3">Data da execução<input type="date" id="exD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM no Sankhya<input id="exO" inputmode="numeric"></label>${enxExecCampos()}<label class="f s6">Quem executou (nomes ou responsável técnico)<input id="exQ" placeholder="nomes da equipe ou responsável técnico do prestador"></label>
+  modal(`<h2>Apontamento de execução · OM preventiva · ${esc(v.nome)} · ${S0.length} serviço${S0.length === 1 ? '' : 's'}</h2><p class="note">${S0.map(y => esc(enxServ(y.t)) + ' (' + esc(posCurtoE(v, y.pos)) + ')').join(' · ')}</p>
+   <div class="g"><label class="f s3">Data de execução<input type="date" id="exD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM no Sankhya<input id="exO" inputmode="numeric"></label>${enxExecCampos()}<label class="f s6">Executante / responsável técnico<input id="exQ" placeholder="nomes da equipe ou responsável técnico do prestador"></label>
    ${hp.map(p => { const h = horAtual(v.id, p); return `<label class="f s3">Horímetro · ${esc(posCurtoE(v, p))}<input class="exH" data-pos="${p}" inputmode="decimal" value="${h ? h.h : ''}"></label>`; }).join('')}</div>
-   ${enxFotosCampos()}<div class="note" id="exE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="exOk">Registrar</button></div>`, true);
+   ${enxCmpCampos(v, S0)}${enxFotosCampos()}<div class="note" id="exE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="exOk">Confirmar apontamento</button></div>`, true);
   $('#exOk').onclick = async () => { const d = $('#exD').value, om = $('#exO').value.replace(/\D/g, ''), quem = $('#exQ').value.trim(), H = {}, E = $('#exE');
     if (!d || d > isoD(hoje())) return E.textContent = 'Data inválida (não pode ser futura).'; if (om.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya (rastreabilidade).'; if (!quem) return E.textContent = 'Informe quem executou.';
     for (const i of $$('#modal .exH')) { const h = +i.value.replace(',', '.'), a = horAtual(v.id, i.dataset.pos); if (!(h > 0)) return E.textContent = 'Informe o horímetro de ' + posCurtoE(v, i.dataset.pos) + '.'; if (a && !a.est && a.date <= d && h < a.h) return E.textContent = 'Horímetro de ' + posCurtoE(v, i.dataset.pos) + ' menor que a última leitura (' + nf(a.h) + ' h).'; H[i.dataset.pos] = h; }
     for (const y of S0) { const L0 = y.s ? y.s.L : ultimoServico(v.id, y.pos, y.t.id); if (L0 && L0.date > d) return E.textContent = enxServ(y.t) + ': já há registro mais novo (' + brD(L0.date) + ').'; }
     const ex = enxExecLer(); if (!ex) return E.textContent = 'Execução por terceiro: informe a empresa.';
+    const CMP = enxCmpLer(); if (typeof CMP === 'string') return E.textContent = CMP;
     E.textContent = 'Preparando as fotos…'; const fotos = await enxFotosLer(); if (!fotos) return E.textContent = 'Anexe ao menos uma foto de antes e uma de depois (evidência da execução).';
     const by = S.session.name, at = Date.now();
     for (const [k, y] of S0.entries()) { const hp1 = posHor(y.pos, y.t, v.id); await saveRec(Object.assign({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: H[hp1] ?? null, date: d, om, quem, exec: ex.exec, empresa: ex.empresa, by, enx: true, createdAt: at }, k ? {} : { fotos })); }   // as fotos ficam no primeiro serviço da OM
     for (const [p, h] of Object.entries(H)) await lubHor(v.id, p, h, d, 'OM ' + om);
+    for (const c of CMP) { const h = H[c.pos] ?? (horAtual(v.id, c.pos) || {}).h; await saveRec({ id: uid('comp'), kind: 'comp', vessel: v.id, pos: c.pos, date: d, h: h == null ? null : +h, vals: c.vals, rpm: c.rpm, om, by, enx: true }); }
     closeModal(); toast(S0.length + ' serviço' + (S0.length === 1 ? '' : 's') + ' registrado' + (S0.length === 1 ? '' : 's') + ' com a OM ' + om + '.'); render(); enxIIB(v.id, om); };
+}
+// ensaio de compressão junto com a calibração dos bicos injetores (Anexo I 1.1.12; NP 055 7.3): aparece no apontamento quando o 1.1.12 está marcado
+function enxCmpCampos(v, S0) {
+  const P = [...new Set(S0.filter(y => y.t.id === '1.1.12' && isMcp(y.pos)).map(y => y.pos))]; if (!P.length) return '';
+  return `<h3 style="margin:12px 0 4px">Ensaio de compressão do MCP · executado com a calibração dos bicos injetores (1.1.12)</h3><p class="note">Pressão de cada cilindro em MPa (ex.: 1,72) ou kgf/cm² (ex.: 17,5). Deixe em branco se o ensaio não foi feito; vai para 3.2 Compressão do MCP e para o relatório.</p>`
+    + P.map(p => `<div class="g" data-cmpm="${p}"><div class="f s6"><b>${esc(posCurtoE(v, p))}</b></div>${[1, 2, 3, 4, 5, 6].map(i => `<label class="f s1">Cil. ${i}<input class="exC" inputmode="decimal"></label>`).join('')}<label class="f s2">Rotação (rpm)<input class="exR" inputmode="numeric" placeholder="~120"></label></div>`).join('');
+}
+function enxCmpLer() {
+  const out = [], mpa = t => { const n = numBR(t); return n == null ? null : n > 4 ? n / 10.197 : n; };
+  for (const b of $$('#modal [data-cmpm]')) { const I = [...b.querySelectorAll('.exC')].map(i => i.value.trim()); if (!I.some(Boolean)) continue;
+    const N = I.map(mpa); if (N.some(n => n == null || n < 0.3 || n > 4)) return 'Compressão ' + b.dataset.cmpm + ': informe os 6 cilindros (MPa, ex.: 1,72, ou kgf/cm², ex.: 17,5).';
+    out.push({ pos: b.dataset.cmpm, vals: N.map(n => n.toFixed(2).replace('.', ',')), rpm: (b.querySelector('.exR') || {}).value || '' }); }
+  return out;
 }
 function enxNFModal() {
   if (!S.session) return loginModal(); const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços não feitos.');
-  modal(`<h2>Não feito · ${esc(v.nome)}</h2><p class="note">Fica registrado com o motivo (evidência para a auditoria). O serviço continua vencido até ser feito.</p>
+  modal(`<h2>Apontamento de não execução · ${esc(v.nome)}</h2><p class="note">Fica registrado com o motivo (evidência para a auditoria). O serviço continua vencido até ser feito.</p>
    <div class="g"><label class="f s3">Data<input type="date" id="nfD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM (se houver)<input id="nfO" inputmode="numeric"></label></div>
-   <label class="f">Motivo<select id="nfM"><option value="">Escolha…</option><option>Falta de material</option><option>Empurrador saiu antes do fim da janela</option><option>Sem equipe disponível</option><option>Aguardando terceiro</option><option>Outro</option></select></label><label class="f">Detalhe<input id="nfX"></label>
-   <div class="note" id="nfE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="nfOk">Registrar</button></div>`, true);
+   <label class="f">Motivo<select id="nfM"><option value="">Escolha…</option><option>Indisponibilidade de material / sobressalente</option><option>Janela de manutenção insuficiente (saída antecipada)</option><option>Indisponibilidade de mão de obra</option><option>Aguardando prestador de serviço</option><option>Outro</option></select></label><label class="f">Justificativa<input id="nfX"></label>
+   <div class="note" id="nfE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="nfOk">Confirmar apontamento</button></div>`, true);
   $('#nfOk').onclick = async () => { const d = $('#nfD').value, m = $('#nfM').value, motivo = m + ($('#nfX').value.trim() ? ': ' + $('#nfX').value.trim() : '');
     if (!d || !m) return $('#nfE').textContent = 'Informe a data e o motivo.'; const by = S.session.name;
     for (const y of S0) await saveRec({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: null, date: d, nf: true, motivo, om: $('#nfO').value.replace(/\D/g, ''), by, enx: true });
@@ -114,12 +134,12 @@ function vEnxHor() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), idade = v => { const h = horAtual(v.id, mpos(v.id)); return h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : 999; };
   if (!V.some(v => v.id === ENXH.v)) ENXH.v = (V.slice().sort((a, b) => idade(b) - idade(a))[0] || {}).id;   // abre no que está há mais tempo sem leitura
   const lin = v => posicoes(v).filter(p => p !== 'UN').map((p, i) => { const h = horAtual(v.id, p), d = h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
-    return `<tr>${i ? '<td></td>' : `<td><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td><td>${h ? brD(h.date) : '—'}${d != null && d > 14 ? ` <span class="pill p-warn">há ${d} dias</span>` : ''}</td><td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"> ${h && !h.est ? `<button class="mbtn sm" data-ehno="${v.id}|${p}" title="Motor parado: repete a última leitura (0 h no período)">Não operou</button>` : ''}</td></tr>`; }).join('');
-  return enxCab('Horímetros', 'Escolha o empurrador que chegou e lance as leituras dos motores · os serviços por horas vencem por estas leituras · em âmbar, os que estão há mais de 14 dias sem leitura', '<button class="mbtn" data-enxreset>Reorganizar</button>')
-   + `<div class="card"><h2>Leituras</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Salvar leituras</button></div>
+    return `<tr>${i ? '<td></td>' : `<td><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td><td>${h ? brD(h.date) : '—'}${d != null && d > 14 ? ` <span class="pill p-warn">há ${d} dias</span>` : ''}</td><td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"> ${h && !h.est ? `<button class="mbtn sm" data-ehno="${v.id}|${p}" title="Motor parado: repete a última leitura (0 h no período)">Sem operação</button>` : ''}</td></tr>`; }).join('');
+  return enxCab('1.1 Apontamento de horímetros', 'Na chegada ao porto: lance a leitura de cada motor · os serviços por horas vencem por estas leituras · em âmbar, os que estão há mais de 14 dias sem leitura', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + `<div class="card"><h2>Leitura de horímetros</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Registrar leituras</button></div>
      <div class="cm-chips" style="margin-bottom:8px">${V.map(v => { const d = idade(v); return `<button class="cm-chip${v.id === ENXH.v ? ' on' : ''}" data-ehv="${v.id}">${esc(v.nome)}${d > 14 ? ` <b style="color:var(--warnt)">${d === 999 ? 'sem leitura' : d + ' d'}</b>` : ''}</button>`; }).join('')}</div>
      <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.filter(v => v.id === ENXH.v).map(lin).join('')}</tbody></table></div>
-     <p class="note">Motor que não rodou: “Não operou” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div></div></div>`;
+     <p class="note">Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div></div></div>`;
 }
 async function enxHorSalvar() {
   if (!S.session) return loginModal(); const d = $('#ehD').value; if (!d || d > isoD(hoje())) return toast('Data inválida.');
@@ -135,8 +155,8 @@ async function enxHorSalvar() {
 function enxRelHTML(R, emi) {
   const pc = (vid, pos) => { const v = vessel(vid); return v ? posCurtoE(v, pos) : pos; }, sv = id => A1M[id] ? enxServ(A1M[id]) : id;
   const t = (cab, L, w) => L.length ? `<table class="t"><thead><tr>${cab.map((c, i) => `<th${w && w[i] ? ` style="width:${w[i]}"` : ''}>${c}</th>`).join('')}</tr></thead><tbody>${L.map(l => `<tr>${l.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum.</p>';
-  return `<div class="enx-rel"><p><b>Referência:</b> ${esc(R.ref)} · <b>Aderência no mês:</b> ${R.ad == null ? '—' : R.ad + '%'} (feito no prazo ÷ o que venceu; referência ≥ 90%) · previsto ${R.T.prev} · no prazo ${R.T.ok} · com atraso ${R.T.late} · não feito no prazo ${R.T.miss}${R.semHist ? ` · <span class="rl-ruim">${R.semHist} serviços sem histórico (não entram)</span>` : ''}</p>
-   <h3>1 · Por empurrador</h3><table class="t"><thead><tr><th>Empurrador</th><th class="r">Previsto</th><th class="r">No prazo</th><th class="r">Com atraso</th><th class="r">Não feito</th><th class="r">Aderência mês</th><th class="r">Aderência ano</th><th>Cronograma aprovado</th></tr></thead><tbody>${R.por.map(p => `<tr><td><b>${esc(p.nome)}</b></td><td class="r">${p.prev}</td><td class="r">${p.ok}</td><td class="r">${p.late}</td><td class="r">${p.miss}</td><td class="r">${p.ad == null ? '—' : p.ad + '%'}</td><td class="r">${p.adAno == null ? '—' : p.adAno + '%'}</td><td>${p.aprov ? 'sim' : 'não'}</td></tr>`).join('')}</tbody></table>
+  return `<div class="enx-rel"><p><b>Referência:</b> ${esc(R.ref)} · <b>Aderência no mês:</b> ${R.ad == null ? '—' : R.ad + '%'} (feito no prazo ÷ o que venceu; referência ≥ 90%) · previsto ${R.T.prev} · no prazo ${R.T.ok} · com atraso ${R.T.late} · não executado no prazo ${R.T.miss}${R.semHist ? ` · <span class="rl-ruim">${R.semHist} serviços sem histórico (não entram)</span>` : ''}</p>
+   <h3>1 · Por empurrador</h3><table class="t"><thead><tr><th>Empurrador</th><th class="r">Previsto</th><th class="r">No prazo</th><th class="r">Com atraso</th><th class="r">Não executado</th><th class="r">Aderência mês</th><th class="r">Aderência ano</th><th>Cronograma aprovado</th></tr></thead><tbody>${R.por.map(p => `<tr><td><b>${esc(p.nome)}</b></td><td class="r">${p.prev}</td><td class="r">${p.ok}</td><td class="r">${p.late}</td><td class="r">${p.miss}</td><td class="r">${p.ad == null ? '—' : p.ad + '%'}</td><td class="r">${p.adAno == null ? '—' : p.adAno + '%'}</td><td>${p.aprov ? 'sim' : 'não'}</td></tr>`).join('')}</tbody></table>
    ${R.ads ? `<h3>2 · Aderência mês a mês · ${R.ano}</h3><div class="enx-gr">${balBarras(R.ads.map((a, i) => [MESES[i], a]), v => Math.round(v) + '%', 90, true)}</div><p class="note">Feito no prazo ÷ o que venceu em cada mês · linha tracejada = referência de 90% · vermelho = abaixo dela.</p>` : ''}
    ${R.cor ? `<h3>3 · Corretivas do mês · ${R.cor.length}</h3><p>Horas paradas: <b>${nf(R.hPar || 0, 1)} h</b> · MTTR (tempo médio do início à liberação): <b>${R.mttr == null ? '—' : nf(R.mttr, 1) + ' h'}</b> (meta NP 055: ≤ 8 h)</p>${t(['Início', 'Empurrador', 'OM', 'Equipamento', 'Classe', 'Parado'], R.cor.map(c => [brD(c[0]), vName(c[1]), c[2] || '—', c[3], c[4], c[5] == null ? 'em aberto' : nf(c[5], 1) + ' h']))}` : ''}
    <h3>4 · OMs preventivas do mês · ${R.feitos.length} serviços</h3>${(() => { const G = {}; R.feitos.forEach(f => { const k = f[1] + '|' + (f[4] || ''); const g = G[k] = G[k] || { d: f[0], v: f[1], om: f[4], n: 0, q: new Set() }; g.n++; if (f[0] > g.d) g.d = f[0]; if (f[5]) g.q.add(f[5]); });
@@ -205,7 +225,7 @@ function enxIIBBranco() {
   const L = n => Array.from({ length: n }, () => '<tr><td style="height:22px"></td><td></td><td style="width:9%"></td><td style="width:9%"></td></tr>').join('');
   enxDoc('ANEXO II-B · RELATÓRIO DE SERVIÇO REALIZADO · PREVENTIVA', 'Formulário em branco',
     enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Data', ''], ['Horímetro', 'MCP BB: ______ h · MCP BE: ______ h · MCA 1: ______ h · MCA 2: ______ h'], ['Execução', 'Equipe própria ☐ · Terceiro ☐ · empresa: ____________________'], ['Executado por', '']])
-    + `<h3>Serviços</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th><th>Feito</th><th>Não feito</th></tr></thead><tbody>${L(14)}</tbody></table>`
+    + `<h3>Serviços</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th><th>Executado</th><th>Não executado</th></tr></thead><tbody>${L(14)}</tbody></table>`
     + '<h3>Motivo dos não feitos e observações</h3><table><tr><td style="height:54px"></td></tr></table>' + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
 }
 function enxIIABranco() {
@@ -218,39 +238,68 @@ function vEnxBib() {
   const item = (d, i) => `<tr><td><b>${esc(d[1])}</b><div class="note">${esc(d[2])}</div></td><td style="width:1%;white-space:nowrap"><button class="mbtn sm pri" data-ebib="${i}">${d[3].length < 4 ? '🖨 Imprimir' : 'Abrir'}</button></td></tr>`;
   const sec = (k, t) => `<div class="card"><h2>${t}</h2><table class="t"><tbody>${ENXB_DOCS.map((d, i) => d[0] === k ? item(d, i) : '').join('')}</tbody></table></div>`;
   const D = recs('doc').sort((a, b) => a.titulo.localeCompare(b.titulo));
-  return enxCab('Biblioteca', 'Formulários padrão para imprimir, a Matriz técnica, o Anexo I e a NP 055 · manuais e catálogos enviados ficam no Google Drive', `<button class="mbtn" data-ebibnovo>＋ Adicionar documento</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+  return enxCab('Biblioteca técnica', 'Formulários padrão para imprimir, a Matriz técnica, o Anexo I e a NP 055 · manuais e catálogos enviados ficam no Google Drive', `<button class="mbtn" data-ebibnovo>＋ Adicionar documento</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + sec('form', 'Formulários padrão') + sec('ref', 'Normas e matrizes')
    + `<div class="card"><h2>Manuais e documentos enviados · ${D.length}</h2>${D.length ? `<table class="t"><tbody>${D.map(r => `<tr><td><b>${esc(r.titulo)}</b><div class="note">${esc([r.desc, r.equip ? EQN[r.equip] || r.equip : '', r.rev ? 'Rev. ' + r.rev : ''].filter(Boolean).join(' · '))}</div></td><td style="width:1%;white-space:nowrap"><button class="mbtn sm pri" data-ebibdoc="${r.id}">Abrir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum ainda. Use “Adicionar documento” para manuais de fabricante, catálogos e procedimentos (arquivo até 10 MB ou link).</p>'}</div></div></div>`;
 }
-// ---------- Corretivas: registro de uma tela, com início e liberação (MTTR) e o Anexo II-A ----------
+// ---------- 1.2 Manutenção corretiva: abre na falha (OM aberta), libera depois; MTTR e disponibilidade saem de início × liberação; Anexo II-A na liberação ----------
+// Status: aberta (em reparo) → conferencia (liberada pela equipe, aguarda o Supervisor) → encerrada. Liberada pelo Supervisor vai direto a encerrada (o servidor só aceita “encerrada” do Supervisor).
+const enxCorSt = o => o.status === 'encerrada' ? ['p-ok', 'Encerrada'] : o.liberacao ? ['p-warn', 'Aguardando conferência'] : ['p-bad', 'Indisponível · em reparo'];
+const enxAgora = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+const enxFotos1 = (id, lb) => `<label class="f s3">${lb}<input type="file" id="${id}" accept="image/*" multiple></label>`;
+async function enxFotosDe(id, tipo) { const L = [...($('#' + id) || {}).files || []], at = Date.now(), out = []; for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out; }
 function vEnxCor() {
-  const V = S.cfg.frota.filter(v => !foraOp(v)), L = oms().filter(o => o.tipo === 'C' && !o.excluido).sort((a, b) => (b.abertura || '') < (a.abertura || '') ? -1 : 1).slice(0, 40), agora = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
-  return enxCab('Corretivas', 'Registre a corretiva feita: o que aconteceu, o que foi feito, início e liberação · sai o Anexo II-A de uma folha · a OM e as fotos ficam no Sankhya', '<button class="mbtn" data-enxreset>Reorganizar</button>')
-   + `<div class="card"><h2>Registrar corretiva</h2><div class="g">
+  const V = S.cfg.frota.filter(v => !foraOp(v)), T = oms().filter(o => o.tipo === 'C' && !o.excluido), ab = T.filter(o => o.status !== 'encerrada').sort((a, b) => (a.abertura || '') < (b.abertura || '') ? -1 : 1),
+    L = T.filter(o => o.status === 'encerrada').sort((a, b) => (b.abertura || '') < (a.abertura || '') ? -1 : 1).slice(0, 30), ag = enxAgora(), adm = can.admin();
+  const hP = o => o.abertura ? Math.max(0, ((o.liberacao ? new Date(o.liberacao) : new Date()) - new Date(o.abertura)) / 36e5) : null;
+  const lin = o => { const st = enxCorSt(o), h = hP(o); return `<tr><td class="nowrap">${brDT(o.abertura || '')}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.num || '—')}</td><td>${esc(o.equip || o.sistema || '—')}<div class="note">${esc(o.classe || '')}</div></td><td>${esc(String(o.descricao || '').slice(0, 90))}</td><td><span class="pill ${st[0]}">${st[1]}</span></td><td class="r nowrap">${h == null ? '—' : nf(h, 1) + ' h'}</td>
+    <td class="nowrap">${!o.liberacao ? `<button class="mbtn sm pri" data-eclib="${o.id}">Liberar para operação</button>` : o.status !== 'encerrada' && adm ? `<button class="mbtn sm pri" data-ecenc="${o.id}">Conferir e encerrar</button> ` : ''}${o.liberacao ? `<button class="mbtn sm" data-ec2a="${o.id}">Anexo II-A</button>` : ''}</td></tr>`; };
+  const tab = (R, vz) => `<div class="tw"><table class="t"><thead><tr><th>Início</th><th>Empurrador</th><th>OM</th><th>Equipamento · criticidade</th><th>Falha (sintoma)</th><th>Situação</th><th class="r">Indisponível</th><th></th></tr></thead><tbody>${R.map(lin).join('') || `<tr><td colspan="8" class="note">${vz}</td></tr>`}</tbody></table></div>`;
+  return enxCab('1.2 Manutenção corretiva', 'Abra a corretiva na falha (fica “em reparo” e conta como indisponibilidade) · na liberação, informe a intervenção e as fotos de depois · sai o Anexo II-A · MTTR = início → liberação', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + `<div class="card"><h2>OMs corretivas em aberto · ${ab.length}</h2>${tab(ab, 'Nenhuma corretiva em aberto.')}</div>
+   <div class="card"><h2>Abertura de OM corretiva</h2><div class="g">
       <label class="f s2">Empurrador<select id="ecV">${V.map(v => `<option value="${v.id}">${esc(v.nome)}</option>`).join('')}</select></label><label class="f s2">Nº da OM (Sankhya)<input id="ecO" inputmode="numeric"></label>
-      <label class="f s2">Classe<select id="ecC">${['Crítica', 'Alta', 'Média', 'Baixa'].map(c => `<option>${c}</option>`).join('')}</select></label>
-      <label class="f s3">Sistema<select id="ecS">${SISTEMAS.map(s => `<option>${esc(s)}</option>`).join('')}</select></label><label class="f s3">Equipamento<input id="ecE" placeholder="ex.: bomba de água salgada do MCA"></label>
-      <label class="f s3">Início do reparo<input type="datetime-local" id="ecI" max="${agora}"></label><label class="f s3">Liberação<input type="datetime-local" id="ecL" max="${agora}"></label>
-      <label class="f s6">O que aconteceu<textarea id="ecD" rows="2"></textarea></label><label class="f s6">O que foi feito<textarea id="ecF" rows="2"></textarea></label>
-      ${enxExecCampos()}<label class="f s3">Executado por (nomes)<input id="ecQ" placeholder="nomes da equipe ou responsável técnico"></label><label class="f s3">Observação<input id="ecX"></label></div>
-     ${enxFotosCampos()}
-     <div class="note" id="ecErr" style="color:var(--badt)"></div><div class="row end"><button class="mbtn pri" data-ecsalvar>Registrar e imprimir o Anexo II-A</button></div></div>
-   <div class="card"><h2>Corretivas registradas</h2><div class="tw"><table class="t"><thead><tr><th>Início</th><th>Empurrador</th><th>OM</th><th>Equipamento</th><th>O que aconteceu</th><th>Classe</th><th class="r">Parado</th><th></th></tr></thead><tbody>
-   ${L.map(o => { const h = o.abertura && o.liberacao ? Math.max(0, (new Date(o.liberacao) - new Date(o.abertura)) / 36e5) : null; return `<tr><td class="nowrap">${brD(String(o.abertura || '').slice(0, 10))}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.num || '—')}</td><td>${esc(o.equip || o.sistema || '—')}</td><td>${esc(String(o.descricao || '').slice(0, 90))}</td><td>${esc(o.classe || '—')}</td><td class="r">${h == null ? '<span class="mut">em aberto</span>' : nf(h, 1) + ' h'}</td><td><button class="mbtn sm" data-ec2a="${o.id}">Anexo II-A</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Nenhuma corretiva registrada.</td></tr>'}</tbody></table></div></div></div></div>`;
+      <label class="f s2">Criticidade<select id="ecC">${['Crítica', 'Alta', 'Média', 'Baixa'].map(c => `<option>${c}</option>`).join('')}</select></label>
+      <label class="f s3">Sistema<select id="ecS">${SISTEMAS.map(s => `<option>${esc(s)}</option>`).join('')}</select></label><label class="f s3">Equipamento / componente<input id="ecE" placeholder="ex.: bomba de água salgada do MCA"></label>
+      <label class="f s3">Início da indisponibilidade (parada)<input type="datetime-local" id="ecI" max="${ag}" value="${ag}"></label><label class="f s3">Liberação <span class="note">(vazio = continua em reparo)</span><input type="datetime-local" id="ecL" max="${ag}"></label>
+      <label class="f s6">Descrição da falha (sintoma observado)<textarea id="ecD" rows="2"></textarea></label><label class="f s6">Intervenção executada <span class="note">(na liberação)</span><textarea id="ecF" rows="2"></textarea></label>
+      ${enxExecCampos()}<label class="f s3">Executante / responsável técnico<input id="ecQ" placeholder="nomes da equipe ou responsável técnico"></label><label class="f s3">Observação<input id="ecX"></label>
+      ${enxFotos1('fxA', 'Registro fotográfico · antes (obrigatório)')}${enxFotos1('fxD', 'Registro fotográfico · depois (na liberação)')}</div>
+     <div class="note" id="ecErr" style="color:var(--badt)"></div><div class="row end"><button class="mbtn pri" data-ecsalvar>Abrir OM corretiva</button></div></div>
+   <div class="card"><h2>OMs corretivas encerradas · últimas ${L.length}</h2>${tab(L, 'Nenhuma corretiva encerrada.')}</div></div></div>`;
 }
 async function enxCorSalvar() {
   if (!S.session) return loginModal(); const g = id => $('#' + id).value.trim(), E = $('#ecErr'), num = g('ecO').replace(/\D/g, ''), ini = g('ecI'), lib = g('ecL');
-  if (num.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya.'; if (oms().some(o => o.num === num)) return E.textContent = 'A OM ' + num + ' já está registrada.';
-  if (!ini || !lib) return E.textContent = 'Informe o início e a liberação (data e hora).'; if (lib < ini) return E.textContent = 'A liberação não pode ser antes do início.';
-  if (!g('ecD') || !g('ecF') || !g('ecQ')) return E.textContent = 'Preencha o que aconteceu, o que foi feito e quem executou.';
+  if (num.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya.'; if (oms().some(o => o.num === num && !o.excluido)) return E.textContent = 'A OM ' + num + ' já está registrada.';
+  if (!ini) return E.textContent = 'Informe o início do reparo (data e hora).'; if (ini > enxAgora()) return E.textContent = 'O início não pode ser no futuro.';
+  if (!g('ecD')) return E.textContent = 'Descreva a falha (sintoma observado).';
+  if (lib) { if (lib < ini) return E.textContent = 'A liberação não pode ser antes do início.'; if (!g('ecF') || !g('ecQ')) return E.textContent = 'Para liberar: preencha a intervenção executada e o executante.'; }
   const ex = enxExecLer(); if (!ex) return E.textContent = 'Execução por terceiro: informe a empresa.';
-  E.textContent = 'Preparando as fotos…'; const fotos = await enxFotosLer(); if (!fotos) return E.textContent = 'Anexe ao menos uma foto de antes e uma de depois (evidência do reparo).'; E.textContent = '';
-  const o = { id: uid('om'), kind: 'om', tipo: 'C', num, vessel: $('#ecV').value, pos: 'UN', status: 'encerrada', classe: $('#ecC').value, sistema: $('#ecS').value, equip: g('ecE'), descricao: g('ecD'), servicos: g('ecF'), execn: g('ecQ'), exec: ex.exec, empresa: ex.empresa, obsEnx: g('ecX'),
-    abertura: ini, deteccao: ini, inicio: ini, termino: lib, liberacao: lib, interd: 'N/A', resultado: 'Conforme', fotos, fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()), enx: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Registrada no modo enxuto' }] };
-  await saveRec(o); toast('Corretiva ' + num + ' registrada.'); enxIIA(o); render(); }
-// ---------- Cronograma corporativo (Supervisor, 27/10/2026: “sem visão clara, sem poder imprimir”) ----------
-// Frota: empurradores × 12 meses (feito/previsto com cor) · empurrador: serviço × 12 meses (grade clássica prTabela) · imprimir A4/A3 paisagem · aprovar o ano.
-// Mesmas contas do cronograma de sempre (prResumo / prLinhas): os números batem com a aderência e com o relatório.
+  E.textContent = 'Preparando as fotos…'; const fa = await enxFotosDe('fxA', 'ANTES'), fd = await enxFotosDe('fxD', 'DEPOIS'); E.textContent = '';
+  if (!fa.length) return E.textContent = 'Anexe ao menos uma foto de antes (evidência da falha).'; if (lib && !fd.length) return E.textContent = 'Para liberar: anexe ao menos uma foto de depois.';
+  const o = { id: uid('om'), kind: 'om', tipo: 'C', num, vessel: $('#ecV').value, pos: 'UN', status: lib ? (can.admin() ? 'encerrada' : 'conferencia') : 'aberta', classe: $('#ecC').value, sistema: $('#ecS').value, equip: g('ecE'), descricao: g('ecD'), servicos: g('ecF'), execn: g('ecQ'), exec: ex.exec, empresa: ex.empresa, obsEnx: g('ecX'),
+    abertura: ini, deteccao: ini, inicio: ini, termino: lib || null, liberacao: lib || null, interd: 'N/A', resultado: lib ? 'Conforme' : '', fotos: fa.concat(fd), enx: true, hist: [{ at: Date.now(), by: S.session.name, ev: lib ? 'Registrada e liberada' : 'Aberta (em reparo)' }] };
+  if (o.status === 'encerrada') Object.assign(o, { fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()) });
+  await saveRec(o); toast('Corretiva ' + num + (lib ? ' registrada e liberada.' : ' aberta: em reparo.')); if (lib) enxIIA(o); render(); }
+function enxCorLiberar(id) {
+  const o = S.recs.get(id); if (!o) return; if (!S.session) return loginModal(); const ag = enxAgora(), temA = (o.fotos || []).some(f => f.tipo === 'ANTES');
+  modal(`<h2>Liberação para operação · OM corretiva ${esc(o.num)} · ${esc(vName(o.vessel))}</h2><p class="note">${esc(o.equip || o.sistema || '')} · início ${brDT(o.abertura)} · ${esc(o.descricao || '')}</p>
+   <div class="g"><label class="f s3">Liberação para operação (data e hora)<input type="datetime-local" id="lbL" max="${ag}" value="${ag}"></label>${enxExecCampos()}<label class="f s3">Executante / responsável técnico<input id="lbQ" value="${esc(o.execn || '')}"></label>
+   <label class="f s6">Intervenção executada<textarea id="lbF" rows="3">${esc(o.servicos || '')}</textarea></label>${temA ? '' : enxFotos1('fxA', 'Registro fotográfico · antes')}${enxFotos1('fxD', 'Registro fotográfico · depois')}</div>
+   <div class="note" id="lbE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="lbOk">Liberar para operação e emitir o Anexo II-A</button></div>`, true);
+  $('#lbOk').onclick = async () => { const lib = $('#lbL').value, E = $('#lbE'), F = $('#lbF').value.trim(), Q = $('#lbQ').value.trim();
+    if (!lib || lib > enxAgora()) return E.textContent = 'Informe a liberação (não pode ser no futuro).'; if (lib < o.abertura) return E.textContent = 'A liberação não pode ser antes do início (' + brDT(o.abertura) + ').';
+    if (!F || !Q) return E.textContent = 'Preencha a intervenção executada e o executante.'; const ex = enxExecLer(); if (!ex) return E.textContent = 'Execução por terceiro: informe a empresa.';
+    E.textContent = 'Preparando as fotos…'; const fa = temA ? [] : await enxFotosDe('fxA', 'ANTES'), fd = await enxFotosDe('fxD', 'DEPOIS'); E.textContent = '';
+    if (!temA && !fa.length) return E.textContent = 'Anexe ao menos uma foto de antes.'; if (!fd.length) return E.textContent = 'Anexe ao menos uma foto de depois.';
+    const adm = can.admin(); Object.assign(o, { liberacao: lib, termino: lib, servicos: F, execn: Q, exec: ex.exec, empresa: ex.empresa, resultado: 'Conforme', status: adm ? 'encerrada' : 'conferencia', fotos: (o.fotos || []).concat(fa, fd), hist: (o.hist || []).concat([{ at: Date.now(), by: S.session.name, ev: 'Liberada' }]) });
+    if (adm) Object.assign(o, { fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()) });
+    await saveRec(o); closeModal(); toast('OM ' + o.num + (adm ? ' liberada e encerrada.' : ' liberada: aguarda conferência do Supervisor.')); enxIIA(o); render(); };
+}
+async function enxCorEncerrar(id) {
+  const o = S.recs.get(id); if (!o || !can.admin()) return toast('Só o Supervisor confere e encerra.');
+  Object.assign(o, { status: 'encerrada', fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()), hist: (o.hist || []).concat([{ at: Date.now(), by: S.session.name, ev: 'Conferida e encerrada' }]) });
+  await saveRec(o); toast('OM ' + o.num + ' encerrada.'); render(); }
 const ENXC = { ano: hoje().getFullYear(), v: '', papel: 'A4' };
 function enxCrGrade(ano, imp) {
   const V = S.cfg.frota.filter(v => !foraOp(v)), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1, sel = [...Array(12).keys()];
@@ -259,7 +308,7 @@ function enxCrGrade(ano, imp) {
     aOk += r.ok; aDen += r.den;
     const cel = i => { const p = r.P[i], rr = Math.min(p, r.R[i]) || r.R[i], ok = r.Ok[i], lt = r.Lt[i], ms = r.Ms[i]; T[i].p += p; T[i].r += r.R[i]; T[i].ok += ok; T[i].lt += lt; T[i].ms += ms;
       const cls = i > hm ? 'fut' : i === hm ? (ms ? 'ms' : 'hj') : ms ? 'ms' : lt ? 'lt' : p || r.R[i] ? 'ok' : 'nd';
-      const tx = i > hm ? (p ? p : '') : (p || r.R[i] ? `${r.R[i]}<small>/${p}</small>` : ''), tip = `${MESES[i]}: ${p} previsto${p === 1 ? '' : 's'} · ${ok} no prazo · ${lt} com atraso · ${ms} não feito${ms === 1 ? '' : 's'}${i === dm ? ' · docagem' : ''}`;
+      const tx = i > hm ? (p ? p : '') : (p || r.R[i] ? `${r.R[i]}<small>/${p}</small>` : ''), tip = `${MESES[i]}: ${p} previsto${p === 1 ? '' : 's'} · ${ok} no prazo · ${lt} com atraso · ${ms} não executado${ms === 1 ? '' : 's'}${i === dm ? ' · docagem' : ''}`;
       return `<td class="ecr-c ${cls}" title="${tip}">${tx}${i === dm ? '<span class="ecr-dk" title="Docagem">⚓</span>' : ''}</td>`; };
     const nome = imp ? `<b>${esc(v.nome)}</b>` : `<a href="#enxcr" data-ecrv="${v.id}"><b>${esc(v.nome)}</b></a>`;
     return `<tr><td class="ecr-n">${nome}</td>${sel.map(cel).join('')}<td class="ecr-t">${r.tP}</td><td class="ecr-t"><b style="color:${r.ad == null ? '#5F6368' : r.ad >= 90 ? '#188038' : r.ad >= 75 ? '#B06000' : '#C5221F'}">${r.ad == null ? '—' : r.ad + '%'}</b></td></tr>`; }).join('');
@@ -272,12 +321,12 @@ function enxCrGrade(ano, imp) {
 function enxCrAprovTxt(V, ano) { const B = V.map(v => cronoBase(ano, v.id)).filter(Boolean); if (!B.length) return 'Cronograma ainda não aprovado';
   const u = B.slice().sort((a, b) => String(a.aprovAt) < String(b.aprovAt) ? 1 : -1)[0], rev = Math.max(...B.map(b => +b.rev || 0));
   return (B.length === V.length ? 'Aprovado' : `Aprovado para ${B.length} de ${V.length} empurradores ·`) + ` por ${u.aprovBy || '—'} em ${brD(u.aprovAt)} · rev. ${rev}`; }
-const ENX_LEG = '<div class="ecr-lg"><span><i class="ok"></i>feito no prazo</span><span><i class="lt"></i>feito com atraso</span><span><i class="ms"></i>venceu sem fazer</span><span><i class="hj"></i>mês atual</span><span><i class="fut"></i>previsto</span><span>⚓ docagem</span><span>número = feito/previsto no mês</span></div>';
+const ENX_LEG = '<div class="ecr-lg"><span><i class="ok"></i>executado no prazo</span><span><i class="lt"></i>executado com atraso</span><span><i class="ms"></i>vencido sem execução</span><span><i class="hj"></i>mês atual</span><span><i class="fut"></i>previsto</span><span>⚓ docagem</span><span>número = executado/previsto no mês</span></div>';
 function vEnxCr() {
   const ano = ENXC.ano, v = vessel(ENXC.v), anos = [ano - 1, ano, ano + 1], seg = `<div class="seg">${anos.map(a => `<button data-ecrano="${a}" class="${a === ano ? 'on' : ''}">${a}</button>`).join('')}</div>`;
   const imp = `<select id="ecrPapel" style="width:auto">${['A4', 'A3'].map(p => `<option${p === ENXC.papel ? ' selected' : ''}>${p}</option>`).join('')}</select><button class="mbtn pri" data-ecrimp>🖨 Imprimir</button>`;
   if (!v) { const G = enxCrGrade(ano);
-    return enxCab('Cronograma anual de manutenção preventiva', `Frota de empurradores · ${ano} · plano do Anexo I (NP Navecunha 055 item 7.3) · clique no empurrador para ver serviço por serviço`, seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
+    return enxCab('2.1 Plano anual de manutenção preventiva', `Frota de empurradores · ${ano} · plano do Anexo I (NP Navecunha 055 item 7.3) · clique no empurrador para ver serviço por serviço`, seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
      + `<div class="card"><h2>Resumo ${ano}</h2><div class="f2-ks">${[['Aderência no ano', G.ad == null ? '—' : G.ad + '%', G.ad == null ? '' : G.ad >= 90 ? 'var(--okt)' : 'var(--badt)'], ['Cronogramas aprovados', G.aprov + ' de ' + G.n, G.aprov < G.n ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>${can.admin() && G.aprov < G.n ? `<p class="note">Aprovar congela o previsto do ano (linha de base): a aderência passa a medir contra o plano aprovado. <button class="mbtn sm" data-ecraprov="todos">Aprovar o cronograma ${ano} da frota</button></p>` : ''}</div>
      <div class="card"><h2>Cronograma da Frota de Empurradores ${ano}</h2><p class="note" style="margin:-4px 0 8px">${esc(G.aprovTxt)}</p>${ENX_LEG}<div class="tw">${G.html}</div></div></div></div>`; }
   const B = cronoBase(ano, v.id);
@@ -305,7 +354,7 @@ async function enxCrAprovar(id) {
 .ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
     if (d.ebib !== undefined) { const x = ENXB_DOCS[+d.ebib][3]; return x === 'iib' ? enxIIBBranco() : x === 'iia' ? enxIIABranco() : window.open(x, '_blank', 'noopener'); }
     if (d.ebibdoc !== undefined) return abrirDoc(S.recs.get(d.ebibdoc));
     if (d.ebibnovo !== undefined) return docModal(null, 'manual');
@@ -320,6 +369,8 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.enxabre !== undefined) { $$('#main details.enx-g').forEach(g => { g.open = true; ENX.abertos.add(g.dataset.enxg); }); return; }
     if (d.enx2b !== undefined) return enxIIB(ENX.v, d.enx2b);
     if (d.ecsalvar !== undefined) return enxCorSalvar();
+    if (d.eclib !== undefined) return enxCorLiberar(d.eclib);
+    if (d.ecenc !== undefined) return enxCorEncerrar(d.ecenc);
     if (d.ec2a !== undefined) { const o = S.recs.get(d.ec2a); if (o) enxIIA(o); return; }
     if (d.enxcopiar !== undefined) return enxCopiar();
     if (d.enxfeito !== undefined) return enxFeitoModal();
