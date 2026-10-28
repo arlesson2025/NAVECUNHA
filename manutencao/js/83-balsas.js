@@ -83,7 +83,7 @@ const BAL_PROX_H = 50, BAL_PROX_D = 30;   // “vence em breve”
 const balItens = b => BA1.filter(t => !t.mot || t.mot === b.mot);
 const balIv = t => t.doca ? { h: null, m: BAL_DOCA_M } : { h: t.h || null, m: t.m || null };
 function balHor(vid) { let b = null; recs('hor').forEach(r => { if (r.vessel === vid && r.pos === 'MB' && !r.excluido && (!b || r.date > b.date || (r.date === b.date && r.h > b.h))) b = r; }); return b; }
-function balUlt(vid, item) { let b = null; recs('base').forEach(r => { if (r.vessel === vid && r.item === item && !r.excluido && r.date && (!b || r.date > b.date)) b = r; }); return b; }
+function balUlt(vid, item) { let b = null; recs('base').forEach(r => { if (r.vessel === vid && r.item === item && !r.excluido && !r.nf && r.date && (!b || r.date > b.date)) b = r; }); return b; }
 function balTaxa(vid) {   // h/dia do motor-bomba pelas leituras dos últimos 180 dias
   const L = recs('hor').filter(r => r.vessel === vid && r.pos === 'MB' && !r.excluido).sort((a, b) => a.date < b.date ? -1 : 1); if (L.length < 2) return null;
   const u = L[L.length - 1], a = L.find(r => pD(r.date) >= addM(pD(u.date), -6)) || L[0], d = (pD(u.date) - pD(a.date)) / 864e5; return d >= 7 && u.h > a.h ? (u.h - a.h) / d : null; }

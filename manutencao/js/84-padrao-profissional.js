@@ -11,6 +11,10 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.0', data: '27/10/2026', itens: ['SMF enxuto (padrão): 1 Horímetros → 2 Cronograma → 3 Corretivas → 4 Relatório de preventiva, mais Óleo e Compressão; o resto das telas fica no Modo completo (Administração, só o Supervisor, por aparelho), nada foi apagado',
+    'Cronograma: marcar serviços, copiar o texto da OM para o Sankhya, registrar feito (data, horímetro, nº da OM, quem) ou não feito com motivo (não reinicia o prazo)',
+    'Anexo II simples, uma folha: II-B = relatório de serviço realizado da preventiva (sai ao registrar o feito) · II-A = relatório de serviço realizado da corretiva, com início e liberação',
+    'Relatório de preventiva do mês emitido e congelado (nº RP-AAAA-MM), com serviço × OM para conferência na auditoria'] },
   { v: '2.1', data: '25/10/2026', itens: ['Tela “Comece aqui” no topo do menu (empurradores e balsas): a sequência do trabalho em ciclos — todo dia, chegada ao porto, saída de viagem, todo mês e apoio — com o pendente de cada passo',
     'Faixa de passos no topo das telas da operação: Chegada → Falhas → Programar → Executar → Conferir → Saída, com o passo atual e o pendente'] },
   { v: '2.0', data: '25/10/2026', itens: ['Padrão único das telas: janelas livres (arrastar, redimensionar, Reorganizar) também nas balsas e no Relatório mensal; só a Apresentação mensal segue em tela de slides',

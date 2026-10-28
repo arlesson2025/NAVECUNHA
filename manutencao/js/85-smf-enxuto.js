@@ -1,0 +1,231 @@
+/* ===== SMF enxuto (Supervisor, 27/10/2026: “controle enxuto, sequência lógica, que passe na auditoria e seja simples”) =====
+   Sequência: 1 Horímetros (na chegada) → 2 Cronograma: o que venceu e o que vence no mês → texto da OM para o Sankhya → registrar feito
+   (data, horímetro, nº da OM, quem) ou não feito com motivo → 3 Relatório de preventiva do mês, emitido e congelado.
+   A execução, as fotos e o encerramento ficam na OM do Sankhya; o SMF guarda a ligação serviço × OM (achado de auditoria nº 1).
+   Registros com os tipos que já existem: 'base' (feito; não feito = nf: true, não reinicia o prazo), 'hor' e 'snap' (relatório emitido, tipo 'relprev').
+   O resto do SMF fica escondido, não apagado: “Modo completo neste aparelho” (Administração, só o Supervisor; localStorage smf_modo_completo). */
+'use strict';
+const ENX_MC = 'smf_modo_completo';
+const enxModoCompleto = () => { try { return localStorage.getItem(ENX_MC) === '1'; } catch (e) { return false; } };
+const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador()) && !enxModoCompleto();
+const ENX_OK = ['enx', 'enxhor', 'enxcor', 'enxrel', 'oleo', 'compr', 'cxr', 'admin'];   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
+function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da lista volta para o Cronograma
+  if (!enxuto() || ENX_OK.includes(VIEW)) return;
+  VIEW = 'enx'; ARG = ''; try { history.replaceState(null, '', '#enx'); } catch (e) { }
+}
+function enxNav() {
+  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
+  let v = 0; try { v = enxDados().reduce((a, x) => a + x.venc.length, 0); } catch (e) { }
+  return '<div class="grp-t grp-trab">Manutenção</div>' + it('enxhor', '1 · Horímetros', 'hoje') + it('enx', '2 · Cronograma', 'crono', v) + it('enxcor', '3 · Corretivas', 'omsv2') + it('enxrel', '4 · Relatório de preventiva', 'relm')
+    + '<div class="grp-t">Condição</div>' + it('oleo', 'Óleo', 'oleo') + it('compr', 'Compressão do MCP', 'compr')
+    + '<div class="grp-t grp-apoio">Apoio</div>' + it('admin', 'Administração', 'adm');
+}
+// ---------- dados do cronograma ----------
+const ENX = { v: '', emDia: false };
+const enxServ = t => t.chk || t.item, enxEq = t => EQN[t.eq] || t.eq;
+const enxIv = (t, v, pos) => { const iv = intervalo(t, v, pos); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + (iv.m === 1 ? ' mês' : ' meses') : ''].filter(Boolean).join(' ou ') || '—'; };
+const enxNF = (vid, pos, item) => { let b = null; recs('base').forEach(r => { if (r.nf && r.vessel === vid && r.pos === pos && r.item === item && !r.excluido && (!b || r.date > b.date)) b = r; }); return b; };
+function enxDados() {
+  return S.cfg.frota.filter(v => !foraOp(v)).map(v => { const P = painelVessel(v).filter(x => x.t.kind === 'prog' && !(typeof CRONO_FORA !== 'undefined' && CRONO_FORA.includes(x.t.id)));
+    const g = P.map(x => Object.assign(x, { g: emGrp(v, x) })), hp = mpos(v.id), hr = horAtual(v.id, hp), dias = hr && !hr.est ? Math.floor((hoje() - pD(hr.date)) / 864e5) : null;
+    return { v, P: g, venc: g.filter(x => x.g === 'venc'), mes: g.filter(x => x.g === 'mes'), sem: g.filter(x => x.g === 'sem'), hr, dias }; }); }
+const ENX_GR = { venc: ['p-bad', 'Vencido'], mes: ['p-warn', 'Vence no mês'], sem: ['p-mut', 'Sem histórico'], ok: ['p-ok', 'Em dia'], emb: ['p-ok', 'Em dia'], adi: ['p-ok', 'Em dia'] };
+const enxCab = (tit, sub, bt) => `<div class="cm-v"><div class="vh"><div><h1>${tit}</h1><p>${sub}</p></div><span class="sp"></span>${bt || ''}</div><div class="cm-ws">`;
+// ---------- 2 · Cronograma ----------
+function vEnx() {
+  const D = enxDados(), v = vessel(ENX.v);
+  if (!v) {
+    const nSem = D.reduce((a, x) => a + x.sem.length, 0), ano = hoje().getFullYear(), aprov = D.filter(x => cronoBase(ano, x.v.id)).length;
+    return enxCab('Cronograma', 'O que venceu e o que vence no mês em cada empurrador · abra o empurrador, copie o texto da OM para o Sankhya e registre o que foi feito com o nº da OM', '<button class="mbtn" data-enxreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button>')
+     + `<div class="card"><h2>Resumo</h2><div class="f2-ks">${[['Vencidos', D.reduce((a, x) => a + x.venc.length, 0), 'var(--badt)'], ['Vencem no mês', D.reduce((a, x) => a + x.mes.length, 0), 'var(--warnt)'], ['Sem histórico', nSem, nSem ? 'var(--badt)' : ''], [`Cronograma ${ano} aprovado`, aprov + ' de ' + D.length, aprov < D.length ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>
+       ${nSem ? `<p class="note" style="color:var(--badt)">${nSem} serviço${nSem === 1 ? '' : 's'} sem histórico não vence${nSem === 1 ? '' : 'm'} nunca: registre o último serviço ou defina o marco zero em Administração antes de usar o cronograma de verdade.</p>` : ''}
+       ${aprov < D.length ? `<p class="note">O previsto do ano só fica valendo para a aderência depois de aprovado: abra o <a href="#cxr">Cronograma preventivo</a>, escolha o empurrador e aprove o previsto de ${ano}.</p>` : ''}</div>
+     <div class="card"><h2>Empurradores</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Onde está</th><th class="r">Vencidos</th><th class="r">Vencem no mês</th><th class="r">Sem histórico</th><th>Horímetro do MCP</th><th></th></tr></thead><tbody>
+     ${D.sort((a, b) => b.venc.length - a.venc.length || b.mes.length - a.mes.length).map(x => { const s = situDe(x.v);
+       return `<tr class="click" data-enxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${!s ? '<span class="mut">não informado</span>' : s.st === 'viagem' ? 'em viagem' : 'no porto'}</td><td class="r">${x.venc.length ? `<b class="rl-ruim">${x.venc.length}</b>` : '0'}</td><td class="r">${x.mes.length ? `<b class="rl-at">${x.mes.length}</b>` : '0'}</td><td class="r">${x.sem.length || '0'}</td>
+         <td>${x.hr ? nf(x.hr.h) + ' h · ' + brD(x.hr.date) + (x.dias != null && x.dias > 14 ? ` <span class="pill p-warn">há ${x.dias} dias</span>` : '') : '<span class="pill p-bad">sem leitura</span>'}</td><td><button class="mbtn sm pri" data-enxv="${x.v.id}">Abrir</button></td></tr>`; }).join('')}</tbody></table></div>
+     <p class="note">Vencido e vence no mês pela data ou pelas horas no ritmo do motor (Anexo I). Horímetro com mais de 14 dias deixa os serviços por horas imprecisos: lance em <a href="#enxhor">1 · Horímetros</a>.</p></div></div></div>`;
+  }
+  const x = D.find(y => y.v === v), ord = { venc: 0, mes: 1, sem: 2 }, L = x.P.filter(y => ENX.emDia || ['venc', 'mes', 'sem'].includes(y.g)).sort((a, b) => (ord[a.g] ?? 3) - (ord[b.g] ?? 3) || a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true }));
+  const lin = y => { const nfr = enxNF(v.id, y.pos, y.t.id), k = y.pos + '|' + y.t.id, L0 = y.s.L;
+    return `<tr><td><input type="checkbox" class="enx-ck" value="${k}"></td><td><b>${esc(enxServ(y.t))}</b><div class="note">${esc(enxEq(y.t))} · ${esc(posCurtoE(v, y.pos))}${y.t.prio === 'Crítica' ? ' · <span class="rl-ruim">Crítica</span>' : ''}</div></td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
+      <td class="nowrap">${L0 ? brD(L0.date) + (L0.h != null ? '<div class="note">' + nf(L0.h) + ' h</div>' : '') : '—'}</td><td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div>${nfr && (!L0 || nfr.date > L0.date) ? `<div class="note rl-ruim">não feito em ${brD(nfr.date)}: ${esc(nfr.motivo || '')}</div>` : ''}</td></tr>`; };
+  return enxCab(`Cronograma · ${esc(v.nome)}`, 'Marque os serviços · “Copiar texto da OM” para abrir a OM no Sankhya com a lista · depois “Registrar feito” com o nº dessa OM, ou “Não feito” com o motivo',
+      `<button class="mbtn" data-enxv="">← Frota</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+   + `<div class="card"><h2>Serviços · ${x.venc.length} vencido${x.venc.length === 1 ? '' : 's'} · ${x.mes.length} no mês</h2>
+     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Marcar vencidos e do mês</button><button class="mbtn" data-enxcopiar>📋 Copiar texto da OM</button><button class="mbtn pri" data-enxfeito>✓ Registrar feito</button><button class="mbtn" data-enxnf>Não feito</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> mostrar os em dia</label></div>
+     <div class="tw"><table class="t"><thead><tr><th></th><th>Serviço</th><th>A cada</th><th>Último</th><th>Situação</th></tr></thead><tbody>${L.map(lin).join('') || '<tr><td colspan="5" class="note">Nada vencido nem vencendo no mês.</td></tr>'}</tbody></table></div>
+     <p class="note">Rastreabilidade: o texto copiado vai na OM do Sankhya, e o mesmo nº de OM fica em cada serviço registrado aqui; o relatório lista serviço × OM para conferência. Fotos e encerramento ficam na OM do Sankhya.</p></div>
+   <div class="card"><h2>OMs preventivas registradas</h2>${(() => { const G = enxOMsDe(v.id).slice(0, 12); return G.length ? `<table class="t"><thead><tr><th>OM</th><th>Data</th><th class="r">Serviços</th><th></th></tr></thead><tbody>${G.map(g => `<tr><td><b>${esc(g.om)}</b></td><td>${brD(g.date)}</td><td class="r">${g.n}</td><td><button class="mbtn sm" data-enx2b="${esc(g.om)}">Anexo II-B</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhuma ainda.</p>'; })()}</div></div></div>`;
+}
+const enxSel = () => $$('#main .enx-ck:checked').map(i => { const [pos, item] = i.value.split('|'); return { pos, t: A1M[item] }; }).filter(y => y.t);
+function enxCopiar() {
+  const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços primeiro.');
+  const txt = `PREVENTIVA · ${v.nome} · ${brD(isoD(hoje()))}\nServiços (Anexo I · NP Navecunha 055):\n` + S0.map(y => `- ${enxEq(y.t)} · ${posCurtoE(v, y.pos)}: ${enxServ(y.t)} (a cada ${enxIv(y.t, v, y.pos)})`).join('\n') + '\nRegistrar a execução no SMF com o nº desta OM.';
+  try { navigator.clipboard.writeText(txt).catch(() => { }); } catch (e) { }
+  modal(`<h2>Texto da OM · ${esc(v.nome)}</h2><p class="note">Já copiado. Cole na descrição da OM no Sankhya. Se não colou, selecione e copie daqui.</p><textarea rows="${Math.min(18, S0.length + 4)}" style="width:100%" readonly>${esc(txt)}</textarea><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`, true);
+}
+function enxFeitoModal() {
+  if (!S.session) return loginModal(); const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços feitos.');
+  const hp = [...new Set(S0.filter(y => intervalo(y.t, v, y.pos).h).map(y => posHor(y.pos, y.t, v.id)))];
+  modal(`<h2>Registrar feito · ${esc(v.nome)} · ${S0.length} serviço${S0.length === 1 ? '' : 's'}</h2><p class="note">${S0.map(y => esc(enxServ(y.t)) + ' (' + esc(posCurtoE(v, y.pos)) + ')').join(' · ')}</p>
+   <div class="g"><label class="f s3">Data da execução<input type="date" id="exD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM no Sankhya<input id="exO" inputmode="numeric"></label><label class="f s6">Quem executou<input id="exQ" placeholder="equipe de manutenção, CTF/MFM ou prestador"></label>
+   ${hp.map(p => { const h = horAtual(v.id, p); return `<label class="f s3">Horímetro · ${esc(posCurtoE(v, p))}<input class="exH" data-pos="${p}" inputmode="decimal" value="${h ? h.h : ''}"></label>`; }).join('')}</div>
+   <div class="note" id="exE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="exOk">Registrar</button></div>`, true);
+  $('#exOk').onclick = async () => { const d = $('#exD').value, om = $('#exO').value.replace(/\D/g, ''), quem = $('#exQ').value.trim(), H = {}, E = $('#exE');
+    if (!d || d > isoD(hoje())) return E.textContent = 'Data inválida (não pode ser futura).'; if (om.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya (rastreabilidade).'; if (!quem) return E.textContent = 'Informe quem executou.';
+    for (const i of $$('#modal .exH')) { const h = +i.value.replace(',', '.'), a = horAtual(v.id, i.dataset.pos); if (!(h > 0)) return E.textContent = 'Informe o horímetro de ' + posCurtoE(v, i.dataset.pos) + '.'; if (a && !a.est && a.date <= d && h < a.h) return E.textContent = 'Horímetro de ' + posCurtoE(v, i.dataset.pos) + ' menor que a última leitura (' + nf(a.h) + ' h).'; H[i.dataset.pos] = h; }
+    for (const y of S0) { const L0 = y.s ? y.s.L : ultimoServico(v.id, y.pos, y.t.id); if (L0 && L0.date > d) return E.textContent = enxServ(y.t) + ': já há registro mais novo (' + brD(L0.date) + ').'; }
+    const by = S.session.name, at = Date.now();
+    for (const y of S0) { const hp1 = posHor(y.pos, y.t, v.id); await saveRec({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: H[hp1] ?? null, date: d, om, quem, by, enx: true, createdAt: at }); }
+    for (const [p, h] of Object.entries(H)) await lubHor(v.id, p, h, d, 'OM ' + om);
+    closeModal(); toast(S0.length + ' serviço' + (S0.length === 1 ? '' : 's') + ' registrado' + (S0.length === 1 ? '' : 's') + ' com a OM ' + om + '.'); render(); enxIIB(v.id, om); };
+}
+function enxNFModal() {
+  if (!S.session) return loginModal(); const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços não feitos.');
+  modal(`<h2>Não feito · ${esc(v.nome)}</h2><p class="note">Fica registrado com o motivo (evidência para a auditoria). O serviço continua vencido até ser feito.</p>
+   <div class="g"><label class="f s3">Data<input type="date" id="nfD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM (se houver)<input id="nfO" inputmode="numeric"></label></div>
+   <label class="f">Motivo<select id="nfM"><option value="">Escolha…</option><option>Falta de material</option><option>Empurrador saiu antes do fim da janela</option><option>Sem equipe disponível</option><option>Aguardando terceiro</option><option>Outro</option></select></label><label class="f">Detalhe<input id="nfX"></label>
+   <div class="note" id="nfE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="nfOk">Registrar</button></div>`, true);
+  $('#nfOk').onclick = async () => { const d = $('#nfD').value, m = $('#nfM').value, motivo = m + ($('#nfX').value.trim() ? ': ' + $('#nfX').value.trim() : '');
+    if (!d || !m) return $('#nfE').textContent = 'Informe a data e o motivo.'; const by = S.session.name;
+    for (const y of S0) await saveRec({ id: uid('base'), kind: 'base', vessel: v.id, pos: y.pos, item: y.t.id, h: null, date: d, nf: true, motivo, om: $('#nfO').value.replace(/\D/g, ''), by, enx: true });
+    closeModal(); toast('Registrado como não feito.'); render(); };
+}
+// ---------- 1 · Horímetros ----------
+function vEnxHor() {
+  const V = S.cfg.frota.filter(v => !foraOp(v)), lin = v => posicoes(v).filter(p => p !== 'UN').map((p, i) => { const h = horAtual(v.id, p), d = h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
+    return `<tr>${i ? '<td></td>' : `<td><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td><td>${h ? brD(h.date) : '—'}${d != null && d > 14 ? ` <span class="pill p-warn">há ${d} dias</span>` : ''}</td><td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"></td></tr>`; }).join('');
+  return enxCab('Horímetros', 'Lance na chegada de cada empurrador · os serviços por horas vencem por estas leituras', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + `<div class="card"><h2>Leituras</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Salvar leituras</button></div>
+     <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.map(lin).join('')}</tbody></table></div>
+     <p class="note">Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div></div></div>`;
+}
+async function enxHorSalvar() {
+  if (!S.session) return loginModal(); const d = $('#ehD').value; if (!d || d > isoD(hoje())) return toast('Data inválida.');
+  const L = $$('#main .ehH').filter(i => i.value.trim()), erro = []; let ok = 0;
+  for (const i of L) { const v = vessel(i.dataset.v), p = i.dataset.p, h = +i.value.trim().replace(/\./g, '').replace(',', '.'), a = horAtual(v.id, p), nome = v.nome + ' · ' + posCurtoE(v, p);
+    if (!(h > 0)) { erro.push(nome + ': número inválido'); continue; }
+    if (a && !a.est && a.date <= d && h < a.h) { erro.push(nome + ': menor que a última (' + nf(a.h) + ' h)'); continue; }
+    if (a && !a.est && a.date < d && h - a.h > (pD(d) - pD(a.date)) / 864e5 * 24 + 1) { erro.push(nome + ': mais horas do que o tempo desde a última leitura'); continue; }
+    if (await lubHor(v.id, p, h, d, 'Horímetros')) ok++; }
+  toast(ok + ' leitura' + (ok === 1 ? '' : 's') + ' salva' + (ok === 1 ? '' : 's') + (erro.length ? ' · ' + erro.length + ' recusada' + (erro.length === 1 ? '' : 's') : '') + '.', 6000);
+  if (erro.length) modal(`<h2>Leituras recusadas</h2><ul>${erro.map(e => `<li>${esc(e)}</li>`).join('')}</ul><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`); render(); }
+// ---------- 3 · Relatório de preventiva (mês), emitido e congelado ----------
+const ENXR = { ym: isoD(hoje()).slice(0, 7) };
+function enxRelDados(ym) {
+  const [y, m] = ym.split('-').map(Number), mi = m - 1, hm = hoje().getFullYear() === y ? hoje().getMonth() : y < hoje().getFullYear() ? 12 : -1, V = S.cfg.frota.filter(v => !foraOp(v));
+  const por = V.map(v => { const r = prResumo(v, y, hm, [mi]), a = prResumo(v, y, hm, [...Array(mi + 1).keys()]); return { nome: v.nome, prev: r.tP, ok: r.Ok[mi], late: r.Lt[mi], miss: r.Ms[mi], ad: r.ad, adAno: a.ad, aprov: !!cronoBase(y, v.id) }; });
+  const ini = `${ym}-01`, fim = isoD(new Date(y, m, 0)), B = recs('base').filter(r => r.date >= ini && r.date <= fim && !r.excluido && vessel(r.vessel) && A1M[r.item]);
+  // cópia compacta (códigos; os nomes são montados na impressão): o registro congelado tem de caber numa célula da planilha (50 mil caracteres)
+  const feitos = B.filter(r => !r.nf).sort((a, b) => a.date < b.date ? -1 : 1).map(r => [r.date, r.vessel, r.pos, r.item, r.om || '', r.quem || '']);
+  const nfs = B.filter(r => r.nf).map(r => [r.date, r.vessel, r.item, r.motivo || '']);
+  const D = enxDados(), venc = D.flatMap(x => x.venc.map(y => [x.v.id, y.pos, y.t.id, y.s.txt || ''])), mes = D.flatMap(x => x.mes.map(y => [x.v.id, y.pos, y.t.id, y.s.txt || '']));
+  const T = por.reduce((a, p) => ({ prev: a.prev + p.prev, ok: a.ok + p.ok, late: a.late + p.late, miss: a.miss + p.miss }), { prev: 0, ok: 0, late: 0, miss: 0 }), den = T.ok + T.late + T.miss;
+  return { ym, ref: MESES[mi] + '/' + y, por, T, ad: den ? Math.round(T.ok / den * 100) : null, feitos, nfs, venc, mes, semHist: D.reduce((a, x) => a + x.sem.length, 0), geradoEm: new Date().toLocaleString('pt-BR') };
+}
+function enxRelHTML(R, emi) {
+  const pc = (vid, pos) => { const v = vessel(vid); return v ? posCurtoE(v, pos) : pos; }, sv = id => A1M[id] ? enxServ(A1M[id]) : id;
+  const t = (cab, L, w) => L.length ? `<table class="t"><thead><tr>${cab.map((c, i) => `<th${w && w[i] ? ` style="width:${w[i]}"` : ''}>${c}</th>`).join('')}</tr></thead><tbody>${L.map(l => `<tr>${l.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum.</p>';
+  return `<div class="enx-rel"><p><b>Referência:</b> ${esc(R.ref)} · <b>Aderência no mês:</b> ${R.ad == null ? '—' : R.ad + '%'} (feito no prazo ÷ o que venceu; referência ≥ 90%) · previsto ${R.T.prev} · no prazo ${R.T.ok} · com atraso ${R.T.late} · não feito no prazo ${R.T.miss}${R.semHist ? ` · <span class="rl-ruim">${R.semHist} serviços sem histórico (não entram)</span>` : ''}</p>
+   <h3>1 · Por empurrador</h3><table class="t"><thead><tr><th>Empurrador</th><th class="r">Previsto</th><th class="r">No prazo</th><th class="r">Com atraso</th><th class="r">Não feito</th><th class="r">Aderência mês</th><th class="r">Aderência ano</th><th>Cronograma aprovado</th></tr></thead><tbody>${R.por.map(p => `<tr><td><b>${esc(p.nome)}</b></td><td class="r">${p.prev}</td><td class="r">${p.ok}</td><td class="r">${p.late}</td><td class="r">${p.miss}</td><td class="r">${p.ad == null ? '—' : p.ad + '%'}</td><td class="r">${p.adAno == null ? '—' : p.adAno + '%'}</td><td>${p.aprov ? 'sim' : 'não'}</td></tr>`).join('')}</tbody></table>
+   <h3>2 · Serviços registrados no mês (serviço × OM do Sankhya)</h3>${t(['Data', 'Empurrador', 'Motor', 'Serviço', 'OM', 'Executou'], R.feitos.map(f => [brD(f[0]), vName(f[1]), pc(f[1], f[2]), sv(f[3]), f[4] || '—', f[5]]), ['10%', '12%', '12%', '40%', '9%', '17%'])}
+   <h3>3 · Não feitos, com motivo</h3>${t(['Data', 'Empurrador', 'Serviço', 'Motivo'], R.nfs.map(f => [brD(f[0]), vName(f[1]), sv(f[2]), f[3]]))}
+   <h3>4 · Vencidos na data ${emi ? 'da emissão' : 'de hoje'}</h3>${t(['Empurrador', 'Motor', 'Serviço', 'Situação'], R.venc.map(f => [vName(f[0]), pc(f[0], f[1]), sv(f[2]), f[3]]))}
+   <h3>5 · Vencem no mês</h3>${t(['Empurrador', 'Motor', 'Serviço', 'Situação'], R.mes.map(f => [vName(f[0]), pc(f[0], f[1]), sv(f[2]), f[3]]))}
+   ${emi ? `<p class="note">Emitido em ${esc(emi.em)} por ${esc(emi.por)} · ${esc(emi.num)} · cópia congelada: não muda se os registros forem corrigidos depois.</p><table class="rl-ass"><tr><th>Elaborado por</th><th>Aprovado por</th></tr><tr><td>Supervisor de Manutenção</td><td>Gerência</td></tr><tr><td class="rl-lin">Assinatura e data</td><td class="rl-lin">Assinatura e data</td></tr></table>` : ''}</div>`;
+}
+const enxEmitidos = () => recs('snap').filter(s => s.tipo === 'relprev' && !s.excluido).sort((a, b) => (b.at || 0) - (a.at || 0));
+function vEnxRel() {
+  const R = enxRelDados(ENXR.ym), E = enxEmitidos(), meses = [...Array(12).keys()].map(k => { const d = new Date(hoje().getFullYear(), hoje().getMonth() - k, 1); return isoD(d).slice(0, 7); });
+  return enxCab('Relatório de preventiva', 'Mês a mês: aderência, serviços feitos com o nº da OM, não feitos com motivo, vencidos e o que vence · “Emitir” congela a cópia para assinatura e auditoria',
+     `<select id="erM">${meses.map(m => `<option value="${m}"${m === ENXR.ym ? ' selected' : ''}>${MESES[+m.slice(5) - 1]}/${m.slice(0, 4)}</option>`).join('')}</select><button class="mbtn pri" data-erem>Emitir e imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+   + `<div class="card"><h2>Prévia · ${esc(R.ref)}</h2>${enxRelHTML(R)}</div>
+   <div class="card"><h2>Relatórios emitidos · ${E.length}</h2>${E.length ? `<table class="t"><thead><tr><th>Nº</th><th>Referência</th><th>Emitido em</th><th>Por</th><th></th></tr></thead><tbody>${E.map(s => `<tr><td><b>${esc(s.num)}</b></td><td>${esc(s.dados.ref)}</td><td>${esc(s.em)}</td><td>${esc(s.por)}</td><td><button class="mbtn sm" data-erimp="${s.id}">Imprimir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum emitido ainda.</p>'}</div></div></div>`;
+}
+function enxRelImprimir(s) {
+  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(s.num)}</title><style>@page{size:A4;margin:10mm}${DOC_CAB_CSS}body{font:11px Arial,sans-serif;color:#202124;margin:0}h3{font-size:12px;color:#1F2A44;margin:12px 0 4px}table{width:100%;border-collapse:collapse;margin-bottom:4px}th,td{border:1px solid #CBD5E1;padding:3px 5px;text-align:left;vertical-align:top}th{background:#16244A;color:#fff;font-size:10px}.r{text-align:right}.note{color:#5F6368;font-size:10px}.rl-ruim{color:#C5221F}.rl-ass th{width:50%}.rl-lin{height:34px;vertical-align:bottom;color:#5F6368}tr{page-break-inside:avoid}thead{display:table-header-group}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
+   ${docCab('RELATÓRIO DE MANUTENÇÃO PREVENTIVA', `Empurradores fluviais · ${esc(s.dados.ref)} · ${esc(s.num)}`, 'NP Navecunha 055 · itens 7.3 e 9 · Anexo I')}${enxRelHTML(s.dados, s)}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
+}
+async function enxRelEmitir() {
+  if (!can.admin()) return toast('Só o Supervisor emite o relatório.'); const R = enxRelDados(ENXR.ym), n = enxEmitidos().filter(s => s.dados.ym === R.ym).length;
+  const s = { id: uid('snap'), kind: 'snap', tipo: 'relprev', date: isoD(hoje()), at: Date.now(), num: 'RP-' + R.ym + (n ? '-r' + n : ''), em: new Date().toLocaleString('pt-BR'), por: S.session.name, dados: R };
+  if (JSON.stringify(s).length > 45000) return toast('Relatório grande demais para guardar congelado (limite da planilha). Avise o desenvolvimento.');
+  await saveRec(s); enxRelImprimir(s); render(); }
+// ---------- Modo completo (só o Supervisor, neste aparelho) ----------
+function enxAdminHTML() {
+  if (!can.admin()) return '';
+  return `<div class="card"><h2>Modo do SMF neste aparelho</h2><p class="note">O SMF abre no modo enxuto: Horímetros, Cronograma, Relatório de preventiva, Óleo e Compressão. O modo completo mostra de novo todas as telas antigas (OMs, Anexo II, falhas, FR 027_L, indicadores…). Nada foi apagado.</p>
+    <label class="row" style="gap:8px"><input type="checkbox" data-enxmc${enxModoCompleto() ? ' checked' : ''}> Modo completo neste aparelho</label></div>`;
+}
+// ---------- Anexo II simples = relatório de serviço realizado, uma folha (Supervisor, 27/10/2026) ----------
+// II-B (preventiva): os serviços registrados com o mesmo nº de OM · II-A (corretiva): o registro da corretiva. Sem nº de item, passo a passo nem medição.
+function enxDoc(tit, sub, corpo) {
+  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tit)}</title><style>@page{size:A4;margin:10mm}${DOC_CAB_CSS}body{font:11.5px Arial,sans-serif;color:#202124;margin:0}h3{font-size:12px;color:#1F2A44;margin:12px 0 4px}
+   table{width:100%;border-collapse:collapse;margin-bottom:6px}th,td{border:1px solid #CBD5E1;padding:4px 6px;text-align:left;vertical-align:top}th{background:#16244A;color:#fff;font-size:10.5px}.k td:first-child{width:24%;background:#F4F6F9;font-weight:600}.ass td{height:46px;vertical-align:bottom;color:#5F6368;font-size:10px;width:33%}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
+   ${docCab(tit, sub, 'NP Navecunha 055 · Anexo II · Rev. 00')}${corpo}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close(); }
+const enxAss = (a, b, c) => `<h3>Assinaturas</h3><table class="ass"><tr><th>${a}</th><th>${b}</th><th>${c}</th></tr><tr><td>Nome, assinatura e data</td><td>Nome, assinatura e data</td><td>Nome, assinatura e data</td></tr></table>`;
+const enxK = L => `<table class="k">${L.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>`;
+function enxIIB(vid, om) {
+  const v = vessel(vid), B = recs('base').filter(r => r.vessel === vid && r.om === om && !r.excluido && A1M[r.item]); if (!B.length) return toast('Nenhum serviço com a OM ' + om + '.');
+  const F = B.filter(r => !r.nf), N = B.filter(r => r.nf), d = F.concat(N).map(r => r.date).sort().pop(), hs = [...new Set(F.filter(r => r.h != null).map(r => posCurtoE(v, posHor(r.pos, A1M[r.item], vid)) + ': ' + nf(r.h) + ' h'))];
+  enxDoc('ANEXO II-B · RELATÓRIO DE SERVIÇO REALIZADO · PREVENTIVA', `${esc(v.nome)} · OM ${esc(om)}`,
+    enxK([['Empurrador', esc(v.nome)], ['OM (Sankhya)', esc(om)], ['Data', brD(d)], ['Horímetro', esc(hs.join(' · ') || '—')], ['Executado por', esc([...new Set(F.map(r => r.quem).filter(Boolean))].join(', ') || '—')]])
+    + `<h3>Serviços realizados · ${F.length}</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th></tr></thead><tbody>${F.map(r => `<tr><td>${esc(enxEq(A1M[r.item]))} · ${esc(posCurtoE(v, r.pos))}</td><td>${esc(enxServ(A1M[r.item]))}</td></tr>`).join('')}</tbody></table>`
+    + (N.length ? `<h3>Não realizados · ${N.length}</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th><th style="width:30%">Motivo</th></tr></thead><tbody>${N.map(r => `<tr><td>${esc(enxEq(A1M[r.item]))}</td><td>${esc(enxServ(A1M[r.item]))}</td><td>${esc(r.motivo || '')}</td></tr>`).join('')}</tbody></table>` : '')
+    + '<h3>Observações</h3><table><tr><td style="height:44px"></td></tr></table>' + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
+}
+function enxIIA(o) {
+  const v = vessel(o.vessel), dt = s => s ? brD(String(s).slice(0, 10)) + (String(s).length > 10 ? ' ' + String(s).slice(11, 16) : '') : '—';
+  enxDoc('ANEXO II-A · RELATÓRIO DE SERVIÇO REALIZADO · CORRETIVA', `${esc(v ? v.nome : o.vessel)} · OM ${esc(o.num || '—')}`,
+    enxK([['Empurrador', esc(v ? v.nome : o.vessel)], ['OM (Sankhya)', esc(o.num || '—')], ['Classe', esc(o.classe || '—')], ['Sistema / equipamento', esc([o.sistema, o.equip].filter(Boolean).join(' · ') || '—')], ['Início do reparo', dt(o.abertura)], ['Liberação', dt(o.liberacao)], ['Executado por', esc(o.execn || '—')]])
+    + `<h3>O que aconteceu</h3><table><tr><td style="height:40px">${esc(o.descricao || '')}</td></tr></table><h3>O que foi feito</h3><table><tr><td style="height:60px">${esc(o.servicos || '')}</td></tr></table><h3>Observações</h3><table><tr><td style="height:36px">${esc(o.obsEnx || '')}</td></tr></table>`
+    + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
+}
+// OMs preventivas registradas de um empurrador (para reimprimir o II-B)
+const enxOMsDe = vid => { const G = {}; recs('base').forEach(r => { if (r.vessel === vid && r.om && !r.excluido && A1M[r.item]) { const g = G[r.om] = G[r.om] || { om: r.om, date: r.date, n: 0 }; g.n++; if (r.date > g.date) g.date = r.date; } }); return Object.values(G).sort((a, b) => a.date < b.date ? 1 : -1); };
+// ---------- Corretivas: registro de uma tela, com início e liberação (MTTR) e o Anexo II-A ----------
+function vEnxCor() {
+  const V = S.cfg.frota.filter(v => !foraOp(v)), L = oms().filter(o => o.tipo === 'C' && !o.excluido).sort((a, b) => (b.abertura || '') < (a.abertura || '') ? -1 : 1).slice(0, 40), agora = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+  return enxCab('Corretivas', 'Registre a corretiva feita: o que aconteceu, o que foi feito, início e liberação · sai o Anexo II-A de uma folha · a OM e as fotos ficam no Sankhya', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + `<div class="card"><h2>Registrar corretiva</h2><div class="g">
+      <label class="f s2">Empurrador<select id="ecV">${V.map(v => `<option value="${v.id}">${esc(v.nome)}</option>`).join('')}</select></label><label class="f s2">Nº da OM (Sankhya)<input id="ecO" inputmode="numeric"></label>
+      <label class="f s2">Classe<select id="ecC">${['Crítica', 'Alta', 'Média', 'Baixa'].map(c => `<option>${c}</option>`).join('')}</select></label>
+      <label class="f s3">Sistema<select id="ecS">${SISTEMAS.map(s => `<option>${esc(s)}</option>`).join('')}</select></label><label class="f s3">Equipamento<input id="ecE" placeholder="ex.: bomba de água salgada do MCA"></label>
+      <label class="f s3">Início do reparo<input type="datetime-local" id="ecI" max="${agora}"></label><label class="f s3">Liberação<input type="datetime-local" id="ecL" max="${agora}"></label>
+      <label class="f s6">O que aconteceu<textarea id="ecD" rows="2"></textarea></label><label class="f s6">O que foi feito<textarea id="ecF" rows="2"></textarea></label>
+      <label class="f s3">Executado por<input id="ecQ" placeholder="equipe de manutenção ou prestador"></label><label class="f s3">Observação<input id="ecX"></label></div>
+     <div class="note" id="ecErr" style="color:var(--badt)"></div><div class="row end"><button class="mbtn pri" data-ecsalvar>Registrar e imprimir o Anexo II-A</button></div></div>
+   <div class="card"><h2>Corretivas registradas</h2><div class="tw"><table class="t"><thead><tr><th>Início</th><th>Empurrador</th><th>OM</th><th>Equipamento</th><th>O que aconteceu</th><th>Classe</th><th class="r">Parado</th><th></th></tr></thead><tbody>
+   ${L.map(o => { const h = o.abertura && o.liberacao ? Math.max(0, (new Date(o.liberacao) - new Date(o.abertura)) / 36e5) : null; return `<tr><td class="nowrap">${brD(String(o.abertura || '').slice(0, 10))}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.num || '—')}</td><td>${esc(o.equip || o.sistema || '—')}</td><td>${esc(String(o.descricao || '').slice(0, 90))}</td><td>${esc(o.classe || '—')}</td><td class="r">${h == null ? '<span class="mut">em aberto</span>' : nf(h, 1) + ' h'}</td><td><button class="mbtn sm" data-ec2a="${o.id}">Anexo II-A</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Nenhuma corretiva registrada.</td></tr>'}</tbody></table></div></div></div></div>`;
+}
+async function enxCorSalvar() {
+  if (!S.session) return loginModal(); const g = id => $('#' + id).value.trim(), E = $('#ecErr'), num = g('ecO').replace(/\D/g, ''), ini = g('ecI'), lib = g('ecL');
+  if (num.length < 3) return E.textContent = 'Informe o nº da OM do Sankhya.'; if (oms().some(o => o.num === num)) return E.textContent = 'A OM ' + num + ' já está registrada.';
+  if (!ini || !lib) return E.textContent = 'Informe o início e a liberação (data e hora).'; if (lib < ini) return E.textContent = 'A liberação não pode ser antes do início.';
+  if (!g('ecD') || !g('ecF') || !g('ecQ')) return E.textContent = 'Preencha o que aconteceu, o que foi feito e quem executou.';
+  const o = { id: uid('om'), kind: 'om', tipo: 'C', num, vessel: $('#ecV').value, pos: 'UN', status: 'encerrada', classe: $('#ecC').value, sistema: $('#ecS').value, equip: g('ecE'), descricao: g('ecD'), servicos: g('ecF'), execn: g('ecQ'), obsEnx: g('ecX'),
+    abertura: ini, deteccao: ini, inicio: ini, termino: lib, liberacao: lib, interd: 'N/A', resultado: 'Conforme', fotos: [], fechadoAt: Date.now(), aprovBy: S.session.name, aprovAt: isoD(hoje()), enx: true, hist: [{ at: Date.now(), by: S.session.name, ev: 'Registrada no modo enxuto' }] };
+  await saveRec(o); toast('Corretiva ' + num + ' registrada.'); enxIIA(o); render(); }
+// ---------- telas e cliques ----------
+const enxAfter = k => () => { const m = $('#main');
+  m.onclick = async e => { const t = e.target.closest('[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-ehsalvar],[data-erem],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a]'); if (!t) return; const d = t.dataset;
+    if (d.enxv !== undefined) { ENX.v = d.enxv; return render(); }
+    if (d.enx2b !== undefined) return enxIIB(ENX.v, d.enx2b);
+    if (d.ecsalvar !== undefined) return enxCorSalvar();
+    if (d.ec2a !== undefined) { const o = S.recs.get(d.ec2a); if (o) enxIIA(o); return; }
+    if (d.enxcopiar !== undefined) return enxCopiar();
+    if (d.enxfeito !== undefined) return enxFeitoModal();
+    if (d.enxnf !== undefined) return enxNFModal();
+    if (d.enxtodos !== undefined) { const D = enxDados().find(x => x.v.id === ENX.v), ks = new Set([...D.venc, ...D.mes].map(y => y.pos + '|' + y.t.id)); $$('#main .enx-ck').forEach(i => { i.checked = ks.has(i.value); }); return; }
+    if (d.ehsalvar !== undefined) return enxHorSalvar();
+    if (d.erem !== undefined) return enxRelEmitir();
+    if (d.erimp !== undefined) { const s = S.recs.get(d.erimp); if (s) enxRelImprimir(s); } };
+  m.onchange = e => { if (e.target.id === 'enxEmDia') { ENX.emDia = e.target.checked; render(); } if (e.target.id === 'erM') { ENXR.ym = e.target.value; render(); } };
+  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'enx' && ENX.v ? '1' : '') + '_lay', '[data-enxreset]'); };
+Object.assign(VX, { enx: vEnx, enxhor: vEnxHor, enxcor: vEnxCor, enxrel: vEnxRel }); ['enx', 'enxhor', 'enxcor', 'enxrel'].forEach(k => { AFTER[k] = enxAfter(k); });
+Object.assign(NP_TAG, { enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9' });
+document.addEventListener('change', e => { const c = e.target.closest('[data-enxmc]'); if (!c) return; try { localStorage.setItem(ENX_MC, c.checked ? '1' : '0'); } catch (er) { } toast(c.checked ? 'Modo completo ligado neste aparelho.' : 'Modo enxuto.'); render(); });
+{ const st = document.createElement('style'); st.textContent = `.enx-rel h3{font-size:14px;margin:14px 0 6px;color:#1F2A44}.enx-ck{width:18px;height:18px}`; document.head.appendChild(st); }

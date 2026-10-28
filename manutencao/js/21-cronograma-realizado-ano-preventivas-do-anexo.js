@@ -7,7 +7,7 @@
 let CXI = null;   // índices montados uma vez por cálculo
 function cxIndice() {
   const ev = {}, hor = {}, add = (k, o) => (ev[k] = ev[k] || []).push(o);
-  recs('base').forEach(b => { if (b.date) add(b.vessel + '|' + b.pos + '|' + b.item, { date: b.date, h: b.h == null || b.h === '' ? null : +b.h, src: 'Último serviço registrado' }); });
+  recs('base').forEach(b => { if (b.date && !b.nf && !b.excluido) add(b.vessel + '|' + b.pos + '|' + b.item, { date: b.date, h: b.h == null || b.h === '' ? null : +b.h, src: 'Último serviço registrado' }); });
   oms().forEach(o => { if (o.tipo === 'P' && o.status === 'encerrada') (o.items || []).forEach(it => add(o.vessel + '|' + o.pos + '|' + it, { date: o.dreal || isoD(new Date(o.fechadoAt || o.updatedAt)), h: o.hreal == null || o.hreal === '' ? null : +o.hreal, src: 'OM ' + o.num, num: o.num })); });
   recs('lub').forEach(r => { if (r.tipo === 'fr049') (r.eq || []).forEach(q => { if (q.status === 'T') (q.itens || []).forEach(it => add(r.vessel + '|' + q.pos + '|' + it, { date: r.date, h: q.hr == null || q.hr === '' ? null : +q.hr, src: 'FR 049_B ' + (r.om || ''), num: r.om })); }); });
   if (typeof corrRefeitos === 'function') oms().forEach(o => { if (o.tipo === 'C' && o.status === 'encerrada' && !o.excluido) corrRefeitos(o).forEach(x => add(o.vessel + '|' + x.pos + '|' + x.id, { date: x.date, h: x.h, src: 'Corretiva OM ' + o.num + ' (reinício)', num: o.num, reset: true })); });   // corretiva que refez o serviço: só reinicia a contagem

@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '2.1';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.0';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -242,7 +242,7 @@ function ultimoServico(vid, pos, item) {   // num lugar só (24/10/2026): antes 
 function ultServBase(vid, pos, itemId) {
   let best = null;
   const cand = (h, date, src) => { if (date && (!best || date > best.date)) best = { h: h === '' || h === null || h === undefined ? null : +h, date, src }; };
-  recs('base').forEach(b => { if (b.vessel === vid && b.pos === pos && b.item === itemId) cand(b.h, b.date, 'base'); });
+  recs('base').forEach(b => { if (b.vessel === vid && b.pos === pos && b.item === itemId && !b.nf && !b.excluido) cand(b.h, b.date, 'base'); });   // nf = não feito (modo enxuto): não reinicia o prazo
   oms().forEach(o => { if (o.tipo === 'P' && o.status === 'encerrada' && o.vessel === vid && o.pos === pos && (o.items || []).includes(itemId)) cand(o.hreal, o.dreal || isoD(new Date(o.fechadoAt || o.updatedAt)), 'om:' + o.num); });
   recs('lub').forEach(r => { if (r.tipo === 'fr049' && r.vessel === vid) (r.eq || []).forEach(q => { if (q.status === 'T' && q.pos === pos && (q.itens || []).includes(itemId)) cand(q.hr, r.date, 'fr049:' + r.om); }); });   // troca registrada no FR 049_B
   if (itemId === '1.1.29') recs('laudo').forEach(r => { if (r.vessel === vid && r.pos === pos && (!best || r.date > best.date)) best = { h: r.h != null && r.h !== '' ? +r.h : null, date: r.date, src: 'laudo:' + (r.num || '') }; });   // laudo de óleo do MCP
@@ -362,7 +362,7 @@ function kpis() {
   const fotosSem = kpiFotos(sem, new Date(d.getTime() + 1));
   const qs = []; for (let i = 3; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i * 3, 1); const t = trimestre(x); qs.push({ y: t.y, q: t.q, lab: 'T' + (t.q + 1) + '/' + String(t.y).slice(2) }); }
   const pred = qs.map(x => { const r = kpiPreditivo(x.y, x.q); return r ? r.v : null; });
-  const snaps = recs('snap').sort((a, b) => a.date < b.date ? -1 : 1).slice(-8);
+  const snaps = recs('snap').filter(s => !s.tipo).sort((a, b) => a.date < b.date ? -1 : 1).slice(-8);
   const bk = kpiBacklog();
   return { ms, disp, mttr, mtbf, fotos, fotosSem, qs, pred, snaps, bk, mtbfNow: kpiMTBF(d) };
 }
@@ -487,6 +487,7 @@ function renderNav() {   // menu num lugar só (24/10/2026): antes eram 6 camada
     return `<a href="#${ULT[s.id] || s.views[0][0]}" class="${s === cur ? 'on' : ''}">${ico(s.id)}<span>${s.nome}</span>${n ? `<span class="n${red ? '' : ' blue'}">${n}</span>` : ''}</a>`; };
   const nav = document.getElementById('nav'), frSel = `<label class="fr-tipo"><span>Frota</span><select id="frTipo">${Object.entries(FROTA_TIPOS).map(([k, n]) => `<option value="${k}"${k === FROTA_TIPO ? ' selected' : ''}>${n}</option>`).join('')}</select></label>`;
   if (FROTA_TIPO === 'bal' && !ehOperador() && typeof balNav === 'function') { nav.innerHTML = frSel + balNav(); return; }   // frota de balsas: menu próprio (js/83)
+  if (typeof enxuto === 'function' && enxuto()) { nav.innerHTML = frSel + enxNav(); return; }   // modo enxuto (js/85)
   nav.innerHTML = frSel + '<div class="grp-t grp-trab">Operação</div>' + SECOES.filter(s => !s.cfg).map(item).join('') + '<div class="grp-t">Controle</div>' + SECOES.filter(s => s.cfg).map(item).join('');
   if (solta && h) { ULT[h.id] = u0; const a1 = document.querySelector('#nav > a'); if (a1) { a1.setAttribute('href', '#' + (u0 || h.views[0][0])); a1.classList.remove('on'); } }
   const A = [...nav.querySelectorAll(':scope > a')], L = SECOES.filter(s => !s.cfg).concat(SECOES.filter(s => s.cfg));
@@ -521,6 +522,7 @@ function render() {
   if (!ehOperador() && typeof BAL_VIEWS !== 'undefined') { const ehBal = BAL_VIEWS.some(v => v[0] === VIEW);   // frota de balsas (js/83)
     if (ehBal && FROTA_TIPO !== 'bal') { FROTA_TIPO = 'bal'; try { localStorage.setItem('smf_frota_tipo', 'bal'); } catch (e) { } }
     else if (!ehBal && FROTA_TIPO === 'bal' && !['admin', 'bib'].includes(VIEW)) { VIEW = 'bal'; ARG = ''; try { history.replaceState(null, '', '#bal'); } catch (e) { } } }
+  if (typeof enxRota === 'function') enxRota();   // modo enxuto: só as telas dele (js/85)
   if (ehOperador() && VIEW !== 'rotina') { VIEW = 'rotina'; ARG = ''; if (location.hash !== '#rotina') history.replaceState(null, '', '#rotina'); }   // perfil Operador só vê Chegada e saída
   const mesma = VIEW === RENDER_ULTV, y = scrollY;   // re-render da mesma tela: volta para onde estava a rolagem
   if (S.cfg && S.cfg.frota) { placaInit(); foraInit(); }
@@ -1457,7 +1459,7 @@ function vAdmin() {
     ${temExemplo() ? `<button class="mbtn bad" data-act="limparEx" ${a ? '' : 'disabled'}>Limpar dados de exemplo</button>` : `<button class="mbtn" data-act="carregarEx" ${a ? '' : 'disabled'}>Carregar dados de exemplo</button>`}
     <button class="mbtn" data-act="exportar">⬇ Cópia de segurança (JSON)</button><label class="mbtn" style="position:relative" ${a ? '' : 'onclick="toast(\'Entre como Supervisor (botão Entrar, embaixo à esquerda) para importar.\')"'}>⬆ Importar / restaurar (JSON)<input type="file" id="adImp" accept=".json,application/json,text/plain,*/*" style="position:absolute;inset:0;opacity:0" ${a ? '' : 'disabled'}></label>
     <button class="mbtn" data-act="instalar" id="btnInstall" ${window._bip ? '' : 'hidden'}>📲 Instalar app</button></div>
-    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML() + (typeof admMenuHTML === 'function' ? admMenuHTML() : '') + (typeof versoesHTML === 'function' ? versoesHTML() : '');   /* fora de operação e marco zero ficam nos blocos deles */
+    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML() + (typeof admMenuHTML === 'function' ? admMenuHTML() : '') + (typeof enxAdminHTML === 'function' ? enxAdminHTML() : '') + (typeof versoesHTML === 'function' ? versoesHTML() : '');   /* fora de operação e marco zero ficam nos blocos deles */
 }
 AFTER.admin = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'adQ') { ADM.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#adQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 350); } };
