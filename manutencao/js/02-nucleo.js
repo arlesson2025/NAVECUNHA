@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.27';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.28';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -272,6 +272,10 @@ function situacao(v, pos, t, viagemH) {
   const hp = posHor(pos, t, v.id), hr = horAtual(v.id, hp), cur = hr ? hr.h : null;
   const L = ultimoServico(v.id, pos, t.id);
   if (!L) return { st: 'sem', txt: 'Sem último serviço registrado', cur, hp };
+  // último serviço com horímetro acima da leitura atual (digitação, horímetro de outro motor ou horímetro trocado): a conta daria “faltam 9.600 h” e o item sumiria
+  // do cronograma; fica “sem referência” com o aviso até ser corrigido em 1.1 Horímetros (SMF 3.28). Tolerância: serviço lançado depois da última leitura (dias × 24 h)
+  if (iv.h && L.h !== null && L.h !== undefined && cur !== null && hr && !hr.est && L.h - cur > Math.max(24, ((pD(L.date) - pD(hr.date)) / 864e5) * 24 + 24))
+    return { st: 'sem', inc: true, txt: `Horímetro inconsistente: serviço de ${brD(L.date)} com ${nf(L.h)} h, leitura atual ${nf(cur)} h`, cur, hp, L };
   viagemH = viagemH === undefined ? viagemDe(v) : viagemH;
   let st = 'ok', txt = [], alvoH = null, alvoD = null, rest = null;
   const ord = { ok: 0, viag: 1, venc: 2 }, up = s => { if (ord[s] > ord[st]) st = s; };
