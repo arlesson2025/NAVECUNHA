@@ -22,10 +22,14 @@ function rmeHorIdx() {
 // soma leitura a leitura: só conta o que subiu e coube no tempo (horas ≤ dias × 24); leitura que desce ou salta demais (horímetro trocado,
 // registro antigo fora de ordem) não soma e é marcada; a leitura “última − primeira” dava 0 h ou o horímetro inteiro com um registro desses
 function rmeHoras(I, vid, pos, ini, fim) {
-  const L = I[vid + '|' + pos] || []; let ant = null, h = 0, n = 0, inc = false, ult = null;
-  L.forEach(r => { if (r.date < ini) { ant = r; return; } if (r.date > fim) return; ult = r; n++;
-    if (ant) { const d = r.h - ant.h, lim = Math.max(1, (pD(r.date) - pD(ant.date)) / 864e5) * 24 + 1; if (d >= 0 && d <= lim) h += d; else inc = true; }
-    ant = r; });
+  // ant = última leitura coerente; alt = leitura incoerente pendente (se a seguinte casar com ela, foi horímetro trocado e a conta segue dela;
+  // se casar com ant, a incoerente era digitação errada e é só ignorada — antes ela derrubava também a leitura certa seguinte)
+  const L = I[vid + '|' + pos] || []; let ant = null, alt = null, h = 0, n = 0, inc = false, ult = null;
+  const casa = (a, r) => { if (!a) return null; const d = r.h - a.h, lim = Math.max(1, (pD(r.date) - pD(a.date)) / 864e5) * 24 + 1; return d >= 0 && d <= lim ? d : null; };
+  L.forEach(r => { if (r.date > fim) return; const dentro = r.date >= ini; if (dentro) { ult = r; n++; }
+    if (!ant) { ant = r; return; }
+    let d = casa(ant, r); if (d == null && alt) d = casa(alt, r);
+    if (d != null) { if (dentro) h += d; ant = r; alt = null; } else { if (dentro) inc = true; alt = r; } });
   if (!n) return { h: 0, sem: true, tot: ant ? ant.h : null };
   return { h: Math.round(h * 10) / 10, parcial: !L.some(r => r.date < ini), inc, tot: ult.h };
 }
@@ -116,7 +120,6 @@ function rmeDados(ini, fim) {
 // ---------- textos e peças do documento ----------
 const rmeP = v => v == null ? '—' : Math.round(v) + '%';
 const rmeH = (v, d) => v == null ? '—' : nf(v, d == null ? 0 : d) + ' h';
-const rmeVar = (a, b, maior) => { if (a == null || b == null) return '—'; const d = a - b; if (Math.abs(d) < 0.05) return '='; const bom = maior == null ? null : maior ? d > 0 : d < 0; return `<span style="color:${bom == null ? '#3C4043' : bom ? '#188038' : '#C5221F'}">${d > 0 ? '▲' : '▼'} ${nf(Math.abs(d), Math.abs(d) < 10 && d % 1 ? 1 : 0)}</span>`; };
 // gráfico do relatório no desenho do Anexo II: barras finas azul-marinho, linhas finas; acum: 'soma' (acumulado, eixo da direita) ou 'pareto' (% acumulado)
 function rmeGraf(L, o) {
   o = o || {}; const E0 = 40, n = L.length, longo = L.some(x => String(x[0]).length > 6), soma = o.acum === 'soma', gw = longo ? 64 : 44, W = E0 + (o.acum === 'pareto' ? 46 : 12) + n * gw, H = longo ? 236 : soma ? 226 : 210, E = 40, D = o.acum === 'pareto' ? 46 : 12, T = 22, B = longo ? 46 : soma ? 40 : 26;
