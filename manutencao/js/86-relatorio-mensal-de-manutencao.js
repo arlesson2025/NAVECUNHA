@@ -19,11 +19,15 @@ function rmeHorIdx() {
   const I = {}; recs('hor').forEach(r => { if (r.est || r.excluido || r.h == null) return; (I[r.vessel + '|' + r.pos] = I[r.vessel + '|' + r.pos] || []).push(r); });
   Object.values(I).forEach(L => L.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.h - b.h)); return I;
 }
+// soma leitura a leitura: só conta o que subiu e coube no tempo (horas ≤ dias × 24); leitura que desce ou salta demais (horímetro trocado,
+// registro antigo fora de ordem) não soma e é marcada; a leitura “última − primeira” dava 0 h ou o horímetro inteiro com um registro desses
 function rmeHoras(I, vid, pos, ini, fim) {
-  const L = I[vid + '|' + pos] || []; let antes = null, ult = null, pri = null;
-  L.forEach(r => { if (r.date < ini) antes = r; else if (r.date <= fim) { if (!pri) pri = r; ult = r; } });
-  if (!ult) return { h: 0, sem: true, tot: antes ? antes.h : null };
-  const b = antes || pri; return { h: Math.max(0, Math.round((ult.h - b.h) * 10) / 10), parcial: !antes, tot: ult.h };
+  const L = I[vid + '|' + pos] || []; let ant = null, h = 0, n = 0, inc = false, ult = null;
+  L.forEach(r => { if (r.date < ini) { ant = r; return; } if (r.date > fim) return; ult = r; n++;
+    if (ant) { const d = r.h - ant.h, lim = Math.max(1, (pD(r.date) - pD(ant.date)) / 864e5) * 24 + 1; if (d >= 0 && d <= lim) h += d; else inc = true; }
+    ant = r; });
+  if (!n) return { h: 0, sem: true, tot: ant ? ant.h : null };
+  return { h: Math.round(h * 10) / 10, parcial: !L.some(r => r.date < ini), inc, tot: ult.h };
 }
 // aderência (mesma conta do Cronograma) nos meses que o intervalo cobre
 let RME_PRM = { n: -1, m: {} };
@@ -64,7 +68,7 @@ function rmeDados(ini, fim) {
   const N = { per: rmeNums(V, I, ini, fim), ano: rmeNums(V, I, iniA, fim), ant: rmeNums(V, I, iniP, fimP) };
   const meses = [...Array(mf + 1).keys()].map(m => [isoD(new Date(y, m, 1)), isoD(new Date(Math.min(+new Date(y, m + 1, 0), +pD(fim))))]);
   // 2 · operação: horas por motor (período, ano, horímetro total) e horas de MCP por mês
-  const hor = V.map(v => ({ v: v.id, M: rmeMot(v).map(p => { const a = rmeHoras(I, v.id, p, ini, fim), b = rmeHoras(I, v.id, p, iniA, fim); return [p, a.h, b.h, a.tot, a.sem ? 1 : a.parcial ? 2 : 0]; }),
+  const hor = V.map(v => ({ v: v.id, M: rmeMot(v).map(p => { const a = rmeHoras(I, v.id, p, ini, fim), b = rmeHoras(I, v.id, p, iniA, fim); return [p, a.h, b.h, a.tot, a.sem ? 1 : a.inc || b.inc ? 3 : a.parcial ? 2 : 0]; }),
     mes: meses.map(([a, b]) => Math.round(mcpPos(v).reduce((s, p) => s + rmeHoras(I, v.id, p, a, b).h, 0))) }));
   // 3 · preventiva
   const B = recs('base').filter(r => !r.excluido && !r.bal && r.date >= iniA && r.date <= fim && vessel(r.vessel) && A1M[r.item]), noP = r => r.date >= ini;
@@ -146,11 +150,14 @@ function rmeSecoes(R, plano) {
     <p class="fo">Período anterior: ${brD(rmeDia(R.ini, -(Math.round((pD(R.fim) - pD(R.ini)) / 864e5) + 1)))} a ${brD(rmeDia(R.ini, -1))} (mesmo número de dias). Aderência = feito no prazo ÷ o que venceu. Disponibilidade = horas sem corretiva em andamento ÷ horas do período × nº de empurradores. MTTR = início do reparo até a liberação.</p>
     <h3>1.3 Principais constatações</h3><ol class="cc">${rmeConclusoes(R).map(s => `<li>${s}</li>`).join('')}</ol>`]);
   // 2 · operação
-  const linH = R.hor.flatMap(x => x.M.map((m, i) => [i ? '' : `<b>${V(x.v)}</b>`, pc(x.v, m[0]), m[4] === 1 ? '0 h <span class="mut">· sem leitura</span>' : rmeH(m[1]) + (m[4] === 2 ? ' <span class="mut">· desde a 1ª leitura</span>' : ''), rmeH(m[2]), m[3] == null ? '—' : nf(m[3]) + ' h']));
+  const pil = L => `<div class="mr">${L.map(x => `<div>${x}</div>`).join('')}</div>`, obs = m => m[4] === 1 ? 'sem leitura' : m[4] === 3 ? 'leitura incoerente fora da soma' : m[4] === 2 ? 'desde a 1ª leitura' : '';
+  const linH = R.hor.map(x => { const mc = x.M.filter(m => isMcp(m[0])), s = (L, k) => L.reduce((t, m) => t + (m[k] || 0), 0);
+    return [`<b>${V(x.v)}</b>`, pil(x.M.map(m => pc(x.v, m[0])).concat(['<b>Total MCP</b>'])), pil(x.M.map(m => rmeH(m[1])).concat([`<b>${rmeH(s(mc, 1))}</b>`])), pil(x.M.map(m => rmeH(m[2])).concat([`<b>${rmeH(s(mc, 2))}</b>`])),
+      pil(x.M.map(m => m[3] == null ? '—' : nf(m[3]) + ' h').concat(['&nbsp;'])), pil(x.M.map(m => obs(m) ? `<span class="mut">${obs(m)}</span>` : '&nbsp;').concat(['&nbsp;']))]; });
   const totMes = R.mesLab.map((l, i) => [l, R.hor.reduce((s, x) => s + x.mes[i], 0)]);
   S1.push([2, 'Operação da frota', `<p>Horas operadas por motor, pela diferença entre as leituras de horímetro (NP 055 5.5.1). Motor sem leitura no período aparece com 0 h e o aviso “sem leitura”; o horímetro total é a última leitura até ${brD(R.fim)}.</p>
     <h3>2.1 Horas de motores principais da frota, mês a mês · ${R.ano}</h3>${rmeGraf(totMes, { acum: 'soma', leg: 'horas no mês' })}${rmeAn(`a frota somou ${nf(p.hMcp)} h de MCP no período e <b>${nf(a.hMcp)} h acumuladas no ano</b> (linha laranja)${totMes.filter(t => t[1]).length > 1 ? `; média de ${nf(a.hMcp / totMes.filter(t => t[1]).length)} h nos ${totMes.filter(t => t[1]).length} meses com leitura` : ''}.`)}${rmeFonte('leituras de horímetro (SMF · 1 Horímetros).')}
-    <h3>2.2 Horas por empurrador e por motor</h3>${rmeTab(['Empurrador', 'Motor', 'No período', 'Acumulado no ano', 'Horímetro total'], linH, ['22%', '18%', '24%', '18%', '18%'], 'qb')}
+    <h3>2.2 Horas por empurrador e por motor</h3>${rmeTab(['Empurrador', 'Motor', 'No período', 'Acumulado no ano', 'Horímetro total', 'Observação'], linH, ['13%', '19%', '13%', '15%', '15%', '25%'], 'qb hv')}
     <h3>2.3 Horas de MCP por mês · ${R.ano}</h3>${rmeTab(['Empurrador', ...R.mesLab, 'Ano'], R.hor.map(x => [`<b>${V(x.v)}</b>`, ...x.mes.map(h => h ? nf(h) : '0'), `<b>${nf(x.mes.reduce((s, h) => s + h, 0))}</b>`]).concat([['<b>Frota</b>', ...totMes.map(t => `<b>${nf(t[1])}</b>`), `<b>${nf(totMes.reduce((s, t) => s + t[1], 0))}</b>`]]), null, 'qb sm')}`]);
   // 3 · preventiva
   const G = {}; R.feitos.forEach(f => { const k = f[1] + '|' + f[4]; const g = G[k] = G[k] || { d: f[0], v: f[1], om: f[4], q: new Set(), E: {} }; if (f[0] > g.d) g.d = f[0]; if (f[5]) g.q.add(f[5]); const t = A1M[f[3]], e = (t ? enxEq(t) : '') + ' (' + pc(f[1], f[2]) + ')'; (g.E[e] = g.E[e] || []).push(sv(f[3])); });
@@ -200,6 +207,8 @@ const RME_CSS = `@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-co
  .cp .mi{flex:1;padding:22mm 16mm 0}.cp .t1{font-size:34px;font-weight:700;color:#1F2A44;line-height:1.1}.cp .t2{font-size:20px;color:#1F2A44;margin-top:10px}
  .cp .bd2{display:flex;gap:12px;align-items:center;margin-top:16mm}.cp .bd2 span{background:#1F2A44;color:#fff;font-weight:700;font-size:11px;padding:4px 10px}.cp .bd2 b{font-size:14px;color:#1F2A44;font-weight:400}.cp .bd2 small{display:block;font-size:10px;color:#5F6B7A}
  .cp .dt{font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#1F2A44;margin-top:16mm}.cp table.dr{margin-top:6px}.cp table.dr td{border:1px solid #D5DCE5;padding:6px 8px;width:33.3%}.cp table.dr td i{display:block;font-style:normal;font-size:8.5px;color:#5F6B7A;text-transform:uppercase}.cp table.dr td b{font-size:12px;font-weight:400;color:#202124}
+ .dc .t b{font-size:12px}table.hv>tbody>tr>td{padding:0 5px;vertical-align:middle}table.hv>tbody>tr>td:first-child{background:#F4F6F9;text-align:center;font-size:11px}table.hv>tbody>tr:nth-child(even)>td:not(:first-child){background:#FBFCFD}
+ .mr>div{padding:2.5px 0;box-shadow:inset 0 -.5px 0 #E6EAF0;white-space:nowrap}.mr>div:last-child{box-shadow:none;border-top:.5px solid #AEB8C6}
  .cp .lgl{font-size:9px;color:#5F6B7A;margin-top:14mm}.prev{color:#C5221F;font-weight:700;font-size:12px;margin-top:6mm}
  .ix{width:100%;margin-top:6mm}.ix td{border:0;border-bottom:1px dotted #9AA0A6;padding:7px 4px;font-size:12px}.ix td:last-child{text-align:right;width:15%;font-weight:700}.ix .n{width:8%;color:#16244A;font-weight:700}
  .cv{justify-content:flex-end}.cv table td:first-child{width:32%;background:#F4F6F9;font-weight:600}
