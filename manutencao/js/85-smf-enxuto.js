@@ -84,14 +84,24 @@ const enxExecTxt = r => r && r.exec ? r.exec + (r.empresa ? ' · ' + r.empresa :
 // campo de foto com miniaturas e “✕ Limpar” (3.24, Supervisor: “como faço pra limpar quando coloco foto errada?”)
 const enxFotoCampo = (id, lb) => `<div class="s3 fx-w"><label class="f">${lb}<input type="file" id="${id}" accept="image/*" multiple></label><div class="fx-pv" data-fxpv="${id}"></div></div>`;
 const enxFotosCampos = () => `<div class="g">${enxFotoCampo('fxA', 'Registro fotográfico · antes')}${enxFotoCampo('fxD', 'Registro fotográfico · depois')}</div>`;
-document.addEventListener('change', e => { const i = e.target; if (!i.matches || !i.matches('.fx-w input[type=file]')) return; const pv = document.querySelector(`[data-fxpv="${i.id}"]`); if (!pv) return;
-  pv.querySelectorAll('img').forEach(im => URL.revokeObjectURL(im.src)); const F = [...i.files].slice(0, 6);
-  pv.innerHTML = F.length ? F.map(f => `<img src="${URL.createObjectURL(f)}" alt="" title="${esc(f.name)}">`).join('') + `<span class="note">${F.length} foto${F.length > 1 ? 's' : ''}${i.files.length > 6 ? ' (só as 6 primeiras entram)' : ''}</span><button type="button" class="mbtn sm" data-fxlimpa="${i.id}">✕ Limpar</button>` : ''; });
-document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-fxlimpa]'); if (!b) return; e.preventDefault(); e.stopPropagation();
-  const i = document.getElementById(b.dataset.fxlimpa), pv = b.closest('.fx-pv'); if (i) i.value = ''; if (pv) { pv.querySelectorAll('img').forEach(im => URL.revokeObjectURL(im.src)); pv.innerHTML = ''; } }, true);
-{ const st = document.createElement('style'); st.textContent = '.fx-w{display:flex;flex-direction:column;gap:6px;min-width:0}.fx-pv{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.fx-pv:empty{display:none}.fx-pv img{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #DADCE0}'; document.head.appendChild(st); }
+// cada escolha ACRESCENTA fotos (até 6; no celular a câmera tira uma por vez) — 3.25, Supervisor: “só está dando pra colocar 1 foto”
+const fxArq = id => { const i = document.getElementById(id); return i ? (i._fx || [...i.files]) : []; };   // fotos escolhidas no campo (as acumuladas)
+const fxDT = L => { const dt = new DataTransfer(); L.forEach(f => dt.items.add(f)); return dt.files; };
+function fxMostra(i) { const pv = document.querySelector(`[data-fxpv="${i.id}"]`); if (!pv) return; const L = i._fx || [];
+  pv.querySelectorAll('img').forEach(im => URL.revokeObjectURL(im.src));
+  pv.innerHTML = L.length ? L.map((f, k) => `<span class="fx-t"><img src="${URL.createObjectURL(f)}" alt="" title="${esc(f.name)}"><button type="button" data-fxrm="${i.id}|${k}" title="Tirar esta foto">✕</button></span>`).join('')
+    + `<span class="note">${L.length} de 6${L.length < 6 ? ' · clique em escolher de novo para acrescentar' : ''}</span><button type="button" class="mbtn sm" data-fxlimpa="${i.id}">✕ Limpar todas</button>` : ''; }
+document.addEventListener('change', e => { const i = e.target; if (!i.matches || !i.matches('.fx-w input[type=file]')) return;
+  const novos = [...i.files].filter(f => !(i._fx || []).includes(f)), L = (i._fx || []).concat(novos);
+  if (L.length > 6) toast('Máximo de 6 fotos por campo: entraram as 6 primeiras.');
+  i._fx = L.slice(0, 6); try { i.files = fxDT(i._fx); } catch (er) { } fxMostra(i); });
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-fxlimpa],[data-fxrm]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+  const [id, k] = (b.dataset.fxrm || b.dataset.fxlimpa).split('|'), i = document.getElementById(id); if (!i) return;
+  i._fx = b.dataset.fxrm ? (i._fx || []).filter((f, j) => j !== +k) : [];
+  try { i.files = fxDT(i._fx); } catch (er) { if (!i._fx.length) i.value = ''; } fxMostra(i); }, true);
+{ const st = document.createElement('style'); st.textContent = '.fx-w{display:flex;flex-direction:column;gap:6px;min-width:0}.fx-pv{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.fx-pv:empty{display:none}.fx-pv img{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #DADCE0;display:block}.fx-t{position:relative}.fx-t button{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:0;background:#D93025;color:#fff;font-size:11px;line-height:20px;padding:0;cursor:pointer}'; document.head.appendChild(st); }
 async function enxFotosLer() {
-  const A = [...($('#fxA') || {}).files || []], D = [...($('#fxD') || {}).files || []]; if (!A.length || !D.length) return null;
+  const A = fxArq('fxA'), D = fxArq('fxD'); if (!A.length || !D.length) return null;
   const out = [], at = Date.now(); for (const [tipo, L] of [['ANTES', A], ['DEPOIS', D]]) for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out;
 }
 function enxFeitoModal() {
@@ -256,7 +266,7 @@ function vEnxBib() {
 // Status: aberta (em reparo) → conferencia (liberada pela equipe, aguarda o Supervisor) → encerrada. Liberada pelo Supervisor vai direto a encerrada (o servidor só aceita “encerrada” do Supervisor).
 const enxCorSt = o => o.status === 'encerrada' ? ['p-ok', 'Encerrada'] : o.liberacao ? ['p-warn', 'Aguardando conferência'] : ['p-bad', 'Indisponível · em reparo'];
 const enxAgora = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
-async function enxFotosDe(id, tipo) { const L = [...($('#' + id) || {}).files || []], at = Date.now(), out = []; for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out; }
+async function enxFotosDe(id, tipo) { const L = fxArq(id), at = Date.now(), out = []; for (const f of L.slice(0, 6)) out.push({ tipo, src: await comprimir(f), at }); return out; }
 function vEnxCor() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), T = oms().filter(o => o.tipo === 'C' && !o.excluido), ab = T.filter(o => o.status !== 'encerrada').sort((a, b) => (a.abertura || '') < (b.abertura || '') ? -1 : 1),
     L = T.filter(o => o.status === 'encerrada').sort((a, b) => (b.abertura || '') < (a.abertura || '') ? -1 : 1).slice(0, 30), ag = enxAgora(), adm = can.admin();
