@@ -10,13 +10,61 @@ function prServ(v, l) {   // nome do serviço, frequência e ordem
   const m = Math.min(...l.its.map(x => intervalo(x.t, v, x.pos).m || 99)), nm = m <= 3 ? 'trimestral' : m <= 6 ? 'semestral' : m <= 12 ? 'anual' : 'de longo prazo';
   return { nome: 'Inspeção ' + nm, freq: m <= 12 ? m + (m === 1 ? ' mês' : ' meses') : m + ' meses', o: 5 + m / 100 };
 }
+// nome do serviço em palavras (o que se faz), pelo conjunto de itens do Anexo I de cada revisão; chave = seção do Anexo I | nome do grupo (o nome do grupo continua sendo a chave da linha de base aprovada)
+const PR_DESC = {
+  '1.1|Revisão de 250 h': 'Correias, filtros, zincos e baterias', '1.1|Revisão de 1.000 h': 'Regulagem de válvulas e injetores, filtros de combustível',
+  '1.1|Revisão de 2.000 h': 'Turbo, intercooler, trocador de calor e damper', '1.1|Revisão de 4.000 h ou mais': 'Troca de correias, selo da bomba d’água e líquido de arrefecimento',
+  '1.5|Revisão de 5.000 h ou mais': 'Trocador de calor e engrenagens', '1.5|Inspeção de longo prazo': 'Troca periódica de peças (Tabela 3 do manual)',
+  '1.6|Troca de óleo e filtros': 'Troca do óleo e do filtro do reversor', '1.6|Revisão de 500 h': 'Filtro e resfriador de óleo',
+  '1.6|Revisão de 6.000 h ou mais': 'Engrenagens, embreagens, rolamentos e vedações', '1.7|Revisão de 5.000 h ou mais': 'Fixação, trocador de calor e revisão básica pela REINTJES',
+  '1.2|Revisão de 5.000 h ou mais': 'Carcaça, eixo, rolamentos e rotor', '3.3|Revisão de 5.000 h ou mais': 'Carcaça, eixo, rolamentos e rotor',
+  '1.3|Revisão de 4.000 h ou mais': 'Ponte retificadora, diodos e rolamentos', '3.4|Revisão de 4.000 h ou mais': 'Ponte retificadora, diodos e rolamentos',
+  '2.1|Inspeção semestral': 'Joystick, sensor de ângulo e manete', '2.1|Inspeção anual': 'Cilindro, bombas hidráulicas, orbitrol e leme',
+  '3.1|Revisão de 250 h': 'Filtros de combustível e de ar, bateria e zincos', '3.2|Revisão de 250 h': 'Filtros de combustível e de ar, bateria, correia e zincos',
+  '3.1|Revisão de 1.000 h': 'Regulagem de válvulas e injetores, correia e arrefecimento', '3.2|Revisão de 1.000 h': 'Regulagem de válvulas e injetores, respiro e megagem',
+  '3.2|Revisão de 2.000 h': 'Compressão, líquido de arrefecimento e mangueiras', '3.1|Inspeção anual': 'Rotor da bomba de água bruta e coxins', '3.2|Inspeção anual': 'Rotor da bomba de água bruta e coxins',
+  '3.5|Inspeção semestral': 'QGD, motores elétricos, aterramento e tomadas', '4.1|Inspeção semestral': 'Bombas, válvulas e mangueiras de incêndio',
+  '5.1|Inspeção trimestral': 'Sensor e bomba de porão, válvulas e iluminação de emergência', '6.1|Inspeção trimestral': 'Válvulas de fechamento rápido e tubulação',
+  '7.1|Inspeção trimestral': 'Rádio VHF, eletrônicos e luzes de navegação', '9.1|Inspeção trimestral': 'Portas estanques, vedações e madeira do gigante',
+  '10.1|Inspeção semestral': 'Cozinha, sanitários, camas e água potável',
+  '9.1.4': 'Inspeção visual do casco e das estruturas', '9.1.5': 'Docagem do casco: jateamento, medição de espessura e repintura'   // serviço de um item só: chave = nº do item
+};
+function prDesc(g) {
+  const T = [...new Map(g.its.map(x => [x.t.id, x.t])).values()];
+  const min1 = s => /^.[a-zà-ú]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+  const N = {}; T.forEach(t => { const s = t.id.split('.').slice(0, 2).join('.'); N[s] = (N[s] || 0) + 1; });
+  const sec = Object.keys(N).sort((a, b) => N[b] - N[a])[0];
+  if (T.length === 1) { const t = T[0], c = t.chk || t.item; return PR_DESC[t.id] || (!t.item || (t.item + c).length > 68 || /:| d[ao]s? /.test(c) ? c : t.item + ': ' + min1(c)); }   // texto genérico (“Inspeção, limpeza e testes”) leva o componente na frente
+  if (PR_DESC[sec + '|' + g.sv.nome]) return PR_DESC[sec + '|' + g.sv.nome];
+  const P = [...new Set(T.map(t => t.item))], L = P.slice(0, 3).map((p, i) => i ? min1(p) : p);
+  return P.length > 3 ? L.join(', ') + ' e mais ' + (P.length - 3) : L.slice(0, -1).join(', ') + ' e ' + L[L.length - 1];
+}
+function prFreqTx(g) {   // frequência real dos itens do grupo (a “Revisão de 4.000 h ou mais” junta itens de 4.000 a 20.000 h)
+  const IV = g.its.map(x => intervalo(x.t, g.v, x.pos)), fx = (L, f) => { L = [...new Set(L.filter(Boolean))].sort((a, b) => a - b); return !L.length ? '' : L.length > 1 ? f(L[0], 1) + ' a ' + f(L[L.length - 1]) : f(L[0]); };
+  const h = fx(IV.map(i => i.h), (n, so) => nf(n) + (so ? '' : ' h')), M = IV.map(i => i.m).filter(Boolean), anos = M.length && M.every(n => n >= 24 && n % 12 === 0);
+  const m = fx(M, (n, so) => anos ? n / 12 + (so ? '' : ' anos') : n + (so ? '' : n === 1 ? ' mês' : ' meses'));
+  const tx = [h, m].filter(Boolean).join(' ou '); return tx ? 'a cada ' + tx : g.sv.freq ? 'a cada ' + g.sv.freq : '';
+}
+function prProx(g) {   // próxima execução: o item do grupo que vence primeiro (horas no ritmo do motor ou data), a mesma conta da situação
+  const v = g.v, d0 = pD(isoD(hoje())); let b = null, sem = 0, cond = 0;
+  g.its.forEach(x => { const s = situacao(v, x.pos, x.t);
+    if (s.st === 'cond') { cond++; return; } if (s.st === 'sem') { sem++; return; }
+    if (s.alvoH != null) { const d = s.rest / Math.max(0.1, horasDiaPos(v.id, s.hp) || 0); if (!b || d < b.d) b = { d, h: s.alvoH, rest: s.rest }; }
+    if (s.alvoD) { const d = Math.round((s.alvoD - d0) / 864e5); if (!b || d < b.d) b = { d, dt: s.alvoD }; } });
+  const nSem = sem ? `<small>${sem} sem histórico</small>` : '';
+  if (!b) return sem ? '<span class="pr-px0">Sem histórico</span>' : cond ? '<span class="pr-px0">Por condição</span>' : '—';
+  const cls = b.d < 0 ? ' venc' : b.d <= 30 ? ' breve' : '';
+  if (b.h != null) return `<b>${nf(b.h)} h</b><small class="${cls}">${b.rest < 0 ? nf(-b.rest) + ' h vencido' : 'faltam ' + nf(b.rest) + ' h'}</small>${nSem}`;
+  const dd = Math.abs(b.d), dias = dd + (dd === 1 ? ' dia' : ' dias');
+  return `<b>${b.dt.toLocaleDateString('pt-BR')}</b><small class="${cls}">${b.d < 0 ? dias + ' vencido' : b.d === 0 ? 'vence hoje' : 'faltam ' + dias}</small>${nSem}`;
+}
 function prLinhas(v, ano) {
   const R = cronoMarcas(v, ano), B = cronoBase(ano, v.id), G = {};
   R.forEach(l => { const sv = prServ(v, l), k = l.eqKey + '|' + sv.nome;
     const g = G[k] = G[k] || { k, v, eqKey: l.eqKey, sv, its: [], M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, corr: 0, tx: [] })), sis: 99 };
     g.its.push(...l.its); l.its.forEach(x => { g.sis = Math.min(g.sis, parseInt(x.t.id)); });
     l.M.forEach((m, i) => { const c = g.M[i]; c.plan += m.plan; c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.corr += m.corr || 0; c.tx.push(...m.its.filter(s => /OM|FR|feito|venceu/.test(s))); }); });
-  const L = Object.values(G).map(g => { g.eq = eqNome(v, g.eqKey); g.base = B && B.linhasPR ? B.linhasPR[g.k] : null; g.crit = g.its.reduce((a, x) => PRIO_ORD[x.t.prio] < PRIO_ORD[a] ? x.t.prio : a, 'Baixa'); return g; });
+  const L = Object.values(G).map(g => { g.eq = eqNome(v, g.eqKey); g.base = B && B.linhasPR ? B.linhasPR[g.k] : null; g.crit = g.its.reduce((a, x) => PRIO_ORD[x.t.prio] < PRIO_ORD[a] ? x.t.prio : a, 'Baixa'); g.desc = prDesc(g); return g; });
   const EQO = ['MCP', 'REV', 'EIXO', 'HELICE', 'CXMAR', 'FAE80', 'ALTPE', 'RACOR', 'MCA', 'FAE50', 'BAMB30'];
   return L.sort((a, b) => a.sis - b.sis || ((EQO.indexOf(a.eqKey.split('|')[0]) + 1 || 50) - (EQO.indexOf(b.eqKey.split('|')[0]) + 1 || 50)) || a.eqKey.localeCompare(b.eqKey) || a.sv.o - b.sv.o);
 }
@@ -36,12 +84,12 @@ function prTabela(v, ano, pdf) {
       if (m.miss) return `<td class="pr-c r miss${i === hm ? ' hj' : ''}" title="${tip}">✗</td>`;
       return `<td class="pr-c r${i === hm ? ' hj' : ''}"></td>`; }).join('');
     const sP = P.reduce((a, x) => a + x, 0), sR = g.M.reduce((a, m) => a + m.ok + m.late, 0);
-    rows += `<tr class="pr-p">${pre}<td class="pr-sv" rowspan="2"><b>${esc(g.sv.nome)}</b><small>${esc(g.crit)}</small></td><td class="pr-f" rowspan="2">${esc(g.sv.freq)}</td><td class="pr-l">P</td>${cP}<td class="pr-t">${sP}</td></tr><tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${sR}</td></tr>`; });
+    rows += `<tr class="pr-p">${pre}<td class="pr-sv" rowspan="2"><b>${esc(g.desc)}</b><small>${esc([g.desc === g.sv.nome ? '' : g.sv.nome, g.crit, prFreqTx(g)].filter(Boolean).join(' · '))}</small></td><td class="pr-f pr-px" rowspan="2">${prProx(g)}</td><td class="pr-l">P</td>${cP}<td class="pr-t">${sP}</td></tr><tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${sR}</td></tr>`; });
   const cs = pdf ? 3 : 5; const foot = `<tr class="pr-tot"><td colspan="${cs}">Total previsto</td>${tot.map(t => `<td class="pr-c">${t.p || ''}</td>`).join('')}<td class="pr-t">${tot.reduce((a, t) => a + t.p, 0)}</td></tr>
     <tr class="pr-tot"><td colspan="${cs}">Total realizado</td>${tot.map(t => `<td class="pr-c">${t.r || ''}</td>`).join('')}<td class="pr-t">${tot.reduce((a, t) => a + t.r, 0)}</td></tr>
     <tr class="pr-tot"><td colspan="${cs}">Aderência (feito no prazo ÷ vencido)</td>${tot.map((t, i) => `<td class="pr-c"><b>${i <= hm && t.den ? Math.round(t.ok / t.den * 100) + '%' : ''}</b></td>`).join('')}<td class="pr-t"><b>${(() => { const ok = tot.reduce((a, t) => a + t.ok, 0), d = tot.reduce((a, t) => a + t.den, 0); return d ? Math.round(ok / d * 100) + '%' : '—'; })()}</b></td></tr>`;
-  return `<table class="pr-t"><colgroup>${pdf ? '' : '<col style="width:105px"><col style="width:120px">'}<col style="width:190px"><col style="width:86px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:40px"></colgroup>
-   <thead><tr>${pdf ? '' : '<th>Sistema</th><th>Equipamento</th>'}<th>Serviço</th><th>Frequência</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${rows || '<tr><td colspan="18">Sem serviços.</td></tr>'}</tbody><tfoot>${foot}</tfoot></table>`;
+  return `<table class="pr-t"><colgroup>${pdf ? '' : '<col style="width:105px"><col style="width:120px">'}<col style="width:230px"><col style="width:100px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:40px"></colgroup>
+   <thead><tr>${pdf ? '' : '<th>Sistema</th><th>Equipamento</th>'}<th>Serviço</th><th>Próxima</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${rows || '<tr><td colspan="18">Sem serviços.</td></tr>'}</tbody><tfoot>${foot}</tfoot></table>`;
 }
 function prFrota(ano, pdf) {
   const V = S.cfg.frota.filter(v => !foraOp(v)), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 12 : -1;
@@ -211,7 +259,7 @@ function prEmpTabela(v, ano, hm, sel) {
   G.forEach(g => {
     // conteúdo do serviço (itens do Anexo I do pacote), mostrado ao passar o mouse / tocar no nome
     const its = {}; g.its.forEach(x => { const o = its[x.t.id] = its[x.t.id] || { t: x.t, pos: new Set() }; if (x.pos && x.pos !== 'UN') o.pos.add(x.pos); });
-    const nSv = PRV._sv.push(`<div class="cf-pop-h"><b>${esc(g.sv.nome)}</b><span>${esc(g.eq.n)} · ${esc(g.sv.freq)} · <span class="cf-cr2 ${PR_CRIT[g.crit] || 'bx'}">${esc(g.crit)}</span></span></div><ul>${Object.values(its).sort((a, b) => a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true })).map(o => `<li><b>${esc(o.t.id)}</b> ${esc(o.t.item || '')}${o.t.chk ? ` — <span>${esc(o.t.chk)}</span>` : ''}${o.pos.size ? ` <em>(${[...o.pos].map(p => isMcp(p) ? (p === 'CE' ? 'central' : p) : posNome(v, p)).join(', ')})</em>` : ''}</li>`).join('')}</ul><small>${Object.keys(its).length} ${Object.keys(its).length === 1 ? 'item' : 'itens'} do Anexo I nesta parada</small>`) - 1;
+    const nSv = PRV._sv.push(`<div class="cf-pop-h"><b>${esc(g.desc)}</b><span>${esc(g.eq.n)} · ${esc(g.desc === g.sv.nome ? '' : g.sv.nome + ' · ')}${esc(prFreqTx(g))} · <span class="cf-cr2 ${PR_CRIT[g.crit] || 'bx'}">${esc(g.crit)}</span></span></div><ul>${Object.values(its).sort((a, b) => a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true })).map(o => `<li><b>${esc(o.t.id)}</b> ${esc(o.t.item || '')}${o.t.chk ? ` — <span>${esc(o.t.chk)}</span>` : ''}${o.pos.size ? ` <em>(${[...o.pos].map(p => isMcp(p) ? (p === 'CE' ? 'central' : p) : posNome(v, p)).join(', ')})</em>` : ''}</li>`).join('')}</ul><small>${Object.keys(its).length} ${Object.keys(its).length === 1 ? 'item' : 'itens'} do Anexo I nesta parada</small>`) - 1;
     const s = SISTEMAS[g.sis - 1] || '', ke = s + '|' + g.eqKey;
     if (s !== sisA) { sisA = s; eqA = ''; rows += `<tr class="cf-gs"><td colspan="${ncol + 1}"><span class="cf-gl">${esc(s)}</span></td></tr>`; }
     if (ke !== eqA) { eqA = ke; rows += `<tr class="cf-ge"><td colspan="${ncol + 1}"><span class="cf-gl">${esc(g.eq.n)}${g.eq.m ? ` <small>${esc(g.eq.m)}</small>` : ''}</span></td></tr>`; }
@@ -228,7 +276,7 @@ function prEmpTabela(v, ano, hm, sel) {
       return `<td class="cf-c" title="${p} previsto(s)"><span class="cf-cg" style="background:rgba(25,103,210,${(0.08 + Math.min(1, p / mxF) * 0.32).toFixed(2)})">${p}</span></td>`; };
     const tP = sel.reduce((a, i) => a + P[i], 0), tR = sel.reduce((a, i) => a + Math.min(P[i], R[i]), 0), venc = sel.reduce((a, i) => a + Ms[i], 0), falta = sel.includes(hm) ? Math.max(0, P[hm] - R[hm] - Ms[hm]) : 0;
     const sit = venc ? `<span class="cf-p ms" title="ocorrências do cronograma vencidas nos meses marcados">${venc} vencida${venc > 1 ? 's' : ''}</span>` : tP ? '<span class="cf-p ok">em dia</span>' : '<span class="cf-z">—</span>';
-    rows += `<tr><td class="cf-n cf-sv" data-cfsv="${nSv}"><b>${esc(g.sv.nome)}</b><small>${esc(g.sv.freq)} · <span class="cf-cr2 ${PR_CRIT[g.crit] || 'bx'}">${esc(g.crit)}</span></small></td>${sel.map(cel).join('')}
+    rows += `<tr><td class="cf-n cf-sv" data-cfsv="${nSv}"><b>${esc(g.desc)}</b><small>${esc([g.desc === g.sv.nome ? '' : g.sv.nome, prFreqTx(g)].filter(Boolean).join(' · '))} · <span class="cf-cr2 ${PR_CRIT[g.crit] || 'bx'}">${esc(g.crit)}</span></small></td>${sel.map(cel).join('')}
       <td class="cf-c cf-tt"><span class="cf-fr">${tP ? `<i class="cf-d" style="background:${venc ? '#C5221F' : '#188038'}"></i>` : ''}<b>${tR}</b> / ${tP}</span></td><td class="cf-s">${sit}${falta ? `<small>${falta} a vencer em ${MESES[hm]}</small>` : ''}</td></tr>`; });
   const head = `<tr><th class="cf-n" data-ck="n">Serviço</th>${sel.map(i => `<th class="${i === hm ? 'cf-hj' : ''}" data-ck="m${i}">${MESES[i].toUpperCase()}${i === hm ? ' · ATUAL' : ''}</th>`).join('')}<th data-ck="t">Total</th><th data-ck="s">Situação</th></tr>`;
   return `<table class="cf-t cf-emp"><thead>${head}</thead><tbody>${rows || `<tr><td colspan="${ncol + 1}">Sem serviços no plano.</td></tr>`}</tbody></table>`;
@@ -352,7 +400,7 @@ var cr3Aprovar = prAprovar;
  .pr-t{width:100%;border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000}
  .pr-t th{background:#16244A;color:#fff;border:1px solid #16244A;padding:5px 2px;font-weight:700;text-align:center;position:sticky;top:0;z-index:1}.pr-t th.hj{background:#1967D2}
  .pr-t td{border:1px solid #BDC1C6;padding:2px 4px;vertical-align:middle}.pr-ms,.pr-me{font-weight:700;vertical-align:top!important;padding-top:6px!important;border-color:#5F6368!important;background:#fff}.pr-me small{display:block;font-weight:400;color:#5F6368;font-size:10.5px}
- .pr-sv b{display:block;font-weight:600}.pr-sv small{color:#5F6368;font-size:10.5px}.pr-f{text-align:center;font-size:11px}.pr-l{text-align:center;font-weight:700;font-size:11px;color:#3C4043;background:#F8F9FA}
+ .pr-sv b{display:block;font-weight:600}.pr-sv small{color:#5F6368;font-size:10.5px}.pr-f{text-align:center;font-size:11px}.pr-px b{display:block;font-weight:700;white-space:nowrap}.pr-px small{display:block;color:#5F6368;font-size:10px}.pr-px small.breve{color:#B06000;font-weight:700}.pr-px small.venc{color:#C5221F;font-weight:700}.pr-px0{color:#5F6368}.pr-l{text-align:center;font-weight:700;font-size:11px;color:#3C4043;background:#F8F9FA}
  .pr-c{text-align:center;font-weight:700;height:20px}.pr-c.p{color:#5F6368;background:#F1F3F4}.pr-c.r.ok{background:#E6F4EA;color:#188038}.pr-c.r.late{background:#FEF3E0;color:#B06000}.pr-c.r.miss{background:#FCE8E6;color:#C5221F}
  .pr-t td.pr-t{text-align:center;font-weight:700;background:#F8F9FA}.pr-tot td{background:#E8F0FE;font-weight:600}.pr-fa small{display:block;color:#5F6368;font-size:11px}.pr-fa,.pr-ad{text-align:center;background:#fff}.pr-c small{color:#C5221F;font-weight:700}.pr-gs td{background:#16244A;color:#fff;font-weight:700}.pr-ge td{background:#E8F0FE;font-weight:700}.pr-tot td:first-child{text-align:right}
  
