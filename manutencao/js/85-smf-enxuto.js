@@ -242,7 +242,7 @@ function enxRelImprimir(s) {
   w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq(s.num))}</title><style>@page{size:A4;margin:10mm}${DOC_CAB_CSS}body{font:11px Arial,sans-serif;color:#202124;margin:0}h3{font-size:12px;color:#1F2A44;margin:12px 0 4px}.enx-gr svg{max-height:170px;width:100%}table{width:100%;border-collapse:collapse;margin-bottom:4px}th,td{border:1px solid #CBD5E1;padding:3px 5px;text-align:left;vertical-align:top}th{background:#16244A;color:#fff;font-size:10px}.r{text-align:right}.note{color:#5F6368;font-size:10px}.rl-ruim{color:#C5221F}.rl-ass th{width:50%}.rl-lin{height:34px;vertical-align:bottom;color:#5F6368}tr{page-break-inside:avoid}thead{display:table-header-group}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
    ${docCab('RELATÓRIO DE MANUTENÇÃO PREVENTIVA', `Empurradores fluviais · ${esc(s.dados.ref)} · ${esc(s.num)}`, 'NP Navecunha 055 · itens 7.3 e 9 · Anexo I')}${enxRelHTML(s.dados, s)}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
 }
-function enxAdminHTML() { return temaAdminHTML(); }   // o cartão “Modo do SMF neste aparelho” saiu na 3.46; no lugar, o Visual (3.66)
+function enxAdminHTML() { return ''; }   // o cartão “Modo do SMF neste aparelho” saiu na 3.46; o Visual (3.66) fica no topo da Administração (vAdmin)
 /* Visual deste aparelho (SMF 3.66): Claro (padrão) ou Vidro azul (css/tema-vidro.css, classe tv no <html>) */
 function temaAdminHTML() {
   const v = document.documentElement.classList.contains('tv');
