@@ -94,9 +94,10 @@ function balSit(b, t) {
   const csn = t.doca ? balCsn(b.id) : null;
   if (!L && !(csn && csn.date)) return { st: 'sem', txt: 'Sem último serviço registrado', cur };
   let st = 'ok', alvoD = null, alvoH = null, rest = null; const txt = [], ord = { ok: 0, prox: 1, venc: 2 }, up = s => { if (ord[s] > ord[st]) st = s; };
-  if (iv.h && L && L.h != null && L.h !== '' && cur != null) { alvoH = +L.h + iv.h; rest = alvoH - cur; txt.push(rest < 0 ? nf(-rest) + ' h vencido' : 'faltam ' + nf(rest) + ' h'); up(rest < 0 ? 'venc' : rest <= BAL_PROX_H ? 'prox' : 'ok'); }
+  // inspecionado sem intervenção (SMF 3.37): o vencimento vai para a próxima avaliação escolhida (prox / proxH), nunca além do intervalo normal nem do CSN
+  if (iv.h && L && L.h != null && L.h !== '' && cur != null) { alvoH = L.insp && L.proxH != null && L.proxH !== '' ? +L.proxH : +L.h + iv.h; rest = alvoH - cur; txt.push(rest < 0 ? nf(-rest) + ' h vencido' : 'faltam ' + nf(rest) + ' h'); up(rest < 0 ? 'venc' : rest <= BAL_PROX_H ? 'prox' : 'ok'); }
   else if (iv.h) txt.push(cur == null ? 'sem horímetro' : 'sem horímetro no último serviço');
-  if (iv.m) { alvoD = csn && csn.date ? pD(csn.date) : L ? addM(pD(L.date), iv.m) : null;   // docagem: a data-limite do CSN manda
+  if (iv.m) { alvoD = L && L.insp && L.prox ? pD(L.prox) : csn && csn.date ? pD(csn.date) : L ? addM(pD(L.date), iv.m) : null; if (L && L.insp && L.prox && csn && csn.date && pD(csn.date) < alvoD) alvoD = pD(csn.date);   // docagem: a data-limite do CSN manda
     if (alvoD) { const dd = Math.round((alvoD - dHoje) / 864e5); txt.push(dd < 0 ? (-dd) + (dd === -1 ? ' dia vencido' : ' dias vencido') : 'vence ' + brD(isoD(alvoD))); up(dd < 0 ? 'venc' : dd <= BAL_PROX_D ? 'prox' : 'ok'); } }
   return { st, txt: txt.join(' · '), alvoD, alvoH, rest, cur, L };
 }
@@ -141,17 +142,17 @@ function balCxItem(b, t, y) {
   const M = Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, tx: [] })), ini = new Date(y, 0, 1), fim = new Date(y + 1, 0, 1), H = hoje(), iv = balIv(t), tx = balTaxa(b.id), csn = t.doca ? balCsn(b.id) : null;
   const E = balExecs(b.id, t.id), usados = new Set(); let cur = null;
   E.forEach(e => { if (pD(e.date) < ini) cur = e; });
-  if (!cur) { const f = E.find(e => pD(e.date) >= ini); if (!f) return M; cur = f; usados.add(f.id); const i = pD(f.date).getMonth(); M[i].ok++; M[i].tx.push('feito ' + brD(f.date) + (f.om ? ' · OM ' + f.om : '')); }   // sem serviço antes do ano: a cadeia começa no primeiro do ano
-  const prox = c => { const d0 = pD(c.date); let d = iv.m ? addM(d0, iv.m) : null; if (iv.h && tx) { const dh = new Date(d0.getTime() + iv.h / tx * 864e5); if (!d || dh < d) d = dh; }
-    if (csn && csn.date && c === E[E.length - 1]) d = pD(csn.date); return d; };
+  if (!cur) { const f = E.find(e => pD(e.date) >= ini); if (!f) return M; cur = f; usados.add(f.id); const i = pD(f.date).getMonth(); M[i].ok++; M[i][f.insp ? 'insp' : 'real'] = 1; M[i].tx.push((f.insp ? 'inspecionado sem intervenção ' : 'feito ') + brD(f.date) + (f.om ? ' · OM ' + f.om : '')); }   // sem serviço antes do ano: a cadeia começa no primeiro do ano
+  const prox = c => { const d0 = pD(c.date); let d = iv.m ? (c.insp && c.prox ? pD(c.prox) : addM(d0, iv.m)) : null; if (iv.h && tx) { const hh = c.insp && c.proxH != null && c.proxH !== '' && c.h != null && c.h !== '' ? Math.max(0, +c.proxH - +c.h) : iv.h, dh = new Date(d0.getTime() + hh / tx * 864e5); if (!d || dh < d) d = dh; }
+    if (csn && csn.date && c === E[E.length - 1]) d = c.insp && c.prox && d && d < pD(csn.date) ? d : pD(csn.date); return d; };
   for (let n = 0; n < 80; n++) { const D = prox(cur); if (!D || D >= fim) break;
     const e = E.find(x => !usados.has(x.id) && pD(x.date) > pD(cur.date)), fimMes = new Date(D.getFullYear(), D.getMonth() + 1, 1);
     if (e && pD(e.date) < fim) { usados.add(e.id); const de = pD(e.date), iE = de.getMonth(), late = de >= fimMes;
-      if (D >= ini) M[D.getMonth()].plan++; if (de >= ini) { M[iE][late ? 'late' : 'ok']++; M[iE].tx.push((late ? 'feito com atraso ' : 'feito ') + brD(e.date) + (e.om ? ' · OM ' + e.om : '')); }
+      if (D >= ini) M[D.getMonth()].plan++; if (de >= ini) { M[iE][late ? 'late' : 'ok']++; M[iE][e.insp ? 'insp' : 'real'] = 1; M[iE].tx.push((e.insp ? 'inspecionado sem intervenção ' : late ? 'feito com atraso ' : 'feito ') + brD(e.date) + (e.om ? ' · OM ' + e.om : '')); }
       if (late && D >= ini && D < H) { /* atraso: o previsto fica no mês do vencimento */ } cur = e; continue; }
     if (D >= ini) { if (fimMes <= H) { M[D.getMonth()].miss++; M[D.getMonth()].tx.push('venceu ' + brD(isoD(D)) + ' sem registro'); } else M[D.getMonth()].plan++; }
     cur = { date: isoD(D), h: null, id: 'proj' + n }; }
-  E.forEach(e => { if (!usados.has(e.id) && pD(e.date) >= ini && pD(e.date) < fim) { const i = pD(e.date).getMonth(); M[i].ok++; M[i].tx.push('feito ' + brD(e.date) + (e.om ? ' · OM ' + e.om : '')); } });   // feito fora da cadeia (adiantado)
+  E.forEach(e => { if (!usados.has(e.id) && pD(e.date) >= ini && pD(e.date) < fim) { const i = pD(e.date).getMonth(); M[i].ok++; M[i][e.insp ? 'insp' : 'real'] = 1; M[i].tx.push((e.insp ? 'inspecionado sem intervenção ' : 'feito ') + brD(e.date) + (e.om ? ' · OM ' + e.om : '')); } });   // feito fora da cadeia (adiantado)
   return M; }
 function balCxBalsa(b, y) { const L = balItens(b).map(t => ({ t, M: balCxItem(b, t, y) })), P = Array(12).fill(0), R = Array(12).fill(0), Ok = Array(12).fill(0), Lt = Array(12).fill(0), Ms = Array(12).fill(0);
   L.forEach(({ M }) => M.forEach((m, i) => { P[i] += m.plan + m.ok + m.late + m.miss; R[i] += m.ok + m.late; Ok[i] += m.ok; Lt[i] += m.late; Ms[i] += m.miss; })); return { b, L, P, R, Ok, Lt, Ms }; }
@@ -163,7 +164,7 @@ function vBalCr() {
     const D = balCxBalsa(sel, y); let rows = '';
     D.L.forEach(({ t, M }) => { const P = M.map(m => m.plan + m.ok + m.late + m.miss);
       const cP = P.map((n, i) => `<td class="pr-c p${i === hm ? ' hj' : ''}">${n ? (n > 1 ? n : '●') : ''}</td>`).join('');
-      const cR = M.map((m, i) => { const r = m.ok + m.late, tip = esc(m.tx.join('\n')); if (r) return `<td class="pr-c r ${m.late ? 'late' : 'ok'}${i === hm ? ' hj' : ''}" title="${tip}">${r > 1 ? r + '×' : '✓'}</td>`; if (m.miss) return `<td class="pr-c r miss${i === hm ? ' hj' : ''}" title="${tip}">✗</td>`; return `<td class="pr-c r${i === hm ? ' hj' : ''}"></td>`; }).join('');
+      const cR = M.map((m, i) => { const r = m.ok + m.late, tip = esc(m.tx.join('\n')); if (r) return `<td class="pr-c r ${m.late ? 'late' : 'ok'}${i === hm ? ' hj' : ''}" title="${tip}">${m.insp && !m.real ? '<b>I</b>' : r > 1 ? r + '×' : '✓'}</td>`; if (m.miss) return `<td class="pr-c r miss${i === hm ? ' hj' : ''}" title="${tip}">✗</td>`; return `<td class="pr-c r${i === hm ? ' hj' : ''}"></td>`; }).join('');
       rows += `<tr class="pr-p"><td class="pr-sv" rowspan="2"><b>${t.id} · ${esc(t.eq)}</b><small>${esc(t.serv)}</small></td><td class="pr-f" rowspan="2">${balIvTx(t)}</td><td class="pr-l">P</td>${cP}<td class="pr-t">${P.reduce((a, x) => a + x, 0)}</td></tr><tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${M.reduce((a, m) => a + m.ok + m.late, 0)}</td></tr>`; });
     const ok = D.Ok.slice(0, hm + 1).reduce((a, x) => a + x, 0), den = ok + D.Lt.slice(0, hm + 1).reduce((a, x) => a + x, 0) + D.Ms.slice(0, hm + 1).reduce((a, x) => a + x, 0), a = ad(ok, den);
     return balCab(`Cronograma · ${sel.nome}`, `${esc(balMotTx(sel))} · ● previsto · ✓ feito no prazo · ✓ âmbar feito com atraso · ✗ venceu sem registro · passe o mouse para ver datas e OMs`, `<a class="mbtn" href="#balcr" data-balcrb="">← Frota de balsas</a>${anoBt}`)
@@ -187,7 +188,7 @@ function vBalCr() {
      <p class="note">Previsto pela data do último serviço e pelas horas no ritmo medido do motor-bomba (sem 2 leituras de horímetro, o serviço por horas só conta pelo prazo em meses). Feito até o fim do mês do vencimento = no prazo. Item sem nenhum serviço registrado não entra.</p></div>`;
 }
 // ---------- docagem: última, data-limite do CSN, histórico com estaleiro, dias parada e custo, projeção de 5 anos ----------
-const balDocas = vid => balExecs(vid, 'B10.1').slice().reverse();
+const balDocas = vid => balExecs(vid, 'B10.1').filter(r => !r.insp && !r.nf).slice().reverse();   // inspeção sem necessidade de docar não é docagem
 function balDocaSit(b) { const t = BA1M['B10.1'], s = balSit(b, t), L = balDocas(b.id), u = L[0] || null, csn = balCsn(b.id), dias = s.alvoD ? Math.round((s.alvoD - pD(isoD(hoje()))) / 864e5) : null;
   return { b, s, L, u, csn, dias, st: !s.alvoD ? 'sem' : dias < 0 ? 'venc' : dias <= 365 ? 'prox' : 'ok' }; }
 const BAL_DST = { venc: ['p-bad', 'Vencida'], prox: ['p-warn', 'Programar (até 12 meses)'], ok: ['p-ok', 'Em dia'], sem: ['p-mut', 'Sem data'] };
@@ -198,7 +199,7 @@ function vBalDoca() {
   return balCab('Docagem', 'Vistoria em seco · vale a data-limite do CSN lançada; sem ela, 5 anos depois da última docagem (critério interno) · a revisão das válvulas de gaveta e a recertificação da PSV vão junto', '')
    + `<div class="cm-chips">${[['venc', 'Vencidas'], ['prox', 'Programar (até 12 meses)'], ['ok', 'Em dia'], ['sem', 'Sem data']].map(([k, t]) => `<span class="cm-chip">${t} <b>${c(k)}</b></span>`).join('')}</div>
    <div class="card"><h2>Situação e projeção</h2><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th><th>Última docagem</th><th>Estaleiro</th><th class="r">Parada</th><th class="r">Custo (R$ mil)</th><th>CSN até</th><th>Situação</th>${anos.map(a => `<th class="c">${a}</th>`).join('')}<th></th></tr></thead><tbody>
-   ${D.map(d => `<tr><td><a href="#balft/${d.b.id}"><b>${esc(d.b.nome)}</b></a></td><td>${d.u ? brD(d.u.date) : '—'}</td><td>${esc(d.u && d.u.estaleiro || '—')}</td><td class="r">${par(d.u)}</td><td class="r">${d.u && d.u.custo != null && d.u.custo !== '' ? nf(d.u.custo) : '—'}</td><td>${d.csn && d.csn.date ? brD(d.csn.date) : '<span class="mut">não lançado</span>'}</td><td>${balPil(BAL_DST, d.st)}<div class="note">${d.dias == null ? '' : d.dias < 0 ? (-d.dias) + ' dias vencida' : 'faltam ' + d.dias + ' dias'}</div></td>${proj(d)}<td class="nowrap"><button class="mbtn sm pri" data-baldoca="${d.b.id}">Registrar docagem</button> <button class="mbtn sm" data-balcsn="${d.b.id}">CSN</button></td></tr>`).join('')}</tbody></table></div>
+   ${D.map(d => `<tr><td><a href="#balft/${d.b.id}"><b>${esc(d.b.nome)}</b></a></td><td>${d.u ? brD(d.u.date) : '—'}</td><td>${esc(d.u && d.u.estaleiro || '—')}</td><td class="r">${par(d.u)}</td><td class="r">${d.u && d.u.custo != null && d.u.custo !== '' ? nf(d.u.custo) : '—'}</td><td>${d.csn && d.csn.date ? brD(d.csn.date) : '<span class="mut">não lançado</span>'}</td><td>${balPil(BAL_DST, d.st)}<div class="note">${d.dias == null ? '' : d.dias < 0 ? (-d.dias) + ' dias vencida' : 'faltam ' + d.dias + ' dias'}</div>${d.s.L && d.s.L.insp ? `<div class="note" style="color:#1A73E8">inspecionada em ${brD(d.s.L.date)} · sem necessidade de docar</div>` : ''}</td>${proj(d)}<td class="nowrap"><button class="mbtn sm pri" data-baldoca="${d.b.id}">Registrar docagem</button> <button class="mbtn sm" data-balcsn="${d.b.id}">CSN</button></td></tr>`).join('')}</tbody></table></div>
    <p class="note">Colunas dos anos = mês em que a próxima docagem vence (vermelho = já vencida).</p></div>
    <div class="card"><h2>Histórico de docagens</h2>${(() => { const H = BALSAS.flatMap(b => balDocas(b.id).map(h => ({ b, h }))).sort((a, b) => a.h.date < b.h.date ? 1 : -1); return H.length ? `<div class="tw"><table class="t"><thead><tr><th>Balsa</th><th>Entrada</th><th>Saída</th><th class="r">Parada</th><th>Estaleiro</th><th>Serviços</th><th class="r">Custo (R$ mil)</th><th>OM</th></tr></thead><tbody>${H.map(({ b, h }) => `<tr><td><b>${esc(b.nome)}</b></td><td>${brD(h.date)}</td><td>${h.saida ? brD(h.saida) : 'no estaleiro'}</td><td class="r">${par(h)}</td><td>${esc(h.estaleiro || '—')}</td><td>${esc(h.servicos || h.obs || '—')}</td><td class="r">${h.custo != null && h.custo !== '' ? nf(h.custo) : '—'}</td><td>${esc(h.om || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note">Nenhuma docagem registrada.</p>'; })()}</div>`;
 }
@@ -365,7 +366,7 @@ function vBalFt() {
      ${BALSAS.map(b => `<tr class="click" data-balft="${b.id}"><td><b>${esc(b.nome)}</b>${b.nota ? ' <span class="pill p-warn" title="' + esc(b.nota) + '">conferir</span>' : ''}</td><td class="r">${b.ano || '—'}</td><td class="r">${nf(b.cap, 2)}</td><td class="r">${b.tanques}</td><td>${esc(b.marca + ' ' + b.modelo)}</td><td>${esc(BAL_MOTOR[b.mot])}</td><td class="r">${b.hp ? nf(b.hp, 1).replace(',0', '') + ' HP' : '—'}</td><td class="r">${b.rpm ? nf(b.rpm) : '—'}</td><td class="r">${b.vazao ? b.vazao + ' m³/h' : '—'}</td><td>${esc([b.batM, b.batA].filter(Boolean).join(' · ') || '—')}</td><td class="r">${b.tqCons ? b.tqCons + ' m³' : '—'}</td><td>${b.cabQ ? esc(b.cabQ + ' · ' + b.cabT) : '—'}</td><td class="r">${b.boias ?? '—'}</td><td class="r">${b.ext ?? '—'}</td><td class="r">${b.mach ?? '—'}</td></tr>`).join('')}</tbody></table></div>
      <p class="note">“Conferir” = dado da planilha que não fecha (passe o mouse). Capacidade e ano vêm do ClickUp; a unidade da capacidade não está na lista.</p></div>`;
   const e = balEstado(b), hr = balHor(b.id), csn = balCsn(b.id), tx = balTaxa(b.id);
-  const H = [...recs('base').filter(r => r.vessel === b.id && !r.excluido && BA1M[r.item]).map(r => ({ d: r.date, tx: `${r.item} ${BA1M[r.item].eq}: executado${r.h != null && r.h !== '' ? ' com ' + nf(r.h) + ' h' : ''}${r.om ? ' · OM ' + r.om : ''}${r.cert ? ' · cert. ' + r.cert : ''}${r.estaleiro ? ' · ' + r.estaleiro : ''}${r.quem && !r.estaleiro ? ' · ' + r.quem : ''}${r.obs ? ' · ' + r.obs : ''}`, by: r.by })),
+  const H = [...recs('base').filter(r => r.vessel === b.id && !r.excluido && BA1M[r.item]).map(r => ({ d: r.date, tx: `${r.item} ${BA1M[r.item].eq}: ${r.insp ? 'inspecionado sem intervenção' + (r.obs ? ' (' + r.obs + ')' : '') : 'executado'}${r.h != null && r.h !== '' ? ' com ' + nf(r.h) + ' h' : ''}${r.om ? ' · OM ' + r.om : ''}${r.cert ? ' · cert. ' + r.cert : ''}${r.estaleiro ? ' · ' + r.estaleiro : ''}${r.quem && !r.estaleiro ? ' · ' + r.quem : ''}${r.obs ? ' · ' + r.obs : ''}`, by: r.by })),
     ...balCmpHist(b.id).map(p => ({ d: p.date, tx: `Ensaio de compressão: menor ${nf(p.min, 1)} bar (C${p.cil}), diferença ${nf(p.max - p.min, 1)} bar${p.bb ? ' · blow-by ' + p.bb : ''}${p.r.om ? ' · OM ' + p.r.om : ''}`, by: p.r.by })),
     ...recs('hor').filter(r => r.vessel === b.id && r.pos === 'MB' && !r.excluido).map(r => ({ d: r.date, tx: `Horímetro do motor-bomba: ${nf(r.h)} h`, by: r.by })),
     ...recs('avaria').filter(r => r.vessel === b.id && !r.excluido).map(r => ({ d: r.date, tx: `Falha ${r.c}: ${r.desc}${r.om ? ' · OM ' + r.om : ''}${r.fim ? ' · resolvida em ' + brD(isoD(new Date(r.fim.at))) : ''}`, by: r.by }))].sort((a, b) => a.d < b.d ? 1 : -1);
@@ -381,17 +382,28 @@ function vBalFt() {
 const balPode = () => { if (S.session) return true; toast('Entre no SMF para registrar.'); return false; };
 function balExeModal(vid, item) {
   if (!balPode()) return; const b = balsaDe(vid); if (!b) return; const hr = balHor(b.id), L = balItens(b);
-  modal(`<h2>Registrar execução · ${esc(b.nome)}</h2><p class="note">Marque os serviços feitos na mesma intervenção. A OM e as fotos de antes e depois ficam no Sankhya (NP 024 6.4 e 9).</p>
+  modal(`<h2>Registrar execução · ${esc(b.nome)}</h2><p class="note">Marque os serviços feitos na mesma OM. A OM e as fotos de antes e depois ficam no Sankhya (NP 024 6.4 e 9).</p>
+   <div class="cm-chips" style="margin-bottom:6px"><label class="cm-chip"><input type="radio" name="beR" value="f" checked> Executado</label><label class="cm-chip"><input type="radio" name="beR" value="i"> Inspecionado · sem intervenção</label></div>
+   <div id="beI" style="display:none" class="g"><label class="f s6">O que foi verificado e por que não precisa intervir agora<input id="beJ" placeholder="ex.: casco inspecionado, sem corrosão relevante; não precisa docar agora"></label><label class="f s3">Próxima avaliação em (meses) <span class="note">nunca além do intervalo de cada serviço</span><input id="beM" inputmode="numeric" placeholder="vazio = intervalo normal"></label><label class="f s3">ou em (horas do motor-bomba)<input id="beHh" inputmode="numeric" placeholder="vazio = intervalo normal"></label></div>
    <div class="g"><label class="f s3">Data<input type="date" id="beD" value="${isoD(hoje())}"></label><label class="f s3">Horímetro do motor-bomba<input id="beH" inputmode="decimal" value="${hr ? hr.h : ''}" placeholder="h"></label><label class="f s3">Nº da OM (Sankhya)<input id="beO" inputmode="numeric"></label><label class="f s3">Quem executou<input id="beQ" placeholder="equipe, CTF/MFM ou terceiro"></label></div>
    <div class="bal-ck">${L.map(t => `<label><input type="checkbox" value="${t.id}"${t.id === item ? ' checked' : ''}> <b>${t.id}</b> ${esc(t.eq)} · ${esc(t.serv)} <span class="note">(${balIvTx(t)})</span></label>`).join('')}</div>
    <label class="f">Observação<input id="beX"></label><div class="note" id="beE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="beOk">Salvar</button></div>`, true);
-  $('#beOk').onclick = async () => { const its = $$('#modal .bal-ck input:checked').map(i => i.value), d = $('#beD').value, hv = $('#beH').value.trim().replace(',', '.'), om = $('#beO').value.trim();
+  $$('#modal [name=beR]').forEach(r => r.onchange = () => { $('#beI').style.display = $('#modal [name=beR]:checked').value === 'i' ? '' : 'none'; });
+  $('#beOk').onclick = async () => { const its = $$('#modal .bal-ck input:checked').map(i => i.value), d = $('#beD').value, hv = $('#beH').value.trim().replace(',', '.'), om = $('#beO').value.trim(), insp = $('#modal [name=beR]:checked').value === 'i';
     if (!its.length) return $('#beE').textContent = 'Marque pelo menos um serviço.'; if (!d) return $('#beE').textContent = 'Informe a data.'; if (!om) return $('#beE').textContent = 'Informe o nº da OM do Sankhya (NP 024: toda intervenção tem OM).';
     if (its.some(i => BA1M[i].h) && hv === '') return $('#beE').textContent = 'Serviço por horas: informe o horímetro.';
-    const h = hv === '' ? null : +hv, quem = $('#beQ').value.trim(), obs = $('#beX').value.trim(), by = S.session.name, at = Date.now();
-    for (const it of its) await saveRec({ id: uid('base'), kind: 'base', vessel: b.id, pos: 'UN', item: it, h, date: d, om, quem, obs, by, bal: true, createdAt: at });
+    const h = hv === '' ? null : +hv, quem = $('#beQ').value.trim(), obs = $('#beX').value.trim(), by = S.session.name, at = Date.now(), E = $('#beE');
+    // inspecionado sem intervenção: próxima avaliação nunca além do intervalo normal; docagem nunca além do CSN
+    const PX = {}; if (insp) { const j = $('#beJ').value.trim(), mm = $('#beM').value.trim(), hh = $('#beHh').value.trim(), csn = balCsn(b.id);
+      if (j.length < 10) return E.textContent = 'Descreva o que foi verificado e por que não precisa intervir.';
+      for (const it of its) { const t = BA1M[it], iv = balIv(t), m = mm === '' ? iv.m : Math.min(+mm, iv.m || 0), hn = hh === '' ? iv.h : Math.min(+hh, iv.h || 0);   // nunca além do intervalo de cada serviço
+        if (iv.m && !(m > 0)) return E.textContent = 'Próxima avaliação: informe os meses (ou deixe vazio para o intervalo normal).';
+        if (iv.h && !(hn > 0)) return E.textContent = 'Próxima avaliação: informe as horas (ou deixe vazio para o intervalo normal).';
+        const prox = iv.m ? isoD(addM(pD(d), m)) : null; if (t.doca && csn && csn.date && prox > csn.date) return E.textContent = it + ': a próxima avaliação passa da data-limite do CSN (' + brD(csn.date) + ').';
+        PX[it] = { insp: true, obs: j, prox, proxH: iv.h && h != null ? h + hn : null }; } }
+    for (const it of its) await saveRec(Object.assign({ id: uid('base'), kind: 'base', vessel: b.id, pos: 'UN', item: it, h, date: d, om, quem, obs, by, bal: true, createdAt: at }, PX[it] || {}));
     if (h != null && (!hr || h > hr.h || d > hr.date)) await saveRec({ id: uid('hor'), kind: 'hor', vessel: b.id, pos: 'MB', h, date: d, by, bal: true });
-    closeModal(); toast(its.length + ' serviço' + (its.length === 1 ? '' : 's') + ' registrado' + (its.length === 1 ? '' : 's') + '.'); render(); };
+    closeModal(); toast(its.length + ' serviço' + (its.length === 1 ? '' : 's') + ' registrado' + (its.length === 1 ? '' : 's') + (insp ? ' como inspecionado sem intervenção' : '') + '.'); render(); };
 }
 function balHorModal(vid) {
   if (!balPode()) return; const b = balsaDe(vid), hr = balHor(vid);

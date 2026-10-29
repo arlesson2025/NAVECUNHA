@@ -309,13 +309,35 @@ async function enxIIA(o, w0) {   // w0: janela já aberta no clique (o navegador
     src.parentNode.removeChild(src);var todas=document.querySelectorAll('.pg'),tot=todas.length;[].forEach.call(todas,function(p,i){p.querySelector('.fn').textContent=(i+1)+' de '+tot;});setTimeout(function(){window.print()},700);})();`;
   w.document.open(); w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq('Anexo II-A OM ' + (o.num || '') + ' ' + nm))}</title><style>${css}</style></head><body><div id="out"></div><div id="src" style="position:absolute;left:-9999px;width:182mm">${corpo + fotos}</div><script>window.onload=function(){${js}}<\/script></body></html>`); w.document.close();
 }
+// formulário de campo do II-A (Supervisor, 28/10/2026): a corretiva aberta sai impressa com o que já se sabe (OM, empurrador, equipamento, falha, início da parada) e o resto em branco para preencher a bordo; depois se transcreve em “Liberar para operação”
+function enxIIACampo(o) {
+  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
+  const v = vessel(o.vessel), nm = v ? v.nome : o.vessel, X = s => esc(s == null || s === '' ? '' : String(s)), ln = n => '<div class="ln"></div>'.repeat(n);
+  const css = `@page{size:A4;margin:12mm 14mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;font:11px Arial,sans-serif;color:#202124}
+   .tp{display:flex;align-items:center;gap:10px;border:1.5px solid #16244A;padding:6px 8px;margin-bottom:4px}.tp img{height:11mm}.tp div{flex:1}.tp div b{display:block;color:#16244A;font-size:13px}.tp div span{font-size:10px;color:#5F6368}.tp .om{flex:none;text-align:center;border-left:1.5px solid #16244A;padding:0 12px;font-size:9px;color:#5F6368}.tp .om b{font-size:18px;color:#16244A}
+   h2{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#16244A;margin:10px 0 3px;border-bottom:1px solid #16244A;padding-bottom:2px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #CBD5E1;padding:5px 6px;text-align:left;vertical-align:top}
+   th{background:#F4F6F9;font-weight:600;width:16%;white-space:nowrap}.k th{width:22%}.ln{border-bottom:1px solid #9AA0A6;height:20px}.as th{width:auto;font-size:10px}.as td{height:50px;vertical-align:bottom;color:#80868B;font-size:9.5px}.cx{white-space:nowrap}`;
+  const A = ['Executante', 'Comandante ou Coord. de Operações', 'Supervisor de Manutenção'].concat(o.classe === 'Crítica' ? ['Coordenador de Operações'] : []);
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq('Anexo II-A campo OM ' + (o.num || '') + ' ' + nm))}</title><style>${css}</style></head><body>
+   <div class="tp"><img src="${docLogo('nav')}"><div><b>ANEXO II-A · RELATÓRIO DE MANUTENÇÃO CORRETIVA</b><span>Formulário de campo · NP Navecunha 055 · ${X(nm)}</span></div><div class="om">OM<b>${X(o.num)}</b></div><img src="${docLogo('vda')}"></div>
+   <h2>Dados</h2><table><tr><th>Empurrador</th><td>${X(nm)}</td><th>Criticidade</th><td>${X(o.classe)}</td></tr><tr><th>Sistema</th><td>${X(o.sistema)}</td><th>Equipamento</th><td>${X(o.equip)}</td></tr>
+    <tr><th>Data da falha</th><td>${X(brDT(o.abertura))}</td><th>Horímetro</th><td>${o.horimetro ? nf(+o.horimetro) + ' h' : '__________ h'}</td></tr>
+    <tr><th>Executante</th><td></td><th>Mão de obra</th><td class="cx">☐ Equipe própria &nbsp; ☐ Terceiro: ____________</td></tr></table>
+   <h2>Falha</h2><table class="k"><tr><th>Sintoma</th><td>${X(o.descricao)}${o.descricao ? '' : ln(2)}</td></tr><tr><th>Modo de falha</th><td>${X(o.modo)}</td></tr>
+    <tr><th>Causa</th><td>${ln(2)}</td></tr></table>
+   <h2>Serviço executado</h2><table class="k"><tr><th>Serviço</th><td>${ln(5)}</td></tr><tr><th>Peças e materiais</th><td>${ln(3)}</td></tr><tr><th>Teste após o reparo</th><td>${ln(2)}</td></tr><tr><th>Observação</th><td>${ln(2)}</td></tr></table>
+   <h2>Tempo de reparo</h2><table><tr><th>Parada</th><td>${X(brDT(o.abertura))}</td><th>Liberação</th><td>____/____/______ às ____:____</td></tr></table>
+   <h2>Fotos</h2><p style="font-size:10px;color:#5F6368;margin:2px 0">Tirar foto de ANTES e de DEPOIS do serviço · anexar no SMF em 1.2 Manutenção corretiva → Liberar para operação.</p>
+   <h2>Assinaturas</h2><table class="as"><tr>${A.map(a => `<th>${a}</th>`).join('')}</tr><tr>${A.map(() => '<td>Nome, assinatura e data</td>').join('')}</tr></table>
+   <script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
+}
 // OMs preventivas registradas de um empurrador (para reimprimir o II-B)
 const enxOMsDe = vid => { const G = {}; recs('base').forEach(r => { if (r.vessel === vid && r.om && !r.excluido && A1M[r.item]) { const g = G[r.om] = G[r.om] || { om: r.om, date: r.date, n: 0 }; g.n++; if (r.date > g.date) g.date = r.date; } }); return Object.values(G).sort((a, b) => a.date < b.date ? 1 : -1); };
 // ---------- Biblioteca do enxuto: formulários padrão, NP, Anexo I e Matriz técnica (Supervisor, 27/10/2026) ----------
 // Formulários em branco para imprimir; os preenchidos saem das próprias telas (Executar, Corretivas, Óleo).
 const ENXB_DOCS = [
   ['form', 'Anexo II-B · Relatório de serviço realizado · preventiva', 'Em branco, uma folha. Com os serviços já listados para levar a bordo: 2.2 OM preventiva → Formulário de campo', 'iib'],
-  ['form', 'Anexo II-A · Relatório de serviço realizado · corretiva', 'Em branco, uma folha. Preenchido, sai em 4 · Corretivas', 'iia'],
+  ['form', 'Anexo II-A · Relatório de serviço realizado · corretiva', 'Em branco, uma folha. Com a falha já preenchida: 1.2 Manutenção corretiva → Formulário de campo', 'iia'],
   ['form', 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', 'Preencher pelo SMF (Óleo) ou imprimir em branco', 'forms/FR_049_B.html'],
   ['form', 'FR 027_L Rev.05 · Check-list de chegada e saída', 'Operador de Medição / Líder, CTF e Coordenador de Operações', 'forms/FR_027_L.html'],
   ['form', 'FR 016_E · Controle de materiais Classe I e II', 'Entrega de resíduos ao SGI (NP 5.7)', 'forms/FR_016_E.html'],
@@ -371,7 +393,7 @@ function vEnxCor() {
     L = T.filter(o => o.status === 'encerrada').sort((a, b) => (b.abertura || '') < (a.abertura || '') ? -1 : 1).slice(0, 30), ag = enxAgora(), adm = can.admin();
   const hP = o => o.abertura ? Math.max(0, ((o.liberacao ? new Date(o.liberacao) : new Date()) - new Date(o.abertura)) / 36e5) : null;
   const lin = o => { const st = enxCorSt(o), h = hP(o); return `<tr><td class="nowrap">${brDT(o.abertura || '')}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc(o.num || '—')}</td><td>${esc(o.equip || o.sistema || '—')}<div class="note">${esc(o.classe || '')}</div></td><td>${esc(String(o.descricao || '').slice(0, 90))}</td><td><span class="pill ${st[0]}">${st[1]}</span></td><td class="r nowrap">${h == null ? '—' : nf(h, 1) + ' h'}</td>
-    <td class="nowrap">${!o.liberacao ? `<button class="mbtn sm pri" data-eclib="${o.id}">Liberar para operação</button>` : o.status !== 'encerrada' && adm ? `<button class="mbtn sm pri" data-ecenc="${o.id}">Conferir e encerrar</button> ` : ''}${o.liberacao ? `<button class="mbtn sm" data-ec2a="${o.id}">Anexo II-A</button>` : ''}</td></tr>`; };
+    <td class="nowrap">${!o.liberacao ? `<button class="mbtn sm" data-ec2acp="${o.id}" title="Formulário de campo do Anexo II-A para preencher a bordo">🖨 Formulário de campo</button> <button class="mbtn sm pri" data-eclib="${o.id}">Liberar para operação</button>` : o.status !== 'encerrada' && adm ? `<button class="mbtn sm pri" data-ecenc="${o.id}">Conferir e encerrar</button> ` : ''}${o.liberacao ? `<button class="mbtn sm" data-ec2a="${o.id}">Anexo II-A</button>` : ''}</td></tr>`; };
   const tab = (R, vz) => `<div class="tw"><table class="t"><thead><tr><th>Início</th><th>Empurrador</th><th>OM</th><th>Equipamento · criticidade</th><th>Falha (sintoma)</th><th>Situação</th><th class="r">Indisponível</th><th></th></tr></thead><tbody>${R.map(lin).join('') || `<tr><td colspan="8" class="note">${vz}</td></tr>`}</tbody></table></div>`;
   return enxCab('1.2 Manutenção corretiva', 'Abra a corretiva na falha (fica “em reparo” e conta como indisponibilidade) · na liberação, informe o serviço executado e as fotos de depois · sai o Anexo II-A · MTTR = início → liberação', '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>OMs corretivas em aberto · ${ab.length}</h2>${tab(ab, 'Nenhuma corretiva em aberto.')}</div>
@@ -479,7 +501,7 @@ async function enxCrAprovar(id) {
 .ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxcampo],[data-enxfeito],[data-enxnf],[data-enxinsp],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxcampo],[data-enxfeito],[data-enxnf],[data-enxinsp],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ec2acp],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
     if (d.ebib !== undefined) { const x = ENXB_DOCS[+d.ebib][3]; return x === 'iib' ? enxIIBBranco() : x === 'iia' ? enxIIABranco() : window.open(x, '_blank', 'noopener'); }
     if (d.ebibdoc !== undefined) return abrirDoc(S.recs.get(d.ebibdoc));
     if (d.ebibnovo !== undefined) return docModal(null, 'manual');
@@ -496,6 +518,7 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.ecsalvar !== undefined) return enxCorSalvar();
     if (d.eclib !== undefined) return enxCorLiberar(d.eclib);
     if (d.ecenc !== undefined) return enxCorEncerrar(d.ecenc);
+    if (d.ec2acp !== undefined) { const o = S.recs.get(d.ec2acp); if (o) enxIIACampo(o); return; }
     if (d.ec2a !== undefined) { const o = S.recs.get(d.ec2a); if (o) enxIIA(o); return; }
     if (d.enxcopiar !== undefined) return enxCopiar();
     if (d.enxcampo !== undefined) return enxIIBCampo();
