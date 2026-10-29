@@ -3,11 +3,11 @@
    (data, horímetro, nº da OM, quem) ou não feito com motivo → 3 Relatório de preventiva do mês, emitido e congelado.
    A execução, as fotos e o encerramento ficam na OM do Sankhya; o SMF guarda a ligação serviço × OM (achado de auditoria nº 1).
    Registros com os tipos que já existem: 'base' (feito; não feito = nf: true, não reinicia o prazo), 'hor' e 'snap' (relatório emitido, tipo 'relprev').
-   O resto do SMF fica escondido, não apagado: “Modo completo neste aparelho” (Administração, só o Supervisor; localStorage smf_modo_completo). */
+   Desde a 3.46 não há mais modo completo: as telas antigas não abrem (enxRota manda para a Situação da frota). */
 'use strict';
-const ENX_MC = 'smf_modo_completo';
-const enxModoCompleto = () => { try { return localStorage.getItem(ENX_MC) === '1'; } catch (e) { return false; } };
-const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador()) && !enxModoCompleto();
+// SMF 3.46 (Supervisor, 29/10/2026: “por que tem duas versões? faça somente uma”): o modo completo por aparelho saiu; o enxuto é o único para o Supervisor e o Analista
+try { localStorage.removeItem('smf_modo_completo'); } catch (e) { }
+const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador());
 const ENX_OK = ['enxhoje', 'enxpend', 'enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxacao', 'enxcal', 'enxbib', 'oleo', 'compr', 'anoleo', 'cxr', 'admin'];
 // link de tela do modo completo → tela equivalente do enxuto (3.22: link fora da lista jogava no Painel; “clico em análise de óleo e vai pra outro canto”)
 const ENX_ALIAS = { horfrota: 'enxhor', hor: 'enxhor', controle: 'enxcal', calib: 'enxcal', crono: 'enxcr', falhas2: 'enxcor', oms: 'enx', emitir: 'enx', omconf: 'enxcor', relmes: 'enxrel', rel: 'enxrel', kpi: 'enxrel', lubreg: 'oleo', lubcons: 'oleo', bib: 'enxbib', apoio: 'enxbib', mapa: 'enxhoje', rotina: 'enxhoje', geral: 'enxhoje', audit: 'enxcr', matriz: 'enxbib' };   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
@@ -242,12 +242,7 @@ function enxRelImprimir(s) {
   w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq(s.num))}</title><style>@page{size:A4;margin:10mm}${DOC_CAB_CSS}body{font:11px Arial,sans-serif;color:#202124;margin:0}h3{font-size:12px;color:#1F2A44;margin:12px 0 4px}.enx-gr svg{max-height:170px;width:100%}table{width:100%;border-collapse:collapse;margin-bottom:4px}th,td{border:1px solid #CBD5E1;padding:3px 5px;text-align:left;vertical-align:top}th{background:#16244A;color:#fff;font-size:10px}.r{text-align:right}.note{color:#5F6368;font-size:10px}.rl-ruim{color:#C5221F}.rl-ass th{width:50%}.rl-lin{height:34px;vertical-align:bottom;color:#5F6368}tr{page-break-inside:avoid}thead{display:table-header-group}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
    ${docCab('RELATÓRIO DE MANUTENÇÃO PREVENTIVA', `Empurradores fluviais · ${esc(s.dados.ref)} · ${esc(s.num)}`, 'NP Navecunha 055 · itens 7.3 e 9 · Anexo I')}${enxRelHTML(s.dados, s)}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
 }
-// ---------- Modo completo (só o Supervisor, neste aparelho) ----------
-function enxAdminHTML() {
-  if (!can.admin()) return '';
-  return `<div class="card"><h2>Modo do SMF neste aparelho</h2><p class="note">O SMF abre no modo enxuto: Horímetros, Cronograma, Executar, Corretivas, Relatório mensal, Óleo, Compressão e Biblioteca. O modo completo mostra de novo todas as telas antigas (OMs, Anexo II, falhas, FR 027_L, indicadores…). Nada foi apagado.</p>
-    <label class="row" style="gap:8px"><input type="checkbox" data-enxmc${enxModoCompleto() ? ' checked' : ''}> Modo completo neste aparelho</label></div>`;
-}
+function enxAdminHTML() { return ''; }   // o cartão “Modo do SMF neste aparelho” saiu na 3.46
 // ---------- Anexo II simples = relatório de serviço realizado, uma folha (Supervisor, 27/10/2026) ----------
 // II-B (preventiva): os serviços registrados com o mesmo nº de OM · II-A (corretiva): o registro da corretiva. Sem nº de item, passo a passo nem medição.
 // título da janela de impressão só em ASCII: a impressora “Microsoft Print to PDF” grava acento e “·” corrompidos no título do PDF e o visualizador do Edge não abre o arquivo (Supervisor, 27/10/2026)
@@ -532,5 +527,4 @@ const enxAfter = k => () => { const m = $('#main');
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'enx' && ENX.v ? '1' : '') + (k === 'enxcr' && ENXC.v ? '1' : '') + '_lay', '[data-enxreset]'); };
 Object.assign(VX, { enx: vEnx, enxcr: vEnxCr, enxhor: vEnxHor, enxcor: vEnxCor, enxbib: vEnxBib }); ['enx', 'enxcr', 'enxhor', 'enxcor', 'enxbib'].forEach(k => { AFTER[k] = enxAfter(k); });
 Object.assign(NP_TAG, { enxcr: '7.3 · Anexo I', enx: '7.3 · Anexo I', enxhor: '5.5.1', enxcor: '5.5 · Anexo II-A', enxrel: '7.3 e 9', enxbib: '8' });
-document.addEventListener('change', e => { const c = e.target.closest('[data-enxmc]'); if (!c) return; try { localStorage.setItem(ENX_MC, c.checked ? '1' : '0'); } catch (er) { } toast(c.checked ? 'Modo completo ligado neste aparelho.' : 'Modo enxuto.'); render(); });
 { const st = document.createElement('style'); st.textContent = `.enx-rel h3{font-size:14px;margin:14px 0 6px;color:#1F2A44}.enx-gr svg{max-height:200px}.enx-ck{width:18px;height:18px}.enx-g{border:1px solid #E3E8EF;border-radius:8px;margin:0 0 8px;background:#fff}.enx-g>summary{display:flex;align-items:center;gap:6px;padding:9px 12px;cursor:pointer;list-style:none}.enx-g>summary::-webkit-details-marker{display:none}.enx-g>summary::before{content:'▸';color:#5F6368;margin-right:4px}.enx-g[open]>summary::before{content:'▾'}.enx-g[open]>summary{border-bottom:1px solid #E3E8EF}.enx-g table{margin:0}`; document.head.appendChild(st); }

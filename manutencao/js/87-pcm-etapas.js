@@ -222,7 +222,7 @@ function pcmHorIncCard() {
 function pcmHorCorrigir(vid, pos, item) {
   const v = vessel(vid), t = A1M[item], L = ultimoServico(vid, pos, item); if (!v || !t || !L) return; if (!S.session) return loginModal();
   const hp = posHor(pos, t, vid), perto = horEm(vid, hp, L.date), cur = horAtual(vid, hp), src = L.src || '';
-  if (src === 'marco' || src.startsWith('corr:') || src.startsWith('laudo')) return toast('Este registro vem do ' + PCM_SRC(src) + ': corrija no Modo completo (Administração).', 7000);
+  if (src === 'marco' || src.startsWith('corr:') || src.startsWith('laudo')) return toast('Este registro vem do ' + PCM_SRC(src) + (src === 'marco' ? ': corrija o marco zero em Administração.' : ': registre o serviço de novo na 2.2 (Apontar execução) com a data e o horímetro reais; o registro mais novo passa a valer.'), 8000);
   const irmaos = src === 'base' ? recs('base').filter(b => b.vessel === vid && b.date === L.date && !b.nf && !b.excluido && +b.h === +L.h && A1M[b.item] && posHor(b.pos, A1M[b.item], vid) === hp) : [];
   modal(`<h2>Corrigir horímetro · ${esc(v.nome)} · ${esc(posCurtoE(v, hp))}</h2><p class="note">${esc(item)} ${esc(t.chk || t.item)} · ${esc(PCM_SRC(src))} de ${brD(L.date)}</p>
    <table class="t"><tbody><tr><td>Horímetro registrado</td><td class="r"><b style="color:var(--badt)">${nf(L.h)} h</b></td></tr><tr><td>Leitura mais próxima do dia do serviço</td><td class="r">${perto ? nf(perto.h) + ' h em ' + brD(perto.date) : '—'}</td></tr><tr><td>Leitura atual</td><td class="r">${cur ? nf(cur.h) + ' h em ' + brD(cur.date) : '—'}</td></tr></tbody></table>
