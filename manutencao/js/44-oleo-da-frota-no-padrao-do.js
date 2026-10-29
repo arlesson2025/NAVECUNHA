@@ -86,7 +86,7 @@ AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.o
 { const st = document.createElement('style'); st.textContent = `
 #main .ol-t th{white-space:nowrap}#main .ol-t th.ol-gu{background:#F4F6F9;text-align:center}#main .ol-t th.ol-gp{background:#E8F0FE;color:#1967D2;text-align:center}
 #main .ol-t td{vertical-align:middle}#main .ol-v{vertical-align:top!important;cursor:pointer;white-space:nowrap}#main .ol-v div{margin:4px 0 0 16px}#main .ol-car{display:inline-block;width:16px;color:var(--mut)}
-#main .ol-gr td{background:#FAFBFC}#main .ol-sit{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+#main .ol-gr td{background:#FAFBFC}#main .ol-v .pill.p-bad{background:#FCE8E6!important;color:#C5221F!important;font-weight:700}#main .ol-v .pill.p-ok{background:#E6F4EA!important;color:#137333!important}#main .ol-sit{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 #main .ol-t tbody td{border-bottom:0!important;border-top:0!important}#main .ol-t tbody tr.ol-b1>td,#main .ol-t tbody tr.ol-gr>td{border-top:1px solid #DADCE0!important}#main .ol-t tbody tr:first-child>td{border-top:0!important}   /* 3.51: só a linha que divide os empurradores */
 .ol-seg{display:inline-flex;border:1px solid #DADCE0;border-radius:16px;overflow:hidden}.ol-seg button{border:0;background:#fff;font:inherit;font-size:12.5px;padding:3px 11px;cursor:pointer}.ol-seg button.on{background:#E8F0FE;color:#1967D2;font-weight:600}
 #main .ol-sv{width:auto!important;min-width:0;flex:none;font:inherit;font-size:12.5px;padding:2px 6px;border:1px solid #DADCE0;border-radius:6px;margin-left:6px}
