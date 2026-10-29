@@ -7,7 +7,7 @@
    · faixa das etapas no topo (pcmFaixa, pelo opPassos do js/84) e títulos técnicos (PCM_TIT, pelo render) */
 'use strict';
 const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejamento', ['enxcr', 'enx', 'cxr']], ['3', 'Condição', ['oleo', 'compr', 'enxcal', 'anoleo']], ['4', 'Fechamento', ['enxacao', 'enxrel']]];
-const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Compressão do MCP · manutenção preditiva', anoleo: '3.4 Análise de óleo do MCP · manutenção preditiva' };
+const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Condição dos MCP · compressão', anoleo: '3.2 Condição dos MCP · análise de óleo' };
 function pcmFaixa() {
   if (!PCM_ETAPAS.some(e => e[2].includes(VIEW)) && !['enxhoje', 'enxpend'].includes(VIEW)) return '';
   return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Situação da frota</a><i>→</i><a href="#enxpend" class="${VIEW === 'enxpend' ? 'on' : ''}">Pendências</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
@@ -64,7 +64,7 @@ function vEnxCal() {
   const pior = r => Math.min(...Object.values(r.c).map(x => ord[x.s.st] ?? 4));
   const R = Object.values(M).sort((a, b) => pior(a) - pior(b) || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }) || a.pos.localeCompare(b.pos));
   const cel = x => { if (!x) return '<td class="cal-c cal-na">—</td>'; const U = x.s.L; return `<td class="cal-c cal-${x.s.st}" title="${esc(x.t.id + ' ' + x.nm)} · a cada ${esc(ivTxt(x.t))} · última: ${U ? brD(U.date) + (U.h != null ? ' · ' + nf(U.h) + ' h' : '') : 'sem registro'}">${x.s.st === 'sem' ? 'sem ref.' : calVal(x)}</td>`; };
-  return enxCab('3.3 Calibração do MCP', 'Matriz motor × serviço de ajuste do Anexo I · cada célula mostra o restante (horas ou dias) até o vencimento · passe o mouse para ver a última execução', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+  return enxCab('3.2 Condição dos MCP · calibração', 'Matriz motor × serviço de ajuste do Anexo I · cada célula mostra o restante (horas ou dias) até o vencimento · passe o mouse para ver a última execução', '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Resumo</h2><div class="f2-ks">${[['Vencidas', n('venc'), 'var(--badt)'], ['Vencem na próxima viagem', n('viag'), 'var(--warnt)'], ['Sem referência', n('sem'), 'var(--warnt)'], ['Dentro do prazo', n('ok'), 'var(--okt)']].map(([l, x, c]) => `<div class="f2-k"><span>${l}</span><b${x ? ` style="color:${c}"` : ''}>${x}</b></div>`).join('')}</div>
      <p class="note"><b>Como lançar:</b> clique no empurrador → marque o serviço → “Apontar execução” com o horímetro de cada motor. Na calibração dos bicos (1.1.12) o ensaio de compressão vai no mesmo apontamento.</p></div>
    <div class="card"><h2>Horas restantes até a próxima calibração</h2><div class="cal-g">${['1.1.11', '1.1.12'].filter(id => C.includes(id)).map(id => `<div><p class="note"><b>${esc(PCM_CAB[id])}</b> · ${esc(id)} · a cada ${esc(ivTxt(A1M[id]))} · menor saldo primeiro</p>${pcmCalGraf(D, id)}</div>`).join('')}</div>
@@ -240,3 +240,39 @@ function pcmHorCorrigir(vid, pos, item) {
     closeModal(); toast('Horímetro corrigido.'); render(); };
 }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-hcorr]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const [v, p, i] = b.dataset.hcorr.split('|'); pcmHorCorrigir(v, p, i); }, true);
+// ---------- 3.2 Condição dos MCP (SMF 3.56; Supervisor, 29/10/2026: “coloca esses 3 numa mesma janela e cria uma janela para o diagnóstico de condição dos MCP da frota”) ----------
+// um item no menu; em cima das telas Compressão (compr), Calibração (enxcal) e Análise de óleo (anoleo): as abas e o diagnóstico (compressão + consumo de óleo + último laudo + calibração → recomendação)
+const MC_VIEWS = [['compr', 'Compressão'], ['enxcal', 'Calibração'], ['anoleo', 'Análise de óleo']];
+const MC_DOT = { ok: '#1E8E3E', at: '#F9AB00', bad: '#C5221F', sem: '#9AA4B1' };
+function mcDiag() {
+  const CM = lubConsumoMCP(120).out, CAL = calibDados().filter(x => isMcp(x.pos)), out = [];
+  S.cfg.frota.filter(v => !foraOp(v) && !(v.off || []).includes('MCP')).forEach(v => mcpPos(v).forEach(pos => {
+    const c = cmpStatus(v, pos), cs = { fora: 'bad', prog: 'at', aten: 'at', sem: 'sem', ok: 'ok' }[c.st], co = CM.find(x => x.v === v && x.p === pos) || {}, os = { venc: 'bad', viag: 'at', ok: 'ok', sem: 'sem' }[co.st || 'sem'];
+    const L = laudos(v.id, pos), ul = L[L.length - 1], ls = ul ? laudoSt(ul) : null, lst = !ul ? 'sem' : { venc: 'bad', viag: 'at', ok: 'ok' }[ls.st];
+    const cl = CAL.filter(x => x.v === v && x.pos === pos), clv = cl.filter(x => x.s.st === 'venc'), cst = !cl.length ? 'sem' : clv.length ? 'bad' : cl.every(x => x.s.st === 'sem') ? 'sem' : 'ok';
+    let rec, rc;
+    if (cs === 'bad' || (lst === 'bad' && (cs === 'at' || os !== 'ok')) || (os === 'bad' && cs === 'at')) { rec = 'Programar inspeção / retífica (overhaul)'; rc = 'bad'; }
+    else if (lst === 'bad' || os === 'bad' || cs === 'at' || lst === 'at' || os === 'at') { rec = 'Monitorar: antecipar ensaio de compressão e amostragem de óleo'; rc = 'at'; }
+    else if (cst === 'bad') { rec = 'Calibração vencida: ' + clv.map(c => c.nm.toLowerCase()).join(', '); rc = 'at'; }
+    else if (cs === 'sem' || lst === 'sem') { rec = 'Completar a base: ' + [cs === 'sem' ? 'ensaio de compressão' : '', lst === 'sem' ? 'análise de óleo' : ''].filter(Boolean).join(' e '); rc = 'sem'; }
+    else { rec = 'Manter'; rc = 'ok'; }
+    out.push({ v, pos, c, cs, co, os, ul, ls, lst, clv, cst, rec, rc, ord: { bad: 0, at: 1, sem: 2, ok: 3 }[rc] }); }));
+  return out.sort((a, b) => a.ord - b.ord || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
+}
+function mcDiagCard() {
+  const D = mcDiag(), dot = s => `<i class="mc-dot" style="background:${MC_DOT[s]}"></i>`, n = k => D.filter(x => x.rc === k).length, P = { bad: 'p-bad', at: 'p-warn', sem: 'p-mut', ok: 'p-ok' };
+  return `<div class="card mc-diag"><h2>Diagnóstico de condição dos MCP da frota</h2>
+    <div class="sf-k">${[['Programar overhaul', n('bad'), 'var(--badt)'], ['Monitorar', n('at'), 'var(--warnt)'], ['Completar a base', n('sem'), ''], ['Manter', n('ok'), 'var(--okt)']].map(([l, x, c]) => `<div><span>${l}</span><b${c && x ? ` style="color:${c}"` : ''}>${x}</b></div>`).join('')}</div>
+    <div class="tw"><table class="t mc-t"><thead><tr><th>Motor</th><th>Compressão (pior cilindro)</th><th>Consumo de óleo</th><th>Último laudo de óleo</th><th>Calibração</th><th>Recomendação</th></tr></thead><tbody>
+    ${D.map(x => `<tr><td class="nowrap"><b>${esc(x.v.nome)}</b>${mcpPos(x.v).length > 1 ? ' · ' + x.pos : ''}</td>
+      <td class="nowrap">${dot(x.cs)}${x.c.u ? `${fMPa(x.c.u.min)} MPa <span class="mut">cil. ${x.c.u.cil}</span>${x.c.vencida ? ' <span class="mut">· ensaio vencido</span>' : ''}` : '<span class="mut">sem ensaio</span>'}</td>
+      <td class="nowrap">${dot(x.os)}${x.co.taxa != null ? x.co.taxa.toFixed(2).replace('.', ',') + ' L/100 h' : '<span class="mut">sem dados</span>'}</td>
+      <td>${dot(x.lst)}${x.ul ? `${brD(x.ul.date)} · ${x.ls.alertas.length ? `<span style="color:${MC_DOT[x.lst]}">${esc(x.ls.alertas.slice(0, 2).map(a => a.nome + ' ' + String(a.v).replace('.', ',')).join(', '))}</span>` : 'normal'}` : '<span class="mut">sem laudo</span>'}</td>
+      <td>${dot(x.cst)}${x.clv.length ? `<span style="color:var(--badt)">${esc(x.clv.map(c => c.nm).join(', '))} vencida${x.clv.length > 1 ? 's' : ''}</span>` : x.cst === 'sem' ? '<span class="mut">sem histórico</span>' : 'em dia'}</td>
+      <td><span class="pill ${P[x.rc]}">${esc(x.rec)}</span></td></tr>`).join('')}</tbody></table></div>
+    <p class="note">Os sinais juntos dão a recomendação: compressão (desgaste interno; limite 1,27 MPa, SM p. 2-3), consumo de óleo em L/100 h (anéis, guias, vazamento; acima de 2× a mediana da frota), laudo de laboratório (metais de desgaste e contaminação, limites da 3.2 Análise de óleo) e calibração (folga de válvulas e bicos, 1.000 h). Overhaul = compressão abaixo do limite, ou laudo crítico ou consumo alto junto com outro sinal.</p></div>`;
+}
+function mcTopo() {   // chamado pelo render logo depois de montar a tela
+  if (!enxuto() || !MC_VIEWS.some(x => x[0] === VIEW)) return; const vh = $('#main .vh'); if (!vh) return;
+  vh.insertAdjacentHTML('afterend', `<div class="mc-tabs">${MC_VIEWS.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>${mcDiagCard()}`);
+}
