@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.62', data: '29/10/2026', itens: ['Trocador de calor (1.1.17) e caixa de mar (1.4.1) saíram da 1 · Calibração e ficam na 4 · Sistema de arrefecimento, junto com os trocadores e resfriadores dos reversores.'] },
   { v: '3.61', data: '29/10/2026', itens: ['3.2 Controles: a aba 4 passou a se chamar Sistema de arrefecimento.'] },
   { v: '3.60', data: '29/10/2026', itens: ['3.2 Controles: aba 4 · Limpeza do arrefecimento com os itens do Anexo I de limpeza dos trocadores de calor e resfriadores do motor e do reversor (MCP 1.1.17, Hitachi 1.5.4, Masson 1.6.4, Reintjes 1.7.3): frequência, última execução, próxima e situação, com o resumo de vencidos, do mês, sem histórico e em dia.'] },
   { v: '3.59', data: '29/10/2026', itens: ['3.2 Controles: rótulo das abas corrigido para “CONTROLE DOS MCP\'s”.'] },
