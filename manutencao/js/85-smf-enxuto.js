@@ -243,11 +243,11 @@ function enxRelImprimir(s) {
    ${docCab('RELATÓRIO DE MANUTENÇÃO PREVENTIVA', `Empurradores fluviais · ${esc(s.dados.ref)} · ${esc(s.num)}`, 'NP Navecunha 055 · itens 7.3 e 9 · Anexo I')}${enxRelHTML(s.dados, s)}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
 }
 function enxAdminHTML() { return ''; }   // o cartão “Modo do SMF neste aparelho” saiu na 3.46; o Visual (3.66) fica no topo da Administração (vAdmin)
-/* Visual deste aparelho (SMF 3.66): Claro (padrão) ou Vidro azul (css/tema-vidro.css, classe tv no <html>) */
+/* Visual deste aparelho (SMF 3.66; 3.69 = Azul gelo, padrão): Claro ou Azul gelo (css/tema-vidro.css, classe tv no <html>) */
 function temaAdminHTML() {
   const v = document.documentElement.classList.contains('tv');
   return `<div class="card"><h2>Visual deste aparelho</h2><p class="note">Só muda a aparência das telas, neste aparelho. Os documentos impressos não mudam.</p>
-    <div class="seg" style="display:inline-flex;margin-top:6px"><button type="button" class="${v ? '' : 'on'}" onclick="temaTroca('')">Claro</button><button type="button" class="${v ? 'on' : ''}" onclick="temaTroca('vidro')">Vidro azul</button></div></div>`;
+    <div class="seg" style="display:inline-flex;margin-top:6px"><button type="button" class="${v ? '' : 'on'}" onclick="temaTroca('')">Claro</button><button type="button" class="${v ? 'on' : ''}" onclick="temaTroca('vidro')">Azul gelo</button></div></div>`;
 }
 function temaTroca(t) {
   try { localStorage.setItem('smf_tema', t || 'claro'); } catch (e) {}

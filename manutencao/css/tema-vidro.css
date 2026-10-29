@@ -1,87 +1,42 @@
-/* ===== Tema “Vidro azul” (SMF 3.66, 29/10/2026) =====
-   Pedido do Supervisor: visual vidrificado, sem foto, azul oceano (referência: painel com cartões de vidro).
-   Liga e desliga em Administração → Visual deste aparelho (localStorage smf_tema = 'vidro' põe a classe tv no <html>).
-   Tudo aqui vale só com html.tv; os impressos abrem em janela própria e não mudam.
-   Para retirar o tema: apagar este arquivo, o <link> no index.html e o cartão temaAdminHTML. */
-html.tv{--g:rgba(255,255,255,.10);--gb:rgba(255,255,255,.26);--tx:#fff;--mu:rgba(255,255,255,.78)}
-html.tv{background:radial-gradient(900px 600px at 78% 18%,rgba(96,165,250,.55),transparent 65%),radial-gradient(800px 700px at 15% 85%,rgba(59,130,246,.45),transparent 65%),radial-gradient(600px 500px at 55% 60%,rgba(147,197,253,.22),transparent 70%),linear-gradient(160deg,#0c2a4d 0%,#13467a 45%,#0a2240 100%)!important;background-attachment:fixed!important;min-height:100%}
+/* ===== Tema “Gelo” (SMF 3.69, 29/10/2026; substitui o Vidro azul da 3.66–3.68) =====
+   Pedido do Supervisor: “vitrificado em cima do azul gelo, e o menu escurece um pouco para destacar”.
+   Fundo azul gelo com luzes suaves do mesmo tom (é o que o vidro borra), cartões de vidro claro,
+   letras escuras como no visual Claro, menu em azul-marinho translúcido.
+   Liga e desliga em Administração → Visual deste aparelho (classe tv no <html>; padrão ligado,
+   localStorage smf_tema = 'claro' desliga). Tudo aqui vale só com html.tv; impressos não mudam. */
+html.tv{background:
+  radial-gradient(900px 620px at 82% 8%,rgba(255,255,255,.95),transparent 62%),
+  radial-gradient(780px 640px at 30% 40%,rgba(160,205,250,.55),transparent 66%),
+  radial-gradient(820px 700px at 95% 85%,rgba(125,185,245,.45),transparent 66%),
+  radial-gradient(640px 520px at 10% 95%,rgba(255,255,255,.75),transparent 62%),
+  linear-gradient(160deg,#eef6ff 0%,#dbeafb 50%,#cfe2f8 100%)!important;background-attachment:fixed!important;min-height:100%}
 html.tv body,html.tv body .app,html.tv body .main,html.tv body main#main{background:transparent!important}
-html.tv body,html.tv body *{font-family:'Inter','Segoe UI',Arial,sans-serif!important}
-html.tv body main#main,html.tv body main#main td,html.tv body main#main th,html.tv body main#main h1,html.tv body main#main h2,html.tv body main#main .card h2,html.tv body main#main td>b,html.tv body main#main .sf-k b{color:var(--tx)!important}
-html.tv body main#main h1{font-size:34px!important;font-weight:800!important;text-shadow:0 2px 12px rgba(0,0,0,.35)}
-html.tv body main#main .vh p,html.tv body main#main .note,html.tv body main#main small,html.tv body main#main .sf-mut{color:var(--mu)!important;text-shadow:0 1px 6px rgba(0,0,0,.35)}
-html.tv body main#main a{color:#c7d2fe!important}
-/* vidro */
-html.tv body main#main div.card{background:var(--g)!important;border:1px solid var(--gb)!important;border-radius:16px!important;box-shadow:0 8px 32px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.25)!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important}
-html.tv body main#main .card h2{font-size:20px!important;font-weight:700!important}
-html.tv body .side{background:rgba(255,255,255,.08)!important;border-right:1px solid rgba(255,255,255,.18)!important;backdrop-filter:blur(26px) saturate(130%)!important;-webkit-backdrop-filter:blur(26px) saturate(130%)!important}
-html.tv body .side,html.tv body .side a,html.tv body .side span,html.tv body .side small,html.tv body .side b{color:#fff!important}
-html.tv body .side .grp-t,html.tv body .side [class*=grp]{color:rgba(255,255,255,.65)!important}
-html.tv body .side a{border-radius:10px!important}
-html.tv body .side a.on{background:rgba(99,102,241,.55)!important;box-shadow:0 4px 14px rgba(79,70,229,.35)!important}
-html.tv body .side .brandbox{background:rgba(255,255,255,.88)!important;border-radius:14px!important;border:0!important}
-html.tv body .side .logo{background:#6366f1!important;border-radius:10px!important}
-html.tv body .side input,html.tv body .side select{background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.25)!important;color:#fff!important;border-radius:10px!important}
-html.tv body .side input::placeholder{color:rgba(255,255,255,.7)!important}
-/* números */
-html.tv body main#main .sf-k>div:not(.seg){background:var(--g)!important;border:1px solid var(--gb)!important;border-radius:14px!important;backdrop-filter:blur(14px)!important}
-html.tv body main#main .sf-k>div b{font-size:28px!important;font-weight:800!important}
-html.tv body main#main .sf-k>div span{color:var(--mu)!important}
-/* passos */
-html.tv body main#main .op-ps a{background:rgba(255,255,255,.14)!important;border:1px solid var(--gb)!important;color:#fff!important;border-radius:999px!important;backdrop-filter:blur(12px)!important}
-html.tv body main#main .op-ps a.on{background:#6366f1!important;border-color:#818cf8!important}
-html.tv body main#main .op-ps a *{color:inherit!important}
-/* botões */
-html.tv body main#main button,html.tv body .mbtn{background:rgba(255,255,255,.14)!important;border:1px solid var(--gb)!important;color:#fff!important;border-radius:10px!important;backdrop-filter:blur(12px)!important}
-html.tv body main#main .seg{background:transparent!important;border:1px solid var(--gb)!important;border-radius:10px!important;overflow:hidden}
-html.tv body main#main .seg button{border:0!important;border-radius:0!important}
-html.tv body main#main .seg button.on,html.tv body main#main .mbtn.pri,html.tv body main#main button.pri{background:#6366f1!important;border-color:#6366f1!important}
-html.tv body main#main select{background:rgba(255,255,255,.14)!important;color:#fff!important;border:1px solid var(--gb)!important;border-radius:10px!important}
-html.tv body main#main select option{color:#111!important}
-/* tabelas */
-html.tv body main#main table th,html.tv body main#main table.sf-mx th,html.tv body main#main table.sf-mx th small{background:transparent!important;color:#fff!important;font-weight:700!important}
-html.tv body main#main table th{border-bottom:1px solid rgba(255,255,255,.3)!important}
-html.tv body main#main table td{border-color:rgba(255,255,255,.14)!important;background:transparent!important}
-html.tv body main#main table tbody tr:hover td{background:rgba(255,255,255,.07)!important}
-html.tv body main#main .sf-p{background:rgba(255,255,255,.15)!important;border:0!important;color:#fff!important;border-radius:6px!important}
-html.tv body main#main .sf-bar{background:rgba(255,255,255,.2)!important}html.tv body main#main .sf-bar i{background:#a5b4fc!important}
-html.tv body main#main .np-tag{background:rgba(255,255,255,.18)!important;color:#fff!important;border:1px solid var(--gb)!important;border-radius:999px!important}
-/* situação em pílula translúcida, como na referência */
-html.tv body main#main .sf-st,html.tv body main#main [class*=sf-st]{text-shadow:none}
-html.tv body main#main .card{color:#fff!important}
-html.tv body main#main .sf-k>div:not(.seg){background:rgba(255,255,255,.10)!important}
-html.tv body main#main .card .card,html.tv body main#main .pd-it{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.18)!important;color:#fff!important}
-html.tv body main#main .sf-s.bad{color:#ff9b91!important}html.tv body main#main .sf-s.at{color:#ffc870!important}html.tv body main#main .sf-s.ok{color:#86efac!important}
-html.tv body main#main .sf-red{color:#ff9b91!important} html.tv body main#main .sf-leg,html.tv body main#main .sf-leg span{color:rgba(255,255,255,.88)!important}
-html.tv body main#main .op-ps a{background:rgba(18,38,64,.38)!important}
-html.tv body main#main .op-ps a.on{background:#6366f1!important}
-html.tv body main#main button:not(.on):not(.pri){background:rgba(18,38,64,.38)!important}
-html.tv body main#main .pd-col{background:rgba(18,38,64,.34)!important}
-html.tv body main#main .pd-cd{background:rgba(255,255,255,.10)!important;box-shadow:none!important;border-top:1px solid rgba(255,255,255,.14);border-right:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
-html.tv body main#main .pd-cd *{color:#fff!important} html.tv body main#main .pd-cd b:first-child,html.tv body main#main .pd-q{color:#ff9b91!important}
-html.tv body main#main .pd-cd.at b:first-child{color:#ffc870!important}
-html.tv body .side svg{stroke:#fff!important;color:#fff!important;opacity:.9}
-html.tv body main#main .pd-col h2{font-size:15px!important;text-transform:none!important;line-height:1.25!important}
-html.tv body main#main .pd-col h2 *{color:#fff!important}
-/* campos */
-html.tv body main#main input:not([type=checkbox]):not([type=radio]):not([type=range]),html.tv body main#main textarea,html.tv body .modal input:not([type=checkbox]):not([type=radio]):not([type=range]),html.tv body .modal textarea,html.tv body .modal select{background:rgba(255,255,255,.12)!important;color:#fff!important;border:1px solid rgba(255,255,255,.28)!important;border-radius:10px!important}
-html.tv body main#main input::placeholder,html.tv body main#main textarea::placeholder,html.tv body .modal input::placeholder,html.tv body .modal textarea::placeholder{color:rgba(255,255,255,.55)!important}
-html.tv body main#main input[type=date]::-webkit-calendar-picker-indicator,html.tv body main#main input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1)}
-html.tv body .modal select option{color:#111!important}
-html.tv body main#main label,html.tv body .modal label{color:rgba(255,255,255,.85)!important}
-/* ajuste automático (js/88-tema-vidro.js) */
-html.tv body .tv-p{background:rgba(255,255,255,.10)!important;border-color:rgba(255,255,255,.22)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)!important;color:#fff!important}
-html.tv body .tv-t{color:#fff!important}
-html.tv body .tv-m{color:rgba(255,255,255,.75)!important}
-html.tv body .tv-r{color:#ff9b91!important}
-html.tv body .tv-a{color:#ffc870!important}
-html.tv body .tv-g{color:#86efac!important}
-html.tv body .tv-b{color:#a5c8ff!important}
-html.tv body .tv-st{fill:rgba(255,255,255,.85)!important}
-/* janelas (modal): vidro mais fechado, para ler por cima da tela */
-html.tv body .modal{background:rgba(5,15,30,.45)!important;backdrop-filter:blur(4px)}
-html.tv body .modal .box{background:rgba(16,42,78,.86)!important;border:1px solid rgba(255,255,255,.25)!important;border-radius:16px!important;color:#fff!important;backdrop-filter:blur(20px) saturate(140%)!important;box-shadow:0 20px 50px rgba(0,0,0,.45)!important}
-html.tv body .modal .box h2,html.tv body .modal .box h3,html.tv body .modal .box b,html.tv body .modal .box td,html.tv body .modal .box th{color:#fff!important}
-html.tv body .modal .box .tv-p{background:rgba(255,255,255,.08)!important}
-html.tv body .modal button:not(.on):not(.pri){background:rgba(255,255,255,.12)!important;color:#fff!important;border:1px solid rgba(255,255,255,.25)!important;border-radius:10px!important}
-html.tv body .modal button.pri,html.tv body .modal .mbtn.pri{background:#6366f1!important;color:#fff!important;border-color:#6366f1!important}
+/* cartões de vidro */
+html.tv body main#main div.card{background:rgba(255,255,255,.55)!important;border:1px solid rgba(255,255,255,.85)!important;border-radius:14px!important;box-shadow:0 10px 28px rgba(30,80,140,.10),inset 0 1px 0 rgba(255,255,255,.95)!important;backdrop-filter:blur(18px) saturate(160%)!important;-webkit-backdrop-filter:blur(18px) saturate(160%)!important}
+html.tv body .tv-p{background:rgba(255,255,255,.50)!important;border-color:rgba(255,255,255,.85)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)!important}
+html.tv body main#main .sf-k>div:not(.seg),html.tv body main#main .pd-cd{background:rgba(255,255,255,.62)!important;border-color:rgba(255,255,255,.9)!important}
+html.tv body main#main .pd-col{background:rgba(255,255,255,.40)!important}
+html.tv body main#main table th{background:transparent!important}
+html.tv body main#main table td{background:transparent!important}
+html.tv body main#main table tbody tr:hover td{background:rgba(255,255,255,.45)!important}
+html.tv body main#main .op-ps a:not(.on){background:rgba(255,255,255,.55)!important;border-color:rgba(255,255,255,.9)!important;backdrop-filter:blur(10px)}
+html.tv body main#main button:not(.on):not(.pri):not(.cm-tb button),html.tv body main#main .mbtn:not(.pri){background:rgba(255,255,255,.6)!important;border-color:rgba(160,190,225,.7)!important}
+html.tv body main#main input:not([type=checkbox]):not([type=radio]):not([type=range]),html.tv body main#main select,html.tv body main#main textarea{background:rgba(255,255,255,.75)!important;border-color:rgba(160,190,225,.8)!important}
+/* menu mais escuro, para destacar */
+html.tv body .side{background:linear-gradient(180deg,rgba(22,48,84,.92),rgba(16,36,66,.94))!important;border-right:1px solid rgba(255,255,255,.12)!important;backdrop-filter:blur(20px) saturate(140%)!important;-webkit-backdrop-filter:blur(20px) saturate(140%)!important}
+html.tv body .side,html.tv body .side a,html.tv body .side span,html.tv body .side small,html.tv body .side b,html.tv body .side div{color:#dbe7f5!important}
+html.tv body .side svg{stroke:#c7d8ee!important}
+html.tv body .side [class*=grp],html.tv body .side .grp-t{color:rgba(219,231,245,.6)!important}
+html.tv body .side a:hover{background:rgba(255,255,255,.08)!important}
+html.tv body .side a.on{background:rgba(255,255,255,.95)!important;box-shadow:0 4px 14px rgba(0,0,0,.18)!important}
+html.tv body .side a.on,html.tv body .side a.on span{color:#16365e!important}
+html.tv body .side a.on svg{stroke:#16365e!important}
+html.tv body .side .brandbox{background:#fff!important;border:0!important;border-radius:10px!important}
+html.tv body .side input,html.tv body .side select{background:rgba(255,255,255,.10)!important;border:1px solid rgba(255,255,255,.22)!important;color:#fff!important}
+html.tv body .side input::placeholder{color:rgba(255,255,255,.6)!important}
+html.tv body .side select option{color:#111!important}
+html.tv body .side .user{border-top-color:rgba(255,255,255,.14)!important}
+/* janelas (modal) */
+html.tv body .modal .box{background:rgba(255,255,255,.88)!important;border:1px solid #fff!important;border-radius:16px!important;backdrop-filter:blur(20px) saturate(160%)!important;box-shadow:0 24px 60px rgba(20,50,90,.25)!important}
+html.tv body .modal .box .tv-p{background:rgba(255,255,255,.6)!important}
+html.tv body .side a .n,html.tv body .side a.on .n{color:#fff!important}
