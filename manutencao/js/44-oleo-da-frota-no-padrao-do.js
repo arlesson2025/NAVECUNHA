@@ -18,22 +18,24 @@ function vOleoP() {
   const passa = e => (OLF.f === 'todas' || e.st === OLF.f) && (!OLF.g || e.g === OLF.g);
   const cor = st => st === 'red' ? 'var(--badt)' : st === 'amber' ? 'var(--warnt)' : st === 'green' ? '#1967D2' : 'var(--mut)';   // em dia = azul nesta tela
   const dt = d => d ? brD(isoD(d)) : '—';
+  const sitP = e => { const v = String(e.restTxt || '').replace(/^−/, ''), M = { red: ['p-bad', 'Vencido'], amber: ['p-warn', 'Atenção'], green: ['p-ok', 'Em dia'] }[e.st];   // 3.52 (Supervisor): Situação = “Vencido · 449 h”, “Em dia · 1.250 h”
+    return M ? `<span class="pill ${M[0]} ol-sit">${M[1]} · ${esc(v)}</span>` : '<span class="pill p-mut ol-sit">Sem histórico</span>'; };
   let rows = '';
   F.forEach(b => { const es = ENG.filter(e => e.vid === b.id && passa(e)); if (!es.length) return;
     const bad = es.filter(e => e.st === 'red').length, ab = O3.open.has(b.id) || OLF.f !== 'todas' || !!OLF.g;
     const res = `<span class="pill ${bad ? 'p-bad' : 'p-ok'}">${bad ? bad + ' vencida' + (bad > 1 ? 's' : '') : es.length + ' em dia'}</span>`;
     if (!ab) { const c = [...es].sort((a, z) => a.daysLeft - z.daysLeft)[0];
-      rows += `<tr class="click ol-gr" data-olv="${b.id}"><td><span class="ol-car">▸</span><b>${esc(b.n)}</b></td><td colspan="7">${res} <span class="note">próxima: <b>${esc(c.name)}</b> em ${dt(c.proxD)}${c.proxH != null ? ' · ' + nf(c.proxH) + ' h' : ''}</span></td><td class="mono r" style="color:${cor(c.st)}">${c.restTxt}</td></tr>`; return; }
+      rows += `<tr class="click ol-gr" data-olv="${b.id}"><td><span class="ol-car">▸</span><b>${esc(b.n)}</b></td><td colspan="7">${res} <span class="note">próxima: <b>${esc(c.name)}</b> em ${dt(c.proxD)}${c.proxH != null ? ' · ' + nf(c.proxH) + ' h' : ''}</span></td><td class="r">${sitP(c)}</td></tr>`; return; }
     es.forEach((e, i) => { rows += `<tr class="click${i === 0 ? ' ol-b1' : ''}" data-frv="${b.id}" title="Clique para lançar a troca (FR 049_B)">${i === 0 ? `<td rowspan="${es.length}" class="ol-v" data-olv="${b.id}"><span class="ol-car">▾</span><b>${esc(b.n)}</b><div>${res}</div></td>` : ''}
       <td>${esc(e.name)}</td><td class="mono r" title="${esc(e.carS)}">${esc(e.car)}</td><td class="mono r">${e.atual != null ? nf(e.atual) : '—'}</td><td class="mono r">${e.ultH != null ? nf(e.ultH) : '—'}</td><td class="mono r">${dt(e.ultD)}</td>
-      <td class="mono r">${e.proxH != null ? nf(e.proxH) : '—'}</td><td class="mono r">${dt(e.proxD)}</td><td class="mono r" style="color:${cor(e.st)}"><b>${e.restTxt}</b></td></tr>`; }); });
+      <td class="mono r">${e.proxH != null ? nf(e.proxH) : '—'}</td><td class="mono r">${dt(e.proxD)}</td><td class="r">${sitP(e)}</td></tr>`; }); });
   const sis = `<div class="card"><div class="row"><h2>Condição por sistema</h2><span class="sp"></span><span class="note">% em dia = em dia ÷ equipamentos com histórico · clique num sistema para filtrar a tabela</span></div><div class="ol-sis">${OL_SIS.map(([g, nome, sub]) => { const L = ENG.filter(e => e.g === g); if (!L.length) return ''; const a = olAnel(L); if (g === 'inc') sub += ' (' + [...new Set(L.map(e => e.b))].join(', ') + ')';
      return `<button class="ol-an${OLF.g === g ? ' on' : ''}" data-olg="${g}" title="${OLF.g === g ? 'Clique para tirar o filtro' : 'Clique para ver só ' + nome + ' na tabela'}">${a.svg}<b>${nome}</b><small>${sub}</small><span><i class="ok">${a.ok} em dia</i>${a.am ? ` · <i class="am">${a.am} até 50 h</i>` : ''}${a.rd ? ` · <i class="rd">${a.rd} vencida${a.rd > 1 ? 's' : ''}</i>` : ''}${a.sm ? ` · ${a.sm} sem hist.` : ''}</span></button>`; }).join('')}</div></div>`;
   const tab = `<div class="card"><div class="row"><h2>Equipamentos${OLF.g ? ` <button class="cm-chip on" data-olg="${OLF.g}" title="Tirar o filtro de sistema">${(OL_SIS.find(x => x[0] === OLF.g) || [, OLF.g])[1]} ✕</button>` : ''}</h2><span class="sp"></span><button class="mbtn sm" data-olall="1">Abrir todas</button><button class="mbtn sm" data-olall="0">Fechar todas</button></div>
    <div class="cm-chips">${chips.map(([k, l, c]) => `<button class="cm-chip${OLF.f === k ? ' on' : ''}" data-olf="${k}">${l} <b>${c}</b></button>`).join('')}</div>
-   ${olSisChips(ENG)}<div class="tw"><table class="t ol-t"><thead><tr><th rowspan="2">Empurrador</th><th rowspan="2">Equipamento</th><th rowspan="2" class="r">Cárter</th><th rowspan="2" class="r">Hor. atual</th><th colspan="2" class="ol-gu">Última troca</th><th colspan="2" class="ol-gp">Próxima troca</th><th rowspan="2" class="r">Saldo</th></tr>
+   ${olSisChips(ENG)}<div class="tw"><table class="t ol-t"><thead><tr><th rowspan="2">Empurrador</th><th rowspan="2">Equipamento</th><th rowspan="2" class="r">Cárter</th><th rowspan="2" class="r">Hor. atual</th><th colspan="2" class="ol-gu">Última troca</th><th colspan="2" class="ol-gp">Próxima troca</th><th rowspan="2" class="r">Situação</th></tr>
     <tr><th class="r ol-gu">Horímetro</th><th class="r ol-gu">Data</th><th class="r ol-gp">Horímetro</th><th class="r ol-gp">Data</th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="note">Nenhum equipamento neste filtro.</td></tr>'}</tbody></table></div>
-   <p class="note">Clique no empurrador para abrir ou fechar · clique num equipamento para lançar a troca (FR 049_B) · saldo negativo = atrasado · cárter = volume da matriz de lubrificação</p></div>`;
+   <p class="note">Clique no empurrador para abrir ou fechar · clique num equipamento para lançar a troca (FR 049_B) · situação: vencido = passou do prazo (horas ou dias de atraso), atenção = até 50 h ou 7 d, em dia = quanto falta · cárter = volume da matriz de lubrificação</p></div>`;
   // saldo para a troca: esquerda = atraso (h ou d), direita = % do intervalo que ainda resta
   const crit = id => ENG.filter(e => e.vid === id && !e.sem).sort((a, z) => (a.v < 0 || z.v < 0) ? a.v - z.v : a.pct - z.pct)[0];
   const barras = L => { const mx = Math.max(1, ...L.filter(r => r.v < 0).map(r => -r.v));
@@ -84,7 +86,7 @@ AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.o
 { const st = document.createElement('style'); st.textContent = `
 #main .ol-t th{white-space:nowrap}#main .ol-t th.ol-gu{background:#F4F6F9;text-align:center}#main .ol-t th.ol-gp{background:#E8F0FE;color:#1967D2;text-align:center}
 #main .ol-t td{vertical-align:middle}#main .ol-v{vertical-align:top!important;cursor:pointer;white-space:nowrap}#main .ol-v div{margin:4px 0 0 16px}#main .ol-car{display:inline-block;width:16px;color:var(--mut)}
-#main .ol-gr td{background:#FAFBFC}
+#main .ol-gr td{background:#FAFBFC}#main .ol-sit{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 #main .ol-t tbody td{border-bottom:0!important;border-top:0!important}#main .ol-t tbody tr.ol-b1>td,#main .ol-t tbody tr.ol-gr>td{border-top:1px solid #DADCE0!important}#main .ol-t tbody tr:first-child>td{border-top:0!important}   /* 3.51: só a linha que divide os empurradores */
 .ol-seg{display:inline-flex;border:1px solid #DADCE0;border-radius:16px;overflow:hidden}.ol-seg button{border:0;background:#fff;font:inherit;font-size:12.5px;padding:3px 11px;cursor:pointer}.ol-seg button.on{background:#E8F0FE;color:#1967D2;font-weight:600}
 #main .ol-sv{width:auto!important;min-width:0;flex:none;font:inherit;font-size:12.5px;padding:2px 6px;border:1px solid #DADCE0;border-radius:6px;margin-left:6px}
