@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.50', data: '29/10/2026', itens: ['Cronograma: a aprovação mostra a revisão, a data, a hora e há quantos dias (hoje, ontem, há N dias) e quem aprovou, no cronograma do empurrador e no da frota. A hora vale para as aprovações feitas a partir desta versão.'] },
   { v: '3.49', data: '29/10/2026', itens: ['Cronograma do empurrador (tela e impresso): coluna Frequência entre Serviço e Próxima (ex.: 350 h ou 6 meses); a frequência saiu do texto pequeno embaixo do serviço.'] },
   { v: '3.48', data: '29/10/2026', itens: ['2.1 Plano anual no visual da Situação da frota: uma janela só com a faixa de números (aderência no ano, executado até agora, vencidos sem execução, com atraso, previsto até dezembro, cronogramas aprovados), cabeçalho claro, linhas baixas e meses em etiquetas coloridas. O impresso não mudou.'] },
   { v: '3.47', data: '29/10/2026', itens: ['Pendências no padrão das outras telas: cada coluna é uma janela (arrastar, mudar o tamanho, minimizar, tela cheia), alinhada à esquerda, com Reorganizar.'] },

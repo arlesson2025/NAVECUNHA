@@ -461,9 +461,12 @@ function enxCrGrade(ano, imp) {
   return { exe: soma(ate, 'r'), prevAte: soma(ate, 'p'), ms: soma(ate, 'ms'), lt: soma(ate, 'lt'), fut: soma(T.filter((t, i) => i > hm), 'p'), html: `<table class="ecr${imp ? '' : ' ecr2'}"><thead><tr><th class="ecr-n">Empurrador</th>${MESES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>`, ad, n: V.length, aprov: V.filter(v => cronoBase(ano, v.id)).length, aprovTxt: enxCrAprovTxt(V, ano) };
 }
 // aprovação do cronograma da frota numa linha só (Supervisor, 27/10/2026: tira a data de cada empurrador e põe embaixo do título)
+// quando foi aprovado (Supervisor, 29/10/2026: “não tem data aqui, toda vez fico pensando se já revisei”): data, hora (aprovações a partir da 3.50) e há quantos dias
+function crAprovQuando(B) { if (!B || !B.aprovAt) return '—'; const d = Math.round((pD(isoD(hoje())) - pD(B.aprovAt)) / 864e5), hr = B.aprovEm ? ' às ' + new Date(B.aprovEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+  return brD(B.aprovAt) + hr + ' (' + (d <= 0 ? 'hoje' : d === 1 ? 'ontem' : 'há ' + d + ' dias') + ')'; }
 function enxCrAprovTxt(V, ano) { const B = V.map(v => cronoBase(ano, v.id)).filter(Boolean); if (!B.length) return 'Cronograma ainda não aprovado';
-  const u = B.slice().sort((a, b) => String(a.aprovAt) < String(b.aprovAt) ? 1 : -1)[0], rev = Math.max(...B.map(b => +b.rev || 0));
-  return (B.length === V.length ? 'Aprovado' : `Aprovado para ${B.length} de ${V.length} empurradores ·`) + ` por ${u.aprovBy || '—'} em ${brD(u.aprovAt)} · rev. ${rev}`; }
+  const u = B.slice().sort((a, b) => String(a.aprovAt) + (a.aprovEm || 0) < String(b.aprovAt) + (b.aprovEm || 0) ? 1 : -1)[0], rev = Math.max(...B.map(b => +b.rev || 0));
+  return (B.length === V.length ? 'Aprovado' : `Aprovado para ${B.length} de ${V.length} empurradores`) + ` · revisão ${rev} · última aprovação em ${crAprovQuando(u)} por ${u.aprovBy || '—'}`; }
 const ENX_LEG = '<div class="ecr-lg"><span><i class="ok"></i>executado no prazo</span><span><i class="lt"></i>executado com atraso</span><span><i class="ms"></i>vencido sem execução</span><span><i class="hj"></i>mês atual</span><span><i class="fut"></i>previsto</span><span>⚓ docagem</span><span>número = executado/previsto no mês</span></div>';
 function vEnxCr() {
   const ano = ENXC.ano, v = vessel(ENXC.v), anos = [ano - 1, ano, ano + 1], seg = `<div class="seg">${anos.map(a => `<button data-ecrano="${a}" class="${a === ano ? 'on' : ''}">${a}</button>`).join('')}</div>`;
@@ -475,7 +478,7 @@ function vEnxCr() {
        ${ENX_LEG}<div class="tw">${G.html}</div></div></div></div>`; }
   const B = cronoBase(ano, v.id);
   return enxCab(`Cronograma anual · ${esc(v.nome)}`, `${ano} · serviço por serviço: ● previsto · ✓ feito no prazo · ✓ âmbar com atraso · ✗ venceu sem fazer · passe o mouse para ver data e OM`, `<button class="mbtn" data-ecrv="">← Frota</button>` + seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
-   + `<div class="card"><h2>Situação do cronograma</h2><p>${B ? `Previsto <b>aprovado</b> por ${esc(B.aprovBy)} em ${brD(B.aprovAt)} · rev. ${B.rev}` : '<b style="color:#B06000">Previsto ainda não aprovado</b> · a aderência mede contra o plano calculado, que muda conforme os serviços são feitos'}
+   + `<div class="card"><h2>Situação do cronograma</h2><p>${B ? `Previsto <b>aprovado</b> · revisão ${B.rev} · aprovada em <b>${crAprovQuando(B)}</b> por ${esc(B.aprovBy)}` : '<b style="color:#B06000">Previsto ainda não aprovado</b> · a aderência mede contra o plano calculado, que muda conforme os serviços são feitos'}
      ${can.admin() ? ` <button class="mbtn sm${B ? '' : ' pri'}" data-ecraprov="${v.id}">${B ? 'Aprovar de novo (nova revisão)' : 'Aprovar o cronograma ' + ano}</button>` : ''} <a class="mbtn sm" href="#enx" data-enxir="${v.id}">Executar: o que vence agora →</a></p></div>
    <div class="card"><h2>Serviços · ${ano}</h2><div class="tw">${prTabela(v, ano)}</div></div></div></div>`;
 }

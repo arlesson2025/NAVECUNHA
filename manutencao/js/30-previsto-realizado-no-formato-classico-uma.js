@@ -374,7 +374,7 @@ async function muralPDF(ano, completo, papel) {
 async function prAprovar(vs, ano) {   // congela o previsto (linha de base) de cada serviço, além do resumo por equipamento
   for (const v of vs) { const L = prLinhas(v, ano), id = 'crono-' + ano + '-' + v.id, B0 = S.recs.get(id), linhasPR = {}, linhasEq = {};
     L.forEach(g => { const pv = g.M.map(m => m.plan + m.miss + m.ok + m.late); linhasPR[g.k] = pv; linhasEq[g.eqKey] = (linhasEq[g.eqKey] || Array(12).fill(0)).map((x, i) => x + pv[i]); });
-    await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), linhasPR, linhasEq }); }
+    await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), aprovEm: Date.now(), linhasPR, linhasEq }); }
 }
 var cr3Aprovar = prAprovar;
 { const st = document.createElement('style'); st.textContent = `.cf-ks{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}.cf-k{border:1px solid #DADCE0;background:#fff;border-radius:999px;padding:3px 11px;font-size:12.5px;color:#5F6368}.cf-k b{font-size:14px;font-weight:600}
