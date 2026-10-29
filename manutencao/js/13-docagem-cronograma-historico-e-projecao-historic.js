@@ -3,7 +3,7 @@
 let DSEL = '';
 function docaHist(v) {
   const iv = intervalo(A1M[DOCA.item]).m || 60, L = [];
-  recs('base').forEach(b => { if (b.vessel === v.id && b.item === DOCA.item) L.push({ id: b.id, rec: b, ent: b.date, sai: b.saida || '', est: b.estaleiro || '', serv: b.servicos || '', custo: b.custo, obs: b.obs || '' }); });
+  recs('base').forEach(b => { if (b.vessel === v.id && b.item === DOCA.item && !b.nf && !b.insp && !b.excluido) L.push({ id: b.id, rec: b, ent: b.date, sai: b.saida || '', est: b.estaleiro || '', serv: b.servicos || '', custo: b.custo, obs: b.obs || '' }); });
   oms().forEach(o => { if (o.tipo === 'P' && o.status === 'encerrada' && o.vessel === v.id && (o.items || []).includes(DOCA.item)) L.push({ id: 'om', ent: o.dreal || isoD(new Date(o.fechadoAt || o.updatedAt)), sai: '', est: '', serv: 'OM ' + o.num, custo: null }); });
   L.sort((a, b) => a.ent < b.ent ? -1 : 1);
   L.forEach((x, i) => { if (i) { const prazo = addM(pD(L[i - 1].ent), iv); x.prazo = prazo; x.atraso = Math.round((pD(x.ent) - prazo) / 864e5); } x.parada = x.sai ? Math.round((pD(x.sai) - pD(x.ent)) / 864e5) + 1 : null; });
@@ -19,9 +19,10 @@ function docaCrono(D) {
   if (!DSEL || !D.some(x => x.v.id === DSEL)) DSEL = (D.find(x => x.st === 'venc') || D[0]).v.id;
   const linhas = D.map(x => { const h = H[x.v.id], fora = foraOp(x.v);
     const mk = h.map((d, i) => `<i class="dh-m ${d.atraso > 0 ? 'late' : ''}" style="left:${X(pD(d.ent))}%" data-tip="${i + 1}ª docagem · entrada ${brD(d.ent)}${d.sai ? ' · saída ' + brD(d.sai) : ''}${d.atraso > 0 ? ' · ' + d.atraso + ' d de atraso' : ''}${d.est ? ' · ' + esc(d.est) : ''}"></i>`).join('');
+    const ins = recs('base').filter(b => b.vessel === x.v.id && b.item === DOCA.item && b.insp && !b.excluido).map(b => `<i class="dh-m" style="left:${X(pD(b.date))}%;background:#fff;border:2px solid #1A73E8" data-tip="Inspeção ${brD(b.date)} · sem necessidade de docar${b.prox ? ' · próxima avaliação ' + brD(b.prox) : ''}${b.obs ? ' · ' + esc(b.obs) : ''}"></i>`).join('');
     const nx = x.due ? `<i class="dh-n" style="left:${X(x.due)}%;border-color:${corN[x.st]}" data-tip="Próxima: limite ${brD(isoD(x.due))} (${x.fonte})"></i>` : '';
     const atr = x.st === 'venc' && x.due ? `<i class="dh-a" style="left:${X(x.due)}%;width:${hj - X(x.due)}%"></i><span class="dh-at" style="left:${hj}%">vencida há ${-x.dias} d</span>` : '';
-    return `<div class="dh-r${x.v.id === DSEL ? ' sel' : ''}${fora ? ' fora' : ''}" data-dsel="${x.v.id}"><span class="dh-l">${esc(x.v.nome)}</span><div class="dh-t">${anos.slice(0, -1).map(y => `<i class="dh-g" style="left:${X(new Date(y, 0, 1))}%"></i>`).join('')}<i class="dh-hjr" style="left:${hj}%"></i>${atr}${mk}${nx}${!h.length && !x.due ? `<span class="dh-sem">${fora ? 'fora de operação' : 'sem registro de docagem'}</span>` : ''}</div></div>`; }).join('');
+    return `<div class="dh-r${x.v.id === DSEL ? ' sel' : ''}${fora ? ' fora' : ''}" data-dsel="${x.v.id}"><span class="dh-l">${esc(x.v.nome)}</span><div class="dh-t">${anos.slice(0, -1).map(y => `<i class="dh-g" style="left:${X(new Date(y, 0, 1))}%"></i>`).join('')}<i class="dh-hjr" style="left:${hj}%"></i>${atr}${mk}${ins}${nx}${!h.length && !x.due ? `<span class="dh-sem">${fora ? 'fora de operação' : 'sem registro de docagem'}</span>` : ''}</div></div>`; }).join('');
   const eixo = `<div class="dh-r dh-ax"><span class="dh-l"></span><div class="dh-t">${anos.map(y => `<span style="left:${X(new Date(y, 0, 1))}%">${y}</span>`).join('')}</div></div>`, rodape = `<div class="dh-r dh-ax"><span class="dh-l"></span><div class="dh-t"><span style="left:${hj}%;color:#188038">hoje</span></div></div>`;
   const x = D.find(d => d.v.id === DSEL), h = H[DSEL];
   const stNx = !x.due ? '<span class="pill p-mut">sem registro</span>' : x.st === 'venc' ? `<span class="pill p-bad">vencida há ${-x.dias} d</span>` : x.st === 'viag' ? `<span class="pill p-warn">planejar · ${x.dias} d</span>` : `<span class="pill p-ok">no prazo</span>`;

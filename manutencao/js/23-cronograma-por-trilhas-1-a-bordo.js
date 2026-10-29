@@ -40,7 +40,7 @@ function cronoMarcas(v, ano) {   // por PACOTE: uma execução programada por ve
     // realizados (qualquer item do pacote no mês = execução) e vencidos não feitos
     const feitos = Array.from({ length: 12 }, () => new Set()); let prox = null;
     l.its.forEach(({ t, pos }) => { const r = cxLinha(v, pos, t, ano); if (!r) return; r.marks.forEach(m => { const c = M[m.d.getMonth()];
-      if (m.k === 'ok' || m.k === 'late') { feitos[m.d.getMonth()].add((m.ev && m.ev.num) || m.d.toISOString().slice(0, 10)); c[m.k === 'late' ? 'late' : 'ok'] = 1; c.its.push(t.id + ' · ' + (m.ev && m.ev.src ? m.ev.src : 'feito') + (m.k === 'late' ? ' (atraso)' : '')); }
+      if (m.k === 'ok' || m.k === 'late') { feitos[m.d.getMonth()].add((m.ev && m.ev.num) || m.d.toISOString().slice(0, 10)); c[m.k === 'late' ? 'late' : 'ok'] = 1; if (m.ev && m.ev.insp) c.insp = 1; else c.real = 1; c.its.push(t.id + ' · ' + (m.ev && m.ev.src ? m.ev.src : 'feito') + (m.k === 'late' ? ' (atraso)' : '')); }
       if (m.k === 'miss') { c.miss = 1; c.its.push(t.id + ' venceu e não foi feito'); }
       if (m.k === 'corr') { c.corr = 1; c.its.push(t.id + ' · ' + (m.ev && m.ev.src || 'corretiva')); }
       if ((m.k === 'plan' || m.k === 'miss') && (!prox || m.d < prox)) prox = m.d; }); });

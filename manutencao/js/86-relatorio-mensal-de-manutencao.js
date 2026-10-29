@@ -58,14 +58,14 @@ const rmeCorr = (ini, fim) => oms().filter(o => o.tipo === 'C' && !o.excluido &&
 const rmeTrocas = (ini, fim) => recs('lub').filter(r => r.tipo === 'fr049' && !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim);
 // números de um intervalo (período, ano e período anterior usam a mesma conta)
 function rmeNums(V, I, ini, fim) {
-  const B = recs('base').filter(r => !r.excluido && !r.bal && r.date >= ini && r.date <= fim && vessel(r.vessel) && A1M[r.item]), F = B.filter(r => !r.nf);
+  const B = recs('base').filter(r => !r.excluido && !r.bal && r.date >= ini && r.date <= fim && vessel(r.vessel) && A1M[r.item]), F = B.filter(r => !r.nf && !r.insp);
   const C = rmeCorr(ini, fim), lib = C.filter(o => rmeHP(o) != null), hPar = lib.reduce((a, o) => a + rmeHP(o), 0);
   const t0 = +pD(ini) - 12 * 36e5, t1 = +pD(fim) + 12 * 36e5, tot = V.length * (t1 - t0) / 36e5;
   const parado = oms().filter(o => o.tipo === 'C' && !o.excluido && vessel(o.vessel) && o.abertura).reduce((a, o) => { const x = Math.max(t0, +new Date(o.abertura)), y = Math.min(t1, o.liberacao ? +new Date(o.liberacao) : Date.now()); return a + Math.max(0, (y - x) / 36e5); }, 0);
   const T = rmeTrocas(ini, fim), rows = T.flatMap(r => (r.eq || []).filter(q => q.status === 'T'));
   const comp = recs('lub').filter(r => r.tipo === 'comp' && !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim);
   let hMcp = 0, sem = 0; V.forEach(v => rmeMot(v).forEach(p => { const h = rmeHoras(I, v.id, p, ini, fim); if (isMcp(p)) hMcp += h.h; if (h.sem) sem++; }));
-  return { serv: F.length, oms: new Set(F.map(r => r.vessel + '|' + (r.om || ''))).size, semOm: F.filter(r => !r.om).length, nf: B.length - F.length, ad: rmeAd(V, ini, fim), cor: C.length, hPar, mttr: lib.length ? hPar / lib.length : null,
+  return { serv: F.length, oms: new Set(F.map(r => r.vessel + '|' + (r.om || ''))).size, semOm: F.filter(r => !r.om).length, nf: B.filter(r => r.nf).length, insp: B.filter(r => r.insp).length, ad: rmeAd(V, ini, fim), cor: C.length, hPar, mttr: lib.length ? hPar / lib.length : null,
     disp: tot > 0 ? Math.max(0, (tot - parado) / tot * 100) : null, trocas: rows.length, litros: rows.reduce((a, q) => a + litros(q.qtd), 0), filtros: rows.filter(q => (q.filters || []).length).length,
     compL: comp.reduce((a, r) => a + litros(r.L), 0), hMcp, sem, ensaios: recs('comp').filter(r => !r.excluido && vessel(r.vessel) && r.date >= ini && r.date <= fim).length };
 }
@@ -83,9 +83,9 @@ function rmeDados(ini, fim) {
     mes: meses.map(([a, b]) => Math.round(mcpPos(v).reduce((s, p) => s + rmeHoras(I, v.id, p, a, b).h, 0))) }));
   // 3 · preventiva
   const B = recs('base').filter(r => !r.excluido && !r.bal && r.date >= iniA && r.date <= fim && vessel(r.vessel) && A1M[r.item]), noP = r => r.date >= ini;
-  const feitos = B.filter(r => !r.nf && noP(r)).sort((a, b) => a.date < b.date ? -1 : 1).map(r => [r.date, r.vessel, r.pos, r.item, r.om || '', r.quem || r.by || '']);
+  const feitos = B.filter(r => !r.nf && !r.insp && noP(r)).sort((a, b) => a.date < b.date ? -1 : 1).map(r => [r.date, r.vessel, r.pos, r.item, r.om || '', r.quem || r.by || '']);
   const nfs = B.filter(r => r.nf && noP(r)).map(r => [r.date, r.vessel, r.item, r.motivo || '', r.om || '']);
-  const porV = V.map(v => { const a = rmeAd([v], ini, fim), b = rmeAd([v], iniA, fim), F = B.filter(r => r.vessel === v.id && !r.nf);
+  const porV = V.map(v => { const a = rmeAd([v], ini, fim), b = rmeAd([v], iniA, fim), F = B.filter(r => r.vessel === v.id && !r.nf && !r.insp);
     return [v.id, F.filter(noP).length, F.length, new Set(F.filter(noP).map(r => r.om || '')).size, a.ad, b.ad, B.filter(r => r.vessel === v.id && r.nf && noP(r)).length]; });
   const ads = meses.map(([a, b]) => rmeAd(V, a, b).ad);
   const venc = enxDados().map(x => [x.v.id, x.venc.length, x.venc.slice(0, 5).map(z => enxServ(z.t)).join('; ')]).filter(x => x[1]);
@@ -177,7 +177,7 @@ const rmeFonte = s => `<p class="fo">Fonte: ${s}</p>`;
 function rmeConclusoes(R) {
   const p = R.N.per, a = R.N.ano, b = R.N.ant, L = [];
   L.push(`A aderência ao cronograma preventivo no período foi de <b>${rmeP(p.ad.ad)}</b> (acumulado no ano: ${rmeP(a.ad.ad)}), ${p.ad.ad == null ? 'sem serviços vencidos no período para medir' : p.ad.ad >= 90 ? 'dentro da referência de 90%' : '<b class="ruim">abaixo da referência de 90%</b>'}${b.ad.ad != null && p.ad.ad != null ? `; no período anterior foi de ${rmeP(b.ad.ad)}` : ''}.`);
-  L.push(`Foram executados <b>${p.serv}</b> serviços preventivos em ${p.oms} OMs (${a.serv} serviços no ano)${p.nf ? `; ${p.nf} serviços não realizados, com justificativa registrada` : ''}.`);
+  L.push(`Foram executados <b>${p.serv}</b> serviços preventivos em ${p.oms} OMs (${a.serv} serviços no ano)${p.insp ? `; ${p.insp} inspecionados sem necessidade de intervenção (próxima avaliação programada)` : ''}${p.nf ? `; ${p.nf} serviços não realizados, com justificativa registrada` : ''}.`);
   const top = R.eqP[0];
   L.push(p.cor ? `Foram registradas <b>${p.cor}</b> manutenções corretivas (${a.cor} no ano), com tempo total de reparo de ${rmeH(p.hPar, 1)} e MTTR de <b>${rmeH(p.mttr, 1)}</b> ${p.mttr == null ? '' : p.mttr <= 8 ? '(meta ≤ 8 h atendida)' : '<b class="ruim">(acima da meta de 8 h)</b>'}${top ? `; o equipamento com maior número de falhas foi <b>${esc(top[0])}</b> (${top[1]})` : ''}.` : `Não houve manutenção corretiva registrada no período (${a.cor} no ano).`);
   L.push(`A disponibilidade da frota no período foi de <b>${p.disp == null ? '—' : nf(p.disp, 1) + '%'}</b> (ano: ${a.disp == null ? '—' : nf(a.disp, 1) + '%'}), ${p.disp == null ? '' : p.disp >= 95 ? 'dentro da meta de 95%' : '<b class="ruim">abaixo da meta de 95%</b>'}.`);

@@ -61,9 +61,9 @@ function prProx(g) {   // próxima execução: o item do grupo que vence primeir
 function prLinhas(v, ano) {
   const R = cronoMarcas(v, ano), B = cronoBase(ano, v.id), G = {};
   R.forEach(l => { const sv = prServ(v, l), k = l.eqKey + '|' + sv.nome;
-    const g = G[k] = G[k] || { k, v, eqKey: l.eqKey, sv, its: [], M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, corr: 0, tx: [] })), sis: 99 };
+    const g = G[k] = G[k] || { k, v, eqKey: l.eqKey, sv, its: [], M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, corr: 0, insp: 0, real: 0, tx: [] })), sis: 99 };
     g.its.push(...l.its); l.its.forEach(x => { g.sis = Math.min(g.sis, parseInt(x.t.id)); });
-    l.M.forEach((m, i) => { const c = g.M[i]; c.plan += m.plan; c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.corr += m.corr || 0; c.tx.push(...m.its.filter(s => /OM|FR|feito|venceu/.test(s))); }); });
+    l.M.forEach((m, i) => { const c = g.M[i]; c.plan += m.plan; c.ok += m.ok; c.late += m.late; c.miss += m.miss; c.corr += m.corr || 0; c.insp += m.insp || 0; c.real += m.real || 0; c.tx.push(...m.its.filter(s => /OM|FR|feito|venceu|Inspecionado/.test(s))); }); });
   const L = Object.values(G).map(g => { g.eq = eqNome(v, g.eqKey); g.base = B && B.linhasPR ? B.linhasPR[g.k] : null; g.crit = g.its.reduce((a, x) => PRIO_ORD[x.t.prio] < PRIO_ORD[a] ? x.t.prio : a, 'Baixa'); g.desc = prDesc(g); return g; });
   const EQO = ['MCP', 'REV', 'EIXO', 'HELICE', 'CXMAR', 'FAE80', 'ALTPE', 'RACOR', 'MCA', 'FAE50', 'BAMB30'];
   return L.sort((a, b) => a.sis - b.sis || ((EQO.indexOf(a.eqKey.split('|')[0]) + 1 || 50) - (EQO.indexOf(b.eqKey.split('|')[0]) + 1 || 50)) || a.eqKey.localeCompare(b.eqKey) || a.sv.o - b.sv.o);
@@ -80,7 +80,7 @@ function prTabela(v, ano, pdf) {
     const P = g.M.map((m, i) => { const pv = g.base ? (g.base[i] || 0) : m.plan + m.miss + m.ok + m.late; tot[i].p += pv; return pv; });
     const cP = P.map((n, i) => `<td class="pr-c p${i === hm ? ' hj' : ''}">${n ? (n > 1 ? n : '●') : ''}</td>`).join('');
     const cR = g.M.map((m, i) => { const r = m.ok + m.late; tot[i].r += r; tot[i].ok += m.ok; if (i <= hm) tot[i].den += m.ok + m.late + m.miss; const tip = esc(m.tx.join('\n'));
-      if (r) return `<td class="pr-c r ${m.late ? 'late' : 'ok'}${i === hm ? ' hj' : ''}" title="${tip}">${r > 1 ? r + '×' : '✓'}</td>`;
+      if (r) return `<td class="pr-c r ${m.late ? 'late' : 'ok'}${i === hm ? ' hj' : ''}" title="${tip}">${m.insp && !m.real ? '<b>I</b>' : r > 1 ? r + '×' : '✓'}</td>`;   // I = inspecionado sem intervenção (SMF 3.32)
       if (m.miss) return `<td class="pr-c r miss${i === hm ? ' hj' : ''}" title="${tip}">✗</td>`;
       return `<td class="pr-c r${i === hm ? ' hj' : ''}"></td>`; }).join('');
     const sP = P.reduce((a, x) => a + x, 0), sR = g.M.reduce((a, m) => a + m.ok + m.late, 0);
