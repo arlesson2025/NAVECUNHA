@@ -1,5 +1,5 @@
 /* SMF · service worker: deixa o painel abrir sem internet. Os dados vão ao Google quando houver sinal. */
-const CACHE='ctle-man-v182';
+const CACHE='ctle-man-v183';
 // essenciais: sem eles o SMF não abre, o FR 049_B (óleo) não abre/salva ou o login e os PDFs saem sem as logos — se algum falhar, a instalação é cancelada e o aparelho segue com a versão anterior inteira
 const ESSENCIAIS=['./','./index.html','./dados/anexo1.js','./forms/FR_049_B.html','./forms/FR_027_L.html','./lib/html2canvas.min.js','./lib/jspdf.umd.min.js','./img/logo-nav.png','./img/logo-vda.png'];
 // opcionais: se falharem (sinal fraco a bordo), usa a cópia da versão anterior ou fica para a próxima abertura com sinal
