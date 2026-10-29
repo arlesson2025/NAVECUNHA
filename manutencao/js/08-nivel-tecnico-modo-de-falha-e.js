@@ -1,5 +1,5 @@
 /* =====================================================================
-   NÍVEL TÉCNICO · modo de falha e causa (ISO 14224), laudo de óleo,
+   NÍVEL TÉCNICO · modo de falha e causa, laudo de óleo,
    saúde do MCP unificada, indicadores técnicos, HH e custo, sobressalentes críticos
    (Anexo III) e fotos sincronizadas pelo Google Drive
    ===================================================================== */
