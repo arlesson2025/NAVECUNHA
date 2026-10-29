@@ -274,6 +274,7 @@ function mcDiagCard() {
     <p class="note">Os sinais juntos dão a recomendação: compressão (desgaste interno; limite 1,27 MPa, SM p. 2-3), consumo de óleo em L/100 h (anéis, guias, vazamento; acima de 2× a mediana da frota), laudo de laboratório (metais de desgaste e contaminação, limites em 3.2 Controles · Análise de óleo) e calibração (folga de válvulas e bicos, 1.000 h). Overhaul = compressão abaixo do limite, ou laudo crítico ou consumo alto junto com outro sinal.</p></div>`;
 }
 function mcTopo() {   // chamado pelo render logo depois de montar a tela
+  if (typeof falTopo === 'function') falTopo();   // abas da 1.2 (js/89)
   if (!enxuto() || !MC_VIEWS.some(x => x[0] === VIEW)) return; const vh = $('#main .vh'); if (!vh) return;
   vh.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLE DOS MCP's</span>${MC_VIEWS.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`);
 }

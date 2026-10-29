@@ -23,7 +23,7 @@ const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje'], ['enxpend', 
   ['4 · Fechamento mensal', [['enxacao', '4.1 Plano de ação', 'relm'], ['enxrel', '4.2 Relatório gerencial', 'relm']]],
   ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];
 function enxNav() {
-  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo', 'enxarr', 'enxsen'].includes(VIEW)) ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
+  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo', 'enxarr', 'enxsen'].includes(VIEW)) || (k === 'enxcor' && VIEW === 'enxfal') ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
   let C = {}; try { C = typeof pcmContagem === 'function' ? pcmContagem() : {}; } catch (e) { }
   return PCM_MENU.map(([g, L]) => (g ? `<div class="grp-t${g === 'Apoio' ? ' grp-apoio' : ''}">${g}</div>` : '') + L.map(([k, n, ic]) => it(k, n, ic, C[k])).join('')).join('');
 }
