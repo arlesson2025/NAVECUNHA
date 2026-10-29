@@ -8,7 +8,7 @@
 // SMF 3.46 (Supervisor, 29/10/2026: “por que tem duas versões? faça somente uma”): o modo completo por aparelho saiu; o enxuto é o único para o Supervisor e o Analista
 try { localStorage.removeItem('smf_modo_completo'); } catch (e) { }
 const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador());
-const ENX_OK = ['enxhoje', 'enxpend', 'enxdiag', 'enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxacao', 'enxcal', 'enxbib', 'oleo', 'compr', 'anoleo', 'cxr', 'admin'];
+const ENX_OK = ['enxhoje', 'enxpend', 'enxdiag', 'enxarr', 'enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxacao', 'enxcal', 'enxbib', 'oleo', 'compr', 'anoleo', 'cxr', 'admin'];
 // link de tela do modo completo → tela equivalente do enxuto (3.22: link fora da lista jogava no Painel; “clico em análise de óleo e vai pra outro canto”)
 const ENX_ALIAS = { horfrota: 'enxhor', hor: 'enxhor', controle: 'enxcal', calib: 'enxcal', crono: 'enxcr', falhas2: 'enxcor', oms: 'enx', emitir: 'enx', omconf: 'enxcor', relmes: 'enxrel', rel: 'enxrel', kpi: 'enxrel', lubreg: 'oleo', lubcons: 'oleo', bib: 'enxbib', apoio: 'enxbib', mapa: 'enxhoje', rotina: 'enxhoje', geral: 'enxhoje', audit: 'enxcr', matriz: 'enxbib' };   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
 function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da lista volta para o Painel de pendências (js/87)
@@ -23,7 +23,7 @@ const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje'], ['enxpend', 
   ['4 · Fechamento mensal', [['enxacao', '4.1 Plano de ação', 'relm'], ['enxrel', '4.2 Relatório gerencial', 'relm']]],
   ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];
 function enxNav() {
-  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo'].includes(VIEW)) ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
+  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo', 'enxarr'].includes(VIEW)) ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
   let C = {}; try { C = typeof pcmContagem === 'function' ? pcmContagem() : {}; } catch (e) { }
   return PCM_MENU.map(([g, L]) => (g ? `<div class="grp-t${g === 'Apoio' ? ' grp-apoio' : ''}">${g}</div>` : '') + L.map(([k, n, ic]) => it(k, n, ic, C[k])).join('')).join('');
 }

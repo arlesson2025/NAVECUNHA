@@ -6,7 +6,7 @@
    · checklist de fechamento mensal (pcmChecklist): mostrado na 4.2 e conferido na emissão do relatório
    · faixa das etapas no topo (pcmFaixa, pelo opPassos do js/84) e títulos técnicos (PCM_TIT, pelo render) */
 'use strict';
-const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejamento', ['enxcr', 'enx', 'cxr']], ['3', 'Condição', ['oleo', 'enxcal', 'compr', 'anoleo', 'enxdiag']], ['4', 'Fechamento', ['enxacao', 'enxrel']]];
+const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejamento', ['enxcr', 'enx', 'cxr']], ['3', 'Condição', ['oleo', 'enxcal', 'compr', 'anoleo', 'enxarr', 'enxdiag']], ['4', 'Fechamento', ['enxacao', 'enxrel']]];
 const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Controles · compressão do MCP', anoleo: '3.2 Controles · análise de óleo do MCP' };
 function pcmFaixa() {
   if (!PCM_ETAPAS.some(e => e[2].includes(VIEW)) && !['enxhoje', 'enxpend'].includes(VIEW)) return '';
@@ -243,7 +243,7 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
 // ---------- 3.2 Condição dos MCP (SMF 3.56; Supervisor, 29/10/2026: “coloca esses 3 numa mesma janela e cria uma janela para o diagnóstico de condição dos MCP da frota”) ----------
 // um item no menu; em cima das telas Compressão (compr), Calibração (enxcal) e Análise de óleo (anoleo): as abas e o diagnóstico (compressão + consumo de óleo + último laudo + calibração → recomendação)
 // 3.58 (Supervisor, 29/10/2026: “1 calibração, 2 compressão, 3 análise de óleo numa tela com abas, ‘Controles’; outra aba ‘Diagnósticos’ só com o diagnóstico”)
-const MC_VIEWS = [['enxcal', '1 · Calibração'], ['compr', '2 · Compressão'], ['anoleo', '3 · Análise de óleo']];
+const MC_VIEWS = [['enxcal', '1 · Calibração'], ['compr', '2 · Compressão'], ['anoleo', '3 · Análise de óleo'], ['enxarr', '4 · Limpeza do arrefecimento']];
 const MC_DOT = { ok: '#1E8E3E', at: '#F9AB00', bad: '#C5221F', sem: '#9AA4B1' };
 function mcDiag() {
   const CM = lubConsumoMCP(120).out, CAL = calibDados().filter(x => isMcp(x.pos)), out = [];
@@ -281,3 +281,22 @@ function vEnxDiag() {
   return enxCab('3.3 Diagnósticos · condição dos MCP', 'Compressão, consumo de óleo, último laudo e calibração de cada MCP da frota juntos, com a recomendação · os dados vêm de 3.1 Lubrificação e 3.2 Controles', '<button class="mbtn" data-enxreset>Reorganizar</button>') + mcDiagCard() + '</div></div>';
 }
 Object.assign(VX, { enxdiag: vEnxDiag }); AFTER.enxdiag = pcmAfter('enxdiag'); Object.assign(NP_TAG, { enxdiag: '7 · Anexo I 1.1.12, 1.1.29' });
+
+// ---------- 3.2 Controles · 4 Limpeza do arrefecimento (SMF 3.60; Supervisor, 29/10/2026: “limpeza do sistema de arrefecimento do reversor e do motor, tirando do Anexo I”) ----------
+// itens de limpeza de trocador/resfriador do Anexo I: MCP 1.1.17 · reversor Hitachi 1.5.4 · Masson 1.6.4 · Reintjes 1.7.3 (mesma conta de vencimento do Backlog, enxDados)
+const ARR_ITENS = ['1.1.17', '1.5.4', '1.6.4', '1.7.3'];
+function vEnxArr() {
+  const D = enxDados(), L = [], ord = { venc: 0, mes: 1, sem: 2 };
+  D.forEach(x => x.P.filter(y => ARR_ITENS.includes(y.t.id)).forEach(y => L.push({ v: x.v, y })));
+  L.sort((a, b) => (ord[a.y.g] ?? 3) - (ord[b.y.g] ?? 3) || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }) || a.y.pos.localeCompare(b.y.pos) || a.y.t.id.localeCompare(b.y.t.id, 'pt-BR', { numeric: true }));
+  const n = g => L.filter(r => r.y.g === g).length, ok = L.filter(r => !['venc', 'mes', 'sem'].includes(r.y.g)).length;
+  const prox = s => s.alvoH != null ? nf(s.alvoH) + ' h' + (s.alvoD ? '<div class="note">' + brD(isoD(s.alvoD)) + '</div>' : '') : s.alvoD ? brD(isoD(s.alvoD)) : '—';
+  return enxCab('3.2 Controles · limpeza do arrefecimento', 'Limpeza dos trocadores de calor e resfriadores de óleo do motor principal e do reversor (Anexo I) · para registrar, abra o empurrador na 2.2 e use “Apontar execução”', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + `<div class="card"><h2>Resumo</h2><div class="sf-k">${[['Vencidos', n('venc'), 'var(--badt)'], ['Vencem no mês', n('mes'), 'var(--warnt)'], ['Sem histórico', n('sem'), ''], ['Em dia', ok, 'var(--okt)']].map(([l, x, c]) => `<div><span>${l}</span><b${c && x ? ` style="color:${c}"` : ''}>${x}</b></div>`).join('')}</div>
+     <p class="note">Itens do Anexo I: MCP 1.1.17 limpeza do trocador de calor (2.000 h ou 24 meses) · reversor Hitachi 1.5.4 limpeza interna do trocador (5.000 h ou 2 anos) · Masson 1.6.4 inspeção e limpeza do resfriador de óleo · Reintjes 1.7.3 verificação do feixe tubular do trocador e dos ânodos (trimestral). Cada empurrador só mostra o que se aplica ao seu reversor.</p></div>
+   <div class="card"><h2>Trocadores de calor e resfriadores</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Equipamento</th><th>Serviço</th><th>Frequência</th><th>Última execução</th><th>Próxima</th><th>Situação</th><th></th></tr></thead><tbody>
+     ${L.map(({ v, y }) => { const U = y.s.L; return `<tr><td class="nowrap"><b>${esc(v.nome)}</b></td><td>${esc(enxEq(y.t))}${mcpPos(v).length > 1 && isMcp(y.pos) ? ' · ' + y.pos : ''}</td><td>${esc(y.t.chk || y.t.item)}<div class="note">Anexo I ${esc(y.t.id)}</div></td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
+       <td class="nowrap">${U ? brD(U.date) + (U.h != null ? '<div class="note">' + nf(U.h) + ' h</div>' : '') + (U.insp ? '<div class="note" style="color:#1A73E8">inspecionado</div>' : '') : '—'}</td><td class="nowrap">${prox(y.s)}</td>
+       <td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div></td><td><button class="mbtn sm" data-pcmv="${v.id}">Abrir na 2.2</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Nenhum item de limpeza do arrefecimento no plano.</td></tr>'}</tbody></table></div></div></div></div>`;
+}
+Object.assign(VX, { enxarr: vEnxArr }); AFTER.enxarr = pcmAfter('enxarr'); Object.assign(NP_TAG, { enxarr: '7.3 · Anexo I' });
