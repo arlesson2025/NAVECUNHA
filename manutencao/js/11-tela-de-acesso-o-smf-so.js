@@ -11,7 +11,7 @@ function gate() {
   // quadro de apresentação ao lado da senha (Supervisor, 28/10/2026: “deixa isso como um banner na entrada do app, resumido, com os destaques”)
   const ban = `<aside class="gban"><p class="gk">O que é o SMF</p><h2>CMMS próprio da frota Navecunha</h2>
    <p>Sistema informatizado de gestão da manutenção, desenvolvido internamente sobre a <b>NP Navecunha 055</b>.</p>
-   <ul><li><b>Feito sobre o nosso processo:</b> plano do Anexo I, equipamentos críticos da NP 6.3, Anexos II, FR 049_B e FR 027_L. Um CMMS comprado não chega tão perto da rotina da frota.</li>
+   <ul><li><b>Feito sobre o nosso processo:</b> Anexo I (Matriz de Manutenção Preventiva), NP 6.3 (Relação de Equipamentos Críticos), Anexos II (Relatórios de Manutenção Preventiva e Corretiva), FR 049_B (Troca de Óleo, Filtros e Fluidos) e FR 027_L (Check-list de Chegada e Saída). Um CMMS comprado não chega tão perto da rotina da frota.</li>
    <li><b>Ciclo completo:</b> horímetro, plano anual, OM, execução com foto, indicadores e relatório mensal.</li>
    <li><b>Rastreável na auditoria:</b> cada serviço ligado à OM do Sankhya, com evidência de antes e depois.</li>
    <li><b>Funciona a bordo:</b> sem internet, e sincroniza quando o sinal volta.</li></ul>
