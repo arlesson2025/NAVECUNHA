@@ -343,6 +343,7 @@ const ENXB_DOCS = [
   ['form', 'FR 016_E · Controle de materiais Classe I e II', 'Entrega de resíduos ao SGI (NP 5.7)', 'forms/FR_016_E.html'],
   ['ref', 'Matriz técnica de equipamentos e lubrificação', 'Modelos, óleos, volumes e intervalos da frota', '../docs/Matriz_tecnica.atual17.10.26.html'],
   ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/Anexo_I_NP_055_visual_matriz.html'],
+  ['ref', 'Como a frota trabalha · resumo para reuniões', 'O ciclo da manutenção em uma folha: chegada, planejamento, execução, saída, fechamento do mês e o papel do Sankhya', '../docs/Como_a_frota_trabalha.html'],
   ['ref', 'NP Navecunha 055 · Plano de Gestão de Manutenção', 'Procedimento vigente (revisão em aprovação)', '../docs/NP_Navecunha_055_corrigida.html'],
 ];
 function enxIIBBranco() {
