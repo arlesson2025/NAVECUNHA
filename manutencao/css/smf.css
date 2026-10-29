@@ -1017,6 +1017,12 @@ html.gated body>*:not(#gate):not(.toast){visibility:hidden}
 #gate #gE{color:#D93025;font-size:13px;min-height:16px}
 #gate button{font:inherit;font-size:15px;font-weight:500;background:#1A73E8;color:#fff;border:0;border-radius:4px;padding:11px;cursor:pointer}#gate button:hover{background:#1765CC}#gate button:disabled{opacity:.6}
 #gate .glink{background:none!important;color:#1A73E8!important;padding:4px 0!important;font-size:13px!important;text-decoration:underline;cursor:pointer}
+#gate{overflow:auto}#gate .gwrap{display:flex;gap:20px;align-items:stretch;justify-content:center;width:100%;max-width:840px;margin:auto}#gate .gwrap .gbox{flex:0 0 380px}
+#gate .gban{flex:1;max-width:420px;background:#16244A;color:#E8EDF5;border-radius:8px;padding:30px 28px;display:flex;flex-direction:column;gap:10px;font-size:13.5px;line-height:1.45}
+#gate .gban .gk{margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#9FB3D9}#gate .gban h2{margin:0;font-size:21px;font-weight:600;color:#fff;line-height:1.25}#gate .gban p{margin:0}#gate .gban b{color:#fff}
+#gate .gban ul{margin:4px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}#gate .gban li{padding-left:16px;position:relative}#gate .gban li:before{content:'';position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:2px;background:#5B8DEF}
+#gate .gban .gf{margin-top:auto;padding-top:10px;border-top:1px solid rgba(255,255,255,.18);font-size:12px;color:#9FB3D9}
+@media (max-width:780px){#gate{align-items:flex-start}#gate .gwrap{flex-direction:column;align-items:center}#gate .gwrap .gbox{flex:none}#gate .gban{max-width:380px;width:100%;padding:22px 20px;font-size:13px}#gate .gban h2{font-size:18px}}
 #gate .gnote{margin:4px 0 0;text-align:center;color:#80868B;font-size:12px}
 .toast{z-index:10000}
 
