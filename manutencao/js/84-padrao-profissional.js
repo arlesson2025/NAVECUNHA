@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.69', data: '29/10/2026', itens: ['Visual Azul gelo no lugar do Vidro azul: fundo azul gelo, cartões de vidro claro, letras escuras e menu azul-marinho para destacar. Continua sendo o padrão; o Claro fica no primeiro cartão da Administração.'] },
   { v: '3.68', data: '29/10/2026', itens: ['Vidro azul passa a ser o visual padrão em todos os aparelhos. Para voltar ao visual Claro: Administração, primeiro cartão (Visual deste aparelho).'] },
   { v: '3.67', data: '29/10/2026', itens: ['Administração: o cartão Visual deste aparelho (Claro · Vidro azul) passou para o topo da tela; estava no fim, abaixo do cadastro da frota.'] },
   { v: '3.66', data: '29/10/2026', itens: ['Administração · Visual deste aparelho: escolha entre Claro (padrão) e Vidro azul (fundo azul oceano, cartões e menu de vidro, letras brancas). Só muda a aparência das telas, neste aparelho; os documentos impressos não mudam.'] },
