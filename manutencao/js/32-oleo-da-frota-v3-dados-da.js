@@ -24,7 +24,7 @@ function o3Dados() {
     const I = porD ? (iv.m ? iv.m * 30.44 : 365) : iv.h;
     const proxD = x.dias != null ? new Date(H.getTime() + x.dias * 864e5) : (x.s.alvoD || null);
     const c = o3Carter(e);
-    ENG.push({ b: b.n, vid: v.id, g: e.key === 'inc' ? 'inc' : e.g, name: o3nome(v, e), car: c.t, carS: c.s, atual: hr ? hr.h : null, ultH: L && L.h != null ? L.h : null, ultD: L && L.date ? pD(L.date) : null,
+    ENG.push({ b: b.n, vid: v.id, g: e.key === 'inc' ? 'inc' : e.g, name: o3nome(v, e), car: c.t, carS: c.s, oleo: e.oleo || '', oleoS: e.lub || '', atual: hr ? hr.h : null, ultH: L && L.h != null ? L.h : null, ultD: L && L.date ? pD(L.date) : null,
       proxH: x.s.alvoH != null ? x.s.alvoH : null, proxD, v: val, u, sem,
       restTxt: sem ? 'sem hist.' : (val < 0 ? '−' : '') + o3nf(Math.abs(val)) + ' ' + u,
       pct: sem ? 0 : Math.max(0, Math.min(1, val / (I || 1))),
