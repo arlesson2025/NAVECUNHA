@@ -72,9 +72,11 @@ function vEnx() {
 const enxSel = () => $$('#main .enx-ck:checked').map(i => { const [pos, item] = i.value.split('|'); return { pos, t: A1M[item] }; }).filter(y => y.t);
 function enxCopiar() {
   const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços primeiro.');
-  const txt = `PREVENTIVA · ${v.nome} · ${brD(isoD(hoje()))}\nServiços (Anexo I · NP Navecunha 055):\n` + S0.map(y => `- ${enxEq(y.t)} · ${posCurtoE(v, y.pos)}: ${enxServ(y.t)} (a cada ${enxIv(y.t, v, y.pos)})`).join('\n') + '\nRegistrar a execução no SMF com o nº desta OM.';
+  // agrupado por equipamento: o nome do equipamento sai uma vez, como título, e os serviços embaixo (Supervisor, 28/10/2026: repetia o nome em toda linha)
+  const G = new Map(); S0.forEach(y => { const k = `${enxEq(y.t)} · ${posCurtoE(v, y.pos)}`; if (!G.has(k)) G.set(k, []); G.get(k).push(`- ${enxServ(y.t)} (a cada ${enxIv(y.t, v, y.pos)})`); });
+  const txt = `PREVENTIVA · ${v.nome} · ${brD(isoD(hoje()))}\nServiços (Anexo I · NP Navecunha 055):\n` + [...G].map(([k, L]) => `\n${k}\n${L.join('\n')}`).join('\n') + '\n\nRegistrar a execução no SMF com o nº desta OM.';
   try { navigator.clipboard.writeText(txt).catch(() => { }); } catch (e) { }
-  modal(`<h2>Descritivo da OM · ${esc(v.nome)}</h2><p class="note">Já copiado. Cole na descrição da OM no Sankhya. Se não colou, selecione e copie daqui.</p><textarea rows="${Math.min(18, S0.length + 4)}" style="width:100%" readonly>${esc(txt)}</textarea><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`, true);
+  modal(`<h2>Descritivo da OM · ${esc(v.nome)}</h2><p class="note">Já copiado. Cole na descrição da OM no Sankhya. Se não colou, selecione e copie daqui.</p><textarea rows="${Math.min(22, S0.length + G.size * 2 + 5)}" style="width:100%" readonly>${esc(txt)}</textarea><div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`, true);
 }
 // fotos de evidência (Supervisor, 27/10/2026: “as evidências falam mais que palavras”): antes e depois, obrigatórias; sobem ao Drive (fotosEnviar) e vão para o relatório mensal
 // execução por equipe própria ou por terceiro (Supervisor, 27/10/2026: “o gerente precisa saber o que foi feito por terceiros e o que foi feito com equipe própria”)
