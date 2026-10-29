@@ -60,7 +60,7 @@ function vEnx() {
   return enxCab(`2.2 OM preventiva · ${esc(v.nome)}`, 'Selecione os itens · “Gerar descritivo da OM” para abrir a OM no Sankhya com a lista · depois “Apontar execução” com o nº dessa OM, ou “Apontar não execução” com o motivo',
       `<button class="mbtn" data-enxv="">← Frota</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Serviços · ${x.venc.length} vencido${x.venc.length === 1 ? '' : 's'} · ${x.mes.length} no mês</h2>
-     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Selecionar backlog (vencidos e do mês)</button><button class="mbtn" data-enxabre>Expandir todos</button><button class="mbtn" data-enxcopiar>📋 Gerar descritivo da OM</button><button class="mbtn pri" data-enxfeito>✓ Apontar execução</button><button class="mbtn" data-enxnf>Apontar não execução</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> exibir itens dentro do prazo</label></div>
+     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Selecionar backlog (vencidos e do mês)</button><button class="mbtn" data-enxabre>Expandir todos</button><button class="mbtn" data-enxcopiar>📋 Gerar descritivo da OM</button><button class="mbtn" data-enxcampo>🖨 Formulário de campo (II-B)</button><button class="mbtn pri" data-enxfeito>✓ Apontar execução</button><button class="mbtn" data-enxnf>Apontar não execução</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> exibir itens dentro do prazo</label></div>
      ${(() => { const G = {}; L.forEach(y => { const k = enxEq(y.t) + ' · ' + posCurtoE(v, y.pos); (G[k] = G[k] || []).push(y); });
        const ks = Object.keys(G).sort((a, b) => G[b].filter(y => y.g === 'venc').length - G[a].filter(y => y.g === 'venc').length || a.localeCompare(b, 'pt-BR'));
        return ks.length ? ks.map(k => { const g = G[k], nv = g.filter(y => y.g === 'venc').length, nm = g.filter(y => y.g === 'mes').length, ns = g.filter(y => y.g === 'sem').length;
@@ -109,7 +109,7 @@ async function enxFotosLer() {
 function enxFeitoModal() {
   if (!S.session) return loginModal(); const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços feitos.');
   const hp = [...new Set(S0.filter(y => intervalo(y.t, v, y.pos).h).map(y => posHor(y.pos, y.t, v.id)))];
-  modal(`<h2>Apontamento de execução · OM preventiva · ${esc(v.nome)} · ${S0.length} serviço${S0.length === 1 ? '' : 's'}</h2><p class="note">${S0.map(y => esc(enxServ(y.t)) + ' (' + esc(posCurtoE(v, y.pos)) + ')').join(' · ')}</p>
+  modal(`<h2>Apontamento de execução · OM preventiva · ${esc(v.nome)} · ${S0.length} serviço${S0.length === 1 ? '' : 's'}</h2><div class="note" style="max-height:180px;overflow:auto;border:1px solid var(--line,#dde);border-radius:6px;padding:6px 10px">${(() => { const G = new Map(); S0.forEach(y => { const k = enxEq(y.t) + ' · ' + posCurtoE(v, y.pos); if (!G.has(k)) G.set(k, []); G.get(k).push(esc(enxServ(y.t))); }); return [...G].map(([k, L]) => `<b>${esc(k)}</b><br>${L.join(' · ')}`).join('<br>'); })()}</div><p class="note">Transcreva aqui o formulário de campo assinado a bordo (🖨 Formulário de campo). Serviço marcado “Não feito” no papel: desmarque aqui e use “Apontar não execução”.</p>
    <div class="g"><label class="f s3">Data de execução<input type="date" id="exD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Nº da OM no Sankhya<input id="exO" inputmode="numeric"></label>${enxExecCampos()}<label class="f s6">Executante / responsável técnico<input id="exQ" placeholder="nomes da equipe ou responsável técnico do prestador"></label>
    ${hp.map(p => { const h = horAtual(v.id, p); return `<label class="f s3">Horímetro · ${esc(posCurtoE(v, p))}<input class="exH" data-pos="${p}" inputmode="decimal" value="${h ? h.h : ''}"></label>`; }).join('')}</div>
    ${enxCmpCampos(v, S0)}${enxFotosCampos()}<div class="note" id="exE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="exOk">Confirmar apontamento</button></div>`, true);
@@ -234,7 +234,7 @@ const enxOMsDe = vid => { const G = {}; recs('base').forEach(r => { if (r.vessel
 // ---------- Biblioteca do enxuto: formulários padrão, NP, Anexo I e Matriz técnica (Supervisor, 27/10/2026) ----------
 // Formulários em branco para imprimir; os preenchidos saem das próprias telas (Executar, Corretivas, Óleo).
 const ENXB_DOCS = [
-  ['form', 'Anexo II-B · Relatório de serviço realizado · preventiva', 'Em branco, uma folha. Preenchido, sai em 3 · Executar → Registrar feito', 'iib'],
+  ['form', 'Anexo II-B · Relatório de serviço realizado · preventiva', 'Em branco, uma folha. Com os serviços já listados para levar a bordo: 2.2 OM preventiva → Formulário de campo', 'iib'],
   ['form', 'Anexo II-A · Relatório de serviço realizado · corretiva', 'Em branco, uma folha. Preenchido, sai em 4 · Corretivas', 'iia'],
   ['form', 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', 'Preencher pelo SMF (Óleo) ou imprimir em branco', 'forms/FR_049_B.html'],
   ['form', 'FR 027_L Rev.05 · Check-list de chegada e saída', 'Operador de Medição / Líder, CTF e Coordenador de Operações', 'forms/FR_027_L.html'],
@@ -249,6 +249,23 @@ function enxIIBBranco() {
     enxK([['Empurrador', ''], ['OM (Sankhya)', ''], ['Data', ''], ['Horímetro', 'MCP BB: ______ h · MCP BE: ______ h · MCA 1: ______ h · MCA 2: ______ h'], ['Execução', 'Equipe própria ☐ · Terceiro ☐ · empresa: ____________________'], ['Executado por', '']])
     + `<h3>Serviços</h3><table><thead><tr><th style="width:30%">Equipamento</th><th>Serviço</th><th>Executado</th><th>Não executado</th></tr></thead><tbody>${L(14)}</tbody></table>`
     + '<h3>Motivo dos não feitos e observações</h3><table><tr><td style="height:54px"></td></tr></table>' + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
+}
+// formulário de campo (Supervisor, 28/10/2026: “não era pra sair um formulário pra eu preencher em campo? e o que o Comandante assina?”):
+// os serviços marcados na 2.2, agrupados por equipamento, com Feito / Não feito / Observação, horímetros e compressão em branco; vai a bordo, o Comandante assina, depois é transcrito em “Apontar execução”
+function enxIIBCampo() {
+  const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços primeiro.');
+  const G = new Map(); S0.forEach(y => { const k = `${enxEq(y.t)} · ${posCurtoE(v, y.pos)}`; if (!G.has(k)) G.set(k, []); G.get(k).push(y); });
+  const hp = [...new Set(S0.filter(y => intervalo(y.t, v, y.pos).h).map(y => posHor(y.pos, y.t, v.id)))];
+  const cmp = [...new Set(S0.filter(y => y.t.id === '1.1.12' && isMcp(y.pos)).map(y => y.pos))];
+  const cx = '<td style="width:8%;text-align:center;font-size:15px">☐</td>';
+  enxDoc('ANEXO II-B · RELATÓRIO DE SERVIÇO REALIZADO · PREVENTIVA', `${esc(v.nome)} · formulário de campo · ${S0.length} serviço${S0.length === 1 ? '' : 's'}`,
+    enxK([['Empurrador', esc(v.nome)], ['OM (Sankhya)', ''], ['Data de execução', '____/____/______'], ['Horímetro', hp.length ? hp.map(p => `${esc(posCurtoE(v, p))}: __________ h`).join(' · ') : '—'], ['Execução', 'Equipe própria ☐ · Terceiro ☐ · empresa: ______________________'], ['Executado por', '']])
+    + `<h3>Serviços · marque Feito ou Não feito em cada linha</h3><table><thead><tr><th>Serviço</th><th style="width:13%">A cada</th><th style="width:8%">Feito</th><th style="width:8%">Não feito</th><th style="width:28%">Observação / motivo</th></tr></thead><tbody>`
+    + [...G].map(([k, L]) => `<tr style="break-after:avoid;page-break-after:avoid"><td colspan="5" style="background:#E8EDF5;font-weight:700;color:#16244A">${esc(k)}</td></tr>` + L.map(y => `<tr><td>${esc(enxServ(y.t))}${y.t.prio === 'Crítica' ? ' <b style="color:#B3261E">(Crítica)</b>' : ''}</td><td>${esc(enxIv(y.t, v, y.pos))}</td>${cx}${cx}<td></td></tr>`).join('')).join('') + '</tbody></table>'
+    + (cmp.length ? `<h3>Ensaio de compressão do MCP · pressão por cilindro (MPa ou kgf/cm²)</h3><table><thead><tr><th style="width:16%">Motor</th>${[1, 2, 3, 4, 5, 6].map(i => `<th>Cil. ${i}</th>`).join('')}<th>Rotação (rpm)</th></tr></thead><tbody>${cmp.map(p => `<tr><td><b>${esc(posCurtoE(v, p))}</b></td>${'<td style="height:24px"></td>'.repeat(7)}</tr>`).join('')}</tbody></table>` : '')
+    + '<h3>Materiais utilizados e observações</h3><table><tr><td style="height:54px"></td></tr></table>'
+    + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção')
+    + '<p style="font-size:10px;color:#5F6368;margin-top:6px">Depois de assinado: anexar este formulário na OM do Sankhya e registrar no SMF em 2.2 OM preventiva → “Apontar execução” (o mesmo nº de OM, os horímetros e as fotos de antes e depois).</p>');
 }
 function enxIIABranco() {
   enxDoc('ANEXO II-A · RELATÓRIO DE SERVIÇO REALIZADO · CORRETIVA', 'Formulário em branco',
@@ -375,7 +392,7 @@ async function enxCrAprovar(id) {
 .ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxcampo],[data-enxfeito],[data-enxnf],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
     if (d.ebib !== undefined) { const x = ENXB_DOCS[+d.ebib][3]; return x === 'iib' ? enxIIBBranco() : x === 'iia' ? enxIIABranco() : window.open(x, '_blank', 'noopener'); }
     if (d.ebibdoc !== undefined) return abrirDoc(S.recs.get(d.ebibdoc));
     if (d.ebibnovo !== undefined) return docModal(null, 'manual');
@@ -394,6 +411,7 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.ecenc !== undefined) return enxCorEncerrar(d.ecenc);
     if (d.ec2a !== undefined) { const o = S.recs.get(d.ec2a); if (o) enxIIA(o); return; }
     if (d.enxcopiar !== undefined) return enxCopiar();
+    if (d.enxcampo !== undefined) return enxIIBCampo();
     if (d.enxfeito !== undefined) return enxFeitoModal();
     if (d.enxnf !== undefined) return enxNFModal();
     if (d.enxtodos !== undefined) { const D = enxDados().find(x => x.v.id === ENX.v), ks = new Set([...D.venc, ...D.mes].map(y => y.pos + '|' + y.t.id)); $$('#main .enx-ck').forEach(i => { i.checked = ks.has(i.value); if (i.checked) { const g = i.closest('details'); if (g) { g.open = true; ENX.abertos.add(g.dataset.enxg); } } }); return; }
