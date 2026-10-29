@@ -242,7 +242,18 @@ function enxRelImprimir(s) {
   w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tituloArq(s.num))}</title><style>@page{size:A4;margin:10mm}${DOC_CAB_CSS}body{font:11px Arial,sans-serif;color:#202124;margin:0}h3{font-size:12px;color:#1F2A44;margin:12px 0 4px}.enx-gr svg{max-height:170px;width:100%}table{width:100%;border-collapse:collapse;margin-bottom:4px}th,td{border:1px solid #CBD5E1;padding:3px 5px;text-align:left;vertical-align:top}th{background:#16244A;color:#fff;font-size:10px}.r{text-align:right}.note{color:#5F6368;font-size:10px}.rl-ruim{color:#C5221F}.rl-ass th{width:50%}.rl-lin{height:34px;vertical-align:bottom;color:#5F6368}tr{page-break-inside:avoid}thead{display:table-header-group}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
    ${docCab('RELATÓRIO DE MANUTENÇÃO PREVENTIVA', `Empurradores fluviais · ${esc(s.dados.ref)} · ${esc(s.num)}`, 'NP Navecunha 055 · itens 7.3 e 9 · Anexo I')}${enxRelHTML(s.dados, s)}<script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
 }
-function enxAdminHTML() { return ''; }   // o cartão “Modo do SMF neste aparelho” saiu na 3.46
+function enxAdminHTML() { return temaAdminHTML(); }   // o cartão “Modo do SMF neste aparelho” saiu na 3.46; no lugar, o Visual (3.66)
+/* Visual deste aparelho (SMF 3.66): Claro (padrão) ou Vidro azul (css/tema-vidro.css, classe tv no <html>) */
+function temaAdminHTML() {
+  const v = document.documentElement.classList.contains('tv');
+  return `<div class="card"><h2>Visual deste aparelho</h2><p class="note">Só muda a aparência das telas, neste aparelho. Os documentos impressos não mudam.</p>
+    <div class="seg" style="display:inline-flex;margin-top:6px"><button type="button" class="${v ? '' : 'on'}" onclick="temaTroca('')">Claro</button><button type="button" class="${v ? 'on' : ''}" onclick="temaTroca('vidro')">Vidro azul</button></div></div>`;
+}
+function temaTroca(t) {
+  try { t ? localStorage.setItem('smf_tema', t) : localStorage.removeItem('smf_tema'); } catch (e) {}
+  document.documentElement.classList.toggle('tv', t === 'vidro');
+  render();
+}
 // ---------- Anexo II simples = relatório de serviço realizado, uma folha (Supervisor, 27/10/2026) ----------
 // II-B (preventiva): os serviços registrados com o mesmo nº de OM · II-A (corretiva): o registro da corretiva. Sem nº de item, passo a passo nem medição.
 // título da janela de impressão só em ASCII: a impressora “Microsoft Print to PDF” grava acento e “·” corrompidos no título do PDF e o visualizador do Edge não abre o arquivo (Supervisor, 27/10/2026)
