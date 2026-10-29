@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.53', data: '29/10/2026', itens: ['3.1 Lubrificação: “N vencidas” embaixo do nome do empurrador agora sai em vermelho (estava cinza); “em dia” em verde.'] },
   { v: '3.52', data: '29/10/2026', itens: ['3.1 Lubrificação: a coluna Saldo virou Situação, em etiqueta: “Vencido · 449 h”, “Atenção · 43 h” (até 50 h ou 7 d), “Em dia · 1.250 h”, “Sem histórico”.'] },
   { v: '3.51', data: '29/10/2026', itens: ['3.1 Lubrificação: a tabela de equipamentos ficou só com a linha que divide os empurradores (saíram as linhas entre os equipamentos do mesmo empurrador).'] },
   { v: '3.50', data: '29/10/2026', itens: ['Cronograma: a aprovação mostra a revisão, a data, a hora e há quantos dias (hoje, ontem, há N dias) e quem aprovou, no cronograma do empurrador e no da frota. A hora vale para as aprovações feitas a partir desta versão.'] },
