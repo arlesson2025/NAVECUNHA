@@ -1,7 +1,7 @@
 const NUVEM_PADRAO = 'https://script.google.com/macros/s/AKfycbwXXNSYq-wClpZQrOR0LasSxyr_56gdFIK8wEAyeD-Vbh8rfJ0lhNZZlbT29hJ8enKA/exec';   // planilha CTLE_MAN: todo aparelho novo já abre ligado à nuvem
 /* bibliotecas de PDF (html2canvas 1.4.1, jsPDF 2.5.1) ficam em lib/ e só carregam ao gerar um PDF; o sw.js guarda as duas para funcionar sem internet */
-/* tema escolhido neste aparelho (Administração → Visual): aplicado antes de desenhar a página */
-try { if (localStorage.getItem('smf_tema') === 'vidro') document.documentElement.classList.add('tv'); } catch (e) {}
+/* tema deste aparelho (Administração → Visual): aplicado antes de desenhar a página */
+try { if (localStorage.getItem('smf_tema') !== 'claro') document.documentElement.classList.add('tv'); } catch (e) { document.documentElement.classList.add('tv'); }   // Vidro azul é o padrão desde a 3.68; Claro só se escolhido
 let LIBS_PDF = null;
 function carregarLibsPdf() {
   if (window.jspdf && window.html2canvas) return Promise.resolve();

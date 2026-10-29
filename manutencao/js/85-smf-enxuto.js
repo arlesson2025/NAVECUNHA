@@ -250,7 +250,7 @@ function temaAdminHTML() {
     <div class="seg" style="display:inline-flex;margin-top:6px"><button type="button" class="${v ? '' : 'on'}" onclick="temaTroca('')">Claro</button><button type="button" class="${v ? 'on' : ''}" onclick="temaTroca('vidro')">Vidro azul</button></div></div>`;
 }
 function temaTroca(t) {
-  try { t ? localStorage.setItem('smf_tema', t) : localStorage.removeItem('smf_tema'); } catch (e) {}
+  try { localStorage.setItem('smf_tema', t || 'claro'); } catch (e) {}
   document.documentElement.classList.toggle('tv', t === 'vidro');
   render();
 }
