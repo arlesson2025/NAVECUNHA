@@ -10,7 +10,7 @@ const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejame
 const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Compressão do MCP · manutenção preditiva', anoleo: '3.4 Análise de óleo do MCP · manutenção preditiva' };
 function pcmFaixa() {
   if (!PCM_ETAPAS.some(e => e[2].includes(VIEW)) && VIEW !== 'enxhoje') return '';
-  return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Painel</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
+  return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Situação da frota</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
 }
 // ---------- plano de ação ----------
 const pcmAcoes = () => recs('snap').filter(r => r.tipo === 'acao' && !r.excluido);
@@ -121,8 +121,60 @@ function pcmPainel() {
 }
 function vEnxHoje() {
   const G = pcmPainel(), tot = G.reduce((a, g) => a + g.length, 0), E = [['1 · Recebimento da embarcação', 'horímetros e corretivas'], ['2 · Planejamento (PCM)', 'backlog e plano anual'], ['3 · Monitoramento de condição', 'óleo, compressão e calibração'], ['4 · Fechamento mensal', 'relatório e plano de ação']];
-  return enxCab('Painel de pendências', tot ? `${tot} tipo(s) de pendência · resolva na ordem das etapas; cada linha abre a tela certa` : 'Nenhuma pendência: frota dentro do prazo', '<button class="mbtn" data-enxreset>Reorganizar</button>')
-   + G.map((L, i) => `<div class="card"><h2>${E[i][0]} <span class="note">· ${E[i][1]}</span>${L.length ? '' : ' <span class="pill p-ok">sem pendência</span>'}</h2>${L.length ? `<table class="t"><tbody>${L.map(x => `<tr><td style="width:44px" class="r"><b style="color:var(--badt);font-size:16px">${x.n}</b></td><td><b>${esc(x.t)}</b><div class="note">${x.d}</div></td><td style="width:1%"><a class="mbtn sm pri" href="${x.h}">Abrir</a></td></tr>`).join('')}</tbody></table>` : ''}</div>`).join('') + '</div></div>';
+  return enxCab('Situação da frota', (tot ? `Como a frota está hoje e ${tot} tipo(s) de pendência, na ordem das etapas` : 'Como a frota está hoje · nenhuma pendência') + ' · cada linha abre a tela certa', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + sfCard() + G.map((L, i) => `<div class="card"><h2>${E[i][0]} <span class="note">· ${E[i][1]}</span>${L.length ? '' : ' <span class="pill p-ok">sem pendência</span>'}</h2>${L.length ? `<table class="t"><tbody>${L.map(x => `<tr><td style="width:44px" class="r"><b style="color:var(--badt);font-size:16px">${x.n}</b></td><td><b>${esc(x.t)}</b><div class="note">${x.d}</div></td><td style="width:1%"><a class="mbtn sm pri" href="${x.h}">Abrir</a></td></tr>`).join('')}</tbody></table>` : ''}</div>`).join('') + '</div></div>';
+}
+// ---------- Situação da frota: matriz empurrador × sistema ou cartões (SMF 3.44; Supervisor, 29/10/2026: “uma visão geral da frota de como ela está hoje”) ----------
+// mesma conta do Backlog (enxDados: vencido · vence no mês · sem histórico) e da saída (frotaMatriz: bloqueado = Crítica vencida sem OM ou falha Crítica sem OM)
+const SF_SIS = ['Propulsão', 'Governo', 'Geração', 'Emergência', 'Salvag.', 'Combust.', 'Comunic.', 'Amarra', 'Casco', 'Habitab.', 'Naveg.'];
+const SF_SIT = [['ok', 'Liberado'], ['at', 'Com restrição'], ['bad', 'Bloqueado'], ['bad', 'Interditado']];
+const sfModo = () => { try { return localStorage.getItem('smf_sf_modo') === 'cartoes' ? 'cartoes' : 'matriz'; } catch (e) { return 'matriz'; } };
+function sfDados() {
+  const D = enxDados(), FM = frotaMatriz().filter(f => f.sit >= 0); let C = []; try { C = cmpDados(); } catch (e) { }
+  const COR = oms().filter(o => o.tipo === 'C' && !o.excluido && !['encerrada', 'cancelada'].includes(o.status));
+  return FM.map(f => { const x = D.find(d => d.v === f.v); if (!x) return null; const P = x.P, v = f.v;
+    const den = P.filter(y => y.g !== 'sem').length, ok = P.filter(y => !['venc', 'mes', 'sem'].includes(y.g)).length;
+    const cm = C.filter(c => c.v === v).map(c => { const u = c.H[c.H.length - 1]; return u ? u.min : null; }).filter(z => z != null), mn = cm.length ? Math.min(...cm) : null;
+    const s = situDe(v), dd = h => h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
+    const mot = [...mcpPos(v).map(p => [p, 'MCP ' + ((v.mcpMod || {})[p] || '') + ((v.rev || {})[p] ? ' · ' + v.rev[p] : '')]), ...MCAS.filter(p => (v.mca || {})[p]).map(p => [p, (v.mcaMod || {})[p] || v.mca[p]])]
+      .map(([p, m]) => { const h = horAtual(v.id, p); return { p, m, h, d: dd(h) }; });
+    return { v, f, P, sit: f.sit, loc: !s ? '' : s.st === 'viagem' ? 'em viagem' : 'no porto',
+      venc: x.venc.length, mes: x.mes.length, sem: x.sem.length, ok, pct: den ? Math.round((den - P.filter(y => y.g === 'venc').length) / den * 100) : null,
+      crit: P.filter(y => y.g === 'venc' && enxCrit(y.t)).length,
+      sis: SF_SIS.map((_, i) => P.filter(y => parseInt(y.t.id) === i + 1)),
+      oleo: P.filter(y => /troca/i.test(y.t.chk || '') && /óleo/i.test(y.t.chk || '')), cal: P.filter(y => ['1.1.11', '1.1.12', '1.1.13'].includes(y.t.id)),
+      cmp: mn == null ? null : mn < 1.27 ? 'venc' : mn < 1.45 ? 'mes' : 'ok', cor: COR.filter(o => o.vessel === v.id).length, mot }; }).filter(Boolean);
+}
+const sfCel = (L, at) => { if (!L.length) return `<span class="sf-na">—</span>`; const v = L.filter(x => x.g === 'venc').length, m = L.filter(x => x.g === 'mes').length;
+  return v ? `<span class="sf-c sf-r"${at}>${v}</span>` : m ? `<span class="sf-c sf-a"${at}>${m}</span>` : L.every(x => x.g === 'sem') ? `<span class="sf-o"${at}></span>` : `<span class="sf-g"${at}></span>`; };
+const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${x.loc ? ` <span class="sf-mut">· ${x.loc}</span>` : ''}`;
+function sfMatriz(L) {
+  const hr = x => x.mot.filter(m => isMcp(m.p)).map(m => `<div><span class="sf-p">${m.p}</span> ${m.h ? nf(m.h.h) + ' h' : '—'} <span class="${m.d == null || m.d > 14 ? 'sf-red' : 'sf-mut'}">${m.d == null ? 'sem leitura' : m.d + ' d'}</span></div>`).join('');
+  const lk = (h, inner) => `<a href="${h}" class="sf-lk">${inner}</a>`;
+  return `<div class="tw"><table class="sf-mx"><thead><tr><th class="l">Empurrador</th><th class="l">Horímetro MCP</th><th class="l">Itens em dia</th><th>Críticos<small>NP 6.3</small></th>${SF_SIS.map((s, i) => `<th><small>${i + 1}.0</small>${s}</th>`).join('')}<th class="sf-sep"><small>condição</small>Óleo</th><th><small>condição</small>Compressão</th><th><small>condição</small>Calibração</th><th><small>abertas</small>Corretivas</th></tr></thead><tbody>
+    ${L.map(x => `<tr><td class="sf-n" data-pcmv="${x.v.id}"><b>${esc(x.v.nome)}</b><div>${sfSit(x)}</div></td><td class="sf-hr">${hr(x)}</td>
+      <td class="nowrap"><span class="sf-bar"><i style="width:${x.pct || 0}%"></i></span><span class="sf-pc">${x.pct == null ? '—' : x.pct + '%'}</span></td>
+      <td class="sf-cc">${x.crit ? `<span class="sf-c sf-r" data-pcmv="${x.v.id}" title="Itens críticos da NP 6.3 vencidos">${x.crit}</span>` : '<span class="sf-g"></span>'}</td>
+      ${x.sis.map((S0, i) => `<td class="sf-cc">${sfCel(S0, ` data-pcmv="${x.v.id}" data-pcms="${i + 1}" title="${esc(x.v.nome)} · ${i + 1}.0 ${SF_SIS[i]}"`)}</td>`).join('')}
+      <td class="sf-cc sf-sep">${lk('#oleo', sfCel(x.oleo, ''))}</td><td class="sf-cc">${lk('#compr', x.cmp ? `<span class="${x.cmp === 'ok' ? 'sf-g' : x.cmp === 'venc' ? 'sf-c sf-r' : 'sf-c sf-a'}">${x.cmp === 'ok' ? '' : '!'}</span>` : '<span class="sf-o"></span>')}</td>
+      <td class="sf-cc">${lk('#enxcal', sfCel(x.cal, ''))}</td><td class="sf-cc">${lk('#enxcor', x.cor ? `<span class="sf-c sf-r">${x.cor}</span>` : '<span class="sf-g"></span>')}</td></tr>`).join('')}</tbody></table></div>
+    <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; óleo, compressão, calibração e corretivas abrem a tela da frota. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
+}
+function sfCartoes(L) {
+  return `<div class="sf-cards">${L.map(x => { const t = x.venc + x.mes + x.ok || 1;
+    return `<div class="sf-cd" data-pcmv="${x.v.id}"><div class="sf-cdh"><b>${esc(x.v.nome)}</b><span class="sf-tag ${SF_SIT[x.sit][0]}">${SF_SIT[x.sit][1]}</span></div>
+      <table class="sf-mt">${x.mot.map(m => `<tr><td><span class="sf-dot ${isMcp(m.p) ? 'mcp' : 'mca'}"></span>${m.p}</td><td>${esc(m.m)}</td><td class="r nowrap">${m.h ? nf(m.h.h) + ' h' : '—'}${m.d != null && m.d > 14 ? ` <span class="sf-red">${m.d} d</span>` : ''}</td></tr>`).join('')}</table>
+      <div class="sf-mut">${x.loc ? x.loc[0].toUpperCase() + x.loc.slice(1) : 'Local não informado'}${x.cor ? ` · <b class="sf-red">${x.cor} corretiva${x.cor === 1 ? '' : 's'} aberta${x.cor === 1 ? '' : 's'}</b>` : ''}</div>
+      <div class="sf-st"><i style="width:${x.venc / t * 100}%;background:#C5221F"></i><i style="width:${x.mes / t * 100}%;background:#F9AB00"></i><i style="width:${x.ok / t * 100}%;background:#1E8E3E"></i></div>
+      <div class="sf-pl">${x.venc ? `<span class="pill p-bad">${x.venc} vencido${x.venc === 1 ? '' : 's'}</span>` : ''}${x.crit ? `<span class="pill p-bad"><b>${x.crit} crítico${x.crit === 1 ? '' : 's'} NP 6.3</b></span>` : ''}${x.mes ? `<span class="pill p-warn">${x.mes} no mês</span>` : ''}<span class="pill p-ok">${x.ok} em dia</span>${x.sem ? `<span class="pill p-mut">${x.sem} sem histórico</span>` : ''}</div></div>`; }).join('')}</div>
+    <p class="note">Clique no cartão para abrir o empurrador na 2.2. Barra: vencidos · vencem no mês · em dia.</p>`;
+}
+function sfCard() {
+  const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => x.loc === 'em viagem').length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
+  return `<div class="card"><h2>Situação da frota · ${md === 'matriz' ? 'empurrador × sistema do Anexo I' : 'cartões por empurrador'}</h2>
+    <div class="sf-k">${[['Liberados', n(0), 'var(--okt)'], ['Com restrição', n(1), 'var(--warnt)'], ['Bloqueados', n(2) + n(3), 'var(--badt)'], ['Em viagem', via, ''], ['Críticos NP 6.3 vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)']].map(([l, v, c]) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`).join('')}
+      <span class="sp"></span><div class="seg"><button data-sfm="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-sfm="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button></div></div>
+    ${md === 'matriz' ? `<div class="sf-leg"><span><span class="sf-c sf-r">3</span> vencidos</span><span><span class="sf-c sf-a">2</span> vencem no mês</span><span><span class="sf-g"></span> em dia</span><span><span class="sf-o"></span> sem histórico</span><span><span class="sf-na">—</span> não se aplica</span></div>` + sfMatriz(L) : sfCartoes(L)}</div>`;
 }
 // contadores do menu (baratos: sem recalcular relatório)
 function pcmContagem() {
@@ -132,8 +184,11 @@ function pcmContagem() {
 }
 // ---------- telas e cliques ----------
 const pcmAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-pcmv],[data-acnova],[data-acok],[data-acx],[data-acre]'); if (!t) return; const d = t.dataset;
-    if (d.pcmv !== undefined) { e.preventDefault(); ENX.v = d.pcmv; ENX.abertos = new Set(); location.hash = '#enx'; return; }
+  m.onclick = async e => { const t = e.target.closest('[data-pcmv],[data-sfm],[data-acnova],[data-acok],[data-acx],[data-acre]'); if (!t) return; const d = t.dataset;
+    if (d.sfm) { try { localStorage.setItem('smf_sf_modo', d.sfm); } catch (x) { } return render(); }
+    if (d.pcmv !== undefined) { e.preventDefault(); ENX.v = d.pcmv; ENX.abertos = new Set();
+      if (d.pcms) { const v = vessel(d.pcmv); enxDados().find(x => x.v === v).P.filter(y => parseInt(y.t.id) === +d.pcms && ['venc', 'mes', 'sem'].includes(y.g)).forEach(y => ENX.abertos.add(enxEq(y.t) + ' · ' + posCurtoE(v, y.pos))); }
+      location.hash = '#enx'; return; }
     if (d.acnova !== undefined) return pcmAcaoNova();
     if (d.acok !== undefined) return pcmAcaoConcluir(d.acok);
     if (d.acx !== undefined) return pcmAcaoSt(d.acx, 'cancelada');
