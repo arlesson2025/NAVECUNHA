@@ -207,7 +207,19 @@ function vEnxHor() {
    + `<div class="card"><h2>Leitura de horímetros</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Registrar leituras</button></div>
      <div class="cm-chips" style="margin-bottom:8px">${V.map(v => { const d = idade(v); return `<button class="cm-chip${v.id === ENXH.v ? ' on' : ''}" data-ehv="${v.id}">${esc(v.nome)}${d > 14 ? ` <b style="color:var(--warnt)">${d === 999 ? 'sem leitura' : d + ' d'}</b>` : ''}</button>`; }).join('')}</div>
      <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.filter(v => v.id === ENXH.v).map(lin).join('')}</tbody></table></div>
-     <p class="note">Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div>${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
+     <p class="note">Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div>${enxHorGraf(vessel(ENXH.v))}${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
+}
+// horas de operação por mês do empurrador escolhido, últimos 12 meses, um gráfico por MCP (Supervisor, 29/10/2026)
+// mesma conta do relatório mensal (rmeHoras: soma leitura a leitura, só o que sobe e cabe no tempo) e o mesmo gráfico (rmeGraf)
+function enxHorGraf(v) {
+  if (!v || typeof rmeHoras !== 'function') return '';
+  const I = rmeHorIdx(), h0 = hoje(), M = [...Array(12).keys()].map(i => { const d = new Date(h0.getFullYear(), h0.getMonth() - 11 + i, 1);
+    return [MESES[d.getMonth()].slice(0, 3).toLowerCase() + '/' + String(d.getFullYear()).slice(2), isoD(d), isoD(new Date(Math.min(+new Date(d.getFullYear(), d.getMonth() + 1, 0), +h0)))]; });
+  const G = mcpPos(v).map(p => { const R = M.map(([l, a, b]) => [l, rmeHoras(I, v.id, p, a, b)]), L = R.map(([l, r]) => [l, Math.round(r.h)]), tot = L.reduce((s, x) => s + x[1], 0);
+    const sem = R.filter(([, r]) => r.sem).length, inc = R.some(([, r]) => r.inc);
+    return `<div style="flex:1;min-width:320px"><b>${esc(posCurtoE(v, p))}</b> <span class="note">· 12 meses: ${nf(tot)} h · média ${nf(Math.round(tot / 12))} h/mês${sem ? ` · ${sem} ${sem === 1 ? 'mês' : 'meses'} sem leitura` : ''}${inc ? ' · tem leitura incoerente (fora da soma)' : ''}</span>${rmeGraf(L, { leg: 'horas no mês' })}</div>`; }).join('');
+  return `<div class="card"><h2>Horas de operação por mês · ${esc(v.nome)}</h2><div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap">${G}</div>
+    <p class="note">Motores principais (MCP), últimos 12 meses (o mês atual até hoje) · horas somadas leitura a leitura, a mesma conta do relatório mensal · leitura que desce ou passa de 24 h por dia fica fora da soma · escolha o empurrador nos botões acima.</p></div>`;
 }
 async function enxHorSalvar() {
   if (!S.session) return loginModal(); const d = $('#ehD').value; if (!d || d > isoD(hoje())) return toast('Data inválida.');
