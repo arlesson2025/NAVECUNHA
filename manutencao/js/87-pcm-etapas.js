@@ -127,10 +127,10 @@ const PD_ETAPAS = [['1 · Recebimento', 'horímetros e corretivas'], ['2 · Plan
 const pdTipo = t => /aguardando confer/i.test(t) ? 'inf' : /vencid|atras|aberto|desatualizado|inconsistente|fora do limite|sem referência/i.test(t) ? '' : 'at';
 function vEnxPend() {
   const G = pcmPainel(), tot = G.reduce((a, g) => a + g.length, 0);
-  return `<div class="cm-v"><div class="vh"><div><h1>Pendências</h1><p>${tot ? `${tot} tipo(s) de pendência · da esquerda para a direita, na ordem das etapas; cada cartão abre a tela que resolve` : 'Nenhuma pendência: frota dentro do prazo'}</p></div><span class="sp"></span></div>
-  <div class="pd-cols">${G.map((L, i) => `<div class="pd-col"><div class="pd-ch">${PD_ETAPAS[i][0]}<b>${L.length}</b></div><div class="pd-sub">${PD_ETAPAS[i][1]}</div>
-    ${L.length ? L.map(x => `<div class="pd-cd ${pdTipo(x.t)}"><div class="pd-t"><span class="pd-n">${x.n}</span><b>${esc(x.t)}</b></div><div class="pd-d">${x.d}</div><a class="mbtn sm pri" href="${x.h}">Abrir</a></div>`).join('') : '<div class="pd-ok">✓ Sem pendência</div>'}</div>`).join('')}</div>
-  <p class="note" style="margin-top:10px">Vermelho = vencido ou atrasado · âmbar = vence no mês ou falta aprovar/emitir · azul = aguardando a sua conferência.</p></div>`;
+  return enxCab('Pendências', tot ? `${tot} tipo(s) de pendência · da esquerda para a direita, na ordem das etapas; cada cartão abre a tela que resolve` : 'Nenhuma pendência: frota dentro do prazo', '<button class="mbtn" data-enxreset>Reorganizar</button>').replace('<div class="cm-ws">', '<div class="cm-ws cm-grid pd-cols">')
+   + G.map((L, i) => `<div class="card pd-col"><h2>${PD_ETAPAS[i][0]} <span class="pd-q">${L.length}</span></h2><div class="pd-sub">${PD_ETAPAS[i][1]}</div>
+    ${L.length ? L.map(x => `<div class="pd-cd ${pdTipo(x.t)}"><div class="pd-t"><span class="pd-n">${x.n}</span><b>${esc(x.t)}</b></div><div class="pd-d">${x.d}</div><a class="mbtn sm pri" href="${x.h}">Abrir</a></div>`).join('') : '<div class="pd-ok">✓ Sem pendência</div>'}</div>`).join('')
+   + '</div><p class="note" style="margin-top:10px">Vermelho = vencido ou atrasado · âmbar = vence no mês ou falta aprovar/emitir · azul = aguardando a sua conferência. Cada coluna é uma janela: arraste, mude o tamanho ou minimize; “Reorganizar” volta ao padrão.</p></div>';
 }
 // ---------- Situação da frota: matriz empurrador × sistema ou cartões (SMF 3.44; Supervisor, 29/10/2026: “uma visão geral da frota de como ela está hoje”) ----------
 // mesma conta do Backlog (enxDados: vencido · vence no mês · sem histórico) e da saída (frotaMatriz: bloqueado = Crítica vencida sem OM ou falha Crítica sem OM)

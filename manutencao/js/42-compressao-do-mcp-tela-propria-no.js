@@ -153,7 +153,7 @@ function janelasLivres(ws, chave, resetSel) {
   const rb = document.querySelector(resetSel); if (rb) rb.onclick = e => { e.stopPropagation(); LS.S({}); render(); };
   const livre = innerWidth > 760; if (livre) ws.classList.add('cm-wide');   // libera a largura total da tela antes de medir
   const cards = [...ws.children].filter(c => c.classList.contains('card')), L = LS.G(), W = ws.clientWidth;
-  const nat = cards.map(c => ({ x: 0, y: c.offsetTop, w: W, h: c.offsetHeight }));   // padrão: empilhados na ordem da tela
+  const grade = ws.classList.contains('cm-grid'), nat = cards.map(c => grade ? { x: c.offsetLeft, y: c.offsetTop, w: c.offsetWidth, h: c.offsetHeight } : { x: 0, y: c.offsetTop, w: W, h: c.offsetHeight });   // padrão: empilhados na ordem da tela; .cm-grid = lado a lado como a grade do CSS
   const pos = k => L[k] || (L[k] = Object.assign({}, nat[+k.slice(1)]));
   const salva = () => LS.S(L);
   const alinha = () => { const m = document.getElementById('main'); if (!m) return;   // cabeçalho e barra "Próximo" na mesma largura das janelas
