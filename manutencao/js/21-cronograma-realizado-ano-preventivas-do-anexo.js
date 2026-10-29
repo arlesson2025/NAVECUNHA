@@ -7,7 +7,7 @@
 let CXI = null;   // índices montados uma vez por cálculo
 function cxIndice() {
   const ev = {}, hor = {}, add = (k, o) => (ev[k] = ev[k] || []).push(o);
-  recs('base').forEach(b => { if (b.date && !b.nf && !b.excluido) add(b.vessel + '|' + b.pos + '|' + b.item, { date: b.date, h: b.h == null || b.h === '' ? null : +b.h, src: 'Último serviço registrado' }); });
+  recs('base').forEach(b => { if (b.date && !b.nf && !b.excluido) add(b.vessel + '|' + b.pos + '|' + b.item, b.insp ? { date: b.date, h: b.h == null || b.h === '' ? null : +b.h, src: 'Inspecionado · sem intervenção' + (b.om ? ' · OM ' + b.om : ''), num: b.om, insp: true, prox: b.prox || null, proxH: b.proxH != null && b.proxH !== '' ? +b.proxH : null } : { date: b.date, h: b.h == null || b.h === '' ? null : +b.h, src: 'Último serviço registrado' }); });
   oms().forEach(o => { if (o.tipo === 'P' && o.status === 'encerrada') (o.items || []).forEach(it => add(o.vessel + '|' + o.pos + '|' + it, { date: o.dreal || isoD(new Date(o.fechadoAt || o.updatedAt)), h: o.hreal == null || o.hreal === '' ? null : +o.hreal, src: 'OM ' + o.num, num: o.num })); });
   recs('lub').forEach(r => { if (r.tipo === 'fr049') (r.eq || []).forEach(q => { if (q.status === 'T') (q.itens || []).forEach(it => add(r.vessel + '|' + q.pos + '|' + it, { date: r.date, h: q.hr == null || q.hr === '' ? null : +q.hr, src: 'FR 049_B ' + (r.om || ''), num: r.om })); }); });
   if (typeof corrRefeitos === 'function') oms().forEach(o => { if (o.tipo === 'C' && o.status === 'encerrada' && !o.excluido) corrRefeitos(o).forEach(x => add(o.vessel + '|' + x.pos + '|' + x.id, { date: x.date, h: x.h, src: 'Corretiva OM ' + o.num + ' (reinício)', num: o.num, reset: true })); });   // corretiva que refez o serviço: só reinicia a contagem
@@ -36,8 +36,9 @@ function cxLinha(v, pos, t, ano) {
   if (!cur) return { v, pos, t, iv, marks };
   let n = 0;
   while (n++ < 80) {
-    const c = []; if (iv.m) c.push(addM(pD(cur.date), iv.m));
-    if (iv.h) { const d = cur.h != null ? cxDataHoras(v.id, hp, cur.h + iv.h, cur.date, rate) : null; c.push(d || new Date(pD(cur.date).getTime() + iv.h / rate * 864e5)); }
+    const c = [], tH = cur.h != null ? (cur.insp && cur.proxH != null ? cur.proxH : cur.h + iv.h) : null;   // inspecionado sem intervenção: próxima avaliação escolhida (SMF 3.32)
+    if (iv.m) c.push(cur.insp && cur.prox ? pD(cur.prox) : addM(pD(cur.date), iv.m));
+    if (iv.h) { const d = tH != null ? cxDataHoras(v.id, hp, tH, cur.date, rate) : null; c.push(d || new Date(pD(cur.date).getTime() + (tH != null ? Math.max(0, tH - cur.h) : iv.h) / rate * 864e5)); }
     const due = new Date(Math.min(...c.filter(Boolean).map(d => d.getTime()))); if (isNaN(due)) break;
     const e = E.find(x => x.date > cur.date);
     if (e && e.reset) { const de = pD(e.date); if (due < de && due >= ini && due < fim && due < hj) marks.push({ k: 'miss', d: due, due }); if (de >= ini && de < fim) marks.push({ k: 'corr', d: de, ev: e }); cur = e; if (de >= fim) break; continue; }   // corretiva: reinicia sem contar como realizado; a preventiva já vencida antes dela segue como não feita
@@ -48,7 +49,7 @@ function cxLinha(v, pos, t, ano) {
     if (due >= fim) break;
     if (due < hj) { if (due >= ini) marks.push({ k: 'miss', d: due, due }); break; }
     if (due >= ini) marks.push({ k: 'plan', d: due, due });
-    cur = { date: isoD(due), h: cur.h != null && iv.h ? cur.h + iv.h : null, proj: true };
+    cur = { date: isoD(due), h: tH != null && iv.h ? tH : null, proj: true };
   }
   return { v, pos, t, iv, marks };
 }

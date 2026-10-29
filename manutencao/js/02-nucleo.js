@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.31';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.32';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -241,8 +241,9 @@ function ultimoServico(vid, pos, item) {   // num lugar só (24/10/2026): antes 
 }
 function ultServBase(vid, pos, itemId) {
   let best = null;
-  const cand = (h, date, src) => { if (date && (!best || date > best.date)) best = { h: h === '' || h === null || h === undefined ? null : +h, date, src }; };
-  recs('base').forEach(b => { if (b.vessel === vid && b.pos === pos && b.item === itemId && !b.nf && !b.excluido) cand(b.h, b.date, 'base'); });   // nf = não feito (modo enxuto): não reinicia o prazo
+  const cand = (h, date, src, x) => { if (date && (!best || date > best.date)) best = Object.assign({ h: h === '' || h === null || h === undefined ? null : +h, date, src }, x || {}); };
+  // nf = não feito (modo enxuto): não reinicia o prazo · insp = inspecionado sem intervenção (SMF 3.32): conta como atendido e o próximo vencimento vai para prox (data) / proxH (horímetro), nunca além do intervalo normal
+  recs('base').forEach(b => { if (b.vessel === vid && b.pos === pos && b.item === itemId && !b.nf && !b.excluido) cand(b.h, b.date, 'base', b.insp ? { insp: true, prox: b.prox || null, proxH: b.proxH != null && b.proxH !== '' ? +b.proxH : null, obs: b.obs || '', om: b.om || '' } : null); });
   oms().forEach(o => { if (o.tipo === 'P' && o.status === 'encerrada' && o.vessel === vid && o.pos === pos && (o.items || []).includes(itemId)) cand(o.hreal, o.dreal || isoD(new Date(o.fechadoAt || o.updatedAt)), 'om:' + o.num); });
   recs('lub').forEach(r => { if (r.tipo === 'fr049' && r.vessel === vid) (r.eq || []).forEach(q => { if (q.status === 'T' && q.pos === pos && (q.itens || []).includes(itemId)) cand(q.hr, r.date, 'fr049:' + r.om); }); });   // troca registrada no FR 049_B
   if (itemId === '1.1.29') recs('laudo').forEach(r => { if (r.vessel === vid && r.pos === pos && (!best || r.date > best.date)) best = { h: r.h != null && r.h !== '' ? +r.h : null, date: r.date, src: 'laudo:' + (r.num || '') }; });   // laudo de óleo do MCP
@@ -280,12 +281,12 @@ function situacao(v, pos, t, viagemH) {
   let st = 'ok', txt = [], alvoH = null, alvoD = null, rest = null;
   const ord = { ok: 0, viag: 1, venc: 2 }, up = s => { if (ord[s] > ord[st]) st = s; };
   if (iv.h && L.h !== null && cur !== null) {
-    alvoH = L.h + iv.h; rest = alvoH - cur;
+    alvoH = L.insp && L.proxH != null ? L.proxH : L.h + iv.h; rest = alvoH - cur;
     txt.push(rest < 0 ? nf(-rest) + ' h vencido' : 'faltam ' + nf(rest) + ' h');
     up(rest < 0 ? 'venc' : rest <= viagemH ? 'viag' : 'ok');
   } else if (iv.h && cur === null) txt.push('sem horímetro');
   if (iv.m) {
-    alvoD = addM(pD(L.date), iv.m); const dd = Math.round((alvoD - pD(isoD(hoje()))) / 864e5);
+    alvoD = L.insp && L.prox ? pD(L.prox) : addM(pD(L.date), iv.m); const dd = Math.round((alvoD - pD(isoD(hoje()))) / 864e5);
     txt.push(dd < 0 ? (-dd) + (dd === -1 ? ' dia vencido' : ' dias vencido') : 'vence ' + alvoD.toLocaleDateString('pt-BR'));
     up(dd < 0 ? 'venc' : dd <= Math.ceil(viagemH / horasDia(v.id)) ? 'viag' : 'ok');
   }
@@ -772,15 +773,17 @@ function exemploComp() {
 const DOCA = { item: '9.1.5', planejarMeses: 12, janela: 6, junto: ['1.8.4'] };
 function docaLim(vid) { let b = null; recs('doclim').forEach(r => { if (r.vessel === vid && (!b || r.updatedAt > b.updatedAt)) b = r; }); return b; }
 function docaVessel(v) {
-  const t = A1M[DOCA.item], iv = intervalo(t), L = ultimoServico(v.id, 'UN', DOCA.item), lim = docaLim(v.id);
-  let due = L && iv.m ? addM(pD(L.date), iv.m) : null, fonte = 'Anexo I (' + iv.m + ' meses)';
+  const t = A1M[DOCA.item], iv = intervalo(t), L0 = ultimoServico(v.id, 'UN', DOCA.item), lim = docaLim(v.id);
+  // inspeção sem necessidade de docar (SMF 3.32): não é docagem (a última docagem continua a real), mas leva o vencimento para a próxima avaliação; o CSN continua valendo
+  const insp = L0 && L0.insp ? L0 : null, HR = insp && typeof docaHist === 'function' ? docaHist(v) : [], L = insp ? (HR.length ? { date: HR[HR.length - 1].ent, src: 'base' } : null) : L0;
+  let due = insp ? (insp.prox ? pD(insp.prox) : addM(pD(insp.date), iv.m)) : L && iv.m ? addM(pD(L.date), iv.m) : null, fonte = insp ? 'Inspeção de ' + brD(insp.date) + ' · sem necessidade de docar' : 'Anexo I (' + iv.m + ' meses)';
   if (lim && lim.date) { const d = pD(lim.date); if (!due || d < due) { due = d; fonte = 'Certificado (CSN)'; } }
   const dias = due ? Math.floor((due - hoje()) / 864e5) : null;
   const st = !due ? 'sem' : dias < 0 ? 'venc' : dias <= DOCA.planejarMeses * 30.4 ? 'viag' : 'ok';
   // itens que só se faz (ou é melhor fazer) com o empurrador fora d'água e vencem até 12 meses depois da docagem
   const junto = [];
   if (due) { const ate = addM(due, DOCA.janela); DOCA.junto.forEach(id => { const ti = A1M[id]; if (!ti) return; posicoes(v).forEach(pos => { if (!aplica(v, pos, ti)) return; const s = situacao(v, pos, ti); const alvo = s.alvoD || null; const perto = (due - hoje()) / 864e5 <= DOCA.planejarMeses * 30.4; if ((perto && (s.st === 'venc' || s.st === 'sem')) || (alvo && alvo >= addM(due, -DOCA.planejarMeses) && alvo <= ate)) junto.push({ id, pos, nm: ti.chk, s }); }); }); }
-  const r = { v, L, lim, due, dias, st, fonte, junto, om: omAberta(v.id, 'UN', DOCA.item) }; if (foraOp(v)) { r.st = 'sem'; r.fora = true; } return r;
+  const r = { v, L, insp, lim, due, dias, st, fonte, junto, om: omAberta(v.id, 'UN', DOCA.item) }; if (foraOp(v)) { r.st = 'sem'; r.fora = true; } return r;
 }
 /* Docagem num bloco só (24/10/2026): aparece dentro de Calibração e docagem e mostra só o cronograma (docaCrono); antes a tela montava contadores,
    cronograma antigo e escopo, e duas camadas trocavam e apagavam */
@@ -795,6 +798,7 @@ function docaModal(vid) {
    <div class="row"><span class="pill ${{ venc: 'p-bad', viag: 'p-warn', ok: 'p-ok', sem: 'p-mut' }[x.st]}">${{ venc: 'Vencida', viag: 'Planejar', ok: 'Em dia', sem: 'Sem registro' }[x.st]}</span><span>${x.due ? 'Limite ' + brD(isoD(x.due)) + ' · ' + x.fonte : 'Sem data'}</span></div>
    <div class="tw"><table class="t"><tbody>
     <tr><td>Última docagem</td><td>${x.L ? brD(x.L.date) + (x.L.src && x.L.src.startsWith('om:') ? ' · ' + x.L.src.slice(3) : '') : '—'}</td><td><button class="mbtn sm" data-base="${vid}|UN|${DOCA.item}">Registrar</button></td></tr>
+    ${x.insp ? `<tr><td>Última inspeção · sem necessidade de docar</td><td>${brD(x.insp.date)}${x.insp.om ? ' · OM ' + esc(x.insp.om) : ''}${x.insp.obs ? '<div class="note">' + esc(x.insp.obs) + '</div>' : ''}</td><td></td></tr>` : ''}
     <tr><td>Data-limite da vistoria em seco no CSN</td><td>${x.lim && x.lim.date ? brD(x.lim.date) + (x.lim.obs ? ' · ' + esc(x.lim.obs) : '') : '—'}</td><td><button class="mbtn sm" id="dlEd">Informar</button></td></tr>
    </tbody></table></div>
    ${x.junto.length ? `<h3 style="margin:4px 0 0;font-size:14px">Incluir no escopo da docagem</h3><div class="tw"><table class="t"><tbody>${x.junto.map(j => `<tr><td>${posTag(j.pos)}</td><td class="mono">${j.id}</td><td>${esc(j.nm)}</td><td>${pillSt(j.s.st)} <span class="note">${esc(j.s.txt || '')}</span></td></tr>`).join('')}</tbody></table></div>` : ''}
