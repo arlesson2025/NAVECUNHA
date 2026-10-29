@@ -63,7 +63,30 @@ function vOleoP() {
   const t = document.createElement('div'); t.innerHTML = vLubReg(); const card = t.querySelector(':scope > .card');   // filtros e tabela da antiga tela Registros de lubrificação
   const reg = card ? `<div class="card" id="ol-trocas"><div class="row"><h2>Trocas registradas</h2><span class="sp"></span><span class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e complementos de óleo</span></div>${card.innerHTML}</div>` : '';
   return `<div class="cm-v"><div class="vh"><div><h1>Óleo da frota</h1><p>Troca de óleo por horímetro ou prazo (Anexo I · matriz de lubrificação) · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d · registro pelo FR 049_B</p></div><span class="sp"></span><button class="mbtn" data-olreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn" data-act="lubComp">＋ Complemento de nível</button><button class="mbtn pri" data-ollanca>＋ Registrar troca de óleo</button></div>
-   <div class="cm-ws">${tab}${graf}${reg}</div></div>`;
+   ${olFaixa(o3Dados().ENG)}<div class="cm-ws">${tab}${graf}${olDemanda()}${olConsumoCard()}${reg}</div></div>`;
+}
+// 3.55 (Supervisor, 29/10/2026: “essas informações são possíveis?”): faixa do mês, óleo para as trocas programadas (pedido de compra) e consumo do MCP
+function olCap(e) { if (e.cap) return { L: +e.cap, est: false }; const t = o3Carter(e).t || '', n = (t.match(/\d+(?:,\d+)?/g) || []).map(x => +x.replace(',', '.')); return n.length ? { L: n.reduce((a, x) => a + x, 0) / n.length, est: true } : { L: 0, est: true, sem: true }; }
+function olDemanda() {
+  const P = [30, 60, 90], T = {}; let sem = 0, est = new Set();
+  lubDados().filter(x => !x.saida && !foraOp(x.v) && !x.om && x.dias != null && x.dias <= 90).forEach(x => { const c = olCap(x.e), k = x.e.oleo || 'Outros';
+    if (c.sem) { sem++; return; } if (c.est) est.add(x.e.nome || x.e.key); const r = T[k] = T[k] || [0, 0, 0]; P.forEach((d, i) => { if (x.dias <= d) r[i] += c.L; }); });
+  const L = Object.entries(T).sort((a, b) => b[1][2] - a[1][2]), f = n => nf(Math.round(n)) + ' L';
+  return `<div class="card"><h2>Óleo para as trocas programadas</h2><div class="tw"><table class="t"><thead><tr><th>Óleo</th><th class="r">Até 30 dias</th><th class="r">Até 60 dias</th><th class="r">Até 90 dias</th></tr></thead><tbody>
+    ${L.length ? L.map(([k, r]) => `<tr><td><b>${esc(k)}</b></td>${r.map(n => `<td class="r mono">${f(n)}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="4" class="note">Nenhuma troca nos próximos 90 dias.</td></tr>'}</tbody></table></div>
+    <p class="note">Soma do volume do cárter (matriz de lubrificação) das trocas vencidas e das que vencem no prazo, sem OM aberta: use para o pedido de compra. Cada coluna inclui a anterior.${est.size ? ' Volumes em faixa (governo, reversor) entram pelo meio da faixa (≈).' : ''}${sem ? ` ${sem} troca(s) sem volume na matriz.` : ''}</p></div>`;
+}
+function olConsumoCard() {
+  const C = lubConsumoMCP(120), L = C.out.filter(x => !foraOp(x.v)).sort((a, b) => (b.taxa ?? -1) - (a.taxa ?? -1)), ST = { ok: ['p-ok', 'Normal'], viag: ['p-warn', 'Atenção'], venc: ['p-bad', 'Investigar'], sem: ['p-mut', 'Sem dados'] };
+  return `<div class="card"><h2>Consumo de óleo do MCP (L/100 h)</h2><div class="tw"><table class="t"><thead><tr><th>Motor</th><th class="r">Reposto</th><th class="r">Horas</th><th class="r">L/100 h</th><th>Situação</th></tr></thead><tbody>
+    ${L.map(x => `<tr><td><b>${esc(x.v.nome)}</b>${mcpPos(x.v).length > 1 ? ' · ' + x.p : ''}</td><td class="r mono">${x.n ? String(Math.round(x.L * 10) / 10).replace('.', ',') + ' L (' + x.n + '×)' : '—'}</td><td class="r mono">${x.h != null ? nf(x.h) : '—'}</td><td class="r mono"><b>${x.taxa != null ? x.taxa.toFixed(2).replace('.', ',') : '—'}</b></td><td><span class="pill ${ST[x.st][0]}">${ST[x.st][1]}</span></td></tr>`).join('')}</tbody></table></div>
+    <p class="note">Últimos ${C.dias} dias: litros dos complementos de nível ÷ horas do motor.${C.med ? ` Mediana da frota: ${C.med.toFixed(2).replace('.', ',')} L/100 h.` : ''} Acima de 1,5× a mediana = atenção; acima de 2× = investigar (anéis e camisas, guias de válvula, turbo ou vazamento). Confirme com a compressão (1.1.12) e a análise de óleo (1.1.29).</p></div>`;
+}
+function olFaixa(ENG) {
+  const ms = isoD(hoje()).slice(0, 7), R = recs('lub').filter(r => !r.excluido && (r.date || '').slice(0, 7) === ms), fr = R.filter(r => r.tipo !== 'comp');
+  const lt = R.reduce((a, r) => a + (r.tipo === 'comp' ? +r.L || 0 : (r.eq || []).filter(q => q.status === 'T').reduce((b, q) => b + litros(q.qtd), 0)), 0);
+  const k = (l, x, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${x}</b></div>`, n = s => ENG.filter(e => e.st === s).length;
+  return `<div class="sf-k ol-fx">${k('Vencidas', n('red'), n('red') ? 'var(--badt)' : 'var(--okt)')}${k('Atenção (até 50 h ou 7 d)', n('amber'), n('amber') ? 'var(--warnt)' : '')}${k('Em dia', n('green'), 'var(--okt)')}${k(`FR 049_B em ${MESES[hoje().getMonth()]}`, fr.length, '')}${k('Óleo no mês (trocas + complementos)', nf(Math.round(lt)) + ' L', '')}</div>`;
 }
 VX.oleo = vOleoP;
 AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.open]); O3.S('mode', O3.mode); O3.S('ves', O3.ves); };
@@ -81,7 +104,7 @@ AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.o
   m.onchange = e => { const id = e.target.id;
     if (id === 'olSv') { O3.ves = e.target.value; O3.mode = '1'; salva(); render(); }
     if (id === 'lrB') { LR.barco = e.target.value; render(); } if (id === 'lrM') { LR.mes = e.target.value; render(); } };
-  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ol_lay2', '[data-olreset]');
+  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ol_lay3', '[data-olreset]');
   if (Date.now() - OL_IR < 3000) { OL_IR = 0; setTimeout(() => { const s = document.getElementById('ol-trocas'); if (s) s.scrollIntoView({ block: 'start' }); }, 300); } };
 { const st = document.createElement('style'); st.textContent = `
 #main .ol-t th{white-space:nowrap}#main .ol-t th.ol-gu{background:#F4F6F9;text-align:center}#main .ol-t th.ol-gp{background:#E8F0FE;color:#1967D2;text-align:center}

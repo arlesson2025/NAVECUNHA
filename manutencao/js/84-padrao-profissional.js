@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.55', data: '29/10/2026', itens: ['3.1 Lubrificação: faixa de números (vencidas, atenção, em dia, FR 049_B no mês, óleo no mês); janela Óleo para as trocas programadas (litros por tipo de óleo até 30, 60 e 90 dias, para o pedido de compra); janela Consumo de óleo do MCP (L/100 h nos últimos 120 dias, comparado com a mediana da frota).'] },
   { v: '3.54', data: '29/10/2026', itens: ['3.1 Lubrificação: coluna Óleo depois do Cárter (ex.: SAE 15W-40, SAE 30, Hidráulico ISO VG 68; passe o mouse para ver a especificação completa).'] },
   { v: '3.53', data: '29/10/2026', itens: ['3.1 Lubrificação: “N vencidas” embaixo do nome do empurrador agora sai em vermelho (estava cinza); “em dia” em verde.'] },
   { v: '3.52', data: '29/10/2026', itens: ['3.1 Lubrificação: a coluna Saldo virou Situação, em etiqueta: “Vencido · 449 h”, “Atenção · 43 h” (até 50 h ou 7 d), “Em dia · 1.250 h”, “Sem histórico”.'] },
