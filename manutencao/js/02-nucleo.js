@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.66';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.67';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -1445,6 +1445,7 @@ function vAdmin() {
   const a = can.admin();
   return `<div class="vh"><div><h1>Administração</h1><p>Nuvem, senhas, cadastro da frota e intervalos. Alterações da frota e dos intervalos valem para todos os aparelhos depois de sincronizar.</p></div></div>
    ${!S.session ? '<div class="banner info">Entre como Supervisor para alterar as configurações. <button class="mbtn sm" data-act="entrar">Entrar</button></div>' : !a ? '<div class="banner info">Você entrou como Analista. Somente o Supervisor altera as configurações.</div>' : ''}
+   ${typeof temaAdminHTML === 'function' ? temaAdminHTML() : ''}
    <div class="card"><h2>Nuvem (Google Apps Script)</h2><p class="note">Cole o endereço da implantação do Code.gs (termina em /exec). Sem endereço, o SMF funciona só neste aparelho. Este endereço fica salvo apenas neste aparelho.</p>
     <div class="row"><input id="adUrl" value="${esc(S.url)}" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:240px"><button class="mbtn" data-act="testar">Testar</button><button class="mbtn pri" data-act="salvarUrl">Salvar</button><button class="mbtn" data-act="sync">↻ Sincronizar agora</button></div><div class="note" id="adUrlMsg">${esc(S.syncMsg)}</div></div>
    <div class="card"><h2>Senhas</h2><p class="note">${S.url ? 'Trocadas no servidor: valem para todos.' : 'Modo local: valem só neste aparelho.'} Mínimo de 6 caracteres. Deixe em branco o que não quer trocar.</p>
