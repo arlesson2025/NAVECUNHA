@@ -1,6 +1,6 @@
 /* ===== PCM em 4 etapas (SMF 3.22, 28/10/2026; Supervisor: “sequência, etapas, nomes técnicos”, “não deixa ruim de operar, evita rodeios”) =====
    Só no modo enxuto (empurradores). Menu em PCM_MENU (js/85). Aqui:
-   · Painel de pendências (enxhoje): o que cada etapa tem pendente agora, cada linha leva à tela que resolve
+   · Situação da frota (enxhoje): matriz ou cartões · Pendências (enxpend): o que cada etapa tem pendente agora, em colunas, cada cartão leva à tela que resolve
    · 3.3 Calibração do MCP (enxcal): folga de válvulas, bicos injetores e demais ajustes do Anexo I por motor (mesma conta da tela Calibração)
    · 4.1 Plano de ação (enxacao): ação · responsável · prazo · situação · conclusão com evidência (PDCA); registros snap tipo 'acao'
    · checklist de fechamento mensal (pcmChecklist): mostrado na 4.2 e conferido na emissão do relatório
@@ -9,8 +9,8 @@
 const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejamento', ['enxcr', 'enx', 'cxr']], ['3', 'Condição', ['oleo', 'compr', 'enxcal', 'anoleo']], ['4', 'Fechamento', ['enxacao', 'enxrel']]];
 const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Compressão do MCP · manutenção preditiva', anoleo: '3.4 Análise de óleo do MCP · manutenção preditiva' };
 function pcmFaixa() {
-  if (!PCM_ETAPAS.some(e => e[2].includes(VIEW)) && VIEW !== 'enxhoje') return '';
-  return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Situação da frota</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
+  if (!PCM_ETAPAS.some(e => e[2].includes(VIEW)) && !['enxhoje', 'enxpend'].includes(VIEW)) return '';
+  return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Situação da frota</a><i>→</i><a href="#enxpend" class="${VIEW === 'enxpend' ? 'on' : ''}">Pendências</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
 }
 // ---------- plano de ação ----------
 const pcmAcoes = () => recs('snap').filter(r => r.tipo === 'acao' && !r.excluido);
@@ -97,14 +97,14 @@ function pcmChecklistCard(ini, fim, R) {
     ${L.map(x => `<tr><td style="width:28px;font-weight:700;color:${x.ok ? 'var(--okt)' : 'var(--warnt)'}">${x.ok ? '✓' : '!'}</td><td><b>${esc(x.t)}</b><div class="note">${x.d}</div></td><td style="width:1%">${x.ok ? '' : `<a class="mbtn sm" href="${x.h}">Resolver</a>`}</td></tr>`).join('')}</tbody></table>
     <p class="note">Na emissão o SMF confere de novo; com pendência, pede confirmação e registra as pendências na cópia emitida.</p></div>`;
 }
-// ---------- Painel de pendências ----------
+// ---------- Pendências (dados) ----------
 function pcmPainel() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), G = [[], [], [], []], add = (e, t, n, d, h) => { if (n) G[e].push({ t, n, d, h }); };
   const hDias = v => { const h = horAtual(v.id, mpos(v.id)); return h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null; };
   const hv = V.filter(v => { const d = hDias(v); return d == null || d > 14; }); add(0, 'Horímetro desatualizado (mais de 14 dias)', hv.length, hv.map(v => esc(v.nome) + (hDias(v) == null ? ' (sem leitura)' : ' (' + hDias(v) + ' d)')).join(', '), '#enxhor');
   const hi = pcmHorInc(); add(0, 'Registro com horímetro inconsistente (item não vence até corrigir)', hi.length, [...new Set(hi.map(x => esc(x.v.nome) + ' ' + (x.s.hp || x.pos)))].join(', '), '#enxhor');
   const C = oms().filter(o => o.tipo === 'C' && !o.excluido && o.status !== 'encerrada'), cr = C.filter(o => !o.liberacao), cc = C.filter(o => o.liberacao);
-  add(0, 'OM corretiva em aberto (embarcação indisponível)', cr.length, cr.map(o => esc(vName(o.vessel)) + ' · OM ' + esc(o.num) + ' · ' + esc(o.equip || o.sistema || '')).join('; '), '#enxcor');
+  add(0, 'OM corretiva em aberto (empurrador indisponível)', cr.length, cr.map(o => esc(vName(o.vessel)) + ' · OM ' + esc(o.num) + ' · ' + esc(o.equip || o.sistema || '')).join('; '), '#enxcor');
   if (can.admin()) add(0, 'OM corretiva liberada aguardando conferência do Supervisor', cc.length, cc.map(o => 'OM ' + esc(o.num)).join(', '), '#enxcor');
   const D = enxDados(), nv = D.reduce((a, x) => a + x.venc.length, 0), nm = D.reduce((a, x) => a + x.mes.length, 0), ns = D.reduce((a, x) => a + x.sem.length, 0);
   add(1, 'Backlog vencido (serviços do plano)', nv, D.filter(x => x.venc.length).sort((a, b) => b.venc.length - a.venc.length).map(x => `<a href="#enx" data-pcmv="${x.v.id}">${esc(x.v.nome)}</a> ${x.venc.length}`).join(' · '), '#enx');
@@ -120,9 +120,17 @@ function pcmPainel() {
   return G;
 }
 function vEnxHoje() {
-  const G = pcmPainel(), tot = G.reduce((a, g) => a + g.length, 0), E = [['1 · Recebimento da embarcação', 'horímetros e corretivas'], ['2 · Planejamento (PCM)', 'backlog e plano anual'], ['3 · Monitoramento de condição', 'óleo, compressão e calibração'], ['4 · Fechamento mensal', 'relatório e plano de ação']];
-  return enxCab('Situação da frota', (tot ? `Como a frota está hoje e ${tot} tipo(s) de pendência, na ordem das etapas` : 'Como a frota está hoje · nenhuma pendência') + ' · cada linha abre a tela certa', '<button class="mbtn" data-enxreset>Reorganizar</button>')
-   + sfCard() + G.map((L, i) => `<div class="card"><h2>${E[i][0]} <span class="note">· ${E[i][1]}</span>${L.length ? '' : ' <span class="pill p-ok">sem pendência</span>'}</h2>${L.length ? `<table class="t"><tbody>${L.map(x => `<tr><td style="width:44px" class="r"><b style="color:var(--badt);font-size:16px">${x.n}</b></td><td><b>${esc(x.t)}</b><div class="note">${x.d}</div></td><td style="width:1%"><a class="mbtn sm pri" href="${x.h}">Abrir</a></td></tr>`).join('')}</tbody></table>` : ''}</div>`).join('') + '</div></div>';
+  return enxCab('Situação da frota', 'Como a frota está hoje · o que fazer está em <a href="#enxpend">Pendências</a>', '<button class="mbtn" data-enxreset>Reorganizar</button>') + sfCard() + '</div></div>';
+}
+// Pendências em colunas por etapa (SMF 3.45; Supervisor, 29/10/2026: separada da Situação da frota, “organizada assim” como o quadro de OMs). Pendência não anda entre colunas: some quando é resolvida
+const PD_ETAPAS = [['1 · Recebimento', 'horímetros e corretivas'], ['2 · Planejamento (PCM)', 'backlog e plano anual'], ['3 · Monitoramento de condição', 'óleo, compressão e calibração'], ['4 · Fechamento mensal', 'relatório e plano de ação']];
+const pdTipo = t => /aguardando confer/i.test(t) ? 'inf' : /vencid|atras|aberto|desatualizado|inconsistente|fora do limite|sem referência/i.test(t) ? '' : 'at';
+function vEnxPend() {
+  const G = pcmPainel(), tot = G.reduce((a, g) => a + g.length, 0);
+  return `<div class="cm-v"><div class="vh"><div><h1>Pendências</h1><p>${tot ? `${tot} tipo(s) de pendência · da esquerda para a direita, na ordem das etapas; cada cartão abre a tela que resolve` : 'Nenhuma pendência: frota dentro do prazo'}</p></div><span class="sp"></span></div>
+  <div class="pd-cols">${G.map((L, i) => `<div class="pd-col"><div class="pd-ch">${PD_ETAPAS[i][0]}<b>${L.length}</b></div><div class="pd-sub">${PD_ETAPAS[i][1]}</div>
+    ${L.length ? L.map(x => `<div class="pd-cd ${pdTipo(x.t)}"><div class="pd-t"><span class="pd-n">${x.n}</span><b>${esc(x.t)}</b></div><div class="pd-d">${x.d}</div><a class="mbtn sm pri" href="${x.h}">Abrir</a></div>`).join('') : '<div class="pd-ok">✓ Sem pendência</div>'}</div>`).join('')}</div>
+  <p class="note" style="margin-top:10px">Vermelho = vencido ou atrasado · âmbar = vence no mês ou falta aprovar/emitir · azul = aguardando a sua conferência.</p></div>`;
 }
 // ---------- Situação da frota: matriz empurrador × sistema ou cartões (SMF 3.44; Supervisor, 29/10/2026: “uma visão geral da frota de como ela está hoje”) ----------
 // mesma conta do Backlog (enxDados: vencido · vence no mês · sem histórico) e da saída (frotaMatriz: bloqueado = Crítica vencida sem OM ou falha Crítica sem OM)
@@ -176,9 +184,11 @@ function sfCard() {
       <span class="sp"></span><div class="seg"><button data-sfm="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-sfm="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button></div></div>
     ${md === 'matriz' ? `<div class="sf-leg"><span><span class="sf-c sf-r">3</span> vencidos</span><span><span class="sf-c sf-a">2</span> vencem no mês</span><span><span class="sf-g"></span> em dia</span><span><span class="sf-o"></span> sem histórico</span><span><span class="sf-na">—</span> não se aplica</span></div>` + sfMatriz(L) : sfCartoes(L)}</div>`;
 }
+const PD_N = { k: null, at: 0, n: 0 };
 // contadores do menu (baratos: sem recalcular relatório)
 function pcmContagem() {
   const C = {}; try { C.enx = enxDados().reduce((a, x) => a + x.venc.length, 0); } catch (e) { }
+  try { const k = S.recs.__v + '|' + isoD(hoje()); if (PD_N.k !== k || Date.now() - PD_N.at > 20000) Object.assign(PD_N, { k, at: Date.now(), n: pcmPainel().reduce((a, g) => a + g.length, 0) }); C.enxpend = PD_N.n; } catch (e) { }   // contagem com memória: pcmPainel custa ~0,25 s
   C.enxcor = oms().filter(o => o.tipo === 'C' && !o.excluido && o.status !== 'encerrada').length;
   C.enxacao = pcmAcoes().filter(a => pcmSitu(a) === 'atrasada').length; return C;
 }
@@ -194,8 +204,8 @@ const pcmAfter = k => () => { const m = $('#main');
     if (d.acx !== undefined) return pcmAcaoSt(d.acx, 'cancelada');
     if (d.acre !== undefined) return pcmAcaoSt(d.acre, 'aberta'); };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + '_lay', '[data-enxreset]'); };
-Object.assign(VX, { enxhoje: vEnxHoje, enxcal: vEnxCal, enxacao: vEnxAcao }); ['enxhoje', 'enxcal', 'enxacao'].forEach(k => { AFTER[k] = pcmAfter(k); });
-Object.assign(NP_TAG, { enxhoje: '7.3', enxcal: '7.3 · Anexo I', enxacao: '9 e 10' });
+Object.assign(VX, { enxhoje: vEnxHoje, enxpend: vEnxPend, enxcal: vEnxCal, enxacao: vEnxAcao }); ['enxhoje', 'enxpend', 'enxcal', 'enxacao'].forEach(k => { AFTER[k] = pcmAfter(k); });
+Object.assign(NP_TAG, { enxhoje: '7.3', enxpend: '7.3', enxcal: '7.3 · Anexo I', enxacao: '9 e 10' });
 // ---------- horímetro inconsistente nos registros (SMF 3.28; Supervisor: “as horas estão com erros absurdos”) ----------
 // situacao() marca inc quando o último serviço tem horímetro acima da leitura atual; aqui a lista e a correção do registro de origem
 function pcmHorInc() {
