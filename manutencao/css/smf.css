@@ -1204,3 +1204,5 @@ table.ecr.ecr2 tfoot td{background:#F7F9FB!important;font-weight:600}
 .mc-tabs{display:flex;align-items:flex-end;gap:4px;border-bottom:1px solid #DADCE0;margin:4px 0 12px}.mc-tl{font-size:11px;font-weight:700;letter-spacing:.06em;color:#5F6368;padding:0 14px 10px 2px}.mc-tabs a{padding:8px 16px;font-size:13.5px;font-weight:600;color:#5F6368;text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-1px}.mc-tabs a.on{color:#1A73E8;border-bottom-color:#1A73E8}.mc-tabs a:hover{color:#1A73E8}
 .mc-diag{margin-bottom:14px}.mc-diag .sf-k{margin-bottom:8px}.mc-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
 table.mc-t td{padding:5px 6px;font-size:12.5px}table.mc-t .pill{font-weight:600;white-space:nowrap}
+/* 3.2 Controles · abas Sistema de arrefecimento e Sensores (ctlTab, SMF 3.64): nome do empurrador uma vez, linha só entre empurradores */
+table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.ctl-g>td{border-top:1px solid #DADCE0!important}table.ctl-t tbody tr:first-child>td{border-top:0!important}table.ctl-t td.ctl-v{vertical-align:top}

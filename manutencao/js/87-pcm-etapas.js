@@ -289,14 +289,18 @@ const ARR_ITENS = ['1.1.17', '1.5.4', '1.6.4', '1.7.3', '1.4.1'];   // 3.62: + c
 function ctlTab(ITENS, tit, sub, h2, nota) {
   const D = enxDados(), L = [], ord = { venc: 0, mes: 1, sem: 2 };
   D.forEach(x => x.P.filter(y => ITENS.includes(y.t.id)).forEach(y => L.push({ v: x.v, y })));
-  L.sort((a, b) => (ord[a.y.g] ?? 3) - (ord[b.y.g] ?? 3) || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }) || a.y.pos.localeCompare(b.y.pos) || a.y.t.id.localeCompare(b.y.t.id, 'pt-BR', { numeric: true }));
+  // 3.64 (Supervisor: “não deixa nome repetitivo”): agrupado por empurrador (nome uma vez só, linha só entre empurradores), empurrador com o pior item primeiro; equipamento em nome curto
+  const pior = {}; L.forEach(r => { pior[r.v.id] = Math.min(pior[r.v.id] ?? 3, ord[r.y.g] ?? 3); });
+  L.sort((a, b) => pior[a.v.id] - pior[b.v.id] || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }) || (ord[a.y.g] ?? 3) - (ord[b.y.g] ?? 3) || a.y.t.id.localeCompare(b.y.t.id, 'pt-BR', { numeric: true }) || a.y.pos.localeCompare(b.y.pos));
+  const eqC = (v, y) => { const n0 = enxEq(y.t), n1 = /^MCP/.test(n0) ? 'MCP' : /^Reversor/.test(n0) ? n0.split(' ').slice(0, 2).join(' ').replace('REINTJES', 'Reintjes') : n0; return n1 + (mcpPos(v).length > 1 && isMcp(y.pos) ? ' ' + y.pos : ''); };
+  const nV = {}; L.forEach(r => { nV[r.v.id] = (nV[r.v.id] || 0) + 1; });
   const n = g => L.filter(r => r.y.g === g).length, ok = L.filter(r => !['venc', 'mes', 'sem'].includes(r.y.g)).length;
   const prox = s => s.alvoH != null ? nf(s.alvoH) + ' h' + (s.alvoD ? '<div class="note">' + brD(isoD(s.alvoD)) + '</div>' : '') : s.alvoD ? brD(isoD(s.alvoD)) : '—';
   return enxCab(tit, sub, '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Resumo</h2><div class="sf-k">${[['Vencidos', n('venc'), 'var(--badt)'], ['Vencem no mês', n('mes'), 'var(--warnt)'], ['Sem histórico', n('sem'), ''], ['Em dia', ok, 'var(--okt)']].map(([l, x, c]) => `<div><span>${l}</span><b${c && x ? ` style="color:${c}"` : ''}>${x}</b></div>`).join('')}</div>
      <p class="note">${nota}</p></div>
-   <div class="card"><h2>${h2}</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Equipamento</th><th>Serviço</th><th>Frequência</th><th>Última execução</th><th>Próxima</th><th>Situação</th><th></th></tr></thead><tbody>
-     ${L.map(({ v, y }) => { const U = y.s.L; return `<tr><td class="nowrap"><b>${esc(v.nome)}</b></td><td>${esc(enxEq(y.t))}${mcpPos(v).length > 1 && isMcp(y.pos) ? ' · ' + y.pos : ''}</td><td>${esc(y.t.chk || y.t.item)}<div class="note">Anexo I ${esc(y.t.id)}</div></td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
+   <div class="card"><h2>${h2}</h2><div class="tw"><table class="t ctl-t"><thead><tr><th>Empurrador</th><th>Equipamento</th><th>Serviço</th><th>Frequência</th><th>Última execução</th><th>Próxima</th><th>Situação</th><th></th></tr></thead><tbody>
+     ${L.map(({ v, y }, i) => { const U = y.s.L, pri = !i || L[i - 1].v !== v; return `<tr class="${pri ? 'ctl-g' : ''}">${pri ? `<td class="nowrap ctl-v" rowspan="${nV[v.id]}"><b>${esc(v.nome)}</b></td>` : ''}<td class="nowrap">${esc(eqC(v, y))}</td><td>${esc(y.t.chk || y.t.item)}<div class="note">Anexo I ${esc(y.t.id)}</div></td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
        <td class="nowrap">${U ? brD(U.date) + (U.h != null ? '<div class="note">' + nf(U.h) + ' h</div>' : '') + (U.insp ? '<div class="note" style="color:#1A73E8">inspecionado</div>' : '') : '—'}</td><td class="nowrap">${prox(y.s)}</td>
        <td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div></td><td><button class="mbtn sm" data-pcmv="${v.id}">Abrir na 2.2</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Nenhum item no plano.</td></tr>'}</tbody></table></div></div></div></div>`;
 }
