@@ -8,7 +8,7 @@
 const ENX_MC = 'smf_modo_completo';
 const enxModoCompleto = () => { try { return localStorage.getItem(ENX_MC) === '1'; } catch (e) { return false; } };
 const enxuto = () => FROTA_TIPO !== 'bal' && !(typeof ehOperador === 'function' && ehOperador()) && !enxModoCompleto();
-const ENX_OK = ['enxhoje', 'enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxacao', 'enxcal', 'enxbib', 'oleo', 'compr', 'anoleo', 'cxr', 'admin'];
+const ENX_OK = ['enxhoje', 'enxpend', 'enx', 'enxcr', 'enxhor', 'enxcor', 'enxrel', 'enxacao', 'enxcal', 'enxbib', 'oleo', 'compr', 'anoleo', 'cxr', 'admin'];
 // link de tela do modo completo → tela equivalente do enxuto (3.22: link fora da lista jogava no Painel; “clico em análise de óleo e vai pra outro canto”)
 const ENX_ALIAS = { horfrota: 'enxhor', hor: 'enxhor', controle: 'enxcal', calib: 'enxcal', crono: 'enxcr', falhas2: 'enxcor', oms: 'enx', emitir: 'enx', omconf: 'enxcor', relmes: 'enxrel', rel: 'enxrel', kpi: 'enxrel', lubreg: 'oleo', lubcons: 'oleo', bib: 'enxbib', apoio: 'enxbib', mapa: 'enxhoje', rotina: 'enxhoje', geral: 'enxhoje', audit: 'enxcr', matriz: 'enxbib' };   // telas abertas no modo enxuto (cxr = aprovar o cronograma do ano)
 function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da lista volta para o Painel de pendências (js/87)
@@ -16,7 +16,7 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
   VIEW = ENX_ALIAS[VIEW] || 'enxhoje'; ARG = ''; try { history.replaceState(null, '', '#' + VIEW); } catch (e) { }
 }
 // menu em 4 etapas do PCM (SMF 3.22, Supervisor: “sequência, etapas, nomes técnicos”; “não deixa ruim de operar”)
-const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje']]],
+const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
   ['1 · Recebimento da embarcação', [['enxhor', '1.1 Horímetros', 'hoje'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
   ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2']]],
   ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação (FR 049_B)', 'oleo'], ['compr', '3.2 Compressão do MCP', 'compr'], ['enxcal', '3.3 Calibração do MCP', 'compr'], ['anoleo', '3.4 Análise de óleo do MCP', 'oleo']]],
