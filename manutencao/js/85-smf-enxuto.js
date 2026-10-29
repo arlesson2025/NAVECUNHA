@@ -16,7 +16,7 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
   VIEW = ENX_ALIAS[VIEW] || 'enxhoje'; ARG = ''; try { history.replaceState(null, '', '#' + VIEW); } catch (e) { }
 }
 // menu em 4 etapas do PCM (SMF 3.22, Supervisor: “sequência, etapas, nomes técnicos”; “não deixa ruim de operar”)
-const PCM_MENU = [['', [['enxhoje', 'Painel de pendências', 'hoje']]],
+const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje']]],
   ['1 · Recebimento da embarcação', [['enxhor', '1.1 Horímetros', 'hoje'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
   ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2']]],
   ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação (FR 049_B)', 'oleo'], ['compr', '3.2 Compressão do MCP', 'compr'], ['enxcal', '3.3 Calibração do MCP', 'compr'], ['anoleo', '3.4 Análise de óleo do MCP', 'oleo']]],
@@ -47,11 +47,9 @@ function vEnx() {
      + `<div class="card"><h2>Resumo</h2><div class="f2-ks">${[['Vencidos', D.reduce((a, x) => a + x.venc.length, 0), 'var(--badt)'], ['Vencimento no mês', D.reduce((a, x) => a + x.mes.length, 0), 'var(--warnt)'], ['Sem histórico', nSem, nSem ? 'var(--badt)' : ''], [`Cronograma ${ano} aprovado`, aprov + ' de ' + D.length, aprov < D.length ? 'var(--warnt)' : 'var(--okt)']].map(([l, n, c]) => `<div class="f2-k"><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${n}</b></div>`).join('')}</div>
        ${nSem ? `<p class="note" style="color:var(--badt)">${nSem} serviço${nSem === 1 ? '' : 's'} sem histórico não vence${nSem === 1 ? '' : 'm'} nunca: registre o último serviço ou defina o marco zero em Administração antes de usar o cronograma de verdade.</p>` : ''}
        ${aprov < D.length ? `<p class="note">O previsto do ano só fica valendo para a aderência depois de aprovado: aprove em <a href="#enxcr">2 · Cronograma</a>.</p>` : ''}</div>
-     <div class="card"><h2>Empurradores</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Situação operacional</th><th class="r">Vencidos</th><th class="r">Vencem no mês</th><th class="r">Sem referência</th><th>Horímetro do MCP</th><th></th></tr></thead><tbody>
-     ${D.sort((a, b) => b.venc.length - a.venc.length || b.mes.length - a.mes.length).map(x => { const s = situDe(x.v);
-       return `<tr class="click" data-enxv="${x.v.id}"><td><b>${esc(x.v.nome)}</b></td><td>${!s ? '<span class="mut">não informado</span>' : s.st === 'viagem' ? 'em viagem' : 'no porto'}</td><td class="r">${x.venc.length ? `<b class="rl-ruim">${x.venc.length}</b>` : '0'}</td><td class="r">${x.mes.length ? `<b class="rl-at">${x.mes.length}</b>` : '0'}</td><td class="r">${x.sem.length || '0'}</td>
-         <td>${x.hr ? nf(x.hr.h) + ' h · ' + brD(x.hr.date) + (x.dias != null && x.dias > 14 ? ` <span class="pill p-warn">há ${x.dias} dias</span>` : '') : '<span class="pill p-bad">sem leitura</span>'}</td><td><button class="mbtn sm pri" data-enxv="${x.v.id}">Abrir</button></td></tr>`; }).join('')}</tbody></table></div>
-     <p class="note">Vencido e vence no mês pela data ou pelas horas no ritmo do motor (Anexo I). Horímetro com mais de 14 dias deixa os serviços por horas imprecisos: lance em <a href="#enxhor">1 · Horímetros</a>.</p></div></div></div>`;
+     <div class="card"><h2>Escolha o empurrador</h2><div class="row" style="gap:6px;flex-wrap:wrap">
+     ${D.sort((a, b) => b.venc.length - a.venc.length || b.mes.length - a.mes.length).map(x => `<button class="mbtn" data-enxv="${x.v.id}"><b>${esc(x.v.nome)}</b>${x.venc.length ? ` <span class="pill p-bad">${x.venc.length}</span>` : ''}${x.mes.length ? ` <span class="pill p-warn">${x.mes.length}</span>` : ''}</button>`).join('')}</div>
+     <p class="note">Vermelho = vencidos, âmbar = vencem no mês. A situação de cada empurrador (sistemas, horímetro, condição) está em <a href="#enxhoje">Situação da frota</a>.</p></div></div></div>`;
   }
   const x = D.find(y => y.v === v), ord = { venc: 0, mes: 1, sem: 2 }, L = x.P.filter(y => ENX.emDia || ['venc', 'mes', 'sem'].includes(y.g)).sort((a, b) => (ord[a.g] ?? 3) - (ord[b.g] ?? 3) || a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true }));
   const lin = y => { const nfr = enxNF(v.id, y.pos, y.t.id), k = y.pos + '|' + y.t.id, L0 = y.s.L;
