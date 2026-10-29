@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.43', data: '28/10/2026', itens: ['Tela de acesso: texto de apresentação revisado pelo Supervisor'] },
   { v: '3.42', data: '28/10/2026', itens: ['Tela de acesso com foto de um empurrador da Navecunha (img/fundo-acesso.jpg): no computador a foto fica à esquerda, no celular atrás dos quadros com camada azul'] },
   { v: '3.41', data: '28/10/2026', itens: ['Biblioteca técnica: “Como a frota trabalha”, resumo do ciclo da manutenção em uma folha para reuniões'] },
   { v: '3.40', data: '28/10/2026', itens: ['Tela de acesso: quadro “O que é o SMF” reescrito (relatórios anexados à OM no Sankhya, indicadores, bloqueio de saída por serviço crítico vencido)'] },
