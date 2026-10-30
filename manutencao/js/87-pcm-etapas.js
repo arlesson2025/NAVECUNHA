@@ -58,8 +58,8 @@ function pcmCalGraf(D, id) {   // 3.76: no modelo do “Intervalo remanescente a
   const mxN = Math.max(1, ...L.filter(x => x.s.rest != null && x.s.rest < 0).map(x => -x.s.rest));
   const lin = L.map(x => { const r = x.s.rest, st = r == null ? 'sem' : x.s.st, neg = r != null && r < 0, w = r == null ? 0 : neg ? Math.max(4, -r / mxN * 100) : Math.max(3, Math.min(r, iv) / iv * 100);
     const tx = `<b style="color:${T[st] || T.ok}">${r == null ? 'sem histórico' : neg ? '−' + nf(-r) + ' h' : nf(r) + ' h'}</b>`, c = C[st] || C.ok;
-    return `<div class="ol-sgr click" data-pcmv="${x.v.id}" title="Abrir as OMs preventivas deste empurrador"><span class="ol-sgl"><b>${esc(x.v.nome)}</b><small>${esc(posCurtoE(x.v, x.pos))}</small></span><span class="ol-sgL">${neg ? `${tx}<i style="width:${w}%;background:${c}"></i>` : ''}</span><span class="ol-sgR">${!neg ? `<i style="width:${w}%;background:${c}"></i>${tx}` : ''}</span></div>`; }).join('');
-  return `<div class="ol-sg">${lin}<div class="ol-sgr ol-sgx"><span></span><span class="ol-sgL"><small>← atrasado</small></span><span class="ol-sgR"><small>vence agora · quanto falta →</small></span></div></div>`;
+    return `<div class="ol-sgr click" data-pcmv="${x.v.id}" title="Abrir as OMs preventivas deste empurrador"><span class="ol-sgl"><b>${esc(x.v.nome)}</b> · ${esc(posCurtoE(x.v, x.pos))}</span><span class="ol-sgL">${neg ? `${tx}<i style="width:${w}%;background:${c}"></i>` : ''}</span><span class="ol-sgR">${!neg ? `<i style="width:${w}%;background:${c}"></i>${tx}` : ''}</span></div>`; }).join('');
+  return `<div class="ol-sg ol-sgc">${lin}<div class="ol-sgr ol-sgx"><span></span><span class="ol-sgL"><small>← atrasado</small></span><span class="ol-sgR"><small>vence agora · quanto falta →</small></span></div></div>`;
 }
 function vEnxCal() {
   const D = calibDados().filter(x => isMcp(x.pos)), n = k => D.filter(x => x.s.st === k).length, ord = { venc: 0, viag: 1, sem: 2, ok: 3 };
