@@ -18,13 +18,14 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
 // menu em 4 etapas do PCM (SMF 3.22, Supervisor: “sequência, etapas, nomes técnicos”; “não deixa ruim de operar”)
 const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
   ['1 · Recebimento do empurrador', [['enxhor', '1.1 Horímetros', 'hor'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
-  ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2']]],
+  ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2'], ['enxrisco', '2.3 Equipamentos críticos e riscos', 'risco']]],
   ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnóstico dos MCP\'s', 'graf']]],
   ['4 · Fechamento mensal', [['enxkpi', '4.1 Indicadores (NP 9)', 'kpi'], ['enxacao', '4.2 Plano de ação', 'acao'], ['enxrel', '4.3 Relatório gerencial', 'relg']]],
   ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];
 // 3.88: um ícone para cada item do menu (Horímetros tinha o mesmo da Situação da frota; 4.1 e 4.2 o mesmo)
 ICO.hor = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5h4"/>';
 ICO.acao = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>';
+ICO.risco = '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>';
 ICO.kpi = '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>';
 ICO.relg = '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 15h7M9 18h4"/>';
 function enxNav() {
