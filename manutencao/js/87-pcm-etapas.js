@@ -125,7 +125,7 @@ function pcmPainel() {
   return G;
 }
 function vEnxHoje() {
-  return enxCab('Situação da frota', 'Como a frota está hoje · o que fazer está em <a href="#enxpend">Pendências</a>', '<button class="mbtn" data-enxreset>Reorganizar</button>') + sfCard() + '</div></div>';
+  return enxCab('Situação da frota', 'Como a frota está hoje · o que fazer está em <a href="#enxpend">Pendências</a>', '<button class="mbtn" data-enxreset>Reorganizar</button>') + sfCard() + sfPorque(sfDados()) + '</div></div>';
 }
 // Pendências em colunas por etapa (SMF 3.45; Supervisor, 29/10/2026: separada da Situação da frota, “organizada assim” como o quadro de OMs). Pendência não anda entre colunas: some quando é resolvida
 const PD_ETAPAS = [['1 · Recebimento', 'horímetros e corretivas'], ['2 · Planejamento (PCM)', 'backlog e plano anual'], ['3 · Monitoramento de condição', 'óleo, compressão e calibração'], ['4 · Fechamento mensal', 'relatório e plano de ação']];
@@ -158,13 +158,17 @@ function sfDados() {
       oleo: P.filter(y => /troca/i.test(y.t.chk || '') && /óleo/i.test(y.t.chk || '')), cal: P.filter(y => CALIB.some(c => c[0] === y.t.id)),
       arr: P.filter(y => ARR_ITENS.includes(y.t.id)), sen: P.filter(y => SEN_ITENS.includes(y.t.id)), amo: P.filter(y => y.t.id === '1.1.29'),
       lab: (() => { const st = mcpPos(v).map(p => { const U = typeof laudos === 'function' ? laudos(v.id, p) : [], u = U[U.length - 1]; return u ? laudoSt(u).st : null; }).filter(Boolean); return !st.length ? null : st.includes('venc') ? 'venc' : st.includes('viag') ? 'mes' : 'ok'; })(),
-      cmp: mn == null ? null : mn < 1.27 ? 'venc' : mn < 1.45 ? 'mes' : 'ok', cor: COR.filter(o => o.vessel === v.id).length, mot }; }).filter(Boolean);
+      cmp: mn == null ? null : mn < 1.27 ? 'venc' : mn < 1.45 ? 'mes' : 'ok', cor: COR.filter(o => o.vessel === v.id).length, mot,
+      vel: (() => { const D = mot.filter(m => isMcp(m.p)).map(m => m.d == null ? 9999 : m.d); const d = D.length ? Math.max(...D) : null; return d != null && d > SF_HOR_D ? d : 0; })() }; }).filter(Boolean);
 }
-const sfCel = (L, at) => { if (!L.length) return `<span class="sf-na">—</span>`; const v = L.filter(x => x.g === 'venc').length, m = L.filter(x => x.g === 'mes').length;
-  return v ? `<span class="sf-c sf-r"${at}>${v}</span>` : m ? `<span class="sf-c sf-a"${at}>${m}</span>` : L.every(x => x.g === 'sem') ? `<span class="sf-o"${at}></span>` : `<span class="sf-g"${at}></span>`; };
+const SF_HOR_D = 30;   // horímetro do MCP sem leitura há mais de 30 dias: o serviço por horas não pode ser dado como em dia (3.84)
+const sfHorItem = y => { try { return !!intervalo(y.t).h; } catch (e) { return false; } };
+const sfCel = (L, at, vel) => { if (!L.length) return `<span class="sf-na">—</span>`; const v = L.filter(x => x.g === 'venc').length, m = L.filter(x => x.g === 'mes').length;
+  return v ? `<span class="sf-c sf-r"${at}>${v}</span>` : m ? `<span class="sf-c sf-a"${at}>${m}</span>` : L.every(x => x.g === 'sem') ? `<span class="sf-o"${at}></span>` : vel && L.some(sfHorItem) ? `<span class="sf-q"${at} title="Horímetro sem leitura há ${vel === 9999 ? 'muito tempo' : vel + ' dias'}: os serviços por horas não podem ser dados como em dia">?</span>` : `<span class="sf-g"${at}></span>`; };
 const sfIco = st => !st ? '<span class="sf-o"></span>' : st === 'ok' ? '<span class="sf-g"></span>' : `<span class="sf-c ${st === 'venc' ? 'sf-r' : 'sf-a'}">!</span>`;
 // clique numa coluna de condição: a tela de origem abre com as linhas do empurrador destacadas (Supervisor, 29/10/2026: “ir direto para os dados que ele está puxando”)
 let SF_FOCO = null;   // { nome, ate, rolou }: vale por alguns segundos porque a tela de origem pode ser redesenhada logo depois de aberta
+document.addEventListener('click', e => { const h = e.target.closest('[data-sfh]'); if (h) ENXH.v = h.dataset.sfh; }, true);
 document.addEventListener('click', e => { const a = e.target.closest('[data-sff]'); if (a) SF_FOCO = { nome: a.dataset.sff, ate: Date.now() + 4000, rolou: false }; }, true);
 function sfFocoAplicar() {
   const F = SF_FOCO; if (!F || Date.now() > F.ate) return; const nome = F.nome;
@@ -178,7 +182,7 @@ function sfFocoAplicar() {
       return toast(nome + ': sem dados nesta tela.'); }
     T.forEach(tr => tr.classList.add('sf-foco')); if (!F.rolou) { F.rolou = true; T[0].scrollIntoView({ block: 'center' }); } }, 350);
 }
-const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${x.loc ? ` <span class="sf-mut">· ${x.loc}</span>` : ''}`;
+const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${x.loc ? ` <span class="sf-mut">· ${x.loc}</span>` : ''}` + (x.vel ? `<div><a href="#enxhor" class="sf-lk sf-hv" data-sfh="${x.v.id}">⚠ horímetro ${x.vel === 9999 ? 'sem leitura' : 'há ' + x.vel + ' d'}</a></div>` : '');
 // linha de totais da matriz (Supervisor, 29/10/2026): em cada coluna, vencidos e vencem no mês somados na frota, um embaixo do outro
 function sfTotais(L) {
   const vm = f => L.reduce((t, x) => { const P = f(x) || []; t[0] += P.filter(y => y.g === 'venc').length; t[1] += P.filter(y => y.g === 'mes').length; return t; }, [0, 0]);
@@ -192,15 +196,15 @@ function sfMatriz(L) {
   const hr = x => x.mot.filter(m => isMcp(m.p)).map(m => `<div><span class="sf-p">${m.p}</span> ${m.h ? nf(m.h.h) + ' h' : '—'} <span class="${m.d == null || m.d > 14 ? 'sf-red' : 'sf-mut'}">${m.d == null ? 'sem leitura' : m.d + ' d'}</span></div>`).join('');
   const lk = (x, h, inner) => `<a href="${h}" class="sf-lk" data-sff="${esc(x.v.nome)}">${inner}</a>`;
   return `<div class="tw"><table class="sf-mx"><thead><tr class="sf-gr"><th colspan="3"></th><th colspan="2" class="sf-sep">Liberação</th><th colspan="${SF_SIS.length}" class="sf-sep">Manutenção preventiva</th><th colspan="6" class="sf-sep">Condição</th></tr><tr><th class="l">Empurrador</th><th class="l">Horímetro MCP</th><th class="l">Itens em dia</th><th class="sf-sep">Críticos<small>NP 6.3</small></th><th title="Corretivas abertas (1.2 Manutenção corretiva)"><small>abertas</small>Corretivas</th>${SF_SIS.map((s, i) => `<th${i ? '' : ' class="sf-sep"'}><small>${i + 1}.0</small>${s}</th>`).join('')}<th class="sf-sep" title="3.1 Lubrificação · troca de óleo"><small>3.1 troca</small>Óleo</th><th title="3.2 Controles · 1 Calibração"><small>3.2·1</small>Calibr.</th><th title="3.2 Controles · 2 Compressão"><small>3.2·2</small>Compr.</th><th title="3.2 Controles · 3 Análise de óleo"><small>3.2·3</small>Laudo</th><th title="3.2 Controles · 4 Sistema de arrefecimento"><small>3.2·4</small>Arrefec.</th><th title="3.2 Controles · 5 Sensores"><small>3.2·5</small>Sensor</th></tr></thead><tbody>
-    ${L.map(x => `<tr><td class="sf-n" data-pcmv="${x.v.id}"><b>${esc(x.v.nome)}</b><div>${sfSit(x)}</div></td><td class="sf-hr">${hr(x)}</td>
+    ${L.map(x => `<tr><td class="sf-n" data-pcmv="${x.v.id}"><b>${esc(x.v.nome)}</b><div>${sfSit(x)}</div></td><td class="sf-hr"><a href="#enxhor" class="sf-lk" data-sfh="${x.v.id}" title="Lançar a leitura do horímetro">${hr(x)}</a></td>
       <td class="nowrap"><span class="sf-bar"><i style="width:${x.pct || 0}%"></i></span><span class="sf-pc">${x.pct == null ? '—' : x.pct + '%'}</span></td>
       <td class="sf-cc sf-sep">${x.crit ? `<span class="sf-c sf-r" data-pcmv="${x.v.id}" title="Itens críticos da NP 6.3 vencidos">${x.crit}</span>` : '<span class="sf-g"></span>'}</td>
       <td class="sf-cc">${lk(x, '#enxcor', x.cor ? `<span class="sf-c sf-r">${x.cor}</span>` : '<span class="sf-g"></span>')}</td>
-      ${x.sis.map((S0, i) => `<td class="sf-cc${i ? '' : ' sf-sep'}">${sfCel(S0, ` data-pcmv="${x.v.id}" data-pcms="${i + 1}" title="${esc(x.v.nome)} · ${i + 1}.0 ${SF_SIS[i]}"`)}</td>`).join('')}
-      <td class="sf-cc sf-sep">${lk(x, '#oleo', sfCel(x.oleo, ''))}</td><td class="sf-cc">${lk(x, '#enxcal', sfCel(x.cal, ''))}</td>
+      ${x.sis.map((S0, i) => `<td class="sf-cc${i ? '' : ' sf-sep'}">${sfCel(S0, ` data-pcmv="${x.v.id}" data-pcms="${i + 1}"`, x.vel)}</td>`).join('')}
+      <td class="sf-cc sf-sep">${lk(x, '#oleo', sfCel(x.oleo, '', x.vel))}</td><td class="sf-cc">${lk(x, '#enxcal', sfCel(x.cal, '', x.vel))}</td>
       <td class="sf-cc">${lk(x, '#compr', sfIco(x.cmp))}</td>
       <td class="sf-cc">${lk(x, '#anoleo', x.amo.some(y => y.g === 'venc') ? sfCel(x.amo, ' title="Amostra de óleo vencida"') : x.lab && x.lab !== 'ok' ? sfIco(x.lab) : x.amo.some(y => y.g === 'mes') ? sfCel(x.amo, '') : sfIco(x.lab))}</td>
-      <td class="sf-cc">${lk(x, '#enxarr', sfCel(x.arr, ''))}</td><td class="sf-cc">${lk(x, '#enxsen', sfCel(x.sen, ''))}</td>
+      <td class="sf-cc">${lk(x, '#enxarr', sfCel(x.arr, '', x.vel))}</td><td class="sf-cc">${lk(x, '#enxsen', sfCel(x.sen, '', x.vel))}</td>
       </tr>`).join('')}</tbody>${sfTotais(L)}</table></div>
     <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; Liberação = o que bloqueia ou restringe a saída (item crítico da NP 6.3 vencido, corretiva aberta); as colunas de condição (3.1 e as cinco abas da 3.2) e as corretivas abrem a tela de origem com o empurrador destacado. Análise de óleo: número = amostra vencida ou do mês, <b>!</b> = último laudo com alerta. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
 }
@@ -212,6 +216,24 @@ function sfCartoes(L) {
       <div class="sf-st"><i style="width:${x.venc / t * 100}%;background:#C5221F"></i><i style="width:${x.mes / t * 100}%;background:#F9AB00"></i><i style="width:${x.ok / t * 100}%;background:#1E8E3E"></i></div>
       <div class="sf-pl">${x.venc ? `<span class="pill p-bad">${x.venc} vencido${x.venc === 1 ? '' : 's'}</span>` : ''}${x.crit ? `<span class="pill p-bad"><b>${x.crit} crítico${x.crit === 1 ? '' : 's'} NP 6.3</b></span>` : ''}${x.mes ? `<span class="pill p-warn">${x.mes} no mês</span>` : ''}<span class="pill p-ok">${x.ok} em dia</span>${x.sem ? `<span class="pill p-mut">${x.sem} sem histórico</span>` : ''}</div></div>`; }).join('')}</div>
     <p class="note">Clique no cartão para abrir o empurrador na 2.2. Barra: vencidos · vencem no mês · em dia.</p>`;
+}
+// por que cada empurrador não está liberado, em palavras, cada motivo levando à tela que resolve (Supervisor, 29/10/2026)
+function sfPorque(L) {
+  const lk = (h, t, at) => `<a href="${h}" class="sf-lk"${at || ''}>${t}</a>`;
+  const R = L.filter(x => x.sit > 0 || x.vel).map(x => { const M = [], f = x.f, sf = ` data-sff="${esc(x.v.nome)}"`;
+    if (f.it) M.push(['bad', 'Interditado: ' + esc(f.it.motivo || f.it.obs || 'ver Administração')]);
+    f.bq.forEach(b => M.push(['bad', lk('#enx', 'Item crítico vencido sem OM: ' + esc(enxServ(b.t)) + ' · ' + esc(posCurtoE(x.v, b.pos)), ` data-pcmv="${x.v.id}"`)]));
+    (f.noPend || []).filter(p => p.c === 'Crítica' || p.c === 'Alta').forEach(p => M.push([p.c === 'Crítica' ? 'bad' : 'at', lk('#enxcor', 'Falha ' + p.c.toLowerCase() + ' sem OM: ' + esc(p.d || p.lab || ''), sf)]));
+    if (x.cor) M.push(['bad', lk('#enxcor', x.cor + ' corretiva' + (x.cor > 1 ? 's abertas' : ' aberta'), sf)]);
+    const sv = x.sis.map((S0, i) => [i, S0.filter(y => y.g === 'venc').length]).filter(z => z[1]);
+    if (sv.length) M.push(['at', 'Serviços vencidos: ' + sv.map(([i, n]) => lk('#enx', `${i + 1}.0 ${SF_SIS[i]} (${n})`, ` data-pcmv="${x.v.id}" data-pcms="${i + 1}"`)).join(' · ')]);
+    const ov = x.oleo.filter(y => y.g === 'venc').length; if (ov) M.push(['at', lk('#oleo', 'Troca de óleo vencida em ' + ov + ' equipamento' + (ov > 1 ? 's' : ''), sf)]);
+    if (typeof popaPend === 'function' && popaPend(x.v).length) M.push(['at', lk('#oleo', 'Troca de óleo do motor de popa pendente desde a chegada', sf)]);
+    if (x.vel) M.push(['at', lk('#enxhor', `Horímetro do MCP ${x.vel === 9999 ? 'sem leitura' : 'sem leitura há ' + x.vel + ' dias'}: os serviços por horas não podem ser dados como em dia`, ` data-sfh="${x.v.id}"`)]);
+    return { x, M }; });
+  return `<div class="card"><h2>Por que não está liberado · ${R.filter(r => r.x.sit > 0).length} empurrador${R.filter(r => r.x.sit > 0).length === 1 ? '' : 'es'}${R.some(r => !r.x.sit) ? ' · horímetro desatualizado em ' + R.filter(r => !r.x.sit).length : ''}</h2>
+    ${R.length ? `<div class="tw"><table class="t sf-pq"><tbody>${R.map(({ x, M }) => `<tr><td class="nowrap"><b>${esc(x.v.nome)}</b><div class="sf-s ${SF_SIT[x.sit][0]}">${x.sit ? SF_SIT[x.sit][1] : 'Liberado'}</div></td><td>${M.length ? M.map(([c, t]) => `<div class="sf-pm ${c}">${t}</div>`).join('') : '<span class="note">Ver Pendências</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note">Todos os empurradores liberados e com horímetro em dia.</p>'}
+    <p class="note">Bloqueia: item crítico da NP 6.3 vencido sem OM, falha crítica sem OM, interdição. Restringe: outro serviço vencido, falha alta sem OM, troca do motor de popa. Clique no motivo para ir à tela que resolve.</p></div>`;
 }
 function sfCard() {
   const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => x.loc === 'em viagem').length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
