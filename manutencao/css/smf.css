@@ -1209,7 +1209,8 @@ table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.c
 
 #main tr.sf-foco>td{background:#FFF4CC!important;box-shadow:inset 0 1px 0 #F2C94C,inset 0 -1px 0 #F2C94C}
 #main .sf-foco-c{box-shadow:0 0 0 3px #F2C94C!important}
-#main .sf-mx tr.sf-gr th{font-size:10.5px;font-weight:700;color:#1F2A44;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #1F2A44;padding:2px 3px}#main .sf-mx tr.sf-gr th:first-child{border-bottom:0}
-#main .sf-mx tr.sf-tot td{border-top:2px solid #1F2A44;border-bottom:0;padding-top:5px;vertical-align:top}#main .sf-mx tr.sf-tot td.sf-cc div+div{margin-top:3px}
+#main .sf-mx tr.sf-gr th{font-size:10.5px;font-weight:400;color:#5F6B7A;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #E3E6EA;padding:2px 3px}#main .sf-mx tr.sf-gr th:first-child{border-bottom:0}
+#main .sf-mx tr.sf-tot td{border-top:1px solid #E3E6EA;border-bottom:0;padding-top:5px;vertical-align:top}#main .sf-mx tr.sf-tot td.sf-cc div+div{margin-top:3px}
 #main .sf-mx .sf-z{display:inline-block;height:20px;line-height:20px;font-size:11px}
-#main .sf-mx .sf-bar{width:34px}#main .sf-mx td.sf-n .sf-mut{display:block;line-height:1.1}
+#main .sf-mx .sf-bar{width:34px}
+#main .sf-mx th{font-weight:400!important}#main .sf-mx tr.sf-tot b{font-weight:400}
