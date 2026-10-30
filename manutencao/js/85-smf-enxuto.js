@@ -237,26 +237,24 @@ function enxNFModal() {
 // ---------- 1 · Horímetros ----------
 const ENXH = { v: '' };
 { const st = document.createElement('style'); st.textContent = '.elt{padding:6px 0 10px;border-bottom:1px solid #E6EAF0}.elt:last-child{border-bottom:0}.elt-h{margin:2px 0}.elt-l{margin:3px 0;font-size:12.5px;line-height:1.5}'; document.head.appendChild(st); }
-{ const st = document.createElement('style'); st.textContent = '.ehl tr.on td{background:#E8F0FE}.ehl tbody tr:hover td{background:#F4F8FE}.ehl-m{display:flex;flex-wrap:wrap;gap:4px 14px;color:#5F6368}.ehl-m b{color:#202124;font-weight:600}@media(max-width:640px){.ehl th:nth-child(2),.ehl td:nth-child(2){display:none}.ehl-m{display:block;font-size:12px}.ehl-m span{display:block;white-space:nowrap}}'; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = '.ehl tr.ehl-1 td{border-top:2px solid #CFD6E0}.ehl td.ehl-v{cursor:pointer;vertical-align:top;background:#F7F9FC}.ehl tr.on td.ehl-v{background:#E8F0FE;box-shadow:inset 3px 0 0 #1A73E8}.ehl td{vertical-align:middle}'; document.head.appendChild(st); }
 function vEnxHor() {
-  const V = S.cfg.frota.filter(v => !foraOp(v)), idade = v => { const h = horAtual(v.id, mpos(v.id)); return h && !h.est ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(h.date)) / 864e5)) : 999; };   // dia contra dia (os dois ao meio-dia)
-  if (!V.some(v => v.id === ENXH.v)) ENXH.v = (V.slice().sort((a, b) => idade(b) - idade(a))[0] || {}).id;   // abre no que está há mais tempo sem leitura
-  const lin = v => posicoes(v).filter(p => p !== 'UN').map((p, i) => { const h = horAtual(v.id, p), d = h && !h.est ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(h.date)) / 864e5)) : null;
-    return `<tr>${i ? '<td></td>' : `<td><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td><td>${h ? brD(h.date) : '—'}${d != null && d > 14 ? ` <span class="pill p-warn">há ${d} dias</span>` : ''}</td><td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"> ${h && !h.est ? `<button class="mbtn sm" data-ehno="${v.id}|${p}" title="Motor parado: repete a última leitura (0 h no período)">Sem operação</button>` : ''}</td></tr>`; }).join('');
-  return enxCab('1.1 Apontamento de horímetros', 'Na chegada ao porto: lance a leitura de cada motor · os serviços por horas vencem por estas leituras · em âmbar, os que estão há mais de 14 dias sem leitura', '<button class="mbtn" data-enxreset>Reorganizar</button>')
-   + enxHorLista(V, idade) + `<div class="card"><h2>Lançamento · ${esc((vessel(ENXH.v) || {}).nome || '')}</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Registrar leituras</button></div>
-     <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.filter(v => v.id === ENXH.v).map(lin).join('')}</tbody></table></div>
-     <p class="note">Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero: avise o Supervisor para registrar a troca).</p></div>${enxHorGraf(vessel(ENXH.v))}${enxHorFrota()}${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
-}
-// situação das leituras da frota (Supervisor, 30/10/2026: juntar a lista da frota com o lançamento): uma linha por empurrador, do mais atrasado
-// para o mais recente; clique na linha = lançamento daquele empurrador logo abaixo
-function enxHorLista(V, idade) {
+  const V = S.cfg.frota.filter(v => !foraOp(v)), dias = h => h && !h.est ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(h.date)) / 864e5)) : 999;   // dia contra dia (os dois ao meio-dia)
+  const idade = v => dias(horAtual(v.id, mpos(v.id)));
+  if (!V.some(v => v.id === ENXH.v)) ENXH.v = (V.slice().sort((a, b) => idade(b) - idade(a))[0] || {}).id;   // gráfico abre no que está há mais tempo sem leitura
   const pil = d => d === 999 ? '<span class="pill p-mut">sem leitura</span>' : d > 30 ? `<span class="pill p-bad">${d} dias</span>` : d > 14 ? `<span class="pill p-warn">${d} dias</span>` : `<span class="pill p-ok">${d === 0 ? 'hoje' : d + (d === 1 ? ' dia' : ' dias')}</span>`;
-  const L = V.map(v => ({ v, d: idade(v), h: horAtual(v.id, mpos(v.id)) })).sort((a, b) => b.d - a.d || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true }));
-  const n = k => L.filter(x => k(x.d)).length;
-  return `<div class="card"><h2>Leituras da frota</h2><p class="note" style="margin-top:0">${n(d => d > 30)} há mais de 30 dias · ${n(d => d > 14 && d <= 30)} entre 15 e 30 dias · ${n(d => d <= 14)} em dia · clique no empurrador para lançar</p>
-    <div class="tw"><table class="t ehl"><thead><tr><th>Empurrador</th><th>Última leitura</th><th>Sem leitura há</th><th>Horímetros</th></tr></thead><tbody>${L.map(({ v, d, h }) => `<tr data-ehv="${v.id}" class="${v.id === ENXH.v ? 'on' : ''}" style="cursor:pointer"><td><b>${esc(v.nome)}</b></td><td>${h && !h.est ? brD(h.date) : '—'}</td><td>${pil(d)}</td>
-      <td class="ehl-m">${posicoes(v).filter(p => p !== 'UN').map(p => { const x = horAtual(v.id, p); return `<span>${esc(posCurtoE(v, p))} <b>${x ? nf(x.h) : '—'}</b></span>`; }).join('')}</td></tr>`).join('')}</tbody></table></div></div>`;
+  const L = V.map(v => ({ v, d: idade(v) })).sort((a, b) => b.d - a.d || a.v.nome.localeCompare(b.v.nome, 'pt-BR', { numeric: true })), n = k => L.filter(x => k(x.d)).length;
+  // uma tabela só (Supervisor, 30/10/2026): empurrador · motor · última leitura · sem leitura há · horímetro acumulado · nova leitura · sem operação
+  const linhas = L.map(({ v }) => { const M = posicoes(v).filter(p => p !== 'UN');
+    return M.map((p, i) => { const h = horAtual(v.id, p);
+      return `<tr class="${i ? '' : 'ehl-1'}${v.id === ENXH.v ? ' on' : ''}">${i ? '' : `<td rowspan="${M.length}" class="ehl-v" data-ehv="${v.id}" title="Ver as horas de operação deste empurrador no gráfico abaixo"><b>${esc(v.nome)}</b></td>`}<td>${esc(posCurtoE(v, p))}</td>
+        <td>${h && !h.est ? brD(h.date) : '—'}</td><td>${pil(dias(h))}</td><td class="r">${h ? nf(h.h) + ' h' + (h.est ? ' <span class="note">estimado</span>' : '') : '—'}</td>
+        <td><input class="ehH" data-v="${v.id}" data-p="${p}" inputmode="decimal" placeholder="nova leitura" style="width:120px"></td><td>${h && !h.est ? `<button class="mbtn sm" data-ehno="${v.id}|${p}" title="Motor parado: repete a última leitura (0 h no período)">Sem operação</button>` : ''}</td></tr>`; }).join(''); }).join('');
+  return enxCab('1.1 Apontamento de horímetros', 'Na chegada ao porto: lance a leitura de cada motor · os serviços por horas vencem por estas leituras · do empurrador mais atrasado para o mais recente', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+   + `<div class="card"><h2>Leituras da frota</h2><div class="row" style="gap:8px;margin-bottom:6px;align-items:end"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label>
+       <p class="note" style="margin:0 0 6px">${n(d => d > 30)} há mais de 30 dias · ${n(d => d > 14 && d <= 30)} entre 15 e 30 dias · ${n(d => d <= 14)} em dia</p><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Registrar leituras</button></div>
+     <div class="tw"><table class="t ehl"><thead><tr><th>Empurrador</th><th>Motor</th><th>Última leitura</th><th>Sem leitura há</th><th class="r">Horímetro acumulado</th><th>Nova leitura</th><th></th></tr></thead><tbody>${linhas}</tbody></table></div>
+     <p class="note">Preencha a nova leitura dos motores que chegaram e clique em Registrar leituras (vale para todos os campos preenchidos, na data escolhida). Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero: avise o Supervisor para registrar a troca). Clique no nome do empurrador para ver as horas de operação dele no gráfico abaixo.</p></div>${enxHorGraf(vessel(ENXH.v))}${enxHorFrota()}${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
 }
 // horas de operação da frota por mês, em curva (Supervisor, 29/10/2026: “logo abaixo do gráfico que já existe”), últimos 12 meses
 // horas de um empurrador no mês = o MCP que mais rodou (os MCPs rodam juntos na viagem; somar BB + BE contaria a viagem duas vezes); frota = soma dos empurradores
@@ -595,7 +593,7 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.ecraprov !== undefined) return enxCrAprovar(d.ecraprov);
     if (d.enxir !== undefined) { e.preventDefault(); ENX.v = d.enxir; ENX.abertos = new Set(); location.hash = '#enx'; return; }
     if (d.enxv !== undefined) { ENX.v = d.enxv; ENX.abertos = new Set(); return render(); }
-    if (d.ehno !== undefined) { const [vid, p] = d.ehno.split('|'), h = horAtual(vid, p), i = $$('#main .ehH').find(x => x.dataset.v === vid && x.dataset.p === p); if (h && i) { i.value = String(h.h).replace('.', ','); toast('Mesma leitura preenchida (0 h). Clique em Salvar leituras.'); } return; }
+    if (d.ehno !== undefined) { const [vid, p] = d.ehno.split('|'), h = horAtual(vid, p), i = $$('#main .ehH').find(x => x.dataset.v === vid && x.dataset.p === p); if (h && i) { i.value = String(h.h).replace('.', ','); toast('Mesma leitura preenchida (0 h). Clique em Registrar leituras.'); } return; }
     if (d.ehv !== undefined) { ENXH.v = d.ehv; return render(); }
     if (d.enxabre !== undefined) { $$('#main details.enx-g').forEach(g => { g.open = true; ENX.abertos.add(g.dataset.enxg); }); return; }
     if (d.enx2b !== undefined) return enxIIB(ENX.v, d.enx2b);
