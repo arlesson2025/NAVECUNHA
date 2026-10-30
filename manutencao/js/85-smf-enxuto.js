@@ -237,7 +237,7 @@ function enxNFModal() {
 // ---------- 1 · Horímetros ----------
 const ENXH = { v: '' };
 { const st = document.createElement('style'); st.textContent = '.elt{padding:6px 0 10px;border-bottom:1px solid #E6EAF0}.elt:last-child{border-bottom:0}.elt-h{margin:2px 0}.elt-l{margin:3px 0;font-size:12.5px;line-height:1.5}'; document.head.appendChild(st); }
-{ const st = document.createElement('style'); st.textContent = '.ehl tr.ehl-1 td{border-top:2px solid #CFD6E0}.ehl td.ehl-v{cursor:pointer;vertical-align:top;background:#F7F9FC}.ehl tr.on td.ehl-v{background:#E8F0FE;box-shadow:inset 3px 0 0 #1A73E8}.ehl td{vertical-align:middle}'; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = '.ehl tr.ehl-1 td{border-top:2px solid #CFD6E0}.ehl td.ehl-v{cursor:pointer;vertical-align:top;background:#F7F9FC}.ehl tr.on td.ehl-v{background:#E8F0FE;box-shadow:inset 3px 0 0 #1A73E8}.ehl td{vertical-align:middle;padding:1px 6px!important;line-height:1.2}.ehl th{padding:3px 6px!important}.ehl input.ehH{height:22px!important;min-height:0!important;padding:0 6px!important;font-size:12.5px;margin:0}.ehl .mbtn.sm{height:20px!important;min-height:0!important;padding:0 8px!important;font-size:11.5px;line-height:18px}.ehl .pill{padding:0 7px;line-height:16px;font-size:11px}'; document.head.appendChild(st); }
 function vEnxHor() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), dias = h => h && !h.est ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(h.date)) / 864e5)) : 999;   // dia contra dia (os dois ao meio-dia)
   const idade = v => dias(horAtual(v.id, mpos(v.id)));
