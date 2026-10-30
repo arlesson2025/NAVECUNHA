@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.104', data: '30/10/2026', itens: ['Horas de operação dos MCP e dos MCA por empurrador: volta a linha laranja fina, agora somando as horas do mês empurrador a empurrador, com o total da frota no último ponto'] },
   { v: '3.103', data: '30/10/2026', itens: ['Horas de operação dos MCP e dos MCA por empurrador: sai a linha do % acumulado (em ordem de nome não dizia nada); entra o acumulado do ano — embaixo do nome de cada empurrador e no total da frota (mês e ano)'] },
   { v: '3.102', data: '30/10/2026', itens: ['Horas de operação por mês de cada MCP: meses e números na vertical, barras coladas (opção vert do rmeGraf)'] },
   { v: '3.101', data: '30/10/2026', itens: ['Horas de operação por empurrador: em ordem de nome (CJA I, CJA II…), uma barra fina por motor lado a lado (MCP BB e BE; 1º, 2º e 3º MCA), números na vertical, sem negrito, linha do % acumulado fina', 'Horas entre duas leituras repartidas pelos dias: com a leitura anterior de meses antes, o mês da leitura nova recebia todas as horas (chegava a 1.572 h num mês); vale para os gráficos e para o relatório mensal'] },
