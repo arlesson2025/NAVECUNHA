@@ -155,23 +155,40 @@ function sfDados() {
       venc: x.venc.length, mes: x.mes.length, sem: x.sem.length, ok, pct: den ? Math.round((den - P.filter(y => y.g === 'venc').length) / den * 100) : null,
       crit: P.filter(y => y.g === 'venc' && enxCrit(y.t)).length,
       sis: SF_SIS.map((_, i) => P.filter(y => parseInt(y.t.id) === i + 1)),
-      oleo: P.filter(y => /troca/i.test(y.t.chk || '') && /óleo/i.test(y.t.chk || '')), cal: P.filter(y => ['1.1.11', '1.1.12', '1.1.13'].includes(y.t.id)),
+      oleo: P.filter(y => /troca/i.test(y.t.chk || '') && /óleo/i.test(y.t.chk || '')), cal: P.filter(y => CALIB.some(c => c[0] === y.t.id)),
+      arr: P.filter(y => ARR_ITENS.includes(y.t.id)), sen: P.filter(y => SEN_ITENS.includes(y.t.id)), amo: P.filter(y => y.t.id === '1.1.29'),
+      lab: (() => { const st = mcpPos(v).map(p => { const U = typeof laudos === 'function' ? laudos(v.id, p) : [], u = U[U.length - 1]; return u ? laudoSt(u).st : null; }).filter(Boolean); return !st.length ? null : st.includes('venc') ? 'venc' : st.includes('viag') ? 'mes' : 'ok'; })(),
       cmp: mn == null ? null : mn < 1.27 ? 'venc' : mn < 1.45 ? 'mes' : 'ok', cor: COR.filter(o => o.vessel === v.id).length, mot }; }).filter(Boolean);
 }
 const sfCel = (L, at) => { if (!L.length) return `<span class="sf-na">—</span>`; const v = L.filter(x => x.g === 'venc').length, m = L.filter(x => x.g === 'mes').length;
   return v ? `<span class="sf-c sf-r"${at}>${v}</span>` : m ? `<span class="sf-c sf-a"${at}>${m}</span>` : L.every(x => x.g === 'sem') ? `<span class="sf-o"${at}></span>` : `<span class="sf-g"${at}></span>`; };
+const sfIco = st => !st ? '<span class="sf-o"></span>' : st === 'ok' ? '<span class="sf-g"></span>' : `<span class="sf-c ${st === 'venc' ? 'sf-r' : 'sf-a'}">!</span>`;
+// clique numa coluna de condição: a tela de origem abre com as linhas do empurrador destacadas (Supervisor, 29/10/2026: “ir direto para os dados que ele está puxando”)
+let SF_FOCO = null;   // { nome, ate, rolou }: vale por alguns segundos porque a tela de origem pode ser redesenhada logo depois de aberta
+document.addEventListener('click', e => { const a = e.target.closest('[data-sff]'); if (a) SF_FOCO = { nome: a.dataset.sff, ate: Date.now() + 4000, rolou: false }; }, true);
+function sfFocoAplicar() {
+  const F = SF_FOCO; if (!F || Date.now() > F.ate) return; const nome = F.nome;
+  const re = new RegExp('^' + nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\s*$|\\s*·|\\s+(BB|BE|CE|MCP|MCA)\\b)');
+  setTimeout(() => { const T = []; $$('#main tr').forEach(tr => { const c = [...tr.children].find(td => re.test(td.textContent.trim()) || [...td.querySelectorAll('b')].some(b => re.test(b.textContent.trim()))); if (!c) return;
+      T.push(tr); let n = (c.rowSpan || 1) - 1, r = tr; while (n-- > 0 && (r = r.nextElementSibling)) T.push(r); });
+    if (!T.length) { if (!F.rolou) { F.rolou = true; toast(nome + ': sem dados nesta tela.'); } return; }
+    T.forEach(tr => tr.classList.add('sf-foco')); if (!F.rolou) { F.rolou = true; T[0].scrollIntoView({ block: 'center' }); } }, 350);
+}
 const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${x.loc ? ` <span class="sf-mut">· ${x.loc}</span>` : ''}`;
 function sfMatriz(L) {
   const hr = x => x.mot.filter(m => isMcp(m.p)).map(m => `<div><span class="sf-p">${m.p}</span> ${m.h ? nf(m.h.h) + ' h' : '—'} <span class="${m.d == null || m.d > 14 ? 'sf-red' : 'sf-mut'}">${m.d == null ? 'sem leitura' : m.d + ' d'}</span></div>`).join('');
-  const lk = (h, inner) => `<a href="${h}" class="sf-lk">${inner}</a>`;
-  return `<div class="tw"><table class="sf-mx"><thead><tr><th class="l">Empurrador</th><th class="l">Horímetro MCP</th><th class="l">Itens em dia</th><th>Críticos<small>NP 6.3</small></th>${SF_SIS.map((s, i) => `<th><small>${i + 1}.0</small>${s}</th>`).join('')}<th class="sf-sep"><small>condição</small>Óleo</th><th><small>condição</small>Compressão</th><th><small>condição</small>Calibração</th><th><small>abertas</small>Corretivas</th></tr></thead><tbody>
+  const lk = (x, h, inner) => `<a href="${h}" class="sf-lk" data-sff="${esc(x.v.nome)}">${inner}</a>`;
+  return `<div class="tw"><table class="sf-mx"><thead><tr><th class="l">Empurrador</th><th class="l">Horímetro MCP</th><th class="l">Itens em dia</th><th>Críticos<small>NP 6.3</small></th>${SF_SIS.map((s, i) => `<th><small>${i + 1}.0</small>${s}</th>`).join('')}<th class="sf-sep" title="3.1 Lubrificação · troca de óleo"><small>3.1 troca</small>Óleo</th><th title="3.2 Controles · 1 Calibração"><small>3.2·1</small>Calibr.</th><th title="3.2 Controles · 2 Compressão"><small>3.2·2</small>Compr.</th><th title="3.2 Controles · 3 Análise de óleo"><small>3.2·3</small>Laudo</th><th title="3.2 Controles · 4 Sistema de arrefecimento"><small>3.2·4</small>Arrefec.</th><th title="3.2 Controles · 5 Sensores"><small>3.2·5</small>Sensor</th><th title="Corretivas abertas"><small>abertas</small>Corret.</th></tr></thead><tbody>
     ${L.map(x => `<tr><td class="sf-n" data-pcmv="${x.v.id}"><b>${esc(x.v.nome)}</b><div>${sfSit(x)}</div></td><td class="sf-hr">${hr(x)}</td>
       <td class="nowrap"><span class="sf-bar"><i style="width:${x.pct || 0}%"></i></span><span class="sf-pc">${x.pct == null ? '—' : x.pct + '%'}</span></td>
       <td class="sf-cc">${x.crit ? `<span class="sf-c sf-r" data-pcmv="${x.v.id}" title="Itens críticos da NP 6.3 vencidos">${x.crit}</span>` : '<span class="sf-g"></span>'}</td>
       ${x.sis.map((S0, i) => `<td class="sf-cc">${sfCel(S0, ` data-pcmv="${x.v.id}" data-pcms="${i + 1}" title="${esc(x.v.nome)} · ${i + 1}.0 ${SF_SIS[i]}"`)}</td>`).join('')}
-      <td class="sf-cc sf-sep">${lk('#oleo', sfCel(x.oleo, ''))}</td><td class="sf-cc">${lk('#compr', x.cmp ? `<span class="${x.cmp === 'ok' ? 'sf-g' : x.cmp === 'venc' ? 'sf-c sf-r' : 'sf-c sf-a'}">${x.cmp === 'ok' ? '' : '!'}</span>` : '<span class="sf-o"></span>')}</td>
-      <td class="sf-cc">${lk('#enxcal', sfCel(x.cal, ''))}</td><td class="sf-cc">${lk('#enxcor', x.cor ? `<span class="sf-c sf-r">${x.cor}</span>` : '<span class="sf-g"></span>')}</td></tr>`).join('')}</tbody></table></div>
-    <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; óleo, compressão, calibração e corretivas abrem a tela da frota. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
+      <td class="sf-cc sf-sep">${lk(x, '#oleo', sfCel(x.oleo, ''))}</td><td class="sf-cc">${lk(x, '#enxcal', sfCel(x.cal, ''))}</td>
+      <td class="sf-cc">${lk(x, '#compr', sfIco(x.cmp))}</td>
+      <td class="sf-cc">${lk(x, '#anoleo', x.amo.some(y => y.g === 'venc') ? sfCel(x.amo, ' title="Amostra de óleo vencida"') : x.lab && x.lab !== 'ok' ? sfIco(x.lab) : x.amo.some(y => y.g === 'mes') ? sfCel(x.amo, '') : sfIco(x.lab))}</td>
+      <td class="sf-cc">${lk(x, '#enxarr', sfCel(x.arr, ''))}</td><td class="sf-cc">${lk(x, '#enxsen', sfCel(x.sen, ''))}</td>
+      <td class="sf-cc">${lk(x, '#enxcor', x.cor ? `<span class="sf-c sf-r">${x.cor}</span>` : '<span class="sf-g"></span>')}</td></tr>`).join('')}</tbody></table></div>
+    <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; as colunas de condição (3.1 e as cinco abas da 3.2) e as corretivas abrem a tela de origem com o empurrador destacado. Análise de óleo: número = amostra vencida ou do mês, <b>!</b> = último laudo com alerta. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
 }
 function sfCartoes(L) {
   return `<div class="sf-cards">${L.map(x => { const t = x.venc + x.mes + x.ok || 1;
@@ -279,6 +296,7 @@ function mcDiagCard() {
     <p class="note">Os sinais juntos dão a recomendação: compressão (desgaste interno; limite 1,27 MPa, SM p. 2-3), consumo de óleo em L/100 h (anéis, guias, vazamento; acima de 2× a mediana da frota), laudo de laboratório (metais de desgaste e contaminação, limites em 3.2 Controles · Análise de óleo) e calibração (folga de válvulas e bicos, 1.000 h). Overhaul = compressão abaixo do limite, ou laudo crítico ou consumo alto junto com outro sinal.</p></div>`;
 }
 function mcTopo() {   // chamado pelo render logo depois de montar a tela
+  sfFocoAplicar();
   if (typeof falTopo === 'function') falTopo();   // abas da 1.2 (js/89)
   if (!enxuto() || !MC_VIEWS.some(x => x[0] === VIEW)) return; const vh = $('#main .vh'); if (!vh) return;
   vh.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLE DOS MCP's</span>${MC_VIEWS.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`);
