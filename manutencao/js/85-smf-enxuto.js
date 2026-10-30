@@ -254,7 +254,36 @@ function vEnxHor() {
    + `<div class="card"><h2>Leituras da frota</h2><div class="row" style="gap:8px;margin-bottom:6px;align-items:end"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label>
        <p class="note" style="margin:0 0 6px">${n(d => d > 30)} há mais de 30 dias · ${n(d => d > 14 && d <= 30)} entre 15 e 30 dias · ${n(d => d <= 14)} em dia</p><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Registrar leituras</button></div>
      <div class="tw"><table class="t ehl"><thead><tr><th>Empurrador</th><th>Motor</th><th>Última leitura</th><th>Sem leitura há</th><th class="r">Horímetro acumulado</th><th>Nova leitura</th><th></th></tr></thead><tbody>${linhas}</tbody></table></div>
-     <p class="note">Preencha a nova leitura dos motores que chegaram e clique em Registrar leituras (vale para todos os campos preenchidos, na data escolhida). Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero: avise o Supervisor para registrar a troca). Clique no nome do empurrador para ver as horas de operação dele no gráfico abaixo.</p></div>${enxHorGraf(vessel(ENXH.v))}${enxHorFrota()}${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
+     <p class="note">Preencha a nova leitura dos motores que chegaram e clique em Registrar leituras (vale para todos os campos preenchidos, na data escolhida). Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero: avise o Supervisor para registrar a troca). Clique no nome do empurrador para ver as horas de operação dele no gráfico abaixo.</p></div>${enxHorPareto()}${enxHorGraf(vessel(ENXH.v))}${enxHorFrota()}${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
+}
+// Pareto das horas de operação por empurrador no mês (Supervisor, 30/10/2026: “um gráfico só de MCP e outro só de MCA, barras o mais próximo que der”)
+// MCP do empurrador = o MCP que mais rodou (rodam juntos na viagem) · MCA = soma dos MCAs (revezam) · horas pela conta do rmeHoras (leitura a leitura)
+const ENXHP = { mes: 0 };   // 0 = este mês · 1 = mês passado
+function hpPareto(L, cor0, cor1) {
+  const n = L.length, E = 16, D = 44, gw = 40, bw = 16, W = E + D + n * gw, H = 230, T = 26, B = 40, mx = Math.max(1, ...L.map(x => x[1]));
+  const tot = L.reduce((a, x) => a + x[1], 0) || 1, Y = v => T + (H - T - B) * (1 - v / mx), Yp = q => T + (H - T - B) * (1 - q), Xc = i => E + i * gw + gw / 2;
+  const mix = (a, b, t) => '#' + [0, 2, 4].map(k => Math.round(parseInt(a.substr(k + 1, 2), 16) * (1 - t) + parseInt(b.substr(k + 1, 2), 16) * t).toString(16).padStart(2, '0')).join('');
+  let g = `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#CFD6E0"/>`, vt = '', acc = 0; const P = [];
+  L.forEach(([lab, v], i) => { const cx = Xc(i); acc += v; P.push([cx, Yp(acc / tot)]);
+    g += `<rect x="${cx - bw / 2}" y="${Y(v)}" width="${bw}" height="${Math.max(0, Y(0) - Y(v))}" fill="${mix(cor0, cor1, n > 1 ? i / (n - 1) : 0)}"><title>${esc(lab)}: ${nf(v)} h</title></rect>`; vt += `<text x="${cx}" y="${Y(v) - 4}" text-anchor="middle" font-size="10" font-weight="700" fill="#1F2A44" stroke="#fff" stroke-width="3" paint-order="stroke">${nf(v)}</text>`;
+    String(lab).split(' ').slice(0, 2).forEach((w, j) => { g += `<text x="${cx}" y="${H - B + 13 + j * 11}" text-anchor="middle" font-size="9.5" fill="#475569">${esc(w)}</text>`; }); });
+  if (P.length > 1) { let d = `M${P[0][0]},${P[0][1]}`; for (let i = 0; i < P.length - 1; i++) { const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+      d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`; }   // curva suave (Catmull-Rom)
+    g += `<path d="${d}" fill="none" stroke="#E07B24" stroke-width="2"/>` + P.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="#fff" stroke="#E07B24" stroke-width="1.6"/>`).join(''); }
+  g += `<text x="${W - D + 6}" y="${Yp(1) + 3}" font-size="9" fill="#E07B24">100%</text><text x="${W - D + 6}" y="${Yp(.5) + 3}" font-size="9" fill="#E07B24">50%</text><line x1="${E}" x2="${W - D}" y1="${Yp(.8)}" y2="${Yp(.8)}" stroke="#E07B24" stroke-dasharray="3 3" stroke-width=".7" opacity=".6"/><text x="${W - D + 6}" y="${Yp(.8) + 3}" font-size="9" fill="#E07B24">80%</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block" data-nodrag>${g}${vt}</svg>`.replace('width="100%" style="display:block"', `style="display:block;margin:0 auto;width:${Math.round(W * 1.25)}px;max-width:100%"`);   // números por cima da curva
+}
+function enxHorPareto() {
+  if (typeof rmeHoras !== 'function') return '';
+  const I = rmeHorIdx(), h0 = hoje(), d0 = new Date(h0.getFullYear(), h0.getMonth() - ENXHP.mes, 1), a = isoD(d0), b = isoD(ENXHP.mes ? new Date(d0.getFullYear(), d0.getMonth() + 1, 0) : h0), V = S.cfg.frota.filter(v => !foraOp(v));
+  const ref = MESES[d0.getMonth()] + '/' + d0.getFullYear();
+  const mcp = V.map(v => { const H = mcpPos(v).map(p => rmeHoras(I, v.id, p, a, b)); return [v.nome, Math.round(Math.max(0, ...H.map(x => x.h)))]; }).sort((x, y) => y[1] - x[1]);
+  const mca = V.filter(v => MCAS.some(p => v.mca && v.mca[p])).map(v => { const H = MCAS.filter(p => v.mca && v.mca[p]).map(p => rmeHoras(I, v.id, p, a, b)); return [v.nome, Math.round(H.reduce((t, x) => t + x.h, 0))]; }).sort((x, y) => y[1] - x[1]);
+  const sel = `<div class="cm-chips" style="margin:0 0 6px"><button class="cm-chip${ENXHP.mes ? '' : ' on'}" data-ehpm="0">Este mês</button><button class="cm-chip${ENXHP.mes ? ' on' : ''}" data-ehpm="1">Mês passado</button></div>`;
+  const card = (tit, L, c0, c1, txt) => { const tot = L.reduce((t, x) => t + x[1], 0); let acc = 0; const n80 = L.findIndex(x => (acc += x[1]) >= tot * .8) + 1;
+    return `<div class="card"><h2>${tit} · ${ref}</h2>${sel}<p class="note" style="margin:0 0 4px">Total da frota <b>${nf(tot)} h</b>${tot ? ` · ${n80} de ${L.length} empurradores fazem 80% das horas` : ''} · ${txt}</p>${tot ? hpPareto(L, c0, c1) : '<p class="note">Sem horas lançadas no período.</p>'}</div>`; };
+  return card('Horas de operação dos MCP por empurrador', mcp, '#0B2A5B', '#9CC1E6', 'por empurrador vale o MCP que mais rodou')
+    + card('Horas de operação dos MCA por empurrador', mca, '#1B5E20', '#A5D6A7', 'soma dos MCAs do empurrador (revezam)');
 }
 // horas de operação da frota por mês, em curva (Supervisor, 29/10/2026: “logo abaixo do gráfico que já existe”), últimos 12 meses
 // horas de um empurrador no mês = o MCP que mais rodou (os MCPs rodam juntos na viagem; somar BB + BE contaria a viagem duas vezes); frota = soma dos empurradores
@@ -583,7 +612,7 @@ async function enxCrAprovar(id) {
 .ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxcampo],[data-enxfeito],[data-enxnf],[data-enxinsp],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ec2acp],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxcampo],[data-enxfeito],[data-enxnf],[data-enxinsp],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehpm],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ec2acp],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
     if (d.ebib !== undefined) { const x = ENXB_DOCS[+d.ebib][3]; return x === 'iib' ? enxIIBBranco() : x === 'iia' ? enxIIABranco() : window.open(x, '_blank', 'noopener'); }
     if (d.ebibdoc !== undefined) return abrirDoc(S.recs.get(d.ebibdoc));
     if (d.ebibnovo !== undefined) return docModal(null, 'manual');
@@ -595,6 +624,7 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.enxv !== undefined) { ENX.v = d.enxv; ENX.abertos = new Set(); return render(); }
     if (d.ehno !== undefined) { const [vid, p] = d.ehno.split('|'), h = horAtual(vid, p), i = $$('#main .ehH').find(x => x.dataset.v === vid && x.dataset.p === p); if (h && i) { i.value = String(h.h).replace('.', ','); toast('Mesma leitura preenchida (0 h). Clique em Registrar leituras.'); } return; }
     if (d.ehv !== undefined) { ENXH.v = d.ehv; return render(); }
+    if (d.ehpm !== undefined) { ENXHP.mes = +d.ehpm; return render(); }
     if (d.enxabre !== undefined) { $$('#main details.enx-g').forEach(g => { g.open = true; ENX.abertos.add(g.dataset.enxg); }); return; }
     if (d.enx2b !== undefined) return enxIIB(ENX.v, d.enx2b);
     if (d.ecsalvar !== undefined) return enxCorSalvar();
