@@ -52,10 +52,14 @@ async function pcmAcaoSt(id, st) { const a = S.recs.get(id); if (!a || !can.admi
 // matriz motor × serviço (3.26, Supervisor: “calibração está com uma planilha gigante, terrível”): uma linha por motor, célula colorida com o restante
 const PCM_CAB = { '1.1.11': 'Folga de válvulas', '1.1.12': 'Bicos injetores', '1.1.13': 'Ponto de injeção', '1.1.15': 'Rótulas do comb.', '1.1.17': 'Trocador de calor', '1.4.1': 'Caixa de mar' };
 // gráfico de horas restantes por motor: o mesmo do relatório (rmeBarH, js/86) — regra do Supervisor: usar os gráficos que já existem no SMF
-function pcmCalGraf(D, id) {
-  const cor = st => st === 'venc' ? '#C5221F' : st === 'viag' ? '#B06000' : st === 'sem' ? '#9AA0A6' : '#16244A', iv = intervalo(A1M[id]).h || 1000;
+function pcmCalGraf(D, id) {   // 3.76: no modelo do “Intervalo remanescente até a troca de óleo” (Supervisor, 29/10/2026): linha do meio = vence agora, à esquerda quanto atrasou, à direita quanto falta
+  const C = { venc: '#D93025', viag: '#F9AB00', ok: '#1E8E3E', sem: '#BDC1C6' }, T = { venc: '#C5221F', viag: '#B06000', ok: '#137333', sem: '#5F6368' }, iv = intervalo(A1M[id]).h || 1000;
   const L = D.filter(x => x.t.id === id).sort((a, b) => (a.s.rest == null ? 9e9 : a.s.rest) - (b.s.rest == null ? 9e9 : b.s.rest));
-  return rmeBarH(L.map(x => [x.v.nome + ' · ' + posCurtoE(x.v, x.pos), x.s.rest != null && x.s.rest > 0 ? x.s.rest : null, cor(x.s.st), x.s.rest == null ? 'sem registro' : x.s.rest <= 0 ? 'vencida há ' + nf(-x.s.rest) + ' h' : nf(x.s.rest) + ' h']), 0, iv);
+  const mxN = Math.max(1, ...L.filter(x => x.s.rest != null && x.s.rest < 0).map(x => -x.s.rest));
+  const lin = L.map(x => { const r = x.s.rest, st = r == null ? 'sem' : x.s.st, neg = r != null && r < 0, w = r == null ? 0 : neg ? Math.max(4, -r / mxN * 100) : Math.max(3, Math.min(r, iv) / iv * 100);
+    const tx = `<b style="color:${T[st] || T.ok}">${r == null ? 'sem histórico' : neg ? '−' + nf(-r) + ' h' : nf(r) + ' h'}</b>`, c = C[st] || C.ok;
+    return `<div class="ol-sgr click" data-pcmv="${x.v.id}" title="Abrir as OMs preventivas deste empurrador"><span class="ol-sgl"><b>${esc(x.v.nome)}</b><small>${esc(posCurtoE(x.v, x.pos))}</small></span><span class="ol-sgL">${neg ? `${tx}<i style="width:${w}%;background:${c}"></i>` : ''}</span><span class="ol-sgR">${!neg ? `<i style="width:${w}%;background:${c}"></i>${tx}` : ''}</span></div>`; }).join('');
+  return `<div class="ol-sg">${lin}<div class="ol-sgr ol-sgx"><span></span><span class="ol-sgL"><small>← atrasado</small></span><span class="ol-sgR"><small>vence agora · quanto falta →</small></span></div></div>`;
 }
 function vEnxCal() {
   const D = calibDados().filter(x => isMcp(x.pos)), n = k => D.filter(x => x.s.st === k).length, ord = { venc: 0, viag: 1, sem: 2, ok: 3 };
@@ -68,7 +72,8 @@ function vEnxCal() {
    + `<div class="card"><h2>Resumo</h2><div class="f2-ks">${[['Vencidas', n('venc'), 'var(--badt)'], ['Vencem na próxima viagem', n('viag'), 'var(--warnt)'], ['Sem referência', n('sem'), 'var(--warnt)'], ['Dentro do prazo', n('ok'), 'var(--okt)']].map(([l, x, c]) => `<div class="f2-k"><span>${l}</span><b${x ? ` style="color:${c}"` : ''}>${x}</b></div>`).join('')}</div>
      <p class="note"><b>Como lançar:</b> clique no empurrador → marque o serviço → “Apontar execução” com o horímetro de cada motor. Na calibração dos bicos (1.1.12) o ensaio de compressão vai no mesmo apontamento.</p></div>
    <div class="card"><h2>Horas restantes até a próxima calibração</h2><div class="cal-g">${['1.1.11', '1.1.12'].filter(id => C.includes(id)).map(id => `<div><p class="note"><b>${esc(PCM_CAB[id])}</b> · ${esc(id)} · a cada ${esc(ivTxt(A1M[id]))} · menor saldo primeiro</p>${pcmCalGraf(D, id)}</div>`).join('')}</div>
-     <p class="note">Mesmo gráfico do relatório gerencial (seção Calibração). Barra = horas restantes no intervalo; vermelho vencida, laranja vence na próxima viagem, azul dentro do intervalo.</p></div>
+     <div class="ol-leg"><span><i style="background:#D93025"></i>Vencida (atraso)</span><span><i style="background:#F9AB00"></i>Vence na próxima viagem</span><span><i style="background:#1E8E3E"></i>Em dia</span><span><i style="background:#BDC1C6"></i>Sem histórico</span></div>
+     <p class="note">Linha do meio = vence agora · à esquerda, quanto atrasou · à direita, quanto falta (barra cheia = intervalo inteiro de 1.000 h) · mais urgente primeiro · clique numa linha para abrir o empurrador.</p></div>
    <div class="card"><h2>Situação por motor · ${R.length} motores principais</h2><div class="ecr-lg"><span><i class="ms"></i>vencida</span><span><i class="lt"></i>vence na próxima viagem</span><span><i class="ok"></i>dentro do prazo</span><span><i class="fut"></i>sem referência</span></div>
      <div class="tw"><table class="cal-m"><thead><tr><th class="cal-n">Empurrador · motor</th>${C.map(id => `<th>${esc(PCM_CAB[id] || id)}<small>${esc(id)}</small></th>`).join('')}</tr></thead><tbody>
      ${R.map(r => `<tr><td class="cal-n"><a href="#enx" data-pcmv="${r.v.id}" title="Abrir as OMs preventivas deste empurrador"><b>${esc(r.v.nome)}</b> · ${esc(posCurtoE(r.v, r.pos))}</a></td>${C.map(id => cel(r.c[id])).join('')}</tr>`).join('') || `<tr><td colspan="${C.length + 1}" class="note">Nenhum item de calibração.</td></tr>`}</tbody></table></div></div></div></div>`;
