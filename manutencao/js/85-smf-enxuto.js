@@ -259,31 +259,38 @@ function vEnxHor() {
 // Pareto das horas de operação por empurrador no mês (Supervisor, 30/10/2026: “um gráfico só de MCP e outro só de MCA, barras o mais próximo que der”)
 // MCP do empurrador = o MCP que mais rodou (rodam juntos na viagem) · MCA = soma dos MCAs (revezam) · horas pela conta do rmeHoras (leitura a leitura)
 const ENXHP = { mes: 0 };   // 0 = este mês · 1 = mês passado
-function hpPareto(L, cor0, cor1) {
-  const n = L.length, E = 16, D = 44, gw = 40, bw = 16, W = E + D + n * gw, H = 230, T = 26, B = 40, mx = Math.max(1, ...L.map(x => x[1]));
-  const tot = L.reduce((a, x) => a + x[1], 0) || 1, Y = v => T + (H - T - B) * (1 - v / mx), Yp = q => T + (H - T - B) * (1 - q), Xc = i => E + i * gw + gw / 2;
-  const mix = (a, b, t) => '#' + [0, 2, 4].map(k => Math.round(parseInt(a.substr(k + 1, 2), 16) * (1 - t) + parseInt(b.substr(k + 1, 2), 16) * t).toString(16).padStart(2, '0')).join('');
-  let g = `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#CFD6E0"/>`, vt = '', acc = 0; const P = [];
-  L.forEach(([lab, v], i) => { const cx = Xc(i); acc += v; P.push([cx, Yp(acc / tot)]);
-    g += `<rect x="${cx - bw / 2}" y="${Y(v)}" width="${bw}" height="${Math.max(0, Y(0) - Y(v))}" fill="${mix(cor0, cor1, n > 1 ? i / (n - 1) : 0)}"><title>${esc(lab)}: ${nf(v)} h</title></rect>`; vt += `<text x="${cx}" y="${Y(v) - 4}" text-anchor="middle" font-size="10" font-weight="700" fill="#1F2A44" stroke="#fff" stroke-width="3" paint-order="stroke">${nf(v)}</text>`;
-    String(lab).split(' ').slice(0, 2).forEach((w, j) => { g += `<text x="${cx}" y="${H - B + 13 + j * 11}" text-anchor="middle" font-size="9.5" fill="#475569">${esc(w)}</text>`; }); });
-  if (P.length > 1) { let d = `M${P[0][0]},${P[0][1]}`; for (let i = 0; i < P.length - 1; i++) { const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
-      d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`; }   // curva suave (Catmull-Rom)
-    g += `<path d="${d}" fill="none" stroke="#E07B24" stroke-width="2"/>` + P.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="#fff" stroke="#E07B24" stroke-width="1.6"/>`).join(''); }
-  g += `<text x="${W - D + 6}" y="${Yp(1) + 3}" font-size="9" fill="#E07B24">100%</text><text x="${W - D + 6}" y="${Yp(.5) + 3}" font-size="9" fill="#E07B24">50%</text><line x1="${E}" x2="${W - D}" y1="${Yp(.8)}" y2="${Yp(.8)}" stroke="#E07B24" stroke-dasharray="3 3" stroke-width=".7" opacity=".6"/><text x="${W - D + 6}" y="${Yp(.8) + 3}" font-size="9" fill="#E07B24">80%</text>`;
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block" data-nodrag>${g}${vt}</svg>`.replace('width="100%" style="display:block"', `style="display:block;margin:0 auto;width:${Math.round(W * 1.25)}px;max-width:100%"`);   // números por cima da curva
+// G = [[empurrador, [[motor, horas], …], horas do empurrador]] na ordem do nome (CJA I, CJA II…); cada motor é uma barra fina, lado a lado
+// (Supervisor, 30/10/2026: “alguns têm 2 MCP, tem que ter as barras deles ao lado”); linha laranja fina = % acumulado das horas do empurrador
+function hpGrupos(G, cores) {
+  const bw = 9, gap = 1, E = 16, D = 44, T = 30, B = 40, H = 240, gl = G.map(g => g[1].length * bw + (g[1].length - 1) * gap), sl = gl.map(x => Math.max(x + 8, 30)), W = E + D + sl.reduce((a, x) => a + x, 0);   // espaço por empurrador: as barras + 8, no mínimo o nome
+  const mx = Math.max(1, ...G.flatMap(g => g[1].map(m => m[1]))), tot = G.reduce((a, g) => a + g[2], 0) || 1, Y = v => T + (H - T - B) * (1 - v / mx), Yp = q => T + (H - T - B) * (1 - q);
+  let g = `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#CFD6E0"/>`, vt = '', x = E, acc = 0; const P = [];
+  G.forEach(([nome, M, ht], k) => { const cx = x + sl[k] / 2, x0 = cx - gl[k] / 2; acc += ht; P.push([cx, Yp(acc / tot)]);
+    M.forEach(([mot, h], j) => { const bx = x0 + j * (bw + gap), c = cores[j % cores.length];
+      g += `<rect x="${bx}" y="${Y(h)}" width="${bw}" height="${Math.max(0, Y(0) - Y(h))}" fill="${c}"><title>${esc(nome)} · ${esc(mot)}: ${nf(h)} h</title></rect>`;
+      vt += `<text x="${bx + bw / 2}" y="${Y(h) - 4}" transform="rotate(-90 ${bx + bw / 2} ${Y(h) - 4})" font-size="9" fill="#1F2A44" stroke="#fff" stroke-width="2.5" paint-order="stroke">${nf(h)}</text>`; });
+    String(nome).split(' ').slice(0, 2).forEach((w, j) => { g += `<text x="${cx}" y="${H - B + 13 + j * 11}" text-anchor="middle" font-size="9.5" fill="#475569">${esc(w)}</text>`; });
+    x += sl[k]; });
+  if (P.length > 1) { const cl = y => Math.min(Yp(0), Math.max(Yp(1), y)); let d = `M${P[0][0]},${P[0][1]}`;
+    for (let i = 0; i < P.length - 1; i++) { const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+      d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${cl(p1[1] + (p2[1] - p0[1]) / 6)} ${p2[0] - (p3[0] - p1[0]) / 6},${cl(p2[1] - (p3[1] - p1[1]) / 6)} ${p2[0]},${p2[1]}`; }   // curva suave sem passar de 100%
+    g += `<path d="${d}" fill="none" stroke="#E07B24" stroke-width="1"/>` + P.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="#fff" stroke="#E07B24" stroke-width="1"/>`).join(''); }
+  g += `<text x="${W - D + 6}" y="${Yp(1) + 3}" font-size="9" fill="#E07B24">100%</text><text x="${W - D + 6}" y="${Yp(.5) + 3}" font-size="9" fill="#E07B24">50%</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${Math.round(W * 1.45)}px;max-width:100%" data-nodrag>${g}${vt}</svg>`;
 }
 function enxHorPareto() {
   if (typeof rmeHoras !== 'function') return '';
-  const I = rmeHorIdx(), h0 = hoje(), d0 = new Date(h0.getFullYear(), h0.getMonth() - ENXHP.mes, 1), a = isoD(d0), b = isoD(ENXHP.mes ? new Date(d0.getFullYear(), d0.getMonth() + 1, 0) : h0), V = S.cfg.frota.filter(v => !foraOp(v));
-  const ref = MESES[d0.getMonth()] + '/' + d0.getFullYear();
-  const mcp = V.map(v => { const H = mcpPos(v).map(p => rmeHoras(I, v.id, p, a, b)); return [v.nome, Math.round(Math.max(0, ...H.map(x => x.h)))]; }).sort((x, y) => y[1] - x[1]);
-  const mca = V.filter(v => MCAS.some(p => v.mca && v.mca[p])).map(v => { const H = MCAS.filter(p => v.mca && v.mca[p]).map(p => rmeHoras(I, v.id, p, a, b)); return [v.nome, Math.round(H.reduce((t, x) => t + x.h, 0))]; }).sort((x, y) => y[1] - x[1]);
+  const I = rmeHorIdx(), h0 = hoje(), d0 = new Date(h0.getFullYear(), h0.getMonth() - ENXHP.mes, 1), a = isoD(d0), b = isoD(ENXHP.mes ? new Date(d0.getFullYear(), d0.getMonth() + 1, 0) : h0);
+  const V = S.cfg.frota.filter(v => !foraOp(v)).slice().sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR', { numeric: true })), ref = MESES[d0.getMonth()] + '/' + d0.getFullYear();
+  const hr = (v, p) => Math.round(rmeHoras(I, v.id, p, a, b).h);
+  const mcp = V.map(v => { const M = mcpPos(v).map(p => [posCurtoE(v, p), hr(v, p)]); return [v.nome, M, Math.max(0, ...M.map(m => m[1]))]; });
+  const mca = V.filter(v => MCAS.some(p => v.mca && v.mca[p])).map(v => { const M = MCAS.filter(p => v.mca && v.mca[p]).map(p => [posCurtoE(v, p), hr(v, p)]); return [v.nome, M, M.reduce((t, m) => t + m[1], 0)]; });
   const sel = `<div class="cm-chips" style="margin:0 0 6px"><button class="cm-chip${ENXHP.mes ? '' : ' on'}" data-ehpm="0">Este mês</button><button class="cm-chip${ENXHP.mes ? ' on' : ''}" data-ehpm="1">Mês passado</button></div>`;
-  const card = (tit, L, c0, c1, txt) => { const tot = L.reduce((t, x) => t + x[1], 0); let acc = 0; const n80 = L.findIndex(x => (acc += x[1]) >= tot * .8) + 1;
-    return `<div class="card"><h2>${tit} · ${ref}</h2>${sel}<p class="note" style="margin:0 0 4px">Total da frota <b>${nf(tot)} h</b>${tot ? ` · ${n80} de ${L.length} empurradores fazem 80% das horas` : ''} · ${txt}</p>${tot ? hpPareto(L, c0, c1) : '<p class="note">Sem horas lançadas no período.</p>'}</div>`; };
-  return card('Horas de operação dos MCP por empurrador', mcp, '#0B2A5B', '#9CC1E6', 'por empurrador vale o MCP que mais rodou')
-    + card('Horas de operação dos MCA por empurrador', mca, '#1B5E20', '#A5D6A7', 'soma dos MCAs do empurrador (revezam)');
+  const leg = (cores, nomes) => nomes.map((n, i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:9px;height:9px;background:${cores[i]}"></i>${n}</span>`).join('') + '<span style="display:inline-flex;align-items:center;gap:4px"><i style="display:inline-block;width:12px;height:1px;background:#E07B24"></i>% acumulado</span>';
+  const card = (tit, G, cores, nomes, txt) => { const tot = G.reduce((t, x) => t + x[2], 0);
+    return `<div class="card"><h2>${tit} · ${ref}</h2>${sel}<p class="note" style="margin:0 0 4px">Total da frota ${nf(tot)} h · ${txt}</p>${tot ? hpGrupos(G, cores) + `<p class="note" style="text-align:center;margin:2px 0 0">${leg(cores, nomes)}</p>` : '<p class="note">Sem horas lançadas no período.</p>'}</div>`; };
+  return card('Horas de operação dos MCP por empurrador', mcp, ['#0B2A5B', '#7FA8D6'], ['BB (ou MCP único)', 'BE'], 'no total do empurrador vale o MCP que mais rodou (rodam juntos na viagem)')
+    + card('Horas de operação dos MCA por empurrador', mca, ['#1B5E20', '#81C784', '#C5A600'], ['1º MCA', '2º MCA', '3º MCA'], 'no total do empurrador, a soma dos MCAs (revezam)');
 }
 // horas de operação da frota por mês, em curva (Supervisor, 29/10/2026: “logo abaixo do gráfico que já existe”), últimos 12 meses
 // horas de um empurrador no mês = o MCP que mais rodou (os MCPs rodam juntos na viagem; somar BB + BE contaria a viagem duas vezes); frota = soma dos empurradores

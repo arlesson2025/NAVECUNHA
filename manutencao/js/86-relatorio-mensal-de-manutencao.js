@@ -33,11 +33,16 @@ function rmeHoras(I, vid, pos, ini, fim) {
   // se casar com ant, a incoerente era digitação errada e é só ignorada — antes ela derrubava também a leitura certa seguinte)
   const L = I[vid + '|' + pos] || []; let ant = null, alt = null, h = 0, n = 0, inc = false, ult = null;
   const casa = (a, r) => { if (!a) return null; const d = r.h - a.h, lim = Math.max(1, (pD(r.date) - pD(a.date)) / 864e5) * 24 + 1; return d >= 0 && d <= lim ? d : null; };
-  L.forEach(r => { if (r.date > fim) return; const dentro = r.date >= ini; if (dentro) { ult = r; n++; }
+  // horas entre duas leituras são repartidas pelos dias (30/10/2026: leitura anterior de meses antes jogava tudo no mês da leitura nova, 1.572 h num mês):
+  // entra no período só a fração do intervalo entre as leituras que cai dentro dele; a primeira leitura depois do fim também conta a parte de dentro
+  const t0 = +pD(ini) - 12 * 36e5, t1 = +pD(fim) + 12 * 36e5, fr = (a, r) => { const x = +pD(a.date), y = +pD(r.date); if (y <= x) return r.date >= ini && r.date <= fim ? 1 : 0; return Math.max(0, Math.min(y, t1) - Math.max(x, t0)) / (y - x); };
+  let depois = false;
+  L.forEach(r => { if (depois) return; const dentro = r.date >= ini && r.date <= fim; if (r.date > fim) depois = true; if (dentro) { ult = r; n++; }
     if (!ant) { ant = r; return; }
-    let d = casa(ant, r); if (d == null && alt) d = casa(alt, r);
-    if (d != null) { if (dentro) h += d; ant = r; alt = null; } else { if (dentro) inc = true; alt = r; } });
-  if (!n) return { h: 0, sem: true, tot: ant ? ant.h : null };
+    let d = casa(ant, r), a0 = ant; if (d == null && alt) { d = casa(alt, r); a0 = alt; }
+    if (d != null) { h += d * fr(a0, r); ant = r; alt = null; } else { if (dentro) inc = true; alt = r; } });
+  if (!n && h < 0.5) return { h: 0, sem: true, tot: ant ? ant.h : null };
+  if (!n) return { h: Math.round(h * 10) / 10, rateio: true, tot: ant ? ant.h : null };   // sem leitura no período, mas a leitura seguinte cobre os dias dele: horas repartidas
   return { h: Math.round(h * 10) / 10, parcial: !L.some(r => r.date < ini), inc, tot: ult.h };
 }
 // aderência (mesma conta do Cronograma) nos meses que o intervalo cobre
