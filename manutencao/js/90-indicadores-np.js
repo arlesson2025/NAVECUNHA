@@ -170,5 +170,5 @@ document.addEventListener('change', e => { if (VIEW !== 'enxkpi' || e.target.id 
 #main .kn-v.ok{color:var(--okt,#137333)}#main .kn-v.bad{color:var(--badt,#C5221F)}#main .kn-m{display:flex;flex-direction:column;gap:3px}
 #main .kn-nd{font-size:12.5px;color:#3C4043;margin-bottom:4px}#main .kn-f{margin-top:6px}
 #main .kn-sel{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;margin-right:8px}#main .kn-sel select{padding:4px 8px}
-#main .kn-int.kn-4{grid-template-columns:repeat(4,1fr)}#main .kn-int{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}#main .kn-int i{display:block;font-style:normal;font-size:12px;color:var(--mut,#5F6368)}#main .kn-int b{display:block;font-size:24px;font-weight:600}#main .kn-int small{color:var(--mut,#5F6368);font-size:11.5px}`;
+#main .kn-int.kn-4{grid-template-columns:repeat(4,1fr)}#main .kn-int{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}#main .kn-int i{display:block;font-style:normal;font-size:12px;color:var(--mut,#5F6368)}#main .kn-int b{display:block;font-size:34px;font-weight:600;line-height:1.15;margin:2px 0}#main .kn-int small{color:var(--mut,#5F6368);font-size:11.5px}`;
   document.head.appendChild(st); }
