@@ -179,6 +179,15 @@ function sfFocoAplicar() {
     T.forEach(tr => tr.classList.add('sf-foco')); if (!F.rolou) { F.rolou = true; T[0].scrollIntoView({ block: 'center' }); } }, 350);
 }
 const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${x.loc ? ` <span class="sf-mut">· ${x.loc}</span>` : ''}`;
+// linha de totais da matriz (Supervisor, 29/10/2026): em cada coluna, vencidos e vencem no mês somados na frota, um embaixo do outro
+function sfTotais(L) {
+  const vm = f => L.reduce((t, x) => { const P = f(x) || []; t[0] += P.filter(y => y.g === 'venc').length; t[1] += P.filter(y => y.g === 'mes').length; return t; }, [0, 0]);
+  const st = f => [L.filter(x => f(x) === 'venc').length, L.filter(x => f(x) === 'mes').length];
+  const cel = ([v, m], sep) => `<td class="sf-cc${sep ? ' sf-sep' : ''}"><div>${v ? `<span class="sf-c sf-r" title="vencidos">${v}</span>` : '<span class="sf-na sf-z">0</span>'}</div><div>${m ? `<span class="sf-c sf-a" title="vencem no mês">${m}</span>` : '<span class="sf-na sf-z">0</span>'}</div></td>`;
+  return `<tfoot><tr class="sf-tot"><td colspan="3"><b>Total da frota</b><div class="sf-mut">vencidos em cima · vencem no mês embaixo</div></td>${cel([L.reduce((a, x) => a + x.crit, 0), 0], 1)}${cel([L.reduce((a, x) => a + x.cor, 0), 0])}
+    ${SF_SIS.map((_, i) => cel(vm(x => x.sis[i]), !i)).join('')}${cel(vm(x => x.oleo), 1)}${cel(vm(x => x.cal))}${cel(st(x => x.cmp))}
+    ${cel((() => { const a = vm(x => x.amo), b = st(x => x.lab); return [a[0] + b[0], a[1] + b[1]]; })())}${cel(vm(x => x.arr))}${cel(vm(x => x.sen))}</tr></tfoot>`;
+}
 function sfMatriz(L) {
   const hr = x => x.mot.filter(m => isMcp(m.p)).map(m => `<div><span class="sf-p">${m.p}</span> ${m.h ? nf(m.h.h) + ' h' : '—'} <span class="${m.d == null || m.d > 14 ? 'sf-red' : 'sf-mut'}">${m.d == null ? 'sem leitura' : m.d + ' d'}</span></div>`).join('');
   const lk = (x, h, inner) => `<a href="${h}" class="sf-lk" data-sff="${esc(x.v.nome)}">${inner}</a>`;
@@ -192,7 +201,7 @@ function sfMatriz(L) {
       <td class="sf-cc">${lk(x, '#compr', sfIco(x.cmp))}</td>
       <td class="sf-cc">${lk(x, '#anoleo', x.amo.some(y => y.g === 'venc') ? sfCel(x.amo, ' title="Amostra de óleo vencida"') : x.lab && x.lab !== 'ok' ? sfIco(x.lab) : x.amo.some(y => y.g === 'mes') ? sfCel(x.amo, '') : sfIco(x.lab))}</td>
       <td class="sf-cc">${lk(x, '#enxarr', sfCel(x.arr, ''))}</td><td class="sf-cc">${lk(x, '#enxsen', sfCel(x.sen, ''))}</td>
-      </tr>`).join('')}</tbody></table></div>
+      </tr>`).join('')}</tbody>${sfTotais(L)}</table></div>
     <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; Liberação = o que bloqueia ou restringe a saída (item crítico da NP 6.3 vencido, corretiva aberta); as colunas de condição (3.1 e as cinco abas da 3.2) e as corretivas abrem a tela de origem com o empurrador destacado. Análise de óleo: número = amostra vencida ou do mês, <b>!</b> = último laudo com alerta. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
 }
 function sfCartoes(L) {

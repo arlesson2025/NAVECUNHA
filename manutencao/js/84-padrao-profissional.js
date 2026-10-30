@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.82', data: '29/10/2026', itens: ['Situação da frota: números sem negrito e linha Total da frota no fim da matriz, com vencidos em cima e vencem no mês embaixo em cada coluna.'] },
   { v: '3.81', data: '29/10/2026', itens: ['Situação da frota: matriz em três blocos com título e divisória: Liberação (Críticos NP 6.3 e Corretivas abertas, lado a lado) · Manutenção preventiva (sistemas 1.0 a 11.0) · Condição (óleo, calibração, compressão, laudo, arrefecimento, sensores).'] },
   { v: '3.80', data: '29/10/2026', itens: ['Azul gelo: os cabeçalhos azul-marinho das tabelas (Situação por motor da Calibração, cronogramas e outros) e as células coloridas voltaram; o tema deixava tudo transparente e as letras brancas sumiam.'] },
   { v: '3.79', data: '29/10/2026', itens: ['Situação da frota: coluna “Corretivas” com o nome inteiro. O clique destaca a corretiva aberta do empurrador na 1.2; sem corretiva aberta, a 1.2 abre com o empurrador já escolhido na Abertura de OM corretiva.'] },
