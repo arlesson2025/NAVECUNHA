@@ -1208,3 +1208,4 @@ table.mc-t td{padding:5px 6px;font-size:12.5px}table.mc-t .pill{font-weight:600;
 table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.ctl-g>td{border-top:1px solid #DADCE0!important}table.ctl-t tbody tr:first-child>td{border-top:0!important}table.ctl-t td.ctl-v{vertical-align:top}
 
 #main tr.sf-foco>td{background:#FFF4CC!important;box-shadow:inset 0 1px 0 #F2C94C,inset 0 -1px 0 #F2C94C}
+#main .sf-foco-c{box-shadow:0 0 0 3px #F2C94C!important}
