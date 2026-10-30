@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.91', data: '30/10/2026', itens: ['Menu: azul-marinho clássico de vidro (translúcido, com brilho na borda), colado na borda; o tom arroxeado da 3.90 saiu.'] },
   { v: '3.90', data: '30/10/2026', itens: ['Menu: azul-marinho no mesmo tom do logo da Navecunha, sólido; item aberto em azul gelo, a cor das telas; logos simétricos, cada um centrado na sua metade da caixa branca.'] },
   { v: '3.89', data: '30/10/2026', itens: ['Menu: caixa branca dos logos só do tamanho dos logos, sem sobra de espaço em branco.'] },
   { v: '3.88', data: '30/10/2026', itens: ['Menu: “1 · Recebimento do empurrador”, “3.1 Lubrificação”, “3.3 Diagnóstico dos MCP\'s”; um ícone para cada item (Horímetros, Plano de ação e Relatório gerencial com ícones próprios); o número da 2.2 passa a ser de empurradores com serviço vencido; topo do menu mais baixo.'] },

@@ -36,8 +36,8 @@ html.tv body .side a .n,html.tv body .side a.on .n{color:#fff!important}
 /* 3.86: janela em tela cheia (apresentação) = fundo azul gelo sólido; o vidro translúcido sobre o fundo preto da tela cheia ficava cinza */
 html.tv body main#main div.card.cm-win:fullscreen,html.tv body main#main div.card.cm-win.cm-full{background:linear-gradient(180deg,#f4f9ff 0%,#e6f0fb 100%)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}
 html.tv .cm-win::backdrop{background:#eaf3fd}
-/* 3.90: ajuste fino do menu (Supervisor): azul-marinho no mesmo tom do logo da Navecunha (#304186, mais profundo e sólido) e item aberto em azul gelo, a cor das telas */
-html.tv body .side{background:linear-gradient(180deg,#25357a 0%,#1c2a63 100%)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* 3.91: menu colado na borda, de vidro azul-marinho (escolha do Supervisor entre 5 cores e 3 formatos) · antes, 3.90: ajuste fino do menu (Supervisor): azul-marinho no mesmo tom do logo da Navecunha (#304186, mais profundo e sólido) e item aberto em azul gelo, a cor das telas */
+html.tv body .side{background:linear-gradient(180deg,rgba(11,42,91,.86) 0%,rgba(8,31,69,.90) 100%)!important;backdrop-filter:blur(18px) saturate(150%)!important;-webkit-backdrop-filter:blur(18px) saturate(150%)!important;border-right:1px solid rgba(255,255,255,.22)!important;box-shadow:inset -1px 0 0 rgba(255,255,255,.10),6px 0 24px rgba(10,30,70,.18)!important}
 html.tv body .side a.on{background:#e6f0fb!important;box-shadow:none!important}
-html.tv body .side a.on,html.tv body .side a.on span{color:#25357a!important}
-html.tv body .side a.on svg{stroke:#25357a!important}
+html.tv body .side a.on,html.tv body .side a.on span{color:#0b2a5b!important}
+html.tv body .side a.on svg{stroke:#0b2a5b!important}
