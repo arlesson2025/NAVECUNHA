@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.88', data: '30/10/2026', itens: ['Menu: “1 · Recebimento do empurrador”, “3.1 Lubrificação”, “3.3 Diagnóstico dos MCP\'s”; um ícone para cada item (Horímetros, Plano de ação e Relatório gerencial com ícones próprios); o número da 2.2 passa a ser de empurradores com serviço vencido; topo do menu mais baixo.'] },
   { v: '3.87', data: '29/10/2026', itens: ['3.2 Controles · Calibração: gráficos de folga de válvulas e bicos injetores compactos, com o rótulo numa linha só (CJA XX · MCP BE) e as barras encostadas.'] },
   { v: '3.86', data: '29/10/2026', itens: ['Tema Azul gelo: janela expandida em tela cheia (apresentação) com fundo azul gelo sólido; antes o vidro transparente sobre o fundo preto da tela cheia deixava tudo cinza.'] },
   { v: '3.85', data: '29/10/2026', itens: ['3.2 Controles · Calibração: tabela Situação por motor no padrão do SMF (cabeçalho claro, linha só entre empurradores, nome do empurrador uma vez só, valores em pílula vermelha, âmbar, verde ou cinza).'] },

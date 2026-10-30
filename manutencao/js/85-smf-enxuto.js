@@ -17,13 +17,17 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
 }
 // menu em 4 etapas do PCM (SMF 3.22, Supervisor: “sequência, etapas, nomes técnicos”; “não deixa ruim de operar”)
 const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
-  ['1 · Recebimento da embarcação', [['enxhor', '1.1 Horímetros', 'hoje'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
+  ['1 · Recebimento do empurrador', [['enxhor', '1.1 Horímetros', 'hor'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
   ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2']]],
-  ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação (FR 049_B)', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnósticos', 'graf']]],
-  ['4 · Fechamento mensal', [['enxacao', '4.1 Plano de ação', 'relm'], ['enxrel', '4.2 Relatório gerencial', 'relm']]],
+  ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnóstico dos MCP\'s', 'graf']]],
+  ['4 · Fechamento mensal', [['enxacao', '4.1 Plano de ação', 'acao'], ['enxrel', '4.2 Relatório gerencial', 'relg']]],
   ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];
+// 3.88: um ícone para cada item do menu (Horímetros tinha o mesmo da Situação da frota; 4.1 e 4.2 o mesmo)
+ICO.hor = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5h4"/>';
+ICO.acao = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>';
+ICO.relg = '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 15h7M9 18h4"/>';
 function enxNav() {
-  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo', 'enxarr', 'enxsen'].includes(VIEW)) || (k === 'enxcor' && VIEW === 'enxfal') ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n">${cnt}</span>` : ''}</a>`;
+  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo', 'enxarr', 'enxsen'].includes(VIEW)) || (k === 'enxcor' && VIEW === 'enxfal') ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n"${k === 'enx' ? ' title="Empurradores com serviço preventivo vencido"' : ''}>${cnt}</span>` : ''}</a>`;
   let C = {}; try { C = typeof pcmContagem === 'function' ? pcmContagem() : {}; } catch (e) { }
   return PCM_MENU.map(([g, L]) => (g ? `<div class="grp-t${g === 'Apoio' ? ' grp-apoio' : ''}">${g}</div>` : '') + L.map(([k, n, ic]) => it(k, n, ic, C[k])).join('')).join('');
 }
