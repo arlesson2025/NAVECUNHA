@@ -64,6 +64,7 @@ function vEnx() {
       <td class="nowrap">${L0 ? brD(L0.date) + (L0.h != null ? '<div class="note">' + nf(L0.h) + ' h</div>' : '') + (L0.insp ? '<div class="note" style="color:#1A73E8" title="' + esc(L0.obs || '') + '">inspecionado · sem intervenção</div>' : '') : '—'}</td><td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div>${nfr && (!L0 || nfr.date > L0.date) ? `<div class="note rl-ruim">não executado em ${brD(nfr.date)}: ${esc(nfr.motivo || '')}</div>` : ''}</td></tr>`; };
   return enxCab(`2.2 OM preventiva · ${esc(v.nome)}`, 'Selecione os itens · “Gerar descritivo da OM” para abrir a OM no Sankhya com a lista · depois “Apontar execução” com o nº dessa OM, “Inspecionado · sem intervenção” quando avaliou e não precisa fazer agora, ou “Apontar não execução” com o motivo',
       `<button class="mbtn" data-enxv="">← Frota</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+   + enxLinhaTempo(v, x)
    + `<div class="card"><h2>Serviços · ${x.venc.length} vencido${x.venc.length === 1 ? '' : 's'} · ${x.mes.length} no mês</h2>
      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-enxtodos>Selecionar backlog (vencidos e do mês)</button><button class="mbtn" data-enxabre>Expandir todos</button><button class="mbtn" data-enxcopiar>📋 Gerar descritivo da OM</button><button class="mbtn" data-enxcampo>🖨 Formulário de campo (II-B)</button><button class="mbtn pri" data-enxfeito>✓ Apontar execução</button><button class="mbtn" data-enxinsp title="Avaliou e não precisa intervir agora: conta como atendido e o próximo vencimento vai para a data que você definir">🔍 Inspecionado · sem intervenção</button><button class="mbtn" data-enxnf>Apontar não execução</button><span class="sp"></span><label class="note"><input type="checkbox" id="enxEmDia"${ENX.emDia ? ' checked' : ''}> exibir itens dentro do prazo</label></div>
      ${(() => { const G = {}; L.forEach(y => { const k = enxEq(y.t) + ' · ' + posCurtoE(v, y.pos); (G[k] = G[k] || []).push(y); });
@@ -73,6 +74,36 @@ function vEnx() {
            <table class="t"><thead><tr><th></th><th>Serviço</th><th>Periodicidade</th><th>Última execução</th><th>Situação</th></tr></thead><tbody>${g.map(lin).join('')}</tbody></table></details>`; }).join('') : '<p class="note">Nada vencido nem vencendo no mês.</p>'; })()}
      <p class="note">Rastreabilidade: o texto copiado vai na OM do Sankhya, e o mesmo nº de OM fica em cada serviço registrado aqui; o relatório lista serviço × OM para conferência. Fotos e encerramento ficam na OM do Sankhya.</p></div>
    <div class="card"><h2>OMs preventivas apontadas</h2>${(() => { const G = enxOMsDe(v.id).slice(0, 12); return G.length ? `<table class="t"><thead><tr><th>OM</th><th>Data</th><th class="r">Serviços</th><th></th></tr></thead><tbody>${G.map(g => `<tr><td><b>${esc(g.om)}</b></td><td>${brD(g.date)}</td><td class="r">${g.n}</td><td><button class="mbtn sm" data-enx2b="${esc(g.om)}">Anexo II-B</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhuma ainda.</p>'; })()}</div></div></div>`;
+}
+// linha do tempo em horas de cada MCP (Supervisor, 30/10/2026: “faz”): do horímetro de agora para a frente, os serviços que vencem por horas
+// (MCP e reversor do mesmo bordo), a faixa da próxima viagem pela rota e o limite de compressão; responde “o que vence antes de ele voltar?”
+function enxLinhaTempo(v, x) {
+  const mot = mcpPos(v); if (!mot.length) return '';
+  const blocos = mot.map(pos => {
+    const hr = horAtual(v.id, pos), dias = hr && !hr.est ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(hr.date)) / 864e5)) : null, velho = dias == null || dias > 14;
+    const viag = Math.round(horasViagem(v, pos) || 0), rota = typeof rotaUso === 'function' && rotaUso(v);
+    const L = x.P.filter(y => y.s && y.s.hp === pos && y.s.rest != null && intervalo(y.t, v, y.pos).h).map(y => ({ y, r: Math.round(y.s.rest) }));
+    const cs = typeof cmpStatus === 'function' ? cmpStatus(v, pos) : null, ovh = cs && cs.proj != null && isFinite(cs.proj) ? Math.round(cs.proj) : null;
+    const ini = Math.max(-300, Math.min(0, ...L.map(z => z.r))), fim = Math.max(1000, viag + 100), W = 700, E = 46, D = 20, X = h => E + (W - E - D) * (Math.max(ini, Math.min(fim, h)) - ini) / (fim - ini);
+    const G = {}, alem = L.filter(z => z.r > fim); L.filter(z => z.r <= fim).forEach(z => { const k = Math.round(Math.max(z.r, ini) / 25) * 25; (G[k] = G[k] || []).push(z); });
+    const cor = r => velho ? '#9AA0A6' : r < 0 ? '#C5221F' : r <= viag ? '#B06000' : '#16244A';
+    let g = `<rect x="${X(0)}" y="30" width="${Math.max(0, X(viag) - X(0))}" height="34" fill="#FEF3E0"/><text x="${X(0) + 4}" y="27" font-size="9.5" fill="#B06000">próxima viagem · ${nf(viag)} h${rota ? ' · ' + esc(rota.nome) : ''}</text>`;
+    if (ini < 0) g += `<rect x="${X(ini)}" y="30" width="${X(0) - X(ini)}" height="34" fill="#FCE8E6"/><text x="${X(ini) + 4}" y="27" font-size="9.5" fill="#C5221F">vencido</text>`;
+    g += `<line x1="${E}" x2="${W - D}" y1="47" y2="47" stroke="#1F2A44" stroke-width="1"/><line x1="${X(0)}" x2="${X(0)}" y1="24" y2="70" stroke="#1F2A44" stroke-width="1.5"/>`;
+    g += `<text x="${X(0)}" y="84" text-anchor="middle" font-size="10" font-weight="700" fill="#1F2A44">agora · ${hr ? nf(hr.h) + ' h' : '—'}</text>`;
+    [250, 500, 750, 1000, 1250, 1500].filter(h => h < fim && X(h) - X(0) > 40).forEach(h => { g += `<line x1="${X(h)}" x2="${X(h)}" y1="44" y2="50" stroke="#9AA0A6"/><text x="${X(h)}" y="84" text-anchor="middle" font-size="9" fill="#5F6368">+${nf(h)} h</text>`; });
+    Object.entries(G).forEach(([k, Z]) => { const r = Math.min(...Z.map(z => z.r)), cx = X(+k), n = Z.length, rad = n > 1 ? 8 : 5.5;
+      g += `<g><title>${esc(Z.map(z => enxServ(z.y.t) + (z.y.pos !== pos ? ' (' + posCurtoE(v, z.y.pos) + ')' : '') + ' · ' + (z.r < 0 ? 'vencido há ' + nf(-z.r) + ' h' : 'em ' + nf(z.r) + ' h')).join('\n'))}</title><circle cx="${cx}" cy="47" r="${rad}" fill="${cor(r)}"/>${n > 1 ? `<text x="${cx}" y="50.5" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">${n}</text>` : ''}</g>`; });
+    if (alem.length) g += `<text x="${W - D}" y="66" text-anchor="end" font-size="9" fill="#5F6368">+ ${alem.length} depois de ${nf(fim)} h</text>`;
+    if (ovh != null && ovh <= fim) g += `<g><title>Compressão: pressão mínima chega ao limite de serviço (1,27 MPa) em ~${nf(ovh)} h · overhaul</title><path d="M${X(ovh) - 6},${40} L${X(ovh) + 6},${40} L${X(ovh)},${51} Z" fill="#7B1FA2"/><text x="${X(ovh)}" y="36" text-anchor="middle" font-size="9" fill="#7B1FA2">overhaul</text></g>`;
+    const antes = L.filter(z => z.r >= 0 && z.r <= viag).sort((a, b) => a.r - b.r), venc = L.filter(z => z.r < 0);
+    const nome = z => esc(enxServ(z.y.t)) + (z.y.pos !== pos ? ' <span class="note">(' + esc(posCurtoE(v, z.y.pos)) + ')</span>' : '');
+    return `<div class="elt"><div class="elt-h"><b>${esc(posCurtoE(v, pos))}</b>${velho ? ` <span class="pill p-mut">horímetro ${dias == null ? 'sem leitura' : 'de ' + dias + ' dias atrás'} · posição aproximada</span>` : ''}</div>
+      <svg viewBox="0 0 ${W} 92" width="100%" style="display:block" data-nodrag>${g}</svg>
+      ${venc.length ? `<p class="elt-l"><span class="pill p-bad">vencidos · ${venc.length}</span> ${venc.sort((a, b) => a.r - b.r).map(z => nome(z) + ' <span class="note">há ' + nf(-z.r) + ' h</span>').join(' · ')}</p>` : ''}
+      ${antes.length ? `<p class="elt-l"><span class="pill p-warn">vencem antes de voltar · ${antes.length}</span> ${antes.map(z => nome(z) + ' <span class="note">em ' + nf(z.r) + ' h</span>').join(' · ')}</p>` : `<p class="elt-l note">Nada vence durante a próxima viagem.</p>`}
+      ${cs && cs.st === 'fora' ? `<p class="elt-l"><b style="color:#7B1FA2">Compressão abaixo do limite de serviço (1,27 MPa): inspeção de overhaul.</b></p>` : ovh != null ? `<p class="elt-l note">Compressão: limite de serviço em ~${nf(ovh)} h${ovh <= viag ? ' · <b style="color:#7B1FA2">antes de voltar</b>' : ''}.</p>` : ''}</div>`; });
+  return `<div class="card"><h2>Linha do tempo em horas · ${esc(v.nome)}</h2><p class="note" style="margin-top:0">Serviços que vencem por horas no MCP e no reversor do mesmo bordo, a partir do horímetro de agora · faixa âmbar = horas da próxima viagem · vermelho = vencido, âmbar = vence antes de voltar, azul = depois · número no círculo = serviços no mesmo ponto (passe o mouse para ver) · ▼ = limite de compressão (overhaul)</p>${blocos.join('')}</div>`;
 }
 // itens críticos da NP = prioridade Crítica no Anexo I E equipamento da tabela da NP 055 item 6.3 (Supervisor, 28/10/2026: “não acredito que coloque geladeira como item crítico na NP”)
 // 6.3: 1 propulsão (MCP, reversores) · 2 governo · 3 geração (MCA, alternador 30 kVA) · 4 motobomba de incêndio · 5 porão e linha de eixos · 6 Racor e válvulas de fechamento rápido · 7 VHF, luzes e parada remota · 8 amarra
@@ -205,6 +236,7 @@ function enxNFModal() {
 }
 // ---------- 1 · Horímetros ----------
 const ENXH = { v: '' };
+{ const st = document.createElement('style'); st.textContent = '.elt{padding:6px 0 10px;border-bottom:1px solid #E6EAF0}.elt:last-child{border-bottom:0}.elt-h{margin:2px 0}.elt-l{margin:3px 0;font-size:12.5px;line-height:1.5}'; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = '.ehl tr.on td{background:#E8F0FE}.ehl tbody tr:hover td{background:#F4F8FE}.ehl-m{display:flex;flex-wrap:wrap;gap:4px 14px;color:#5F6368}.ehl-m b{color:#202124;font-weight:600}@media(max-width:640px){.ehl th:nth-child(2),.ehl td:nth-child(2){display:none}.ehl-m{display:block;font-size:12px}.ehl-m span{display:block;white-space:nowrap}}'; document.head.appendChild(st); }
 function vEnxHor() {
   const V = S.cfg.frota.filter(v => !foraOp(v)), idade = v => { const h = horAtual(v.id, mpos(v.id)); return h && !h.est ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(h.date)) / 864e5)) : 999; };   // dia contra dia (os dois ao meio-dia)
