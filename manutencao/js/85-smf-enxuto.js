@@ -207,7 +207,19 @@ function vEnxHor() {
    + `<div class="card"><h2>Leitura de horímetros</h2><div class="row" style="gap:8px;margin-bottom:8px"><label class="f">Data da leitura<input type="date" id="ehD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><span class="sp"></span><button class="mbtn pri" data-ehsalvar>Registrar leituras</button></div>
      <div class="cm-chips" style="margin-bottom:8px">${V.map(v => { const d = idade(v); return `<button class="cm-chip${v.id === ENXH.v ? ' on' : ''}" data-ehv="${v.id}">${esc(v.nome)}${d > 14 ? ` <b style="color:var(--warnt)">${d === 999 ? 'sem leitura' : d + ' d'}</b>` : ''}</button>`; }).join('')}</div>
      <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th class="r">Última leitura</th><th>Data</th><th>Nova leitura</th></tr></thead><tbody>${V.filter(v => v.id === ENXH.v).map(lin).join('')}</tbody></table></div>
-     <p class="note">Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div>${enxHorGraf(vessel(ENXH.v))}${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
+     <p class="note">Motor que não rodou: “Sem operação” repete a última leitura e o relatório mensal conta 0 h confirmado (sem leitura no mês também sai 0 h, mas com o aviso “sem leitura”). Leitura menor que a anterior ou com mais horas do que dias × 24 é recusada: confira o número (horímetro trocado ou que voltou a zero se ajusta no Modo completo).</p></div>${enxHorGraf(vessel(ENXH.v))}${enxHorFrota()}${typeof pcmHorIncCard === 'function' ? pcmHorIncCard() : ''}</div></div>`;
+}
+// horas de operação da frota por mês, em curva (Supervisor, 29/10/2026: “logo abaixo do gráfico que já existe”), últimos 12 meses
+// horas de um empurrador no mês = o MCP que mais rodou (os MCPs rodam juntos na viagem; somar BB + BE contaria a viagem duas vezes); frota = soma dos empurradores
+function enxHorFrota() {
+  if (typeof rmeHoras !== 'function') return '';
+  const I = rmeHorIdx(), h0 = hoje(), V = S.cfg.frota.filter(v => !foraOp(v)), M = [...Array(12).keys()].map(i => { const d = new Date(h0.getFullYear(), h0.getMonth() - 11 + i, 1);
+    return [MESES[d.getMonth()] + '/' + String(d.getFullYear()).slice(2), isoD(d), isoD(new Date(Math.min(+new Date(d.getFullYear(), d.getMonth() + 1, 0), +h0)))]; });
+  const T = M.map(([, a, b]) => V.reduce((s, v) => s + Math.max(0, ...mcpPos(v).map(p => rmeHoras(I, v.id, p, a, b).h)), 0)).map(Math.round);
+  const tot = T.reduce((s, x) => s + x, 0), med = Math.round(tot / 12);
+  const g = lineChart(T, M.map(x => x[0]), med, ' h', 0, { h: 190 }).replace(/(lnc-p(?: u)?) f"/g, '$1"').replace(/>meta /, '>média ');
+  return `<div class="card"><h2>Horas de operação da frota por mês</h2><p class="note" style="margin-top:0">${V.length} empurradores · 12 meses: <b>${nf(tot)} h</b> · média <b>${nf(med)} h/mês</b> · linha tracejada = média</p>${g}
+    <p class="note">Horas de cada empurrador no mês = o MCP que mais rodou (os MCPs rodam juntos na viagem) · frota = soma dos empurradores · mês sem leitura de horímetro entra com 0 h, então lance as leituras na chegada para a curva ficar certa.</p></div>`;
 }
 // horas de operação por mês do empurrador escolhido, últimos 12 meses, um gráfico por MCP (Supervisor, 29/10/2026)
 // mesma conta do relatório mensal (rmeHoras: soma leitura a leitura, só o que sobe e cabe no tempo) e o mesmo gráfico (rmeGraf)
