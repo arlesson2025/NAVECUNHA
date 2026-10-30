@@ -1232,3 +1232,7 @@ table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.c
 .side .brandbox i{height:30px!important}
 .side .bt span{display:none}
 .side .bt .logo{width:26px;height:26px}
+/* 3.89: caixa branca dos logos só do tamanho dos logos (Supervisor: “tem muito espaço em branco”) */
+.side .brandbox{width:fit-content!important;margin:0 auto!important;padding:4px 10px!important;gap:10px!important;border-radius:8px!important}
+.side .brandbox img{height:44px!important;max-width:none!important}
+.side .brandbox i{height:34px!important}
