@@ -262,34 +262,35 @@ const ENXHP = { mes: 0 };   // 0 = este mês · 1 = mês passado
 // G = [[empurrador, [[motor, horas], …], horas do empurrador]] na ordem do nome (CJA I, CJA II…); cada motor é uma barra fina, lado a lado
 // (Supervisor, 30/10/2026: “alguns têm 2 MCP, tem que ter as barras deles ao lado”); linha laranja fina = % acumulado das horas do empurrador
 function hpGrupos(G, cores) {
-  const bw = 9, gap = 1, E = 16, D = 56, T = 30, B = 52, H = 250, gl = G.map(g => g[1].length * bw + (g[1].length - 1) * gap), sl = gl.map(x => Math.max(x + 8, 30)), W = E + D + sl.reduce((a, x) => a + x, 0);   // espaço por empurrador: as barras + 8, no mínimo o nome
+  const bw = 9, gap = 1, E = 16, D = 56, T = 30, B = 40, H = 240, gl = G.map(g => g[1].length * bw + (g[1].length - 1) * gap), sl = gl.map(x => Math.max(x + 8, 30)), W = E + D + sl.reduce((a, x) => a + x, 0);   // espaço por empurrador: as barras + 8, no mínimo o nome
   const mx = Math.max(1, ...G.flatMap(g => g[1].map(m => m[1]))), Y = v => T + (H - T - B) * (1 - v / mx);
   // linha laranja = horas do mês somadas empurrador a empurrador (Supervisor, 30/10/2026: “no final somando todas as horas”), escala própria até o total
   const tot = G.reduce((a, g) => a + g[2], 0) || 1, Ya = v => T + (H - T - B) * (1 - v / tot), P = [];
   let g = `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#CFD6E0"/>`, vt = '', x = E, acc = 0;
-  G.forEach(([nome, M, ht, ano], k) => { const cx = x + sl[k] / 2, x0 = cx - gl[k] / 2; acc += ht; P.push([cx, Ya(acc), acc]);
+  G.forEach(([nome, M, ht], k) => { const cx = x + sl[k] / 2, x0 = cx - gl[k] / 2; acc += ht; P.push([cx, Ya(acc), acc]);
     M.forEach(([mot, h], j) => { const bx = x0 + j * (bw + gap), c = cores[j % cores.length];
       g += `<rect x="${bx}" y="${Y(h)}" width="${bw}" height="${Math.max(0, Y(0) - Y(h))}" fill="${c}"><title>${esc(nome)} · ${esc(mot)}: ${nf(h)} h</title></rect>`;
       vt += `<text x="${bx + bw / 2}" y="${Y(h) - 4}" transform="rotate(-90 ${bx + bw / 2} ${Y(h) - 4})" font-size="9" fill="#1F2A44" stroke="#fff" stroke-width="2.5" paint-order="stroke">${nf(h)}</text>`; });
     String(nome).split(' ').slice(0, 2).forEach((w, j) => { g += `<text x="${cx}" y="${H - B + 13 + j * 11}" text-anchor="middle" font-size="9.5" fill="#475569">${esc(w)}</text>`; });
-    if (ano != null) g += `<text x="${cx}" y="${H - B + 40}" text-anchor="middle" font-size="8.5" fill="#B06000"><title>Acumulado no ano</title>${nf(ano)}</text>`;
     x += sl[k]; });
-  if (P.length > 1) { const u = P[P.length - 1];
+  if (P.length > 1 && G.every(x => x[2] != null)) { const u = P[P.length - 1];
     g += `<polyline points="${P.map(p => p[0] + ',' + p[1]).join(' ')}" fill="none" stroke="#E07B24" stroke-width="1"/>` + P.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2" fill="#fff" stroke="#E07B24" stroke-width="1"><title>somado até aqui: ${nf(p[2])} h</title></circle>`).join('');
     vt += `<text x="${u[0] + 7}" y="${u[1] + 3}" font-size="9.5" fill="#B06000" stroke="#fff" stroke-width="2.5" paint-order="stroke">${nf(u[2])} h</text>`; }
   return `<svg viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${Math.round(W * 1.45)}px;max-width:100%" data-nodrag>${g}${vt}</svg>`;
 }
 function enxHorPareto() {
   if (typeof rmeHoras !== 'function') return '';
-  const I = rmeHorIdx(), h0 = hoje(), d0 = new Date(h0.getFullYear(), h0.getMonth() - ENXHP.mes, 1), a = isoD(d0), b = isoD(ENXHP.mes ? new Date(d0.getFullYear(), d0.getMonth() + 1, 0) : h0);
-  const V = S.cfg.frota.filter(v => !foraOp(v)).slice().sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR', { numeric: true })), ref = MESES[d0.getMonth()] + '/' + d0.getFullYear();
-  const hr = (v, p) => Math.round(rmeHoras(I, v.id, p, a, b).h), aI = d0.getFullYear() + '-01-01', hA = (v, p) => Math.round(rmeHoras(I, v.id, p, aI, b).h);
-  const mcp = V.map(v => { const M = mcpPos(v).map(p => [posCurtoE(v, p), hr(v, p)]); return [v.nome, M, Math.max(0, ...M.map(m => m[1])), Math.max(0, ...mcpPos(v).map(p => hA(v, p)))]; });
-  const mca = V.filter(v => MCAS.some(p => v.mca && v.mca[p])).map(v => { const P = MCAS.filter(p => v.mca && v.mca[p]), M = P.map(p => [posCurtoE(v, p), hr(v, p)]); return [v.nome, M, M.reduce((t, m) => t + m[1], 0), P.reduce((t, p) => t + hA(v, p), 0)]; });
-  const sel = `<div class="cm-chips" style="margin:0 0 6px"><button class="cm-chip${ENXHP.mes ? '' : ' on'}" data-ehpm="0">Este mês</button><button class="cm-chip${ENXHP.mes ? ' on' : ''}" data-ehpm="1">Mês passado</button></div>`;
-  const leg = (cores, nomes) => nomes.map((n, i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:9px;height:9px;background:${cores[i]}"></i>${n}</span>`).join('') + '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:12px;height:1px;background:#E07B24"></i>horas do mês somadas (no fim, o total da frota)</span><span style="color:#B06000">número embaixo do nome = acumulado no ano (h)</span>';
-  const card = (tit, G, cores, nomes, txt) => { const tot = G.reduce((t, x) => t + x[2], 0), totA = G.reduce((t, x) => t + x[3], 0);
-    return `<div class="card"><h2>${tit} · ${ref}</h2>${sel}<p class="note" style="margin:0 0 4px">Total da frota: ${nf(tot)} h no mês · ${nf(totA)} h no ano (01/01 a ${brD(b)}) · ${txt}</p>${tot ? hpGrupos(G, cores) + `<p class="note" style="text-align:center;margin:2px 0 0">${leg(cores, nomes)}</p>` : '<p class="note">Sem horas lançadas no período.</p>'}</div>`; };
+  const ac = ENXHP.mes === 'ac', I = rmeHorIdx(), h0 = hoje(), d0 = new Date(h0.getFullYear(), h0.getMonth() - (ac ? 0 : ENXHP.mes), 1), a = isoD(d0), b = isoD(ENXHP.mes === 1 ? new Date(d0.getFullYear(), d0.getMonth() + 1, 0) : h0);
+  const V = S.cfg.frota.filter(v => !foraOp(v)).slice().sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR', { numeric: true })), ref = ac ? 'última leitura' : MESES[d0.getMonth()] + '/' + d0.getFullYear();
+  // Horímetro acumulado (Supervisor, 30/10/2026): a barra é o horímetro total de cada motor na última leitura; sem a linha da soma
+  const hr = (v, p) => ac ? Math.round((horAtual(v.id, p) || {}).h || 0) : Math.round(rmeHoras(I, v.id, p, a, b).h), aI = d0.getFullYear() + '-01-01', hA = (v, p) => Math.round(rmeHoras(I, v.id, p, aI, b).h);
+  const mcp = V.map(v => { const M = mcpPos(v).map(p => [posCurtoE(v, p), hr(v, p)]); return [v.nome, M, ac ? null : Math.max(0, ...M.map(m => m[1])), Math.max(0, ...mcpPos(v).map(p => hA(v, p)))]; });
+  const mca = V.filter(v => MCAS.some(p => v.mca && v.mca[p])).map(v => { const P = MCAS.filter(p => v.mca && v.mca[p]), M = P.map(p => [posCurtoE(v, p), hr(v, p)]); return [v.nome, M, ac ? null : M.reduce((t, m) => t + m[1], 0), P.reduce((t, p) => t + hA(v, p), 0)]; });
+  const bt = (k, t) => `<button class="cm-chip${ENXHP.mes === k ? ' on' : ''}" data-ehpm="${k}">${t}</button>`, sel = `<div class="cm-chips" style="margin:0 0 6px">${bt(0, 'Este mês')}${bt(1, 'Mês passado')}${bt('ac', 'Horímetro acumulado')}</div>`;
+  const leg = (cores, nomes) => nomes.map((n, i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><i style="display:inline-block;width:9px;height:9px;background:${cores[i]}"></i>${n}</span>`).join('') + (ac ? '' : '<span style="display:inline-flex;align-items:center;gap:4px"><i style="display:inline-block;width:12px;height:1px;background:#E07B24"></i>horas do mês somadas (no fim, o total da frota)</span>');
+  const card = (tit, G, cores, nomes, txt) => { const tot = G.reduce((t, x) => t + (x[2] || 0), 0), totA = G.reduce((t, x) => t + x[3], 0), tem = G.some(x => x[1].some(m => m[1]));
+    const cab = ac ? 'Horímetro de cada motor na última leitura lançada (horas totais de vida do horímetro)' : `Total da frota: ${nf(tot)} h no mês · ${nf(totA)} h no ano (01/01 a ${brD(b)}) · ${txt}`;
+    return `<div class="card"><h2>${ac ? tit.replace('Horas de operação', 'Horímetro acumulado') : tit} · ${ref}</h2>${sel}<p class="note" style="margin:0 0 4px">${cab}</p>${tem ? hpGrupos(G, cores) + `<p class="note" style="text-align:center;margin:2px 0 0">${leg(cores, nomes)}</p>` : '<p class="note">Sem horas lançadas no período.</p>'}</div>`; };
   return card('Horas de operação dos MCP por empurrador', mcp, ['#0B2A5B', '#7FA8D6'], ['BB (ou MCP único)', 'BE'], 'no total do empurrador vale o MCP que mais rodou (rodam juntos na viagem)')
     + card('Horas de operação dos MCA por empurrador', mca, ['#1B5E20', '#81C784', '#C5A600'], ['1º MCA', '2º MCA', '3º MCA'], 'no total do empurrador, a soma dos MCAs (revezam)');
 }
@@ -632,7 +633,7 @@ const enxAfter = k => () => { const m = $('#main');
     if (d.enxv !== undefined) { ENX.v = d.enxv; ENX.abertos = new Set(); return render(); }
     if (d.ehno !== undefined) { const [vid, p] = d.ehno.split('|'), h = horAtual(vid, p), i = $$('#main .ehH').find(x => x.dataset.v === vid && x.dataset.p === p); if (h && i) { i.value = String(h.h).replace('.', ','); toast('Mesma leitura preenchida (0 h). Clique em Registrar leituras.'); } return; }
     if (d.ehv !== undefined) { ENXH.v = d.ehv; return render(); }
-    if (d.ehpm !== undefined) { ENXHP.mes = +d.ehpm; return render(); }
+    if (d.ehpm !== undefined) { ENXHP.mes = d.ehpm === 'ac' ? 'ac' : +d.ehpm; return render(); }
     if (d.enxabre !== undefined) { $$('#main details.enx-g').forEach(g => { g.open = true; ENX.abertos.add(g.dataset.enxg); }); return; }
     if (d.enx2b !== undefined) return enxIIB(ENX.v, d.enx2b);
     if (d.ecsalvar !== undefined) return enxCorSalvar();
