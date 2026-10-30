@@ -11,8 +11,6 @@ html.tv body main#main div.card{background:rgba(255,255,255,.55)!important;borde
 html.tv body .tv-p{background:rgba(255,255,255,.50)!important;border-color:rgba(255,255,255,.85)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)!important}
 html.tv body main#main .sf-k>div:not(.seg),html.tv body main#main .pd-cd{background:rgba(255,255,255,.62)!important;border-color:rgba(255,255,255,.9)!important}
 html.tv body main#main .pd-col{background:rgba(255,255,255,.40)!important}
-html.tv body main#main table th{background:transparent!important}
-html.tv body main#main table td{background:transparent!important}
 html.tv body main#main table tbody tr:hover td{background:rgba(255,255,255,.45)!important}
 html.tv body main#main .op-ps a:not(.on){background:rgba(255,255,255,.55)!important;border-color:rgba(255,255,255,.9)!important;backdrop-filter:blur(10px)}
 html.tv body main#main button:not(.on):not(.pri):not(.cm-tb button),html.tv body main#main .mbtn:not(.pri){background:rgba(255,255,255,.6)!important;border-color:rgba(160,190,225,.7)!important}
