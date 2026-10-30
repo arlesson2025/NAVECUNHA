@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.73', data: '29/10/2026', itens: ['Situação da frota: em dia virou quadrado verde com ✓ e sem histórico um quadrado vazio, do mesmo tamanho dos números vermelhos e âmbar.'] },
   { v: '3.72', data: '29/10/2026', itens: ['1.2 Manutenção corretiva: abas Corretivas e Análise de falhas. A análise traz o resumo do período (6, 12 ou 24 meses), A Pareto de falhas por sistema por classe, B componentes com maior frequência, C ações de bloqueio (pendentes ou todas), D modo de falha, E causa da falha e F sistema × modo de falha.'] },
   { v: '3.71', data: '29/10/2026', itens: ['1.1 Horímetros: gráfico Horas de operação por mês do empurrador escolhido (MCP, últimos 12 meses), com total e média; mesma conta do relatório mensal.'] },
   { v: '3.70', data: '29/10/2026', itens: ['Azul gelo: fundo liso, sem as manchas de luz.'] },
