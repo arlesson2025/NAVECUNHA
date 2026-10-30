@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.95', data: '30/10/2026', itens: ['Limpeza profunda: saíram as telas antigas que ninguém mais abre desde que o SMF ficou só enxuto (OMs antigas, programação antiga, relatório mensal antigo, parâmetros do MCP, auditoria antiga, horímetros antigos, indicadores antigos e outras) e tudo o que só elas usavam (cerca de 280 mil caracteres, 20% do código), 95 regras de estilo sem uso e 4 arquivos vazios', 'Biblioteca do menu das balsas abre a Biblioteca atual (o link antigo caía na Situação das balsas)'] },
   { v: '3.94', data: '30/10/2026', itens: ['Resumo das telas 2.3 Equipamentos críticos e riscos e 4.1 Indicadores com os números maiores.'] },
   { v: '3.93', data: '30/10/2026', itens: ['2.3 Equipamentos críticos e riscos (NP 055 item 6): matriz de risco 5 × 5 dos 8 sistemas críticos (severidade pelos três impactos da 6.2, probabilidade pelas corretivas dos últimos 12 meses), aprovação da matriz pelo Supervisor e impressão; controles da 6.3 por empurrador (serviços críticos vencidos e falhas abertas por sistema); monitoramento de desgaste da 6.1.'] },
   { v: '3.92', data: '30/10/2026', itens: ['4.1 Indicadores (NP 055 item 9): os 6 indicadores da NP com meta, numerador e denominador, fórmula, curva e a lista dos registros que entraram na conta; aderência ao cronograma em Acompanhamento interno. Plano de ação passa a 4.2 e Relatório gerencial a 4.3.', 'Fórmulas pela NP (decisão do Supervisor): disponibilidade desconta só a corretiva que impediu a operação (Crítica ou impacto na operação) e as horas paradas da preventiva (campo novo “Horas parado para o serviço” no Registrar feito); MTBF e MTTR só falhas Crítica e Alta (também no relatório gerencial); backlog lançado toda segunda do Sankhya; registro fotográfico de corretivas e preventivas; plano preditivo pelos itens 1.1.12 e 1.1.29 que venceram no trimestre.'] },
@@ -130,27 +131,7 @@ function versoesHTML() {
 const mpPasso = (n, nome, tx, href, cnt, cor) => `<a class="mp-p" href="${href}"><span class="mp-n">${n}</span><span class="mp-t"><b>${nome}</b><small>${tx}</small></span>${cnt ? `<span class="mp-c${cor ? ' ' + cor : ''}">${cnt}</span>` : ''}</a>`;
 const mpBloco = (tit, sub, ps) => `<div class="card"><h2>${tit}</h2><p class="note">${sub}</p><div class="mp-l">${ps}</div></div>`;
 const mpTela = (sub, reset, blocos) => `<div class="cm-v"><div class="vh"><div><h1>Comece aqui</h1><p>${sub}</p></div><span class="sp"></span><button class="mbtn" data-${reset} title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div><div class="cm-ws">${blocos}</div></div>`;
-function vMapa() {
-  let C = {}, ag = 0, olv = 0; try { C = navCont(); } catch (e) { } try { ag = agoraLista().length; } catch (e) { } try { olv = lubDados().filter(x => !foraOp(x.v) && x.horas != null && x.horas < 0).length; } catch (e) { }
-  const op = S.cfg.frota.filter(v => !foraOp(v)), porto = op.filter(v => situDe(v) && v.situ.st === 'porto').length, viag = op.filter(v => situDe(v) && v.situ.st === 'viagem').length;
-  return mpTela('A sequência do trabalho em quatro ciclos. Cada passo leva à tela certa; o número é o que está pendente agora.', 'mpreset',
-    mpBloco('Todo dia', 'Comece sempre por aqui: tudo o que venceu ou está pendente na frota aparece nesta lista.', mpPasso(1, 'O que precisa de você agora', 'Na Frota: urgentes (P1) e desta semana (P2)', '#rotina', ag, 'r'))
-    + mpBloco('A · O empurrador chegou ao porto', `${porto} empurrador${porto === 1 ? '' : 'es'} no porto agora · faça nesta ordem`,
-      mpPasso(1, 'Registrar a chegada e o horímetro', 'Frota: “Chegou em Manaus” abre o FR 027_L; o horímetro do C1 entra sozinho', '#rotina')
-      + mpPasso(2, 'Tratar as falhas encontradas', 'Corretivas e falhas: classificar e informar o nº da OM do Sankhya', '#falhas2', C.falhasSem, 'r')
-      + mpPasso(3, 'Programar a preventiva', 'O que vence no mês: gera a OM e o Anexo II-B', '#emitir', C.emitir)
-      + mpPasso(4, 'Executar e registrar', 'Preventivas: registrar a execução da OM com as fotos', '#oms', C.oms)
-      + mpPasso(5, 'Conferir e encerrar', 'Aprovar no SMF e anexar o PDF na OM do Sankhya', '#omconf', C.omconf)
-      + mpPasso(6, 'Trocar o óleo, se venceu', 'Óleo da frota: FR 049_B', '#oleo', olv, 'r'))
-    + mpBloco('B · O empurrador vai sair de viagem', `${viag} em viagem agora`,
-      mpPasso(1, 'Registrar a saída', 'Frota: “Saiu de viagem” com o FR 027_L de saída e a situação para sair', '#rotina')
-      + mpPasso(2, 'Entregar as Ordens de Máquinas', 'Na janela de saída: serviços embarcados, óleo da viagem e Diário de Máquinas para o CTF/MFM', '#rotina')
-      + mpPasso(3, 'Acompanhar a viagem', 'Leituras do MCP por rádio e avarias comunicadas', '#parmcp'))
-    + mpBloco('C · Todo mês', 'Acompanhar e prestar contas',
-      mpPasso(1, 'Cronograma preventivo', 'Previsto × realizado e aderência', '#cxr') + mpPasso(2, 'Condição dos motores', 'Horímetros, óleo, análise de óleo, parâmetros e compressão', '#oleo')
-      + mpPasso(3, 'Calibração e docagem', 'Prazos dos instrumentos e da vistoria em seco', '#controle') + mpPasso(4, 'Indicadores', 'Os indicadores da NP 055 item 9', '#kpi') + mpPasso(5, 'Relatório mensal', 'Para a gerência', '#relmes'))
-    + mpBloco('Apoio', 'Consulta e configuração', mpPasso('·', 'Biblioteca', 'NP, manuais, formulários, peças, prestadores e treinamento', '#apoio') + mpPasso('·', 'Registros e evidências', 'Para a auditoria', '#regs') + mpPasso('·', 'Administração', 'Frota, senhas, nuvem e versão do SMF', '#admin')));
-}
+
 function vBalMapa() {
   const E = BALSAS.map(balEstado), bl = E.filter(e => e.st === 'bloq').length, venc = E.reduce((a, e) => a + e.venc.length, 0), fal = E.reduce((a, e) => a + e.A.length, 0);
   return mpTela('A sequência do trabalho nas balsas petroleiras (NP 024). Cada passo leva à tela certa; o número é o que está pendente agora.', 'bmpreset',
@@ -162,7 +143,7 @@ function vBalMapa() {
       + mpPasso(3, 'Plano de calibração', 'PSV, válvula de alívio, manômetro e injeção', '#balcal') + mpPasso(4, 'Compressão dos motores', 'Ensaio na revisão de 1.000 h', '#balcmp') + mpPasso(5, 'Indicadores', 'NP 024 item 10', '#balkpi'))
     + mpBloco('Consulta', 'Plano e cadastro', mpPasso('·', 'Plano preventivo', 'Itens B1 a B12 com intervalo e criticidade', '#balpl') + mpPasso('·', 'Ficha técnica', 'Motor, bomba, baterias e segurança de cada balsa', '#balft')));
 }
-VX.mapa = vMapa; AFTER.mapa = () => { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_mapa_lay', '[data-mpreset]'); };
+ 
 VX.balmapa = vBalMapa; AFTER.balmapa = () => { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_balmapa_lay', '[data-bmpreset]'); };
 BAL_VIEWS.unshift(['balmapa', 'Comece aqui']);
 SECOES.unshift({ id: 'mapa', nome: 'Comece aqui', sub: 'a sequência do trabalho', views: [['mapa', 'Comece aqui']] });

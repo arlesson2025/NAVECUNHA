@@ -4,7 +4,7 @@
    ~130 caixas com fundo branco próprio; em vez de uma regra para cada uma, este bloco olha a tela
    já desenhada (só com o tema ligado) e marca a caixa grande de fundo claro com tv-p (vidro claro).
    Os textos não mudam (o fundo continua claro). Com o tema desligado a classe não faz nada. */
-const TV_IGNORA = 'input,select,textarea,option,img,canvas,video,iframe,br,hr,script,style,button,a';
+
 function tvCor(s) {
   const m = s && s.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?/);
   return m ? { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] } : null;

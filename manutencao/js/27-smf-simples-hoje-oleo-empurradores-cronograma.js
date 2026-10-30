@@ -7,14 +7,7 @@ function olStatus(x) { if (x.s.st === 'sem' || x.horas == null) return 'sem'; if
 
 /* ---------- Barco: tudo de um empurrador numa página ---------- */
 const BR = { v: '' };
-AFTER.barco = function () { const m = $('#main');
-  m.onchange = e => { if (e.target.id === 'brV') go('barco/' + e.target.value); };
-  m.onclick = async e => { const it = e.target.closest('[data-prit]'); if (it) CRV.v = it.dataset.prit; const t = e.target.closest('button'); if (!t) return;
-    if ('frv' in t.dataset) { if (!precisa(false)) return; return lubAbrirForm(t.dataset.frv); }
-    if (t.dataset.situ) { if (!precisa(false)) return; const [vid, st] = t.dataset.situ.split('|'); await situSalvar(vid, st); render(); return; }
-    if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
-    if (t.dataset.rtadv) { if (!precisa(false)) return; const [g, st, grp] = t.dataset.rtadv.split('|'); if (grp === '1') await grpAvancar(g, st); else { const o = S.recs.get(g); o.status = st; await saveRec(o); } render(); } };   const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_barco2_lay', '[data-brreset]');
-};
+
 
 /* ---------- menu simples ---------- */
 { const old = SECOES.slice(), ja = new Set(), todas = [];

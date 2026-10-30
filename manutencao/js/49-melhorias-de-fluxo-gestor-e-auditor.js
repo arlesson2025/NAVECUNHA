@@ -8,15 +8,7 @@
 function fr27Pend(vid) { return fr27s(vid).flatMap(r => fr27SemOM(r).map(x => Object.assign({ orig: 'FR 027_L', rec: r.id, date: r.date, mov: r.mov }, x))).concat(nokPend(vid), avPend(vid)); }   // falhas sem OM: NO do FR 027_L, NOK da preventiva e avaria em viagem   // embrulhada no bloco "Falhas sem OM" (NOK e avaria)
 const drivePdf = (id, txt) => id ? `<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${txt}</a>` : '<span class="note">PDF no Drive depois de sincronizar</span>';
 // 4 e 5 · OM: de onde veio (FR 027_L) e linha do tempo
-function omHistHTML(o) {
-  const H = (o.hist || []).slice(); if (!H.some(h => /Emitida|Aberta/.test(h.ev || ''))) { if (o.emitAt) H.unshift({ at: +pD(String(o.emitAt).slice(0, 10)), by: o.emitBy || '', ev: 'Emitida' }); }
-  if (o.aprovAt && !H.some(h => /provad/.test(h.ev || ''))) H.push({ at: o.aprovAt, by: o.aprovBy || '', ev: 'Aprovada e encerrada' });
-  H.sort((a, b) => (a.at || 0) - (b.at || 0)); if (!H.length) return '';
-  const dt = t => { const d = new Date(t); return isNaN(d) ? '—' : brD(isoD(d)) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
-  return `<div class="card"><div class="row"><h2>Histórico da OM</h2><span class="sp"></span><span class="note">trilha de auditoria: cada mudança de etapa, com quem fez e quando</span></div><div class="tw"><table class="t"><thead><tr><th>Data e hora</th><th>Quem</th><th>O que aconteceu</th></tr></thead><tbody>${H.map(h => `<tr><td class="mono">${dt(h.at)}</td><td>${esc(h.by || '—')}</td><td>${esc(h.ev || '')}${h.motivo ? ' · ' + esc(h.motivo) : ''}</td></tr>`).join('')}</tbody></table></div></div>`;
-}
-function omOrigemHTML(o) { if (!o || !o.fr027) return ''; const r = S.recs.get(o.fr027); if (!r) return '';
-  return `<div class="banner info">Aberta pelo <b>FR 027_L de ${r.mov === 'saida' ? 'saída' : 'chegada'}</b> de ${brD(r.date)} ${esc(r.hora || '')} · ${esc(((r.ass || [])[0] || {}).nome || '')}${((r.ass || [])[1] || {}).nome ? ' · CTF ' + esc(r.ass[1].nome) : ''}<span class="sp"></span>${drivePdf(r.pdfFileId, '📄 Abrir o FR 027_L')}</div>`; }
+
 // 6 · Hoje: o que precisa de você agora
 function agoraLista() {
   const out = [], add = (p, txt, btn) => out.push({ p, txt, btn }), FM = frotaMatriz();

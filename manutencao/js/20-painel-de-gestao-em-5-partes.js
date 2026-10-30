@@ -11,7 +11,7 @@
 /* ---------- 4 · praça de máquinas ---------- */
 
 /* ---------- montagem ---------- */
-VX.geral = vGeral;
+
 // docagem: o clique nos empurradores do cronograma também vale no painel
 document.addEventListener('click', e => { if (VIEW !== 'geral') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
   if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);

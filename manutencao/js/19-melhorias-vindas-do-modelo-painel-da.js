@@ -14,6 +14,4 @@
 /* ---------- painel: alertas logo depois do cabeçalho; previsto × realizado depois dos indicadores ---------- */
 
 /* ---------- 4) docagem: parada média e pontualidade ---------- */
-function docaStats() { const H = S.cfg.frota.flatMap(v => docaHist(v)); const par = H.filter(x => x.parada != null).map(x => x.parada), pont = H.filter(x => x.atraso != null);
-  return { parada: par.length ? par.reduce((a, b) => a + b, 0) / par.length : null, nPar: par.length, pont: pont.length ? pont.filter(x => x.atraso <= 0).length / pont.length * 100 : null, nPont: pont.length, okPont: pont.filter(x => x.atraso <= 0).length }; }
 

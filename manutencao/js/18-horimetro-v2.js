@@ -10,7 +10,6 @@
 'use strict';
 const VOLTA = 10000;
 const horNum = s => { s = String(s || '').trim().replace(/\s/g, ''); if (!s) return null; if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, ''); const n = parseFloat(s); return isNaN(n) ? null : n; };
-const recsHorp = () => [...S.recs.values()].filter(r => r.kind === 'horp' && !r.excluido);
 async function excluirRec(r) { r.excluido = true; await saveRec(r); if (S.url && S.session) { try { await api('delete', { id: r.id }); } catch (e) { } } }
 
 /* ---------- estimativa (MCA sem horímetro) ---------- */
@@ -118,14 +117,6 @@ function horModal(vid) {
 /* ---------- MCA sem horímetro: estimativa ---------- */
 
 /* ---------- confirmação do Supervisor ---------- */
-function horPendCard() {
-  const P = recsHorp().sort((a, b) => a.date < b.date ? -1 : 1); if (!P.length) return '';
-  const a = can.admin();
-  return `<div class="card hp-card"><div class="row"><h2>Leituras aguardando confirmação (${P.length})</h2><span class="sp"></span><span class="note">Lançadas pelo Analista e fora do esperado. Só entram nos cálculos depois de confirmadas.</span></div>
-   <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Motor</th><th>Data</th><th>Painel</th><th>Total calculado</th><th>Motivo</th><th>Lançado por</th><th>Foto</th><th></th></tr></thead><tbody>
-   ${P.map(r => `<tr><td><b>${esc(vName(r.vessel))}</b></td><td>${esc(posNome(vessel(r.vessel), r.pos))}</td><td>${brD(r.date)}</td><td class="mono">${r.painel != null ? nf(r.painel, r.painel % 1 ? 1 : 0) : '—'}</td><td class="mono">${r.h != null ? nf(r.h) + ' h' : '—'}</td><td class="note">${esc(r.motivo || '')}</td><td>${esc(r.by || '')}</td><td>${r.fotoMin ? `<img src="${r.fotoMin}" class="hl-foto" data-hpver="${r.id}">` : r.fotoId ? `<button class="mbtn sm" data-hpdrive="${r.fotoId}">ver foto</button>` : '—'}</td>
-     <td style="white-space:nowrap">${a ? `<button class="mbtn sm pri" data-hpok="${r.id}" ${r.h == null ? 'disabled' : ''}>Confirmar</button><button class="mbtn sm" data-hped="${r.id}">Corrigir</button><button class="mbtn sm bad" data-hpno="${r.id}">Recusar</button>` : '<span class="note">aguardando</span>'}</td></tr>`).join('')}</tbody></table></div></div>`;
-}
 async function horConfirmar(r, total) { await saveRec({ id: uid('hor'), kind: 'hor', vessel: r.vessel, pos: r.pos, date: r.date, h: total, painel: r.painel, by: r.by, confirmadoPor: S.session.name, obs: 'confirmado: ' + (r.motivo || ''), fotoId: r.fotoId, fotoMin: r.fotoMin }); await excluirRec(r); }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-hpok],[data-hped],[data-hpno],[data-hpver],[data-hpdrive]'); if (!b) return; e.stopPropagation();

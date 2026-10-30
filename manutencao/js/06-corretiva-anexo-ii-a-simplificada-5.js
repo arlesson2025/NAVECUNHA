@@ -55,14 +55,6 @@ function formIIA(o) {
     <div class="note">${ca ? `Depois de encerrada, a corretiva pede a <b>verificação da eficácia</b> em ${EF_DIAS} dias (ISO 9001 10.2): confirmar que a falha não voltou.` : ''}</div>${aprovacaoHtml(o)}</div>`;
 }
 // verificação da eficácia: fica editável depois de encerrada (fora do formulário bloqueado)
-function omEficaciaHTML(o) {   /* verificação de eficácia da corretiva Crítica/Alta encerrada (ISO 9001 10.2.1 d) */
-  if (!o || o.tipo !== 'C' || o.status !== 'encerrada' || !ehCA(o)) return '';
-  const pv = efPrev(o), venc = !o.efRes && pv && pv <= isoD(hoje()), reinc = typeof falhasDados === 'function' && falhasDados(24).some(f => f.id !== o.id && f.vessel === o.vessel && f._comp && (f._comp || '').toLowerCase() === String(o.equip || '').toLowerCase() && pD(f.abertura) > pD(o.liberacao || o.abertura));
-  const card = `<div class="card cblk ef">${blkH('✓', 'Verificação da eficácia', 'ISO 9001 10.2.1 d · a ação funcionou?')}
-   ${reinc ? '<div class="banner bad">Atenção: houve nova falha do mesmo componente neste empurrador depois desta corretiva.</div>' : ''}
-   ${o.efRes ? `<p>${o.efRes === 'Eficaz' ? '<span class="pill p-ok">Eficaz</span>' : '<span class="pill p-bad">Não eficaz</span>'} verificada em ${brD(o.efData)} por ${esc(o.efBy || '')}${o.efObs ? ' · ' + esc(o.efObs) : ''}</p>` : `<p class="note">${venc ? '<b style="color:var(--badt)">Verificação vencida</b> desde ' + brD(pv) : 'Verificar a partir de ' + brD(pv)} (${EF_DIAS} dias depois da liberação ou do prazo da medida). Confira se a falha voltou, se a medida foi aplicada e se precisa mudar o Anexo I.</p>`}
-   ${can.admin() ? `<div class="g"><label class="f s2">Resultado<select id="efR"><option value="">Escolha…</option>${['Eficaz', 'Não eficaz'].map(x => `<option${o.efRes === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label><label class="f s2">Data<input id="efD" type="date" value="${esc(o.efData || isoD(hoje()))}"></label><label class="f s4">Observação<input id="efO" value="${esc(o.efObs || '')}" placeholder="ex.: 4 meses sem reincidência; não eficaz → nova OM 48xxx"></label></div><div class="row"><button class="mbtn pri" data-ef="salvar">Registrar verificação</button></div>` : '<p class="note">Somente o Supervisor registra a verificação.</p>'}</div>`;
-  return card;
-}
+
 
 

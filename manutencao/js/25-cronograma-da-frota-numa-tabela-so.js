@@ -8,23 +8,8 @@ function eqNome(v, k) { const [g, pos] = k.split('|'), ps = mcpPos(v), suf = ps.
   if (g === 'MCA') return { n: posCurtoE(v, pos), m: (v.mcaMod && v.mcaMod[pos]) || EQN[v.mca[pos]] || '' };
   if (g === 'REV') return { n: 'Reversor' + suf, m: [...new Set(ps.map(p => (EQN[v.rev[p]] || '').replace('Reversor ', '')).filter(Boolean))].join(' / ') + ' · caixa redutora' };
   return { n: (EQN[g] || g) + (pos === 'MCP' ? suf : ''), m: '' }; }
-function servNome(l) { if (l.tr === 'bordo') return 'Troca de óleo' + (l.its.some(x => compDe(l.its[0].t ? vessel(l.vId) || {} : {}, x.pos, x.t)) ? ' + 250 h' : '');
-  if (l.tr === 'janela') { const h = Math.min(...l.its.map(x => x.t.h || 1e9)); return h >= 4000 ? 'Revisão ' + nf(h) + ' h+' : 'Revisão ' + nf(h) + ' h'; }
-  if (l.tr === 'doca') return 'Docagem'; return l.nome.replace(' (2 a 10 anos)', '').toLowerCase().replace(/^./, c => c.toUpperCase()); }
-function cronoFrota(ano, vid) {
-  const out = [];
-  S.cfg.frota.filter(v => !foraOp(v) && (!vid || v.id === vid)).forEach(v => {
-    const R = cronoMarcas(v, ano), B = cronoBase(ano, v.id), E = {};
-    R.forEach(l => { const k = l.eqKey, e = E[k] = E[k] || { v, k, servs: [], crit: 'Baixa', its: 0, M: Array.from({ length: 12 }, () => ({ plan: 0, ok: 0, late: 0, miss: 0, tx: [] })), sis: 99, ord: 0 };
-      const sv = l.tr === 'bordo' ? 'Troca de óleo' + (l.its.some(x => compDe(v, x.pos, x.t)) ? ' + itens 250 h' : '') : servNome(l);
-      if (!e.servs.includes(sv)) e.servs.push(sv); e.its += l.its.length;
-      l.its.forEach(x => { if (PRIO_ORD[x.t.prio] < PRIO_ORD[e.crit]) e.crit = x.t.prio; e.sis = Math.min(e.sis, parseInt(x.t.id)); });
-      { const EQO = ['MCP', 'REV', 'EIXO', 'HELICE', 'CXMAR', 'FAE80', 'ALTPE', 'MCA', 'FAE50', 'BAMB30'], gi = EQO.indexOf(k.split('|')[0]); e.ord = e.sis * 1000 + (gi < 0 ? 50 : gi) * 10 + posicoes(v).indexOf(l.its[0].pos); }   // MCP BB, MCP BE, Reversor BB, Reversor BE… lado a lado
-      l.M.forEach((m, i) => { const c = e.M[i]; ['plan', 'ok', 'late', 'miss'].forEach(z => c[z] += m[z]); if (m.plan || m.ok || m.late || m.miss) c.tx.push(sv + (m.ok || m.late ? ' · realizado' : m.miss ? ' · venceu e não foi feito' : ' · programado')); }); });
-    Object.values(E).forEach(e => { e.nome = eqNome(v, e.k); if (B && B.linhasEq && B.linhasEq[e.k]) e.base = B.linhasEq[e.k]; out.push(e); });
-  });
-  return out.sort((a, b) => S.cfg.frota.indexOf(a.v) - S.cfg.frota.indexOf(b.v) || a.ord - b.ord);
-}
+
+
 const K3CSS = `.k3{width:100%;border-collapse:collapse}.k3 th{background:#16244A;color:#fff;padding:6px 4px;font-weight:600;position:sticky;top:0;z-index:1}.k3 th.hj{background:#1967D2}.k3 td{border-bottom:1px solid #E8EAED;text-align:center;padding:4px 3px;vertical-align:middle}.k3 td.hj{background:#F1F6FE}
  .k3 td.k3-e{text-align:left;min-width:170px}.k3 td.k3-e small{display:block;color:#5F6368;font-size:.85em}.k3 td.k3-s{text-align:left;color:#3C4043;font-size:.85em;min-width:180px;max-width:260px;line-height:1.3}.k3 td.k3-t{font-weight:700;white-space:nowrap}
  .k3 tr.k3-v td{background:#E8F0FE;color:#16244A;font-weight:700;text-align:left;padding:7px 8px;font-size:1.05em}.k3 tr.k3-v td span{font-weight:400;color:#5F6368;font-size:.85em;margin-left:8px}

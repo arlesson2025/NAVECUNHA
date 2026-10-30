@@ -376,7 +376,7 @@ async function prAprovar(vs, ano) {   // congela o previsto (linha de base) de c
     L.forEach(g => { const pv = g.M.map(m => m.plan + m.miss + m.ok + m.late); linhasPR[g.k] = pv; linhasEq[g.eqKey] = (linhasEq[g.eqKey] || Array(12).fill(0)).map((x, i) => x + pv[i]); });
     await saveRec({ id, kind: 'crono', ano, vessel: v.id, rev: B0 ? (B0.rev || 0) + 1 : 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), aprovEm: Date.now(), linhasPR, linhasEq }); }
 }
-var cr3Aprovar = prAprovar;
+
 { const st = document.createElement('style'); st.textContent = `.cf-ks{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}.cf-k{border:1px solid #DADCE0;background:#fff;border-radius:999px;padding:3px 11px;font-size:12.5px;color:#5F6368}.cf-k b{font-size:14px;font-weight:600}
  .cf-bt{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}.cf-fl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 6px;font-size:12.5px;color:#5F6368}.cf-fl select{width:auto;min-width:0;font-size:12.5px;padding:3px 6px;margin-left:4px}
  .cf-seg{display:inline-flex;background:#F1F3F4;border-radius:7px;padding:2px}.cf-seg button{border:0;background:transparent;padding:3px 10px;border-radius:5px;cursor:pointer;font:inherit;color:#5F6368}.cf-seg button.on{background:#fff;color:#202124;box-shadow:0 1px 2px rgba(0,0,0,.12)}

@@ -172,7 +172,7 @@ function vLubCons() {
     <div class="tw"><table class="t"><thead><tr><th>Mês</th><th class="c">FR 049_B</th><th class="c">OLUC</th><th class="c">Filtros</th><th>FR 016_E</th></tr></thead><tbody>${res.slice().reverse().map((r, i) => `<tr><td>${ms[ms.length - 1 - i].lab}</td><td class="c">${r.n || '–'}</td><td class="c mono">${r.oleo ? nf(r.oleo) + ' L' : '–'}</td><td class="c mono">${r.flt ? nf(r.flt) : '–'}</td><td class="note">${r.fr016.length ? `<span data-tip="${esc(r.fr016.join(', '))}">${r.fr016.length > 3 ? r.fr016.slice(0, 2).map(esc).join(', ') + ' +' + (r.fr016.length - 2) : r.fr016.map(esc).join(', ')}</span>` : '–'}${r.sem016 ? ` <span class="pill p-warn">${r.sem016} sem nº</span>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
   </div>`;
 }
-AFTER.lubcons = () => { $('#main').onchange = e => { if (e.target.id === 'lcM') { LC.meses = +e.target.value; render(); } if (e.target.id === 'lcB') { LC.barco = e.target.value; render(); } }; };
+
 
 /* =====================================================================
    TELA · REGISTROS (FR 049_B e complementos)
@@ -191,9 +191,7 @@ function vLubReg() {
   <div class="card"><div class="g"><label class="f s3">Empurrador<select id="lrB"><option value="">Todos</option>${empurradores.map(b => `<option${LR.barco === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></label><label class="f s2">Mês<select id="lrM"><option value="">Todos</option>${ms.map(m => `<option value="${m.k}"${LR.mes === m.k ? ' selected' : ''}>${m.lab}</option>`).join('')}</select></label></div>
    ${rows ? `<div class="tw"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Registro</th><th>Local</th><th>Equipamentos trocados</th><th>Litros</th><th>Anexo II-B</th><th>Fotos</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${L.length > 300 ? '<p class="note">Mostrando os 300 mais recentes. Use os filtros.</p>' : ''}` : '<div class="note">Nenhum registro neste filtro.</div>'}</div>`;
 }
-AFTER.lubreg = () => { const m = $('#main');
-  m.onchange = e => { if (e.target.id === 'lrB') { LR.barco = e.target.value; render(); } if (e.target.id === 'lrM') { LR.mes = e.target.value; render(); } };
-  m.onclick = async e => { const x = e.target.closest('[data-lubexc]'); if (x) { lubExcluir(x.dataset.lubexc); return; } const b = e.target.closest('[data-lubver]'); if (b) lubVerModal(b.dataset.lubver); }; };
+
 function lubExcluir(id) {
   if (!precisa(true)) return; const r = S.recs.get(id); if (!r) return;
   confirmar(r.tipo === 'fr049' ? `Excluir o FR 049_B da OM ${r.om} (${brD(r.date)})? As trocas dele deixam de contar como último serviço.` : `Excluir o complemento de ${nf1(+r.L)} L de ${brD(r.date)}?`, async () => { r.excluido = true; await saveRec(r); closeModal(); toast('Registro excluído.'); render(); });
@@ -242,7 +240,7 @@ function vPlano() {
    <div class="tw"><table class="t plt"><thead><tr><th>Equipamento</th><th class="c">${vi < 0 ? 'Qtd na frota' : 'Qtd no empurrador'}</th><th>Troca</th><th>Óleo e marcas</th><th>Volume por equip.</th>${vi >= 0 ? '<th>Total p/ 1 troca</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></div></div>
   <div class="card"><div class="row"><h2>Procedimento de troca de óleo (FR 049_B)</h2></div><div class="mmgrid">${MM.map(([t, l], i) => `<div class="mmc"><b><i>${i + 1}</i>${t}</b><ul>${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div></div>`;
 }
-AFTER.plano = () => { $('#main').onchange = e => { if (e.target.id === 'lpB') { LP.barco = e.target.value; render(); } }; };
+
 
 /* =====================================================================
    COMPLEMENTO DE ÓLEO (reposição de nível entre trocas)

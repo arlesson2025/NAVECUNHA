@@ -1,75 +1,13 @@
 /* ===== Auditoria: cronograma aprovado · previsto × realizado (mês e ano) · histórico · evidências ===== */
 'use strict';
-const AUD = { ano: hoje().getFullYear(), mes: hoje().getMonth() };
-const MESL = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-function audDados(ano) {
-  const L = cronoFrota(ano), V = S.cfg.frota.filter(v => !foraOp(v)), hm = hoje().getFullYear() === ano ? hoje().getMonth() : ano < hoje().getFullYear() ? 11 : -1;
-  const mes = MESL.map(() => ({ prev: 0, ok: 0, late: 0, miss: 0 })), porV = {};
-  V.forEach(v => porV[v.id] = { v, prev: 0, ok: 0, late: 0, miss: 0, prevMes: 0, realMes: 0, aprov: cronoBase(ano, v.id) });
-  L.forEach(e => e.M.forEach((m, i) => { const pv = e.base ? (e.base[i] || 0) : m.plan + m.miss + m.ok + m.late, c = mes[i], pvv = porV[e.v.id]; if (!pvv) return;
-    c.prev += pv; c.ok += m.ok; c.late += m.late; c.miss += m.miss; pvv.prev += pv; pvv.ok += m.ok; pvv.late += m.late; pvv.miss += m.miss;
-    if (i === AUD.mes) { pvv.prevMes += pv; pvv.realMes += m.ok + m.late; } }));
-  const ad = c => { const d = c.ok + c.late + c.miss; return d ? c.ok / d * 100 : null; };
-  const ano_ = mes.slice(0, hm + 1).reduce((a, c) => ({ prev: a.prev + c.prev, ok: a.ok + c.ok, late: a.late + c.late, miss: a.miss + c.miss }), { prev: 0, ok: 0, late: 0, miss: 0 });
-  return { L, V, mes, porV: Object.values(porV), hm, ad, ano_, prevAno: mes.reduce((a, c) => a + c.prev, 0) };
-}
-function audEvid(ano, mes) {   // execuções do período, com o documento de evidência
-  const ini = new Date(ano, mes == null ? 0 : mes, 1), fim = mes == null ? new Date(ano + 1, 0, 1) : new Date(ano, mes + 1, 1), dentro = d => { const x = pD(d); return x && x >= ini && x < fim; };
-  const out = [], vis = new Set();
-  oms().filter(o => o.status === 'encerrada').forEach(o => { const g = o.grupo || o.id; if (vis.has(g)) return; vis.add(g); const P = o.grupo ? omGrupo(o.grupo) : [o], d = o.dreal || isoD(new Date(o.fechadoAt || 0)); if (!dentro(d)) return;
-    out.push({ d, tipo: o.tipo === 'C' ? 'Corretiva (Anexo II-A)' : 'Preventiva (Anexo II-B)', v: vName(o.vessel), doc: 'OM ' + o.num, oque: o.tipo === 'C' ? (o.descricao || o.sistema || '') : P.reduce((a, p) => a + (p.items || []).length, 0) + ' itens' + (P.some(p => (p.naoExec || []).length) ? ' · ' + P.reduce((a, p) => a + (p.naoExec || []).length, 0) + ' NOK/NA' : ''),
-      quem: P[0].execn || '', aprov: P[0].aprovBy || '', fotos: P.reduce((a, p) => a + (p.fotos || []).length, 0), pdf: P.map(p => p.pdfFileId).filter(Boolean), link: o.grupo ? '#omg/' + encodeURIComponent(o.grupo) : '#om/' + o.id }); });
-  recs('lub').filter(r => r.tipo === 'fr049' && dentro(r.date)).forEach(r => { const vv = vessel(r.vessel);
-    out.push({ d: r.date, tipo: 'Troca de óleo (FR 049_B)', v: vName(r.vessel) || r.vNome || '', doc: 'FR 049_B · O.M. ' + (r.om || ''), oque: (r.eq || []).filter(q => q.status === 'T').map(q => { const e = lubEq(vv, q.key); return e ? eqNomeC(vv, e) : q.key; }).join(', '), quem: (r.nomes || {}).exe || '', aprov: r.by || '', fotos: ((r.fotosLocais || {}).a || []).length + ((r.fotosLocais || {}).d || []).length + ((r.fotos || []).length || 0), pdf: r.pdfFileId ? [r.pdfFileId] : [], link: '#lubreg' }); });
-  return out.sort((a, b) => a.d < b.d ? 1 : -1);
-}
-function vAudit() {
-  const ano = +AUD.ano, D = audDados(ano), E = audEvid(ano, AUD.mes === 'ano' ? null : +AUD.mes), mesSel = AUD.mes === 'ano' ? null : +AUD.mes;
-  const adC = x => x == null ? '#5F6368' : x >= 90 ? '#188038' : x >= 75 ? '#E37400' : '#C5221F', pc = x => x == null ? '—' : nf(x, 0) + '%';
-  const nAprov = D.porV.filter(x => x.aprov).length, mS = mesSel != null ? D.mes[mesSel] : null;
-  const mx = Math.max(1, ...D.mes.map(c => Math.max(c.prev, c.ok + c.late)));
-  const barras = D.mes.map((c, i) => { const hP = Math.round(c.prev / mx * 120), hR = Math.round((c.ok + c.late) / mx * 120), fut = i > D.hm;
-    return `<div class="au-b${i === mesSel ? ' sel' : ''}" data-aumes="${i}" title="${MESL[i]}: previsto ${c.prev} · realizado ${c.ok + c.late} (${c.late} com atraso) · não feito ${c.miss}"><div class="au-bb"><i class="p" style="height:${hP}px"></i><span class="au-rs" style="height:${fut ? 0 : hR}px"><i class="au-l" style="height:${fut || !(c.ok + c.late) ? 0 : Math.round(c.late / (c.ok + c.late) * hR)}px"></i><i class="au-o"></i></span></div><b>${MESL[i]}</b><small>${fut ? c.prev : (c.ok + c.late) + '/' + c.prev}</small></div>`; }).join('');
-  const anos = [hoje().getFullYear() - 1, hoje().getFullYear(), hoje().getFullYear() + 1];
-  return `<div class="vh"><div><h1>Histórico e evidências · ${ano}</h1><p>O que o auditor pede, num lugar só: o cronograma aprovado, o previsto × realizado no mês e no ano, e a evidência de cada execução.</p></div><span class="sp"></span><a class="mbtn" href="#cxr">← Cronograma</a><button class="mbtn pri" data-aupdf>⬇ PDF para o auditor</button></div>
-   <div class="card row" style="gap:12px;flex-wrap:wrap"><label class="f s2">Ano<select data-au="ano">${anos.map(y => `<option${y === ano ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
-    <label class="f s2">Período das evidências<select data-au="mes"><option value="ano"${AUD.mes === 'ano' ? ' selected' : ''}>Ano todo</option>${MESL.map((m, i) => `<option value="${i}"${String(AUD.mes) === String(i) ? ' selected' : ''}>${m}/${String(ano).slice(2)}</option>`).join('')}</select></label></div>
-   <div class="au-k">
-    <div><span>1 · Cronograma aprovado</span><b style="color:${nAprov === D.porV.length ? '#188038' : '#E37400'}">${nAprov}/${D.porV.length}</b><small>${nAprov === D.porV.length ? 'todos os empurradores' : '<a href="#audit" data-auapr>aprovar a frota (' + ano + ')</a>'}</small></div>
-    <div><span>2 · Aderência no ano</span><b style="color:${adC(D.ad(D.ano_))}">${pc(D.ad(D.ano_))}</b><small>${D.ano_.ok} de ${D.ano_.ok + D.ano_.late + D.ano_.miss} serviços vencidos feitos no prazo</small></div>
-    ${mS ? `<div><span>Mês · ${MESL[mesSel]}</span><b style="color:${adC(D.ad(mS))}">${pc(D.ad(mS))}</b><small>previsto ${mS.prev} · realizado ${mS.ok + mS.late} · não feito ${mS.miss}</small></div>` : ''}
-    <div><span>3 · Execuções com evidência</span><b>${E.length}</b><small>${E.filter(x => x.pdf.length).length} com PDF no Drive · ${E.filter(x => x.fotos).length} com fotos</small></div></div>
-   <div class="card"><div class="row"><h2>Previsto × realizado por mês · ${ano}</h2><span class="sp"></span><span class="au-lg"><i class="p"></i>previsto <i class="r"></i>realizado <i class="r l"></i>com atraso</span></div><div class="au-bars">${barras}</div><p class="note">Clique no mês para ver as evidências dele. Serviço = um item do cronograma (troca de óleo, revisão por hora, trimestral, semestral, anual) de um equipamento.</p></div>
-   <div class="card"><h2>Por empurrador · ${ano}</h2><div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Cronograma</th><th>Previsto no ano</th><th>Realizado no prazo</th><th>Com atraso</th><th>Não feito</th><th>Aderência</th>${mesSel != null ? `<th>${MESL[mesSel]}: previsto / realizado</th>` : ''}</tr></thead><tbody>${D.porV.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td>${x.aprov ? `<span class="pill p-ok">aprovado rev. ${x.aprov.rev}</span>` : '<span class="pill p-warn">não aprovado</span>'}</td><td>${x.prev}</td><td>${x.ok}</td><td>${x.late || '—'}</td><td>${x.miss ? `<b style="color:#C5221F">${x.miss}</b>` : '—'}</td><td><b style="color:${adC(D.ad(x))}">${pc(D.ad(x))}</b></td>${mesSel != null ? `<td>${x.prevMes} / ${x.realMes}</td>` : ''}</tr>`).join('')}</tbody></table></div></div>
-   <div class="card"><div class="row"><h2>Histórico e evidências · ${mesSel != null ? MESL[mesSel] + '/' + ano : ano}</h2><span class="sp"></span><span class="note">${E.length} execuções</span></div><div class="tw" style="max-height:520px"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Tipo</th><th>Documento</th><th>O que foi feito</th><th>Executor</th><th>Aprovado / lançado por</th><th>Evidência</th></tr></thead><tbody>${E.map(x => `<tr><td class="mono">${brD(x.d)}</td><td><b>${esc(x.v)}</b></td><td>${esc(x.tipo)}</td><td class="mono"><a href="${x.link}">${esc(x.doc)}</a></td><td>${esc(x.oque)}</td><td>${esc(x.quem)}</td><td>${esc(x.aprov)}</td><td>${x.pdf.map((id, i) => `<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">PDF${x.pdf.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ') || '<span class="note">sem PDF</span>'}${x.fotos ? ` · ${x.fotos} fotos` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="note">Nenhuma execução neste período.</td></tr>'}</tbody></table></div></div>`;
-}
-function audPDF() {
-  const ano = +AUD.ano, D = audDados(ano), mesSel = AUD.mes === 'ano' ? null : +AUD.mes, E = audEvid(ano, mesSel), pc = x => x == null ? '—' : nf(x, 0) + '%';
-  const css = `@page{size:A4 landscape;margin:9mm}body{font-family:Arial,sans-serif;font-size:9.5px;color:#202124;margin:0}.hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:8px}.hd img{height:34px}.hd h1{font-size:15px;margin:0;color:#16244A}.hd p{margin:2px 0 0;color:#5F6368}
-   h2{font-size:12px;color:#16244A;margin:12px 0 4px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #BDC1C6;padding:3px 4px;text-align:left}th{background:#16244A;color:#fff}td.c,th.c{text-align:center}.k{display:flex;gap:10px}.k div{border:1px solid #BDC1C6;border-radius:4px;padding:5px 10px}.k b{display:block;font-size:15px}
-   .ass{display:flex;gap:60px;margin-top:26px}.ass div{flex:1;border-top:1px solid #202124;padding-top:4px;text-align:center}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{page-break-inside:avoid}thead{display:table-header-group}`;
-  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para gerar o PDF.');
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Auditoria ${ano}</title><style>${css}${DOC_CAB_CSS}</style></head><body>
-   ${docCab(`MANUTENÇÃO DA FROTA · EVIDÊNCIAS PARA AUDITORIA · ${ano}${mesSel != null ? ' · ' + MESL[mesSel].toUpperCase() : ''}`, `Empurradores fluviais · emitido em ${hoje().toLocaleDateString('pt-BR')}`, 'NP Navecunha 055 · Anexo I (plano) · Anexo II (registros) · FR 049_B')}
-   <div class="k"><div><b>${D.porV.filter(x => x.aprov).length}/${D.porV.length}</b>cronogramas aprovados</div><div><b>${pc(D.ad(D.ano_))}</b>aderência no ano (${D.ano_.ok} de ${D.ano_.ok + D.ano_.late + D.ano_.miss})</div><div><b>${E.length}</b>execuções no período</div><div><b>${E.filter(x => x.pdf.length).length}</b>com PDF no Drive</div></div>
-   <h2>1 · Previsto × realizado por mês</h2><table><thead><tr><th></th>${MESL.map(m => `<th class="c">${m}</th>`).join('')}<th class="c">ano</th></tr></thead><tbody>
-    <tr><td>Previsto</td>${D.mes.map(c => `<td class="c">${c.prev}</td>`).join('')}<td class="c"><b>${D.prevAno}</b></td></tr>
-    <tr><td>Realizado no prazo</td>${D.mes.map((c, i) => `<td class="c">${i > D.hm ? '' : c.ok}</td>`).join('')}<td class="c"><b>${D.ano_.ok}</b></td></tr>
-    <tr><td>Com atraso</td>${D.mes.map((c, i) => `<td class="c">${i > D.hm ? '' : c.late}</td>`).join('')}<td class="c"><b>${D.ano_.late}</b></td></tr>
-    <tr><td>Não feito</td>${D.mes.map((c, i) => `<td class="c">${i > D.hm ? '' : c.miss}</td>`).join('')}<td class="c"><b>${D.ano_.miss}</b></td></tr>
-    <tr><td><b>Aderência</b></td>${D.mes.map((c, i) => `<td class="c"><b>${i > D.hm ? '' : pc(D.ad(c))}</b></td>`).join('')}<td class="c"><b>${pc(D.ad(D.ano_))}</b></td></tr></tbody></table>
-   <h2>2 · Por empurrador</h2><table><thead><tr><th>Empurrador</th><th>Cronograma</th><th class="c">Previsto</th><th class="c">No prazo</th><th class="c">Atraso</th><th class="c">Não feito</th><th class="c">Aderência</th></tr></thead><tbody>${D.porV.map(x => `<tr><td>${esc(x.v.nome)}</td><td>${x.aprov ? 'aprovado rev. ' + x.aprov.rev + ' · ' + esc(x.aprov.aprovBy) + ' · ' + brD(x.aprov.aprovAt) : 'não aprovado'}</td><td class="c">${x.prev}</td><td class="c">${x.ok}</td><td class="c">${x.late}</td><td class="c">${x.miss}</td><td class="c"><b>${pc(D.ad(x))}</b></td></tr>`).join('')}</tbody></table>
-   <h2>3 · Histórico e evidências${mesSel != null ? ' · ' + MESL[mesSel] + '/' + ano : ''}</h2><table><thead><tr><th>Data</th><th>Empurrador</th><th>Tipo</th><th>Documento</th><th>O que foi feito</th><th>Executor</th><th>Aprovado / lançado</th><th>Evidência</th></tr></thead><tbody>${E.map(x => `<tr><td>${brD(x.d)}</td><td>${esc(x.v)}</td><td>${esc(x.tipo)}</td><td>${esc(x.doc)}</td><td>${esc(x.oque)}</td><td>${esc(x.quem)}</td><td>${esc(x.aprov)}</td><td>${x.pdf.length ? 'PDF no Drive (' + x.pdf.length + ')' : '—'}${x.fotos ? ' · ' + x.fotos + ' fotos' : ''}</td></tr>`).join('') || '<tr><td colspan="8">Nenhuma execução no período.</td></tr>'}</tbody></table>
-   <p style="color:#5F6368">Os PDFs do Anexo II e do FR 049_B ficam no Google Drive da empresa, na pasta de cada empurrador, com o número da OM no nome do arquivo. O cronograma detalhado de cada empurrador sai em Cronograma → Imprimir.</p>
-   <div class="ass"><div>Supervisor de Manutenção</div><div>Gerência</div><div>Data</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
-}
-VX.audit = vAudit;
-AFTER.audit = function () { const m = $('#main');
-  m.onchange = e => { const t = e.target.closest('[data-au]'); if (!t) return; AUD[t.dataset.au] = t.dataset.au === 'ano' ? +t.value : t.value; render(); };
-  m.onclick = async e => { const b = e.target.closest('[data-aumes],[data-aupdf],[data-auapr]'); if (!b) return; e.preventDefault();
-    if ('aupdf' in b.dataset) return audPDF();
-    if (b.dataset.aumes != null && 'aumes' in b.dataset) { AUD.mes = b.dataset.aumes; render(); return; }
-    if ('auapr' in b.dataset) { if (!precisa(true)) return; await cr3Aprovar(S.cfg.frota.filter(v => !foraOp(v)), +AUD.ano); toast('Cronograma ' + AUD.ano + ' aprovado para a frota.'); render(); } }; };
+
+
+
+
+
+
+
+
 { const s = SECOES.find(x => x.id === 'crono'); if (s) { s.views = [['crono', 'Cronograma do empurrador'], ['audit', 'Auditoria'], ['cxr', 'Planejado × realizado (detalhe)'], ['rel', 'Relatório do mês']]; s.extra = []; }
    }
 { const st = document.createElement('style'); st.textContent = `.au-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 14px}.au-k>div{background:#fff;border:1px solid var(--line,#DADCE0);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:2px}.au-k span{font-size:12px;font-weight:700;color:#5F6368;text-transform:uppercase;letter-spacing:.03em}.au-k b{font-size:28px}.au-k small{color:#5F6368}

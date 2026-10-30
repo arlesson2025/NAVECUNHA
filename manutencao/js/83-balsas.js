@@ -464,7 +464,7 @@ BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.
 function balNav() {
   const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${k === 'bal' ? (n2 => n2 ? `<span class="n">${n2}</span>` : '')(BALSAS.filter(b => balEstado(b).st === 'bloq').length) : ''}</a>`;
   return (VX.balmapa ? it('balmapa', 'Comece aqui', 'mapa') : '') + '<div class="grp-t grp-trab">Operação</div>' + it('bal', 'Situação das balsas', 'hoje') + '<div class="grp-t">Controle</div>' + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr') + it('balkpi', 'Indicadores', 'graf') + it('balft', 'Ficha técnica', 'barcos')
-    + '<div class="grp-t grp-apoio">Apoio</div>' + it('bib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }
+    + '<div class="grp-t grp-apoio">Apoio</div>' + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores (o antigo #bib virava #apoio e caía na Situação das balsas)
 // ---------- dados de exemplo das balsas (seed: some em “Limpar dados de exemplo”) ----------
 async function balExemplo() {
   if (!temExemplo() || S.recs.has('ex-bal-v5')) return;

@@ -8,19 +8,8 @@ function skPend() {
   recs('lub').filter(r => r.tipo === 'fr049' && r.om && !r.seed && !r.excluido && !r.skFim).forEach(r => L.push({ r, tipo: 'Troca de óleo', num: r.om, vid: r.vessel, at: r.updatedAt || +pD(r.date) || 0 }));
   return L.sort((a, b) => a.at - b.at);
 }
-function skCard() {
-  const L = skPend();
-  const evid = x => { const r = x.r, E = [];
-    if (r.kind === 'lub') E.push(drivePdf(r.pdfFileId, '📄 FR 049_B'));
-    else { E.push(drivePdf(r.pdfFileId, '📄 Anexo ' + (r.tipo === 'C' ? 'II-A' : 'II-B'))); const fr = r.fr027 && S.recs.get(r.fr027); if (fr) E.push(drivePdf(fr.pdfFileId, '📄 FR 027_L de origem')); }
-    return E.join(' · '); };
-  const linha = x => { const dias = x.at ? Math.floor((Date.now() - x.at) / 864e5) : null;
-    return `<tr><td class="mono"><b>OM ${esc(x.num || '—')}</b></td><td><b>${esc(vName(x.vid))}</b></td><td><span class="pill ${x.tipo === 'Corretiva' ? 'p-bad' : x.tipo === 'Preventiva' ? 'p-ok' : 'p-inf'}">${x.tipo}</span></td>
-      <td>${evid(x)}</td><td class="note">${dias == null ? '' : dias === 0 ? 'encerrada hoje' : 'há ' + dias + ' dia' + (dias > 1 ? 's' : '')}</td><td class="r"><button class="mbtn sm pri" data-skfim="${x.r.id}">✓ Anexado e encerrado no Sankhya</button></td></tr>`; };
-  return `<div class="card"><h2>Anexar no Sankhya · ${L.length}</h2><p class="note">OMs já encerradas no SMF. Abra o PDF, anexe na OM do Sankhya, encerre a OM lá e marque aqui. Enquanto não marcar, a OM continua nesta lista.</p>
-   ${L.length ? `<div class="tw"><table class="t"><tbody>${L.map(linha).join('')}</tbody></table></div>` : '<p class="note">Nada pendente no Sankhya.</p>'}</div>`;
-}
-VX.omconf = vOmConf;
+
+
 document.addEventListener('click', async e => { const b = e.target.closest('[data-skfim]'); if (!b) return; e.preventDefault(); e.stopPropagation();
   if (!precisa(true)) return; const r = S.recs.get(b.dataset.skfim); if (!r) return; const num = r.kind === 'lub' ? r.om : r.num;
   if (!confirm('Confirma que o PDF foi anexado e a OM ' + (num || '') + ' foi encerrada no Sankhya?')) return;

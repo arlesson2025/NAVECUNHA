@@ -4,7 +4,7 @@
 // Hoje: troca de óleo vencida (P1) · vence em até OL_ALERTA_H horas ou OL_ALERTA_D dias (P2) — mesmo critério da tela Óleo da frota
 // #lubreg (antiga tela de registros) abre o Óleo da frota no bloco Trocas lançadas
 let OL_IR = 0;   // veio de #lubreg: rolar até o bloco das trocas
-VX.lubreg = () => { OL_IR = Date.now(); location.replace('#oleo'); return ''; };
+
 // links cruzados: situação → cronograma do empurrador · cronograma → situação de hoje
 // Controle: sem a parte de vencimentos (agora no Hoje)
 { const by = id => SECOES.find(s => s.id === id), oleo = by('oleo'), compr = by('compr'), graf = by('graf'), adm = by('adm');
@@ -31,14 +31,7 @@ VX.lubreg = () => { OL_IR = Date.now(); location.replace('#oleo'); return ''; };
   ICO.prev2 = ICO.crono || ICO.oms || ICO.hoje; ICO.conf2 = ICO.adm || ICO.omsv2 || ICO.oms; }
 // Conferir e encerrar: OMs (preventiva e corretiva) na etapa "Em conferência", que só o Supervisor aprova
 /* Conferir e encerrar num bloco só (24/10/2026) */
-function vOmConf() { const L = [], vis = new Set();
-  oms().filter(o => !o.excluido && o.status !== 'encerrada').forEach(o => { const g = o.grupo || o.id; if (vis.has(g)) return; vis.add(g); const st = o.grupo ? grpStatus(omGrupo(o.grupo)) : o.status; if (st === 'conferencia') L.push({ o, g }); });
-  L.sort((a, b) => (a.o.updatedAt || 0) - (b.o.updatedAt || 0));
-  const linha = ({ o, g }) => { const dias = o.updatedAt ? Math.floor((Date.now() - o.updatedAt) / 864e5) : null;
-    return `<tr><td class="mono"><b>OM ${esc(o.num || '—')}</b></td><td><b>${esc(vName(o.vessel))}</b></td><td>${o.tipo === 'C' ? '<span class="pill p-bad">Corretiva</span> ' + esc(o.classe || '') : '<span class="pill p-ok">Preventiva</span>'}</td><td class="note">${dias == null ? '' : dias === 0 ? 'lançada hoje' : 'esperando há ' + dias + ' dia' + (dias > 1 ? 's' : '')}</td>
-      <td class="r"><a class="mbtn sm pri" href="${o.grupo ? '#omg/' + encodeURIComponent(g) : '#om/' + o.id}">Conferir e encerrar</a></td></tr>`; };
-  return `<div class="vh"><div><h1>Conferir e encerrar</h1><p>1) Conferir e encerrar no SMF · 2) anexar o PDF e encerrar a OM no Sankhya.</p></div></div>
-   <div class="card"><h2>Esperando conferência · ${L.length}</h2>${L.length ? `<div class="tw"><table class="t"><tbody>${L.map(linha).join('')}</tbody></table></div>` : '<p class="note">Nada esperando conferência.</p>'}</div>` + skCard(); }   /* + Anexar no Sankhya (bloco do Sankhya) */
+/* + Anexar no Sankhya (bloco do Sankhya) */
 // Calibração e docagem: mesma largura e alinhamento da Compressão do MCP (largura toda, encostada à esquerda)
 { const st = document.createElement('style'); st.textContent = `body:has(#main .cs-idx) #main{max-width:none!important;margin-left:0!important;margin-right:0!important}`; document.head.appendChild(st); }
 { const st = document.createElement('style'); st.textContent = `.fs-sm{display:block;font-size:11.5px;font-weight:400;color:#64748B;line-height:1.2}

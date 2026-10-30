@@ -13,25 +13,9 @@ function regLista() {
   return L.sort((a, b) => String(b.d).localeCompare(String(a.d)));
 }
 // o que é cada documento (aparece ao passar o mouse no filtro e na etiqueta da tabela)
-const DOC_NOME = { 'FR 027_L': 'Check-list de chegada e saída do empurrador no terminal (Operador de Medição / Líder, CTF e Coordenação de Operações)', 'Anexo II-B': 'Registro de manutenção preventiva (NP 055 · Anexo II-B)', 'Anexo II-A': 'Registro de manutenção corretiva (NP 055 · Anexo II-A)', 'FR 049_B': 'Registro de troca de óleo e filtro de óleo (feito pelo CTF/MFM)' };
-function vRegs() {
-  const H = hoje(), ini = REGF.per === 'mes' ? isoD(new Date(H.getFullYear(), H.getMonth(), 1)) : REGF.per === '3m' ? isoD(new Date(H.getFullYear(), H.getMonth() - 2, 1)) : REGF.per === 'ano' ? isoD(new Date(H.getFullYear(), 0, 1)) : '';
-  const T0 = regLista().filter(x => (!REGF.v || x.vid === REGF.v) && (!ini || String(x.d) >= ini));
-  const T = T0.filter(x => (REGF.t === 'todos' || x.doc === REGF.t) && (!REGF.sk || x.sk === false));
-  const chip = (k, val, l, n, tt) => `<button class="cm-chip${REGF[k] === val ? ' on' : ''}" data-rgf="${k}|${val}"${tt ? ` title="${esc(tt)}"` : ''}>${l}${n != null ? ` <b>${n}</b>` : ''}</button>`;
-  const c = d => T0.filter(x => x.doc === d).length, falta = T0.filter(x => x.sk === false).length;
-  const skTx = x => x.sk === null ? '<span class="note">—</span>' : x.sk === 'seed' ? '<span class="note">exemplo</span>' : x.sk ? `<span class="pill p-ok">✓ anexado ${x.sk.at ? brD(String(x.sk.at).slice(0, 10)) : ''}</span>` : '<span class="pill p-bad">falta anexar</span>';
-  const sel = `<select id="rgV" style="width:auto"><option value="">Todos os empurradores</option>${S.cfg.frota.map(v => `<option value="${v.id}"${REGF.v === v.id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select>`;
-  return `<div class="vh"><div><h1>Registros e evidências</h1><p>x</p></div></div>
-   <div class="card"><h2>Registros · ${T.length}</h2>
-    <div class="cm-chips" style="margin-bottom:6px">${sel}<span class="note" style="margin:0 4px 0 10px">Período</span>${chip('per', 'mes', 'Este mês')}${chip('per', '3m', 'Últimos 3 meses')}${chip('per', 'ano', 'Este ano')}${chip('per', 'tudo', 'Tudo')}</div>
-    <div class="cm-chips" style="margin-bottom:10px"><span class="note" style="margin-right:4px">Documento</span>${chip('t', 'todos', 'Todos', T0.length)}${['FR 027_L', 'Anexo II-B', 'Anexo II-A', 'FR 049_B'].map(d => chip('t', d, d, c(d), DOC_NOME[d])).join('')}<span style="width:10px"></span>${chip('sk', REGF.sk ? '' : '1', 'Só o que falta anexar no Sankhya', falta)}</div>
-    <div class="tw" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Documento</th><th>Referência</th><th>Evidência</th><th>Sankhya</th><th></th></tr></thead><tbody>
-    ${T.slice(0, 300).map(x => `<tr><td class="mono">${x.d ? brD(String(x.d).slice(0, 10)) : '—'}</td><td><b>${esc(vName(x.vid))}</b></td><td><span class="pill ${x.cls}" title="${esc(DOC_NOME[x.doc] || '')}">${x.doc}</span></td><td>${esc(x.ref)}</td><td>${x.pdf}</td><td>${skTx(x)}</td><td class="rt-b">${x.go ? `<a class="mbtn sm" href="${x.go}">Abrir</a>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="note">Nenhum registro neste filtro.</td></tr>'}</tbody></table></div>
-    <p class="note"><b>FR 027_L</b> = check-list de chegada e saída · <b>Anexo II-B</b> = registro da preventiva · <b>Anexo II-A</b> = registro da corretiva · <b>FR 049_B</b> = troca de óleo e filtro de óleo.</p>
-    <p class="note">FR 027_L não vai para o Sankhya (fica no Drive). Anexo II e FR 049_B com nº de OM são anexados na OM do Sankhya, marcados em 4 · Conferir e encerrar.</p></div>`;
-}
-VX.regs = vRegs;
+
+
+
 padTela('regs', { titulo: 'Registros e evidências', desc: 'Tudo o que a auditoria pede, por empurrador e período',
   resumo: () => { const L = regLista(); return [['Registros no total', L.length], ['Sem PDF no Drive', L.filter(x => /depois de sincronizar/.test(x.pdf)).length, 'var(--warnt)'], ['Falta anexar no Sankhya', L.filter(x => x.sk === false).length, 'var(--badt)']]; } });
 document.addEventListener('click', e => { const b = e.target.closest('[data-rgf]'); if (!b || VIEW !== 'regs') return; e.preventDefault(); e.stopPropagation(); const [k, v] = b.dataset.rgf.split('|'); REGF[k] = v; render(); }, true);
@@ -47,16 +31,7 @@ const NP63 = [
   ['6. Alimentação de Combustível', 'Filtros Separadores (Racor) e Válvulas de Fechamento Rápido', 'Contaminação por água causando corte súbito de potência; vazamento de diesel com risco de ignição.', 'Drenagem física e purga do copo sedimentador; inspeção de trincas nas vedações e teste das válvulas de corte.', 'Drenagem diária na rotina matinal e teste das válvulas trimestral.'],
   ['7. Sinalização e Comunicação', 'Rádio VHF Fixo, Luzes de Navegação.', 'Incomunicabilidade em sinistros; colisão por falta de sinalização noturna; falha na parada remota.', 'Teste prático de rádio; verificação noturna da sinalização; teste mecânico do botão de emergência.', 'Rádio VHF e sinalização: verificação diária antes da navegação. Botão de parada de emergência: teste a cada saída do porto (item 5.3).'],
   ['8. Fainas de Amarra e Carga', 'Guinchos de Amarra, Molinetes e Cabos de Aço de Fixação', 'Rompimento de cabos sob tensão extrema; balsas à deriva e risco de esmagamento de tripulantes.', 'Inspeção visual minuciosa buscando fios partidos, amassamentos ou corrosão e verificação dos freios.', 'Inspeção visual obrigatória a cada faina de engate/desengate.']];
-function critPDF() {   // lista de equipamentos críticos (NP 6) para a auditoria, em A4
-  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para gerar o PDF.');
-  const corpo = `<table><thead><tr><th style="width:15%">Sistema operacional</th><th style="width:19%">Ativo crítico mapeado</th><th style="width:24%">Impacto de risco / causa raiz</th><th style="width:24%">Controle e ação técnica</th><th>Gatilho / frequência</th></tr></thead><tbody>${NP63.map(r => `<tr>${r.map((c, i) => `<td>${i ? esc(c) : '<b>' + esc(c) + '</b>'}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Equipamentos críticos · NP 055 item 6.3</title><style>@page{size:A4 landscape;margin:10mm}${DOC_CAB_CSS}body{font-family:Arial,sans-serif;font-size:11px;color:#202124;margin:0}
-   .hd{display:flex;align-items:center;gap:12px;border-bottom:2px solid #16244A;padding-bottom:6px;margin-bottom:10px}.hd img{height:34px}.hd h1{font-size:16px;margin:0;color:#16244A}.hd p{margin:2px 0 0;font-size:10px;color:#5F6368}
-   .card{margin:0 0 12px;break-inside:avoid}.card h2{font-size:13px;margin:0 0 4px;color:#16244A}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #DADCE0;padding:3px 5px;text-align:left;vertical-align:top}th{font-size:9.5px;text-transform:uppercase;color:#5F6368}.r{text-align:right}.note{font-size:10px;color:#5F6368}
-   .ass{display:flex;gap:80px;margin-top:24px}.ass div{flex:1;border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
-   ${docCab('RELAÇÃO DE EQUIPAMENTOS CRÍTICOS', `Critérios de criticidade: segurança e saúde, meio ambiente, operação e qualidade (item 6.2) · emitido em ${hoje().toLocaleDateString('pt-BR')}`, 'NP Navecunha 055 · item 6.3')}
-   ${corpo}<p class="note">Itens do Anexo I desses equipamentos têm prioridade Crítica: vencido sem OM bloqueia a saída (NP 5.5).</p><div class="ass"><div>Supervisor de Manutenção</div><div>Data</div></div><script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
-}
+
 /* menu: Suporte = Registros e evidências · Biblioteca (abas) · Administração; Plano preventivo ganha Equipamentos críticos */
 { const by = id => SECOES.find(s => s.id === id), cr = by('crono'), cd = by('cond2'), bib = by('apoio2'), adm = by('adm');
   if (cr) cr.sub = 'cronograma, Anexo I';   // a aba Equipamentos críticos saiu: o Anexo I tem o filtro Crítica e Alta e o PDF da NP 6

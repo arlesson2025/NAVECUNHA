@@ -1,21 +1,7 @@
 /* ===== Faixa-guia no topo da OM (pedido do Supervisor, 22/10/2026: "olho pra tela e fico sem rumo") =====
    Tipo em destaque (PREVENTIVA / CORRETIVA), linha de etapas até o Sankhya, AGORA (uma frase + um botão) e o que FALTA para aprovar (gateIIA/gateIIB). */
 'use strict';
-function guiaOM(o, P) {
-  if (!o) return '';
-  const prev = o.tipo !== 'C', st = P && P.length > 1 && typeof grpStatus === 'function' ? grpStatus(P) : o.status, sk = !!(o.skFim || (P || []).some(p => p.skFim));
-  const et = prev ? ['Emitida', 'Lançada (conferência)', 'Encerrada no SMF', 'Encerrada no Sankhya'] : ['Aberta', 'Em execução', 'Em conferência', 'Encerrada no SMF', 'Encerrada no Sankhya'];
-  const idx = prev ? (st === 'encerrada' ? (sk ? 3 : 2) : st === 'conferencia' ? 1 : 0) : (st === 'encerrada' ? (sk ? 4 : 3) : st === 'conferencia' ? 2 : st === 'execucao' ? 1 : 0);
-  const agora = prev ? [['marcar o que foi feito e anexar as fotos de antes e depois', 'Lançar o realizado'], ['conferir e aprovar · só o Supervisor', 'Conferir'], ['anexar o PDF (Anexo II-B) e encerrar a OM no Sankhya', 'Anexar no Sankhya'], ['nada a fazer · OM fechada nos dois sistemas', '']][idx]
-    : [['começar o serviço · marca o início para o prazo da NP 5.5.1', 'Ir para o início'], ['registrar o que foi feito, as fotos de depois e a causa', 'Continuar'], ['conferir e aprovar · só o Supervisor', 'Conferir'], ['anexar o PDF (Anexo II-A) e encerrar a OM no Sankhya', 'Anexar no Sankhya'], ['nada a fazer · OM fechada nos dois sistemas', '']][idx];
-  let falta = []; try { const g = prev ? gateIIB(o) : gateIIA(o); falta = g.filter(x => !x[1]).map(x => x[0]); } catch (e) { }
-  const destino = (prev && idx === 2) || (!prev && idx === 3) ? 'sankhya' : (prev && idx === 0 && o.grupo && VIEW === 'om') ? 'lancar' : 'form';
-  const passos = et.map((e, i) => `<div class="gu-p${i < idx ? ' feito' : i === idx ? ' atual' : ''}"><i>${i < idx ? '✓' : i + 1}</i><span>${e}</span></div>`).join('<div class="gu-l"></div>');
-  return `<div class="card gu"><div class="gu-h"><span class="gu-t ${prev ? 'pv' : 'cr'}">${prev ? 'PREVENTIVA' : 'CORRETIVA'}${!prev && o.classe ? ' · ' + esc(o.classe) : ''}</span><b>OM ${esc(o.num || '—')}</b><span class="note">${esc(vName(o.vessel))}${prev ? ' · Anexo II-B' : ' · Anexo II-A'}</span></div>
-    <div class="gu-ps">${passos}</div>
-    <div class="gu-a"><span><b>AGORA:</b> ${agora[0]}</span><span class="sp"></span>${agora[1] ? `<button class="mbtn pri" data-guia="${destino}" data-gg="${esc(o.grupo || '')}">${agora[1]}</button>` : ''}</div>
-    ${falta.length && idx < (prev ? 2 : 3) ? `<div class="gu-f"><b>Falta para aprovar:</b> ${falta.slice(0, 6).map(esc).join(' · ')}${falta.length > 6 ? ' · +' + (falta.length - 6) : ''}</div>` : ''}</div>`;
-}
+
 document.addEventListener('click', e => { const b = e.target.closest('[data-guia]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const d = b.dataset.guia;
   if (d === 'sankhya') { location.hash = '#omconf'; return; }
   if (d === 'lancar') { location.hash = '#omg/' + encodeURIComponent(b.dataset.gg); return; }

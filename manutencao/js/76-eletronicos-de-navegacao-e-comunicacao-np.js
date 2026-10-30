@@ -5,12 +5,6 @@
 'use strict';
 const TI_RE = /\b(radar|gps|plotter|ais|ecobat[ií]metro|sonda|autotrac|vhf|cftv|r[aá]dio)\b/i;
 const ehEletr = o => { if (!o || o.tipo !== 'C') return false; if (o.eletr === false) return false; if (o.eletr === true) return true; return TI_RE.test((o.descricao || '') + ' ' + (o.equipamento || '')); };
-const talvezEletr = o => o && o.tipo === 'C' && o.eletr == null && !ehEletr(o) && /^(7\.0|11\.0)/.test(o.sistema || '');
-function tiCard(o) { const T = o.ti;
-  if (talvezEletr(o)) return `<div class="card ti-c"><div class="row" style="align-items:center"><h2 style="margin:0">É eletrônico de navegação ou comunicação? · NP 5.12</h2><span class="sp"></span><button class="mbtn sm" data-tieletr="${o.id}|1">Sim</button><button class="mbtn sm" data-tieletr="${o.id}|0">Não</button></div><p class="note" style="margin:6px 0 0">Radar, GPS/Plotter, AIS, Ecobatímetro, Autotrac, rádio VHF ou CFTV: a Manutenção só verifica a alimentação elétrica; o resto é do TI.</p></div>`;
-  if (!ehEletr(o)) return '';
-  return `<div class="card ti-c ${T ? (T.res === 'ti' ? 'ti' : 'ok') : ''}"><div class="row" style="align-items:center"><h2 style="margin:0">Eletrônico de navegação · NP 5.12</h2><span class="sp"></span><button class="mbtn sm${T ? '' : ' pri'}" data-timodal="${o.id}">${T ? 'Alterar' : 'Registrar a verificação'}</button></div>
-    <p class="note" style="margin:6px 0 0">${T ? (T.res === 'ti' ? `🖥 <b>Direcionada ao TI</b>: alimentação normal · o TI repara ou terceiriza e o relatório é anexado à OM (NP 5.8)` : `🔌 <b>Causa na alimentação elétrica</b>: a Manutenção corrige e encerra`) + ` · ${brD(T.data)} · ${esc(T.quem)}${T.obs ? ' · ' + esc(T.obs) : ''}` : 'A Manutenção verifica só a alimentação elétrica (tensão, disjuntores, fusíveis, cabos, aterramento, terminais e suportes). Não abre, não configura e não troca componente interno.'}</p></div>`; }
 function tiModal(o) { if (!precisa(false)) return;
   modal(`<h2>Verificação da alimentação elétrica · OM ${esc(o.num || '')} · ${esc(vName(o.vessel))}</h2><p class="note">NP 5.12: a Manutenção verifica tensão, disjuntores e fusíveis, cabos de alimentação e aterramento, terminais e fixação dos suportes.</p>
    <div class="g"><label class="f s2">Data<input type="date" id="tiD" value="${isoD(hoje())}"></label><label class="f s4">Verificada por<input id="tiQ" value="${esc(S.session ? S.session.name : '')}"></label>

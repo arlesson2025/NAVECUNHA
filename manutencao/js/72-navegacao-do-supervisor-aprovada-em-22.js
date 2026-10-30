@@ -20,23 +20,8 @@ function navCont() { const k = (S.recs.__v || 0) + '|' + S.recs.size + '|' + iso
   if (h) h.sub = 'comece por aqui'; }
 /* 3 · Executar e lançar · aba Corretivas e falhas */
 /* Corretivas e falhas num bloco só (24/10/2026): a etiqueta dos eletrônicos de navegação (NP 5.12) entra direto na coluna Etapa */
-function vFalhas2() {
-  const op = S.cfg.frota.filter(v => !foraOp(v)), F = [];
-  op.forEach(v => fr27Pend(v.id).forEach(x => F.push(Object.assign({ v }, x))));
-  const gr = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 }; F.sort((a, b) => (gr[a.c] ?? 9) - (gr[b.c] ?? 9) || String(a.date || '').localeCompare(String(b.date || '')));
-  const pc = c => `<span class="pill ${/Crít/.test(c) ? 'p-bad' : /Alta/.test(c) ? 'p-warn' : 'p-mut'}">${esc(c || '—')}</span>`;
-  const G = new Map(); oms().filter(o => !o.excluido && o.tipo === 'C').forEach(o => { if (!G.has(o.id)) G.set(o.id, o); });
-  const ab = [...G.values()].filter(o => o.status !== 'encerrada').sort((a, b) => (gr[a.classe] ?? 9) - (gr[b.classe] ?? 9)), enc = [...G.values()].filter(o => o.status === 'encerrada').sort((a, b) => (b.fechadoAt || 0) - (a.fechadoAt || 0));
-  const tab = (cab, L, vazio) => `<div class="tw"><table class="t"><thead><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${L || `<tr><td colspan="${cab.length}" class="note">${vazio}</td></tr>`}</tbody></table></div>`;
-  const tF = tab(['Empurrador', 'Origem', 'O que foi encontrado', 'Criticidade', 'Detectada', ''], F.map(x => `<tr><td><b>${esc(x.v.nome)}</b></td><td class="note">${esc(x.orig || 'FR 027_L')}</td><td>${esc(x.lab || '')}${x.d ? `<div class="note">${esc(x.d)}</div>` : ''}</td><td>${pc(x.c)}</td><td class="mono">${x.date ? brD(String(x.date).slice(0, 10)) : '—'}</td><td class="rt-b"><button class="mbtn sm pri" data-fr27pend="${x.rec}">Informar OM</button></td></tr>`).join(''), 'Nenhuma falha esperando OM.');
-  const tA = tab(['Tipo', 'OM', 'Empurrador', 'Falha', 'Classe', 'Etapa', ''], ab.map(o => `<tr><td><span class="tp-cr">CORRETIVA</span></td><td class="mono"><b>OM ${esc(o.num || '—')}</b></td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc((o.descricao || '').split('\n')[0].replace(/^•\s*/, ''))}</td><td>${pc(o.classe)}</td><td class="note">${esc(omStatusTxt(o))}${typeof ehEletr === 'function' && ehEletr(o) ? (o.ti && o.ti.res === 'ti' ? ' <span class="pill p-inf ti-p">com o TI</span>' : o.ti ? ' <span class="pill p-mut ti-p">alimentação</span>' : ' <span class="pill p-warn ti-p">NP 5.12: verificar alimentação</span>') : ''}</td><td class="rt-b"><a class="mbtn sm pri" href="#om/${o.id}">Abrir</a></td></tr>`).join(''), 'Nenhuma corretiva em andamento.');
-  const tE = tab(['Encerrada em', 'OM', 'Empurrador', 'Falha', 'Classe', ''], enc.slice(0, 40).map(o => `<tr><td class="mono">${brD(o.dreal || isoD(new Date(o.fechadoAt || 0)))}</td><td class="mono">OM ${esc(o.num || '—')}</td><td><b>${esc(vName(o.vessel))}</b></td><td>${esc((o.descricao || '').split('\n')[0].replace(/^•\s*/, ''))}</td><td>${pc(o.classe)}</td><td class="rt-b"><a class="mbtn sm" href="#om/${o.id}">Ver</a></td></tr>`).join(''), 'Nenhuma ainda.');
-  return `<div class="vh"><div><h1>Corretivas e falhas</h1><p>x</p></div><span class="sp"></span><button class="mbtn pri" data-act="novaCorr">⚠ Registrar falha</button></div>
-   <div class="card"><h2>Falhas sem OM · ${F.length}</h2><p class="note" style="margin:-4px 0 8px">Classifique e abra a OM no Sankhya; depois informe o nº aqui. Crítica bloqueia a saída, Alta restringe.</p>${tF}</div>
-   <div class="card"><h2>Corretivas em andamento · ${ab.length}</h2>${tA}</div>
-   <div class="card"><h2>Corretivas encerradas</h2><div style="max-height:380px;overflow:auto">${tE}</div></div>`;
-}
-VX.falhas2 = vFalhas2;
+
+
 padTela('falhas2', { titulo: 'Executar e lançar · Corretivas e falhas', desc: 'Da falha detectada à corretiva aberta no Sankhya e executada (Anexo II-A)',
   resumo: () => { const C = navCont(); return [['Falhas sem OM', C.falhasSem, C.falhasSem ? 'var(--badt)' : 'var(--okt)'], ['Corretivas em andamento', C.falhas2 - C.falhasSem], ['Prazo estourado', agoraLista().filter(a => /prazo estourado/.test(a.txt)).length, 'var(--badt)']]; } });
 /* → Próximo no fim de cada tela da operação */

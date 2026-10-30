@@ -12,18 +12,8 @@
     return t.innerHTML; };
   /* Calibração e docagem num bloco só (24/10/2026): antes a tela montava Vencimentos, Lubrificação, MBC e Horímetros e depois quatro
      blocos apagavam o que não aparece. Agora monta só o que aparece: cabeçalho, índice, Calibração do MCP (vCalib) e Docagem (VX.doca). */
-  VX.controle = () => {
-    const t = document.createElement('div');
-    t.innerHTML = `<div class="vh"><div><h1>Calibração e docagem</h1></div><span class="sp"></span><button class="mbtn" data-act="lancarHor">⏱ Registrar horímetros</button></div>`
-      + `<nav class="cs-idx" data-sec="nav"><button data-csgo="mcp">Calibração do MCP</button><button data-csgo="doca">Docagem</button></nav>`
-      + parte('mcp', vCalib, 1) + parte('doca', VX.doca, 2);
-    t.querySelectorAll('.kgrid').forEach(g => { if (/caixa de mar vence na viagem|docagens vencidas|embarcações liberadas para operação/.test(g.textContent)) g.remove(); });
-    t.querySelectorAll('.card').forEach(c => { const h = ((c.querySelector('h2') || {}).textContent || '').trim(); if (/^B · (Frota: o item mais urgente|Todos os itens, por urgência|Escopo de serviços da docagem)/.test(h)) c.remove(); });
-    return t.innerHTML; };
-  AFTER.controle = () => { const m = $('#main'), H = {};
-    [['mcp', AFTER.calib], ['doca', AFTER.doca]].forEach(([k, a]) => { m.onclick = m.oninput = m.onchange = null; a && a(); H[k] = { onclick: m.onclick, oninput: m.oninput, onchange: m.onchange }; });
-    ['onclick', 'oninput', 'onchange'].forEach(ev => { m[ev] = function (e) { const s = e.target.closest('[data-sec]'); const k = s ? s.dataset.sec : ''; const f = (H[k] || {})[ev]; if (f) return f.call(m, e); }; });
-    if (ALVO && Date.now() - ALVO.t < 3000) { const a = ALVO.k; setTimeout(() => irPara(a), 450); } };
+  
+  
   const fixa = () => { const n = document.querySelector('.cs-idx'); if (!n) return; const ph = document.querySelector('.cs-ph'); const ref = ph || n; const r = ref.getBoundingClientRect(), mr = $('#main').getBoundingClientRect();
     if (!n.classList.contains('fix') && r.top < 0) { const p = document.createElement('div'); p.className = 'cs-ph'; p.style.height = n.offsetHeight + 'px'; n.before(p); n.classList.add('fix'); n.style.left = mr.left + 'px'; n.style.width = mr.width + 'px'; }
     else if (n.classList.contains('fix') && ph && ph.getBoundingClientRect().top >= 0) { ph.remove(); n.classList.remove('fix'); n.style.left = n.style.width = ''; } };
