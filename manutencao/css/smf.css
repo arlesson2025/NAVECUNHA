@@ -1236,3 +1236,5 @@ table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.c
 .side .brandbox{width:fit-content!important;margin:0 auto!important;padding:4px 10px!important;gap:10px!important;border-radius:8px!important}
 .side .brandbox img{height:44px!important;max-width:none!important}
 .side .brandbox i{height:34px!important}
+/* 3.90: logos simétricos: duas metades iguais, cada logo centrado na sua (o da VDA é mais estreito e ficava com menos branco) */
+.side .brandbox{display:grid!important;grid-template-columns:76px 1px 76px;justify-items:center;align-items:center;gap:8px!important}
