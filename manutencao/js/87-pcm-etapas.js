@@ -2,8 +2,8 @@
    Só no modo enxuto (empurradores). Menu em PCM_MENU (js/85). Aqui:
    · Situação da frota (enxhoje): matriz ou cartões · Pendências (enxpend): o que cada etapa tem pendente agora, em colunas, cada cartão leva à tela que resolve
    · 3.3 Calibração do MCP (enxcal): folga de válvulas, bicos injetores e demais ajustes do Anexo I por motor (mesma conta da tela Calibração)
-   · 4.1 Plano de ação (enxacao): ação · responsável · prazo · situação · conclusão com evidência (PDCA); registros snap tipo 'acao'
-   · checklist de fechamento mensal (pcmChecklist): mostrado na 4.2 e conferido na emissão do relatório
+   · 4.2 Plano de ação (enxacao; 4.1 desde a 3.92 = Indicadores, js/90): ação · responsável · prazo · situação · conclusão com evidência (PDCA); registros snap tipo 'acao'
+   · checklist de fechamento mensal (pcmChecklist): mostrado na 4.3 e conferido na emissão do relatório
    · faixa das etapas no topo (pcmFaixa, pelo opPassos do js/84) e títulos técnicos (PCM_TIT, pelo render) */
 'use strict';
 const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejamento', ['enxcr', 'enx', 'cxr']], ['3', 'Condição', ['oleo', 'enxcal', 'compr', 'anoleo', 'enxarr', 'enxsen', 'enxdiag']], ['4', 'Fechamento', ['enxacao', 'enxrel']]];
@@ -26,7 +26,7 @@ function vEnxAcao() {
   const A = pcmAcoes(), ab = A.filter(a => a.st !== 'concluida' && a.st !== 'cancelada').sort((a, b) => (a.prazo || '9') < (b.prazo || '9') ? -1 : 1), fe = A.filter(a => a.st === 'concluida' || a.st === 'cancelada').sort((a, b) => (b.concl || '') < (a.concl || '') ? -1 : 1).slice(0, 20);
   const lin = (a, bt) => { const s = PCM_SIT[pcmSitu(a)]; return `<tr><td class="nowrap"><b>${esc(a.num || '')}</b><div class="note">${brD(a.date)}</div></td><td>${esc(a.txt)}<div class="note">${esc(a.orig || '')}</div>${a.ev ? `<div class="note">evidência: ${esc(a.ev)}</div>` : ''}</td><td>${esc(a.resp || '')}</td><td class="nowrap">${a.prazo ? brD(a.prazo) : '—'}</td><td><span class="pill ${s[0]}">${s[1]}</span>${a.concl ? `<div class="note">${brD(a.concl)}</div>` : ''}</td><td class="nowrap">${bt}</td></tr>`; };
   const tab = (L, bt, vz) => `<div class="tw"><table class="t"><thead><tr><th>Nº</th><th>Ação (o quê) · origem</th><th>Responsável</th><th>Prazo</th><th>Situação</th><th></th></tr></thead><tbody>${L.map(a => lin(a, bt(a))).join('') || `<tr><td colspan="6" class="note">${vz}</td></tr>`}</tbody></table></div>`;
-  return enxCab('4.1 Plano de ação', 'Ação corretiva ou de melhoria com responsável e prazo · conclua com a evidência (verificação de eficácia) · o relatório gerencial mostra no prazo, atrasadas e concluídas no período', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+  return enxCab('4.2 Plano de ação', 'Ação corretiva ou de melhoria com responsável e prazo · conclua com a evidência (verificação de eficácia) · o relatório gerencial mostra no prazo, atrasadas e concluídas no período', '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Em andamento · ${ab.length}${ab.filter(a => pcmSitu(a) === 'atrasada').length ? ` · <span style="color:var(--badt)">${ab.filter(a => pcmSitu(a) === 'atrasada').length} atrasada(s)</span>` : ''}</h2>${tab(ab, a => `<button class="mbtn sm pri" data-acok="${a.id}">Encerrar</button>${can.admin() ? ` <button class="mbtn sm" data-acx="${a.id}">Cancelar</button>` : ''}`, 'Nenhuma ação em andamento.')}</div>
    <div class="card"><h2>Nova ação</h2><div class="g"><label class="f s6">Ação (o quê)<input id="acT" placeholder="ex.: substituir a bomba de água salgada do MCA 1 do CJA I e revisar o plano do item"></label>
      <label class="f s2">Origem<select id="acO">${PCM_ORIG.map(o => `<option>${o}</option>`).join('')}</select></label><label class="f s2">Responsável (quem)<input id="acR"></label><label class="f s2">Prazo (quando)<input type="date" id="acP" min="${isoD(hoje())}"></label></div>
