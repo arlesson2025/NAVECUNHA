@@ -248,7 +248,7 @@ function sfCard() {
 const PD_N = { k: null, at: 0, n: 0 };
 // contadores do menu (baratos: sem recalcular relatório)
 function pcmContagem() {
-  const C = {}; try { C.enx = enxDados().reduce((a, x) => a + x.venc.length, 0); } catch (e) { }
+  const C = {}; try { C.enx = enxDados().filter(x => x.venc.length).length; /* 3.88: empurradores com vencido; a soma de serviços dava 107 e perdia o sentido */ } catch (e) { }
   try { const k = S.recs.__v + '|' + isoD(hoje()); if (PD_N.k !== k || Date.now() - PD_N.at > 20000) Object.assign(PD_N, { k, at: Date.now(), n: pcmPainel().reduce((a, g) => a + g.length, 0) }); C.enxpend = PD_N.n; } catch (e) { }   // contagem com memória: pcmPainel custa ~0,25 s
   C.enxcor = oms().filter(o => o.tipo === 'C' && !o.excluido && o.status !== 'encerrada').length;
   C.enxacao = pcmAcoes().filter(a => pcmSitu(a) === 'atrasada').length; return C;
@@ -341,7 +341,7 @@ function mcTopo() {   // chamado pelo render logo depois de montar a tela
   vh.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLE DOS MCP's</span>${MC_VIEWS.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`);
 }
 function vEnxDiag() {
-  return enxCab('3.3 Diagnósticos · condição dos MCP', 'Compressão, consumo de óleo, último laudo e calibração de cada MCP da frota juntos, com a recomendação · os dados vêm de 3.1 Lubrificação e 3.2 Controles', '<button class="mbtn" data-enxreset>Reorganizar</button>') + mcDiagCard() + '</div></div>';
+  return enxCab('3.3 Diagnóstico dos MCP\'s · condição dos motores principais', 'Compressão, consumo de óleo, último laudo e calibração de cada MCP da frota juntos, com a recomendação · os dados vêm de 3.1 Lubrificação e 3.2 Controles', '<button class="mbtn" data-enxreset>Reorganizar</button>') + mcDiagCard() + '</div></div>';
 }
 Object.assign(VX, { enxdiag: vEnxDiag }); AFTER.enxdiag = pcmAfter('enxdiag'); Object.assign(NP_TAG, { enxdiag: '7 · Anexo I 1.1.12, 1.1.29' });
 

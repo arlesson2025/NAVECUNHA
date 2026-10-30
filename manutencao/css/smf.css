@@ -1225,3 +1225,10 @@ table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.c
 #main .ol-sgc .ol-sgL,#main .ol-sgc .ol-sgR{padding:1px 0}
 #main .ol-sgc .ol-sgL i,#main .ol-sgc .ol-sgR i{height:13px}
 #main .ol-sgc .ol-sgx{min-height:22px}
+
+/* 3.88: topo do menu mais baixo (logos menores, sem a linha repetida “Gestão da Manutenção da Frota”) */
+.side .brandbox{padding:7px 10px!important}
+.side .brandbox img{height:38px!important}
+.side .brandbox i{height:30px!important}
+.side .bt span{display:none}
+.side .bt .logo{width:26px;height:26px}
