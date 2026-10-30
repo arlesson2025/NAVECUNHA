@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.85', data: '29/10/2026', itens: ['3.2 Controles · Calibração: tabela Situação por motor no padrão do SMF (cabeçalho claro, linha só entre empurradores, nome do empurrador uma vez só, valores em pílula vermelha, âmbar, verde ou cinza).'] },
   { v: '3.84', data: '29/10/2026', itens: ['Situação da frota: janela Por que não está liberado (cada empurrador bloqueado ou com restrição com o motivo em palavras, e cada motivo leva à tela que resolve); horímetro do MCP sem leitura há mais de 30 dias = aviso na linha e serviços por horas em cinza com “?” em vez de verde; clicar no horímetro abre a 1.1 já no empurrador.'] },
   { v: '3.83', data: '29/10/2026', itens: ['Situação da frota: linhas do título dos blocos e do total no padrão fino das outras linhas, cabeçalhos sem negrito, coluna Itens em dia mais estreita.'] },
   { v: '3.82', data: '29/10/2026', itens: ['Situação da frota: números sem negrito e linha Total da frota no fim da matriz, com vencidos em cima e vencem no mês embaixo em cada coluna.'] },
