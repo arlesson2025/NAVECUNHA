@@ -169,16 +169,20 @@ document.addEventListener('click', e => { const a = e.target.closest('[data-sff]
 function sfFocoAplicar() {
   const F = SF_FOCO; if (!F || Date.now() > F.ate) return; const nome = F.nome;
   const re = new RegExp('^' + nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\s*$|\\s*·|\\s+(BB|BE|CE|MCP|MCA)\\b)');
-  setTimeout(() => { const T = []; $$('#main tr').forEach(tr => { const c = [...tr.children].find(td => re.test(td.textContent.trim()) || [...td.querySelectorAll('b')].some(b => re.test(b.textContent.trim()))); if (!c) return;
+  setTimeout(() => { const T = [], tb = VIEW === 'enxcor' ? $('#main table') : null;   // na 1.2 só a tabela de corretivas abertas (o histórico de encerradas vem depois)
+    (tb ? [...tb.querySelectorAll('tr')] : $$('#main tr')).forEach(tr => { const c = [...tr.children].find(td => re.test(td.textContent.trim()) || [...td.querySelectorAll('b')].some(b => re.test(b.textContent.trim()))); if (!c) return;
       T.push(tr); let n = (c.rowSpan || 1) - 1, r = tr; while (n-- > 0 && (r = r.nextElementSibling)) T.push(r); });
-    if (!T.length) { if (!F.rolou) { F.rolou = true; toast(nome + ': sem dados nesta tela.'); } return; }
+    if (!T.length) { if (F.rolou) return; F.rolou = true;
+      const sel = $('#ecV'), v = S.cfg.frota.find(z => z.nome === nome);   // 1.2 sem corretiva aberta: o formulário de abertura já vem com o empurrador
+      if (VIEW === 'enxcor' && sel && v) { sel.value = v.id; sel.dispatchEvent(new Event('change', { bubbles: true })); sel.closest('.card').scrollIntoView({ block: 'start' }); sel.classList.add('sf-foco-c'); return toast(nome + ': nenhuma corretiva aberta · a abertura de OM já está com o empurrador escolhido.', 5000); }
+      return toast(nome + ': sem dados nesta tela.'); }
     T.forEach(tr => tr.classList.add('sf-foco')); if (!F.rolou) { F.rolou = true; T[0].scrollIntoView({ block: 'center' }); } }, 350);
 }
 const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${x.loc ? ` <span class="sf-mut">· ${x.loc}</span>` : ''}`;
 function sfMatriz(L) {
   const hr = x => x.mot.filter(m => isMcp(m.p)).map(m => `<div><span class="sf-p">${m.p}</span> ${m.h ? nf(m.h.h) + ' h' : '—'} <span class="${m.d == null || m.d > 14 ? 'sf-red' : 'sf-mut'}">${m.d == null ? 'sem leitura' : m.d + ' d'}</span></div>`).join('');
   const lk = (x, h, inner) => `<a href="${h}" class="sf-lk" data-sff="${esc(x.v.nome)}">${inner}</a>`;
-  return `<div class="tw"><table class="sf-mx"><thead><tr><th class="l">Empurrador</th><th class="l">Horímetro MCP</th><th class="l">Itens em dia</th><th>Críticos<small>NP 6.3</small></th>${SF_SIS.map((s, i) => `<th><small>${i + 1}.0</small>${s}</th>`).join('')}<th class="sf-sep" title="3.1 Lubrificação · troca de óleo"><small>3.1 troca</small>Óleo</th><th title="3.2 Controles · 1 Calibração"><small>3.2·1</small>Calibr.</th><th title="3.2 Controles · 2 Compressão"><small>3.2·2</small>Compr.</th><th title="3.2 Controles · 3 Análise de óleo"><small>3.2·3</small>Laudo</th><th title="3.2 Controles · 4 Sistema de arrefecimento"><small>3.2·4</small>Arrefec.</th><th title="3.2 Controles · 5 Sensores"><small>3.2·5</small>Sensor</th><th title="Corretivas abertas"><small>abertas</small>Corret.</th></tr></thead><tbody>
+  return `<div class="tw"><table class="sf-mx"><thead><tr><th class="l">Empurrador</th><th class="l">Horímetro MCP</th><th class="l">Itens em dia</th><th>Críticos<small>NP 6.3</small></th>${SF_SIS.map((s, i) => `<th><small>${i + 1}.0</small>${s}</th>`).join('')}<th class="sf-sep" title="3.1 Lubrificação · troca de óleo"><small>3.1 troca</small>Óleo</th><th title="3.2 Controles · 1 Calibração"><small>3.2·1</small>Calibr.</th><th title="3.2 Controles · 2 Compressão"><small>3.2·2</small>Compr.</th><th title="3.2 Controles · 3 Análise de óleo"><small>3.2·3</small>Laudo</th><th title="3.2 Controles · 4 Sistema de arrefecimento"><small>3.2·4</small>Arrefec.</th><th title="3.2 Controles · 5 Sensores"><small>3.2·5</small>Sensor</th><th title="Corretivas abertas (1.2 Manutenção corretiva)"><small>1.2 abertas</small>Corretivas</th></tr></thead><tbody>
     ${L.map(x => `<tr><td class="sf-n" data-pcmv="${x.v.id}"><b>${esc(x.v.nome)}</b><div>${sfSit(x)}</div></td><td class="sf-hr">${hr(x)}</td>
       <td class="nowrap"><span class="sf-bar"><i style="width:${x.pct || 0}%"></i></span><span class="sf-pc">${x.pct == null ? '—' : x.pct + '%'}</span></td>
       <td class="sf-cc">${x.crit ? `<span class="sf-c sf-r" data-pcmv="${x.v.id}" title="Itens críticos da NP 6.3 vencidos">${x.crit}</span>` : '<span class="sf-g"></span>'}</td>
