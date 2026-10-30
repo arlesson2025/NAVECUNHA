@@ -312,9 +312,9 @@ function enxHorGraf(v) {
     return [MESES[d.getMonth()].slice(0, 3).toLowerCase() + '/' + String(d.getFullYear()).slice(2), isoD(d), isoD(new Date(Math.min(+new Date(d.getFullYear(), d.getMonth() + 1, 0), +h0)))]; });
   const G = mcpPos(v).map(p => { const R = M.map(([l, a, b]) => [l, rmeHoras(I, v.id, p, a, b)]), L = R.map(([l, r]) => [l, Math.round(r.h)]), tot = L.reduce((s, x) => s + x[1], 0);
     const sem = R.filter(([, r]) => r.sem).length, inc = R.some(([, r]) => r.inc);
-    return `<div style="flex:1;min-width:320px"><b>${esc(posCurtoE(v, p))}</b> <span class="note">· 12 meses: ${nf(tot)} h · média ${nf(Math.round(tot / 12))} h/mês${sem ? ` · ${sem} ${sem === 1 ? 'mês' : 'meses'} sem leitura` : ''}${inc ? ' · tem leitura incoerente (fora da soma)' : ''}</span>${rmeGraf(L, { leg: 'horas no mês' })}</div>`; }).join('');
+    return `<div style="flex:1;min-width:320px"><b>${esc(posCurtoE(v, p))}</b> <span class="note">· 12 meses: ${nf(tot)} h · média ${nf(Math.round(tot / 12))} h/mês${sem ? ` · ${sem} ${sem === 1 ? 'mês' : 'meses'} sem leitura` : ''}${inc ? ' · tem leitura incoerente (fora da soma)' : ''}</span>${rmeGraf(L, { leg: 'horas no mês', vert: true })}</div>`; }).join('');
   return `<div class="card"><h2>Horas de operação por mês · ${esc(v.nome)}</h2><div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap">${G}</div>
-    <p class="note">Motores principais (MCP), últimos 12 meses (o mês atual até hoje) · horas somadas leitura a leitura, a mesma conta do relatório mensal · leitura que desce ou passa de 24 h por dia fica fora da soma · escolha o empurrador nos botões acima.</p></div>`;
+    <p class="note">Motores principais (MCP), últimos 12 meses (o mês atual até hoje) · horas somadas leitura a leitura, a mesma conta do relatório mensal · leitura que desce ou passa de 24 h por dia fica fora da soma · clique no nome do empurrador na tabela de leituras para ver outro.</p></div>`;
 }
 async function enxHorSalvar() {
   if (!S.session) return loginModal(); const d = $('#ehD').value; if (!d || d > isoD(hoje())) return toast('Data inválida.');

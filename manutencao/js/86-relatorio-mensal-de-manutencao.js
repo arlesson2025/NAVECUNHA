@@ -134,15 +134,16 @@ const rmeP = v => v == null ? '—' : Math.round(v) + '%';
 const rmeH = (v, d) => v == null ? '—' : nf(v, d == null ? 0 : d) + ' h';
 // gráfico do relatório no desenho do Anexo II: barras finas azul-marinho, linhas finas; acum: 'soma' (acumulado, eixo da direita) ou 'pareto' (% acumulado)
 function rmeGraf(L, o) {
-  o = o || {}; const E0 = 40, n = L.length, longo = L.some(x => String(x[0]).length > 6), soma = o.acum === 'soma', gw = longo ? 64 : 44, W = E0 + (o.acum === 'pareto' ? 46 : 12) + n * gw, H = longo ? 236 : soma ? 226 : 210, E = 40, D = o.acum === 'pareto' ? 46 : 12, T = 22, B = longo ? 46 : soma ? 40 : 26;
-  const bw = 16, mx = o.pct ? 100 : Math.max(1, ...L.map(x => x[1] || 0)), Y = v => T + (H - T - B) * (1 - v / mx), X = i => E + i * gw + gw / 2;
+  o = o || {}; const E0 = 40, n = L.length, longo = L.some(x => String(x[0]).length > 6), soma = o.acum === 'soma', vt = !!o.vert, gw = vt ? 22 : longo ? 64 : 44, W = E0 + (o.acum === 'pareto' ? 46 : 12) + n * gw, H = longo ? 236 : soma ? 226 : 210, E = 40, D = o.acum === 'pareto' ? 46 : 12, T = vt ? 30 : 22, B = vt ? 46 : longo ? 46 : soma ? 40 : 26;
+  const bw = vt ? 14 : 16, mx = o.pct ? 100 : Math.max(1, ...L.map(x => x[1] || 0)), Y = v => T + (H - T - B) * (1 - v / mx), X = i => E + i * gw + gw / 2;
   const inteiro = L.every(x => x[1] == null || Number.isInteger(x[1])), tk = o.pct ? [0, 50, 100] : inteiro && mx <= 5 ? [...Array(mx + 1).keys()] : [0, inteiro ? Math.round(mx / 2) : mx / 2, mx], NV = '#16244A', AC = '#B06000';
   let g = tk.map(t => `<line x1="${E}" x2="${W - D}" y1="${Y(t)}" y2="${Y(t)}" stroke="#E3E8EF" stroke-width=".5"/><text x="${E - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="9" fill="#5F6368">${o.pct ? t + '%' : nf(t)}</text>`).join('');
   g += `<line x1="${E}" x2="${W - D}" y1="${Y(0)}" y2="${Y(0)}" stroke="#1F2A44" stroke-width=".5"/>`;
   if (o.meta != null) g += `<line x1="${E}" x2="${W - D}" y1="${Y(o.meta)}" y2="${Y(o.meta)}" stroke="${AC}" stroke-dasharray="4 3" stroke-width=".7"/><text x="${W - D}" y="${Y(o.meta) - 4}" text-anchor="end" font-size="9" fill="${AC}">referência ${o.meta}%</text>`;
   L.forEach(([lab, v], i) => { const cx = X(i), ruim = o.meta != null && v != null && v < o.meta;
-    if (v) g += `<rect x="${cx - bw / 2}" y="${Y(v)}" width="${bw}" height="${Y(0) - Y(v)}" fill="${ruim ? '#C5221F' : NV}"/><text x="${cx}" y="${Y(v) - 4}" text-anchor="middle" font-size="9" fill="#202124">${o.fmt ? o.fmt(v) : nf(v)}</text>`;
+    if (v) g += `<rect x="${cx - bw / 2}" y="${Y(v)}" width="${bw}" height="${Y(0) - Y(v)}" fill="${ruim ? '#C5221F' : NV}"/>${vt ? `<text x="${cx + 3}" y="${Y(v) - 3}" transform="rotate(-90 ${cx + 3} ${Y(v) - 3})" font-size="9" fill="#202124">${o.fmt ? o.fmt(v) : nf(v)}</text>` : `<text x="${cx}" y="${Y(v) - 4}" text-anchor="middle" font-size="9" fill="#202124">${o.fmt ? o.fmt(v) : nf(v)}</text>`}`;
     const ls = typeof rmQuebra === 'function' && longo ? rmQuebra(lab, 12).slice(0, 2) : [lab];
+    if (vt) { g += `<text x="${cx + 3}" y="${H - B + 6}" transform="rotate(-90 ${cx + 3} ${H - B + 6})" text-anchor="end" font-size="9" fill="#3C4043">${esc(lab)}</text>`; return; }
     g += `<text x="${cx}" y="${H - B + 13}" text-anchor="middle" font-size="9" fill="#3C4043">${ls.map((l, j) => `<tspan x="${cx}" dy="${j ? 11 : 0}">${esc(l)}</tspan>`).join('')}</text>`; });
   if (o.acum) { let s = 0; const tot = L.reduce((a, x) => a + (x[1] || 0), 0) || 1, P = L.map(x => (s += x[1] || 0));
     const top = o.acum === 'pareto' ? tot : Math.max(1, s), Ya = v => T + (H - T - B) * (1 - v / top), pts = P.map((v, i) => [X(i), Ya(v), v]).filter((p, i) => o.acum === 'pareto' || L.slice(0, i + 1).some(x => x[1]));
