@@ -14,7 +14,7 @@ function tvAjusta() {
   for (const raiz of [document.getElementById('main'), ...document.querySelectorAll('.modal')]) {
     if (!raiz) continue;
     for (const el of raiz.querySelectorAll('div,section,table,ul,li,details,summary,article,aside,header,footer')) {
-      if (el.classList.contains('tv-p') || el.closest('svg')) continue;
+      if (el.classList.contains('tv-p') || el.closest('svg,.at-sl')) continue;   // slides da apresentação (4.4) ficam como impressos
       const c = tvCor(getComputedStyle(el).backgroundColor);
       if (c && c.a > 0.85 && c.r > 236 && c.g > 236 && c.b > 236 && el.offsetWidth > 110 && el.offsetHeight > 30) el.classList.add('tv-p');
     }
