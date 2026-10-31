@@ -31,7 +31,7 @@ function cxLinha(v, pos, t, ano) {
   const ini = new Date(ano, 0, 1), fim = new Date(ano + 1, 0, 1), hj = hoje(), iniS = isoD(ini), fimS = isoD(fim);
   const E = cxServicos(v.id, pos, t.id), marks = [];
   let cur = E.filter(e => e.date < iniS).pop() || null;
-  if (!cur && v.marco && v.marco.date && t.id !== DOCA.item) cur = { date: v.marco.date, h: v.marco.h && v.marco.h[hp] != null ? v.marco.h[hp] : null, src: 'Marco zero' };
+  if (!cur && v.marco && v.marco.date && t.id !== DOCA.item) cur = { date: (v.marco.dates && v.marco.dates[hp]) || v.marco.date, h: v.marco.h && v.marco.h[hp] != null ? v.marco.h[hp] : null, src: 'Marco zero' };
   if (!cur) { const f = E.find(e => e.date >= iniS && e.date < fimS); if (f) { marks.push(f.reset ? { k: 'corr', d: pD(f.date), ev: f } : { k: 'ok', d: pD(f.date), ev: f, semPrazo: true }); cur = f; } }
   if (!cur) return { v, pos, t, iv, marks };
   let n = 0;

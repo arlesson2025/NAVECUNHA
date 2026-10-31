@@ -276,29 +276,34 @@ function pcmHorInc() {
 const PCM_SRC = s => !s ? '—' : s === 'base' ? 'apontamento de OM preventiva' : s.startsWith('om:') ? 'OM preventiva ' + s.slice(3) : s.startsWith('fr049') ? 'FR 049_B ' + s.slice(6) : s === 'marco' ? 'marco zero da implantação' : s.startsWith('corr:') ? 'corretiva ' + s.slice(5) : s;
 function pcmHorIncCard() {
   const L = pcmHorInc(); if (!L.length) return '';
-  return `<div class="card"><h2 style="color:var(--badt)">Registros com horímetro inconsistente · ${L.length}</h2><p class="note">O último serviço foi registrado com horímetro <b>acima</b> da leitura atual do motor (digitação, horímetro de outro motor ou horímetro trocado). Enquanto não for corrigido, o item fica “sem referência” e não vence. Corrija com o horímetro real do dia do serviço.</p>
+  return `<div class="card"><h2 style="color:var(--badt)">Registros com horímetro inconsistente · ${L.length}</h2><p class="note">O horímetro do último serviço não combina com as leituras do motor: está <b>acima</b> da leitura atual, ou entre o serviço e a leitura atual há <b>mais horas do que cabem nos dias</b> (24 h por dia). Quase sempre é serviço lançado com a data do dia do lançamento e o horímetro de quando foi feito. Enquanto não for corrigido, o item fica “sem referência” e não vence. Corrija a data ou o horímetro para os do dia real do serviço.</p>
     <div class="tw"><table class="t"><thead><tr><th>Empurrador · motor</th><th>Item</th><th>Registro de origem</th><th class="r">Horímetro registrado</th><th class="r">Leitura atual</th><th></th></tr></thead><tbody>
-    ${L.map(x => `<tr><td><b>${esc(x.v.nome)}</b> · ${esc(posCurtoE(x.v, x.s.hp || x.pos))}</td><td>${esc(x.t.id)} ${esc(x.t.chk || x.t.item)}</td><td>${esc(PCM_SRC(x.s.L.src))} · ${brD(x.s.L.date)}</td><td class="r"><b style="color:var(--badt)">${nf(x.s.L.h)} h</b></td><td class="r">${nf(x.s.cur)} h</td><td><button class="mbtn sm pri" data-hcorr="${x.v.id}|${x.pos}|${x.t.id}">Corrigir horímetro</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    ${L.map(x => `<tr><td><b>${esc(x.v.nome)}</b> · ${esc(posCurtoE(x.v, x.s.hp || x.pos))}</td><td>${esc(x.t.id)} ${esc(x.t.chk || x.t.item)}</td><td>${esc(PCM_SRC(x.s.L.src))} · ${brD(x.s.L.date)}</td><td class="r"><b style="color:var(--badt)">${nf(x.s.L.h)} h</b></td><td class="r">${nf(x.s.cur)} h</td><td><button class="mbtn sm pri" data-hcorr="${x.v.id}|${x.pos}|${x.t.id}">Corrigir</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
+// corrige o registro de origem: horímetro e, no apontamento de OM e no marco zero, também a data (SMF 3.110)
 function pcmHorCorrigir(vid, pos, item) {
   const v = vessel(vid), t = A1M[item], L = ultimoServico(vid, pos, item); if (!v || !t || !L) return; if (!S.session) return loginModal();
-  const hp = posHor(pos, t, vid), perto = horEm(vid, hp, L.date), cur = horAtual(vid, hp), src = L.src || '';
-  if (src === 'marco' || src.startsWith('corr:') || src.startsWith('laudo')) return toast('Este registro vem do ' + PCM_SRC(src) + (src === 'marco' ? ': corrija o marco zero em Administração.' : ': registre o serviço de novo na 2.2 (Apontar execução) com a data e o horímetro reais; o registro mais novo passa a valer.'), 8000);
+  const hp = posHor(pos, t, vid), perto = horEm(vid, hp, L.date), cur = horAtual(vid, hp), src = L.src || '', comData = src === 'base' || src === 'marco';
+  if (src.startsWith('corr:') || src.startsWith('laudo')) return toast('Este registro vem do ' + PCM_SRC(src) + ': registre o serviço de novo na 2.2 (Apontar execução) com a data e o horímetro reais; o registro mais novo passa a valer.', 8000);
+  if (src === 'marco' && !can.admin()) return toast('Só o Supervisor corrige o marco zero.');
   const irmaos = src === 'base' ? recs('base').filter(b => b.vessel === vid && b.date === L.date && !b.nf && !b.excluido && +b.h === +L.h && A1M[b.item] && posHor(b.pos, A1M[b.item], vid) === hp) : [];
-  modal(`<h2>Corrigir horímetro · ${esc(v.nome)} · ${esc(posCurtoE(v, hp))}</h2><p class="note">${esc(item)} ${esc(t.chk || t.item)} · ${esc(PCM_SRC(src))} de ${brD(L.date)}</p>
-   <table class="t"><tbody><tr><td>Horímetro registrado</td><td class="r"><b style="color:var(--badt)">${nf(L.h)} h</b></td></tr><tr><td>Leitura mais próxima do dia do serviço</td><td class="r">${perto ? nf(perto.h) + ' h em ' + brD(perto.date) : '—'}</td></tr><tr><td>Leitura atual</td><td class="r">${cur ? nf(cur.h) + ' h em ' + brD(cur.date) : '—'}</td></tr></tbody></table>
-   <div class="g"><label class="f s3">Horímetro correto no dia do serviço<input id="hcH" inputmode="decimal" value="${perto ? perto.h : ''}"></label></div>
-   ${irmaos.length > 1 ? `<label class="row" style="gap:6px"><input type="checkbox" id="hcT" checked> Corrigir também os outros ${irmaos.length - 1} serviço(s) apontados no mesmo dia com o mesmo horímetro${L.om ? '' : ''}</label>` : ''}
+  modal(`<h2>Corrigir registro · ${esc(v.nome)} · ${esc(posCurtoE(v, hp))}</h2><p class="note">${esc(item)} ${esc(t.chk || t.item)} · ${esc(PCM_SRC(src))} de ${brD(L.date)}${src === 'marco' ? ' (vale para todos os itens do motor sem serviço registrado)' : ''}</p>
+   <table class="t"><tbody><tr><td>Registrado</td><td class="r"><b style="color:var(--badt)">${nf(L.h)} h em ${brD(L.date)}</b></td></tr><tr><td>Leitura até o dia registrado</td><td class="r">${perto ? nf(perto.h) + ' h em ' + brD(perto.date) : '—'}</td></tr><tr><td>Leitura atual</td><td class="r">${cur ? nf(cur.h) + ' h em ' + brD(cur.date) : '—'}</td></tr></tbody></table>
+   <div class="g">${comData ? `<label class="f s3">Data real do serviço<input type="date" id="hcD" value="${L.date}" max="${isoD(hoje())}"></label>` : ''}<label class="f s3">Horímetro no dia do serviço<input id="hcH" inputmode="decimal" value="${L.h != null ? L.h : perto ? perto.h : ''}"></label></div>
+   <p class="note">Se o horímetro está certo e foi a data que ficou com o dia do lançamento, corrija só a data.</p>
+   ${irmaos.length > 1 ? `<label class="row" style="gap:6px"><input type="checkbox" id="hcT" checked> Corrigir também os outros ${irmaos.length - 1} serviço(s) apontados no mesmo dia com o mesmo horímetro</label>` : ''}
    <div class="note" id="hcE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="hcOk">Corrigir</button></div>`);
-  $('#hcOk').onclick = async () => { const h = +String($('#hcH').value).replace(/\./g, '').replace(',', '.'), E = $('#hcE');
-    if (!(h > 0)) return E.textContent = 'Informe o horímetro.'; if (cur && !cur.est && h > cur.h) return E.textContent = 'O horímetro do serviço não pode ser maior que a leitura atual (' + nf(cur.h) + ' h).';
-    const ev = { at: Date.now(), by: S.session.name, ev: 'Horímetro corrigido de ' + L.h + ' para ' + h + ' h (inconsistente com a leitura)' };
-    if (src === 'base') { const R = ($('#hcT') && $('#hcT').checked) ? irmaos : irmaos.filter(b => b.item === item && b.pos === pos).slice(0, 1);
-      for (const b of R) { b.hCorrDe = b.hCorrDe ?? b.h; b.h = h; b.hist = (b.hist || []).concat([ev]); await saveRec(b); } }
+  $('#hcOk').onclick = async () => { const h = +String($('#hcH').value).replace(/\./g, '').replace(',', '.'), d = comData ? $('#hcD').value : L.date, E = $('#hcE');
+    if (!(h > 0)) return E.textContent = 'Informe o horímetro.'; if (!d || d > isoD(hoje())) return E.textContent = 'Data inválida.';
+    const er = horPossivel(vid, hp, h, d); if (er) return E.textContent = er;
+    const ev = { at: Date.now(), by: S.session.name, ev: 'Registro corrigido de ' + L.h + ' h em ' + brD(L.date) + ' para ' + h + ' h em ' + brD(d) + ' (horímetro inconsistente com as leituras)' };
+    if (src === 'marco') { v.marco.h = Object.assign({}, v.marco.h, { [hp]: h }); if (d !== v.marco.date) { v.marco.dates = Object.assign({}, v.marco.dates, { [hp]: d }); } v.marco.hist = (v.marco.hist || []).concat([ev]); await salvarFrotaCfg(); }
+    else if (src === 'base') { const R = ($('#hcT') && $('#hcT').checked) ? irmaos : irmaos.filter(b => b.item === item && b.pos === pos).slice(0, 1);
+      for (const b of R) { b.hCorrDe = b.hCorrDe ?? b.h; if (d !== b.date) b.dCorrDe = b.dCorrDe ?? b.date; b.h = h; b.date = d; b.hist = (b.hist || []).concat([ev]); await saveRec(b); } }
     else if (src.startsWith('om:')) { const o = oms().find(o => o.num === src.slice(3) && o.vessel === vid); if (o) { o.hreal = h; o.hist = (o.hist || []).concat([ev]); await saveRec(o); } }
     else if (src.startsWith('fr049')) { const r = recs('lub').find(r => r.tipo === 'fr049' && r.vessel === vid && r.date === L.date && (r.eq || []).some(q => q.pos === pos && (q.itens || []).includes(item)));
       if (r) { r.eq.filter(q => q.pos === pos && +q.hr === +L.h).forEach(q => { q.hr = h; }); r.hist = (r.hist || []).concat([ev]); await saveRec(r); } }
-    closeModal(); toast('Horímetro corrigido.'); render(); };
+    closeModal(); toast('Registro corrigido.'); render(); };
 }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-hcorr]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const [v, p, i] = b.dataset.hcorr.split('|'); pcmHorCorrigir(v, p, i); }, true);
 // ---------- 3.2 Condição dos MCP (SMF 3.56; Supervisor, 29/10/2026: “coloca esses 3 numa mesma janela e cria uma janela para o diagnóstico de condição dos MCP da frota”) ----------

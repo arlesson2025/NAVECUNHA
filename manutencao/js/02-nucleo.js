@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.109';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.110';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -229,6 +229,21 @@ function horAtual(vid, pos) {   // leitura real mais recente ou estimativa (MCA 
   const dias = Math.max(0, Math.floor((hoje() - pD(base.date)) / 864e5));
   return { vessel: vid, pos, h: Math.round(base.h + e.hd * dias), date: isoD(hoje()), est: true, by: 'estimativa ' + nf(e.hd, 1) + ' h/dia' };
 }
+// horímetro possível na data (SMF 3.110; Supervisor, 30/10/2026: calibrações lançadas com a data do lançamento e o horímetro de meses antes deram
+// “1.571 h em 12 dias”): entre a leitura anterior e a seguinte do mesmo motor, no máximo 24 h por dia + 24 h de folga. Devolve o aviso ou ''.
+// Leituras estimadas não contam; horímetro trocado (v.horOff) separa as leituras: só valem as do mesmo lado da troca.
+function horPossivel(vid, pos, h, date) {
+  if (h == null || h === '' || isNaN(+h) || !date) return ''; h = +h; const v = vessel(vid), nome = v ? posCurtoE(v, pos) : pos;
+  const tr = ((v && v.horOff && v.horOff[pos]) || []).map(x => x.date).filter(Boolean).sort(), lado = d => tr.filter(x => x <= d).length;
+  let a = null, b = null; recs('hor').forEach(r => { if (r.vessel !== vid || r.pos !== pos || r.est || r.excluido || r.h == null || r.h === '' || lado(r.date) !== lado(date)) return;
+    if (r.date <= date) { if (!a || r.date > a.date || (r.date === a.date && +r.h > +a.h)) a = r; } else if (!b || r.date < b.date || (r.date === b.date && +r.h < +b.h)) b = r; });
+  const dd = (x, y) => Math.max(0, Math.round((pD(y) - pD(x)) / 864e5)), mx = n => n * 24 + 24;
+  if (a && h < +a.h - .5) return `Horímetro de ${nome} (${nf(h)} h) menor que a leitura de ${brD(a.date)} (${nf(+a.h)} h). Confira o horímetro e a data.`;
+  if (a && h - +a.h > mx(dd(a.date, date))) return `Horímetro de ${nome} impossível: ${nf(h - +a.h)} h acima da leitura de ${brD(a.date)} (${nf(+a.h)} h) em ${dd(a.date, date)} dia(s); o máximo é ${nf(mx(dd(a.date, date)))} h. Confira o horímetro e a data.`;
+  if (b && h > +b.h + .5) return `Horímetro de ${nome} (${nf(h)} h) maior que a leitura de ${brD(b.date)} (${nf(+b.h)} h), que é depois desta data. Confira o horímetro e a data.`;
+  if (b && +b.h - h > mx(dd(date, b.date))) return `Horímetro de ${nome} impossível nesta data: a leitura de ${brD(b.date)} (${nf(+b.h)} h) fica ${nf(+b.h - h)} h acima em ${dd(date, b.date)} dia(s); o máximo é ${nf(mx(dd(date, b.date)))} h. Se o serviço foi feito antes, informe a data real em que foi feito.`;
+  return '';
+}
 function horEm(vid, pos, date) { // último horímetro até a data
   let best = null; recs('hor').forEach(r => { if (r.vessel === vid && r.pos === pos && r.date <= date && (!best || r.date > best.date)) best = r; }); return best;
 }
@@ -250,7 +265,7 @@ function ultServBase(vid, pos, itemId) {
   if (best) return best;
   if (itemId === DOCA.item) return null;   // docagem não conta do marco zero
   const v = vessel(vid), m = v && v.marco; if (!m || !m.date) return null;   // marco zero da implantação
-  const t = A1M[itemId], hp = t ? posHor(pos, t, vid) : pos; const h = m.h && m.h[hp] != null ? m.h[hp] : null; return { h, date: m.date, src: 'marco' };
+  const t = A1M[itemId], hp = t ? posHor(pos, t, vid) : pos; const h = m.h && m.h[hp] != null ? m.h[hp] : null; return { h, date: (m.dates && m.dates[hp]) || m.date, src: 'marco' };
 }
 function omAberta(vid, pos, itemId) { return oms().find(o => o.tipo === 'P' && o.status !== 'encerrada' && o.vessel === vid && o.pos === pos && (o.items || []).includes(itemId)); }
 // situação de um item: venc | viag | ok | sem (sem histórico) | cond (por condição)
@@ -277,6 +292,9 @@ function situacao(v, pos, t, viagemH) {
   // do cronograma; fica “sem referência” com o aviso até ser corrigido em 1.1 Horímetros (SMF 3.28). Tolerância: serviço lançado depois da última leitura (dias × 24 h)
   if (iv.h && L.h !== null && L.h !== undefined && cur !== null && hr && !hr.est && L.h - cur > Math.max(24, ((pD(L.date) - pD(hr.date)) / 864e5) * 24 + 24))
     return { st: 'sem', inc: true, txt: `Horímetro inconsistente: serviço de ${brD(L.date)} com ${nf(L.h)} h, leitura atual ${nf(cur)} h`, cur, hp, L };
+  // o contrário (SMF 3.110): mais horas desde o serviço do que cabem nos dias (serviço lançado com a data do lançamento e o horímetro de meses antes)
+  if (iv.h && L.h !== null && L.h !== undefined && cur !== null && hr && !hr.est && hr.date >= L.date && cur - L.h > ((pD(hr.date) - pD(L.date)) / 864e5) * 24 + 24)
+    return { st: 'sem', inc: true, txt: `Horímetro inconsistente: ${nf(cur - L.h)} h desde o serviço de ${brD(L.date)} (${nf(L.h)} h) até a leitura de ${brD(hr.date)}, em ${Math.round((pD(hr.date) - pD(L.date)) / 864e5)} dia(s)`, cur, hp, L };
   viagemH = viagemH === undefined ? viagemDe(v) : viagemH;
   let st = 'ok', txt = [], alvoH = null, alvoD = null, rest = null;
   const ord = { ok: 0, viag: 1, venc: 2 }, up = s => { if (ord[s] > ord[st]) st = s; };
@@ -650,6 +668,7 @@ function compModal(vid, pos) {
     if (!dv) return toast('Informe a data.'); if (vals.filter(Boolean).length < 6) return toast('Informe os 6 cilindros.');
     if (vals.some(v => numBR(v) == null || numBR(v) < 0.3 || numBR(v) > 4)) return toast('Confira os valores: MPa (ex.: 1,72) ou kgf/cm² (ex.: 17,5).');
     const hv = $('#cH').value.trim();
+    { const er = hv === '' ? '' : horPossivel($('#cV').value, $('#cP').value, +hv.replace(/\D/g, ''), dv); if (er) return toast(er, 9000); }
     await saveRec({ id: uid('comp'), kind: 'comp', vessel: $('#cV').value, pos: $('#cP').value, date: dv, h: hv === '' ? null : +hv.replace(/\D/g, ''), vals, rpm: $('#cR').value.trim(), by: S.session.name });
     closeModal(); toast('Ensaio de compressão registrado.'); render();
   };
@@ -830,7 +849,7 @@ function baseModal(vid, pos, item) {
   modal(`<h2>Último serviço · ${item}</h2><p class="note">${esc(vName(vid))} · ${POSN[pos]} · ${esc(t.chk)}. Use para registrar o ponto de partida de itens feitos antes do SMF. Depois, o próprio encerramento da OM atualiza.</p>
    <div class="g"><label class="f s3">Horímetro do serviço (${hp})<input id="bH" inputmode="numeric" value="${L && L.h !== null ? L.h : h ? h.h : ''}"></label><label class="f s3">Data do serviço<input id="bD" type="date" value="${L ? L.date : isoD(hoje())}"></label></div>
    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="bOk">Salvar</button></div>`);
-  $('#bOk').onclick = async () => { const hv = $('#bH').value.trim(), dv = $('#bD').value; if (!dv) return toast('Informe a data.'); await saveRec({ id: uid('base'), kind: 'base', vessel: vid, pos, item, h: hv === '' ? null : +hv.replace(/\D/g, ''), date: dv, by: S.session.name }); closeModal(); toast('Último serviço registrado.'); vesselModal(vid, 'todos'); };
+  $('#bOk').onclick = async () => { const hv = $('#bH').value.trim(), dv = $('#bD').value; if (!dv) return toast('Informe a data.'); { const er = hv === '' ? '' : horPossivel(vid, hp, +hv.replace(/\D/g, ''), dv); if (er) return toast(er, 9000); } await saveRec({ id: uid('base'), kind: 'base', vessel: vid, pos, item, h: hv === '' ? null : +hv.replace(/\D/g, ''), date: dv, by: S.session.name }); closeModal(); toast('Último serviço registrado.'); vesselModal(vid, 'todos'); };
 }
 
 /* =====================================================================

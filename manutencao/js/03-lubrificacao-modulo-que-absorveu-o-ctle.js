@@ -356,6 +356,9 @@ async function lubSalvarForm(data, win) {
   const v = vesselPorNome(data.vessel);
   const dup = fr049s().find(r => (r.vNome === data.vessel || (v && r.vessel === v.id)) && String(r.om) === String(data.om));
   if (dup && !confirm('Já existe FR 049_B salvo para ' + data.vessel + ' com a O.M. ' + data.om + ' (' + brD(dup.date) + ').\nSalvar novamente mesmo assim?')) throw { cancelled: true };
+  if (v) for (const q of data.eq || []) { if (q.status !== 'T' || q.hr == null || q.hr === '' || ['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) continue;   // horímetro possível na data (SMF 3.110)
+    const e = lubEq(v, q.key); if (!e) continue; const hp = lubHp(v, e); let h = +q.hr; if (h < VOLTA) { const t = horPainelTotal(v.id, hp, h, data.date); if (t != null) h = t; }
+    const er = horPossivel(v.id, hp, h, data.date); if (er) { alert('FR 049_B não salvo.\n\n' + (q.name || q.key) + ': ' + er); throw { cancelled: true }; } }
   lubBusy(true, 'Gerando o PDF das 2 folhas…');
   let out = null;
   try {
