@@ -11,7 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
-  { v: '3.105', data: '30/10/2026', itens: ['Gráficos de horas por empurrador: saem os números do ano embaixo dos nomes (o total do ano continua no topo); novo botão Horímetro acumulado, que mostra o horímetro total de cada motor na última leitura'] },
+  { v: '3.105', data: '30/10/2026', itens: ['Gráficos de horas por empurrador: saem os números do ano embaixo dos nomes (o total do ano continua no topo); novo botão Horímetro acumulado, que mostra o horímetro total de cada motor na última leitura, com a linha somando até o horímetro acumulado da frota; a linha laranja passa a ser curva suave'] },
   { v: '3.104', data: '30/10/2026', itens: ['Horas de operação dos MCP e dos MCA por empurrador: volta a linha laranja fina, agora somando as horas do mês empurrador a empurrador, com o total da frota no último ponto'] },
   { v: '3.103', data: '30/10/2026', itens: ['Horas de operação dos MCP e dos MCA por empurrador: sai a linha do % acumulado (em ordem de nome não dizia nada); entra o acumulado do ano — embaixo do nome de cada empurrador e no total da frota (mês e ano)'] },
   { v: '3.102', data: '30/10/2026', itens: ['Horas de operação por mês de cada MCP: meses e números na vertical, barras coladas (opção vert do rmeGraf)'] },
