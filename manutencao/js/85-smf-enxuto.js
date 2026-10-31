@@ -273,9 +273,12 @@ function hpGrupos(G, cores) {
       vt += `<text x="${bx + bw / 2}" y="${Y(h) - 4}" transform="rotate(-90 ${bx + bw / 2} ${Y(h) - 4})" font-size="9" fill="#1F2A44" stroke="#fff" stroke-width="2.5" paint-order="stroke">${nf(h)}</text>`; });
     String(nome).split(' ').slice(0, 2).forEach((w, j) => { g += `<text x="${cx}" y="${H - B + 13 + j * 11}" text-anchor="middle" font-size="9.5" fill="#475569">${esc(w)}</text>`; });
     x += sl[k]; });
-  if (P.length > 1 && G.every(x => x[2] != null)) { const u = P[P.length - 1], ent = (y, a, b) => Math.min(Math.max(a, b), Math.max(Math.min(a, b), y));
-    let d = `M${P[0][0]},${P[0][1]}`; for (let i = 0; i < P.length - 1; i++) { const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;   // curva suave (Catmull-Rom) presa entre os pontos: só sobe, como a soma
-      d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${ent(p1[1] + (p2[1] - p0[1]) / 6, p1[1], p2[1])} ${p2[0] - (p3[0] - p1[0]) / 6},${ent(p2[1] - (p3[1] - p1[1]) / 6, p1[1], p2[1])} ${p2[0]},${p2[1]}`; }
+  if (P.length > 1 && G.every(x => x[2] != null)) { const u = P[P.length - 1], n = P.length;
+    // curva suave monótona (Fritsch–Carlson): passa por todos os pontos, só sobe e não fica reta entre eles (Supervisor, 30/10/2026: “suave e não reta”)
+    const dx = [], m = [], t = []; for (let k = 0; k < n - 1; k++) { dx[k] = P[k + 1][0] - P[k][0]; m[k] = (P[k + 1][1] - P[k][1]) / dx[k]; }
+    t[0] = m[0]; t[n - 1] = m[n - 2]; for (let k = 1; k < n - 1; k++) t[k] = m[k - 1] * m[k] <= 0 ? 0 : (m[k - 1] + m[k]) / 2;
+    for (let k = 0; k < n - 1; k++) { if (!m[k]) { t[k] = t[k + 1] = 0; continue; } const a = t[k] / m[k], b = t[k + 1] / m[k], h = a * a + b * b; if (h > 9) { const q = 3 / Math.sqrt(h); t[k] = q * a * m[k]; t[k + 1] = q * b * m[k]; } }
+    let d = `M${P[0][0]},${P[0][1]}`; for (let k = 0; k < n - 1; k++) d += ` C${P[k][0] + dx[k] / 3},${P[k][1] + t[k] * dx[k] / 3} ${P[k + 1][0] - dx[k] / 3},${P[k + 1][1] - t[k + 1] * dx[k] / 3} ${P[k + 1][0]},${P[k + 1][1]}`;
     g += `<path d="${d}" fill="none" stroke="#E07B24" stroke-width="1"/>` + P.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2" fill="#fff" stroke="#E07B24" stroke-width="1"><title>somado até aqui: ${nf(p[2])} h</title></circle>`).join('');
     vt += `<text x="${u[0] + 7}" y="${u[1] + 3}" font-size="9.5" fill="#B06000" stroke="#fff" stroke-width="2.5" paint-order="stroke">${nf(u[2])} h</text>`; }
   return `<svg viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${Math.round(W * 1.45)}px;max-width:100%" data-nodrag>${g}${vt}</svg>`;
