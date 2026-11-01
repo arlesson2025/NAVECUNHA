@@ -251,7 +251,9 @@ function pcmContagem() {
   const C = {}; try { C.enx = enxDados().filter(x => x.venc.length).length; /* 3.88: empurradores com vencido; a soma de serviços dava 107 e perdia o sentido */ } catch (e) { }
   try { const k = S.recs.__v + '|' + isoD(hoje()); if (PD_N.k !== k || Date.now() - PD_N.at > 20000) Object.assign(PD_N, { k, at: Date.now(), n: pcmPainel().reduce((a, g) => a + g.length, 0) }); C.enxpend = PD_N.n; } catch (e) { }   // contagem com memória: pcmPainel custa ~0,25 s
   C.enxcor = oms().filter(o => o.tipo === 'C' && !o.excluido && o.status !== 'encerrada').length;
-  C.enxacao = pcmAcoes().filter(a => pcmSitu(a) === 'atrasada').length; return C;
+  C.enxacao = pcmAcoes().filter(a => pcmSitu(a) === 'atrasada').length;
+  if (typeof gsReqs === 'function') C.semsc = gsReqs().filter(r => gsAberta(r) && gsDias(r) > 15).length;   // 5.1: SC/RM em aberto há mais de 15 dias (js/93)
+  return C;
 }
 // ---------- telas e cliques ----------
 const pcmAfter = k => () => { const m = $('#main');
