@@ -5,9 +5,10 @@
      com os dias em aberto (até 7 · 8 a 15 · mais de 15 · mais de 30), situação, previsão e OM ligada. O SMF não fala com o
      Sankhya: cadastro à mão ou “Colar do Sankhya” (linhas copiadas do Excel: Nº · Data · Descrição · Empurrador/balsa · OM).
      Registro: snap tipo 'screq' (tp SC/RM, num, date, txt, vessel, om, urg, prev, st, fim, obs, hist).
-     SMF 3.116: “📄 Ler PDF do Sankhya” lê o impresso da requisição/pedido (pdf.js em lib/pdfjs, carregado só no uso): nº, data,
+     SMF 3.116: “📄 PDF de solicitação (SC)” e “📄 PDF de requisição (RM)” leem o impresso da requisição/pedido (pdf.js em lib/pdfjs, carregado só no uso): nº, data,
      situação no Sankhya (stSk), aplicação (apl → empurrador ou balsa), necessidade (nec), requisito (vira o txt) e os itens
-     (itens = [[item, código, descrição, unidade, quantidade]]). Valores unitário e total NÃO são lidos (Supervisor: “fictícios, não considero”).
+     (itens = [[item, código, descrição, unidade, quantidade]]). O tipo vem do botão (o impresso é igual para SC e RM; Supervisor:
+     “é melhor ter algo que fale para o sistema se é solicita ou requisição”); nº igual só atualiza se for do mesmo tipo. Valores unitário e total NÃO são lidos (Supervisor: “fictícios, não considero”).
    · 5.2 Reunião de sexta (semreun): semana de segunda a domingo; números da semana calculados dos registros (frota, balsas,
      corretivas, preventivas, óleo, disponibilidade, SC/RM), entregas, riscos e decisões, próxima semana; o texto do Supervisor
      e a conferência dos compromissos da semana anterior em snap tipo 'semana' (id snap-semana-<segunda>).
@@ -56,8 +57,8 @@ function vSemSc() {
      <div class="cm-chips">${chip('ab', 'Todas em aberto')}${chip('SC', 'SC')}${chip('RM', 'RM')}${chip('fim', 'Atendidas e canceladas')}</div>
      <div class="tw"><table class="t"><thead><tr><th>Nº · data</th><th>Em aberto</th><th>Item / serviço</th><th>Empurrador / balsa</th><th>OM</th><th>Situação</th><th></th></tr></thead>
      <tbody>${L.map(lin).join('') || `<tr><td colspan="7" class="note">${R.length ? 'Nada neste filtro.' : 'Nenhuma solicitação ou requisição cadastrada. Cadastre abaixo ou cole as linhas do Sankhya.'}</td></tr>`}</tbody></table></div></div>
-   <div class="card"><div class="row"><h2>Nova solicitação ou requisição</h2><span class="sp"></span><label class="mbtn pri" style="cursor:pointer">📄 Ler PDF do Sankhya<input type="file" id="gsPdf" accept="application/pdf,.pdf" hidden></label></div>
-     <p class="note">O jeito mais rápido: escolha o PDF impresso da requisição ou do pedido no Sankhya. O SMF lê o nº, a data, a situação, a aplicação (empurrador ou balsa), o requisito e os itens com quantidade; os valores não são lidos. Ou preencha à mão:</p><div class="g">
+   <div class="card"><div class="row"><h2>Nova solicitação ou requisição</h2><span class="sp"></span><label class="mbtn pri" style="cursor:pointer">📄 PDF de solicitação (SC)<input type="file" data-gspdf="SC" accept="application/pdf,.pdf" hidden></label> <label class="mbtn pri" style="cursor:pointer">📄 PDF de requisição (RM)<input type="file" data-gspdf="RM" accept="application/pdf,.pdf" hidden></label></div>
+     <p class="note">O jeito mais rápido: clique no botão do tipo certo (SC ou RM; o impresso do Sankhya é igual para os dois, por isso é você quem diz o tipo) e escolha o PDF. O SMF lê o nº, a data, a situação, a aplicação (empurrador ou balsa), o requisito e os itens com quantidade; os valores não são lidos. Ou preencha à mão:</p><div class="g">
      <label class="f s1">Tipo<select id="gsT"><option>SC</option><option>RM</option></select></label><label class="f s1">Nº no Sankhya<input id="gsN"></label>
      <label class="f s1">Data do pedido<input type="date" id="gsD" value="${isoD(hoje())}" max="${isoD(hoje())}"></label><label class="f s3">Item / serviço pedido<input id="gsX" placeholder="ex.: bomba Darka H53 3 CV trifásica"></label>
      <label class="f s2">Empurrador / balsa<select id="gsV">${gsOndeOps('')}</select></label><label class="f s1">OM ligada<input id="gsO"></label>
@@ -135,19 +136,19 @@ function gsLerSankhya(L) {
   const iR = L.findIndex(l => /REQUISITO:/i.test(l));
   if (iR >= 0) { R.req = L[iR].replace(/^.*REQUISITO:\s*/i, '').split('\t')[0].trim(); const c = (L[iR + 1] || '').split('\t')[0].trim();
     if (c && !/:/.test(c) && /^[A-ZÀ-Ú0-9 ,.\-/()]+$/.test(c) && c.length < 60) R.req += ' ' + c; }
-  R.tp = /^(R\s*[\\/]?\s*M)\b/i.test(R.apl) ? 'RM' : /^(S\s*[\\/]?\s*C)\b/i.test(R.apl) ? 'SC' : /SOLICITA[ÇC][ÃA]O DE COMPRA/i.test(tudo) ? 'SC' : 'RM';
   L.forEach(l => { const m = l.replace(/\t/g, ' ').match(/^(\d{1,3})\s+(\d{1,8})\s+(.+?)\s+([A-Z]{1,4})\s+(\d{1,3}(?:\.\d{3})*,\d+)\s+\d[\d.]*,\d+\s+\d[\d.]*,\d+$/);
     if (m) R.itens.push([+m[1], m[2], m[3].trim(), m[4], gsNumBR(m[5])]); });
   R.vessel = gsOndeTexto(R.apl) || gsOndeTexto(R.req); R.st = /APROVAD|LIBERAD|CONFIRMAD/.test(R.stSk) && !/EM APROVA|AGUARDANDO/.test(R.stSk) ? 'apr' : /ATENDID/.test(R.stSk) ? 'fim' : /CANCELAD|REPROVAD/.test(R.stSk) ? 'can' : 'ab';
   return R;
 }
-async function gsPdfLer(file) {
+async function gsPdfLer(file, tp) {   // tp = SC ou RM, escolhido pelo botão (o impresso do Sankhya é igual para os dois)
   if (!S.session) return loginModal(); toast('Lendo o PDF…', 1500); let R;
-  try { R = gsLerSankhya(await gsPdfLinhas(file)); } catch (e) { return toast('Não foi possível ler o PDF: ' + e.message, 5000); }
+  try { R = gsLerSankhya(await gsPdfLinhas(file)); R.tp = tp === 'SC' ? 'SC' : 'RM'; } catch (e) { return toast('Não foi possível ler o PDF: ' + e.message, 5000); }
   if (!R.num && !R.itens.length) return toast('Não encontrei nº nem itens neste PDF. Ele é o impresso de requisição ou pedido do Sankhya?', 6000);
-  const ja = gsReqs().find(r => r.num === R.num && r.num);
-  modal(`<h2>${ja ? 'Atualizar' : 'Cadastrar'} pelo PDF do Sankhya</h2><p class="note">Confira o que foi lido. Os valores unitário e total do impresso não são lidos.${ja ? ` Já existe ${esc(ja.tp)} ${esc(ja.num)}: os itens, o requisito e a situação no Sankhya serão atualizados; a situação no SMF e o histórico continuam.` : ''}</p>
-    <div class="g"><label class="f s1">Tipo<select id="gpT"><option${R.tp === 'SC' ? ' selected' : ''}>SC</option><option${R.tp === 'RM' ? ' selected' : ''}>RM</option></select></label><label class="f s1">Nº<input id="gpN" value="${esc(R.num)}"></label>
+  const ja = gsReqs().find(r => r.tp === R.tp && r.num === R.num && r.num);
+  const TPN = { SC: 'solicitação (SC)', RM: 'requisição (RM)' };
+  modal(`<h2>${ja ? 'Atualizar' : 'Cadastrar'} ${TPN[R.tp]} pelo PDF do Sankhya</h2><p class="note">Confira o que foi lido. Os valores unitário e total do impresso não são lidos.${ja ? ` Já existe ${esc(ja.tp)} ${esc(ja.num)}: os itens, o requisito e a situação no Sankhya serão atualizados; a situação no SMF e o histórico continuam.` : ''}</p>
+    <div class="g"><label class="f s1">Tipo<input id="gpT" value="${R.tp}" readonly title="Escolhido no botão. Para trocar, cancele e use o outro botão."></label><label class="f s1">Nº<input id="gpN" value="${esc(R.num)}"></label>
     <label class="f s1">Data<input type="date" id="gpD" value="${esc(R.date || isoD(hoje()))}" max="${isoD(hoje())}"></label><label class="f s1">No Sankhya<input id="gpK" value="${esc(R.stSk)}"></label>
     <label class="f s2">Empurrador / balsa${R.apl ? ` <span class="note">(aplicação: ${esc(R.apl)})</span>` : ''}<select id="gpV">${gsOndeOps(R.vessel)}</select></label>
     <label class="f s4">Requisito / para quê<input id="gpX" value="${esc(R.req || R.nec || (R.itens[0] || [])[2] || '')}"></label><label class="f s1">OM ligada<input id="gpO" value="${esc(ja ? ja.om || '' : '')}"></label><label class="f s1">Prioridade<select id="gpU"><option value="">Normal</option><option value="1"${ja && ja.urg ? ' selected' : ''}>Urgente</option></select></label></div>
@@ -290,7 +291,7 @@ AFTER.semsc = () => { const m = $('#main');
     if (d.gscola !== undefined) return gsColar();
     if (d.gsed) return gsEditar(d.gsed);
     if (d.gsfim) return gsAtendida(d.gsfim); };
-  m.onchange = e => { if (e.target.id === 'gsPdf') { const f = e.target.files[0]; e.target.value = ''; if (f) gsPdfLer(f); } };
+  m.onchange = e => { const tp = e.target.dataset.gspdf; if (tp) { const f = e.target.files[0]; e.target.value = ''; if (f) gsPdfLer(f, tp); } };
   m.oninput = e => { if (e.target.id === 'gsQ') { GS.q = e.target.value; clearTimeout(m._gs); m._gs = setTimeout(() => { render(); const q = $('#gsQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 400); } };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_semsc_lay', '[data-enxreset]'); };
 AFTER.semreun = () => { const m = $('#main');
