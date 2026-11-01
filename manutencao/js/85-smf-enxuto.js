@@ -81,13 +81,13 @@ function enxLinhaTempo(v, x) {
   const mot = mcpPos(v); if (!mot.length) return '';
   const blocos = mot.map(pos => {
     const hr = horAtual(v.id, pos), dias = hr && !hr.est ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(hr.date)) / 864e5)) : null, velho = dias == null || dias > 14;
-    const viag = Math.round(horasViagem(v, pos) || 0), rota = typeof rotaUso === 'function' && rotaUso(v);
+    const rota = typeof rotaUso === 'function' && rotaUso(v), viag = rota ? Math.round(horasViagem(v, pos) || 0) : 0;   // sem viagem em curso não há rota (é escolhida no dia da saída)
     const L = x.P.filter(y => y.s && y.s.hp === pos && y.s.rest != null && intervalo(y.t, v, y.pos).h).map(y => ({ y, r: Math.round(y.s.rest) }));
     const cs = typeof cmpStatus === 'function' ? cmpStatus(v, pos) : null, ovh = cs && cs.proj != null && isFinite(cs.proj) ? Math.round(cs.proj) : null;
     const ini = Math.max(-300, Math.min(0, ...L.map(z => z.r))), fim = Math.max(1000, viag + 100), W = 700, E = 46, D = 20, X = h => E + (W - E - D) * (Math.max(ini, Math.min(fim, h)) - ini) / (fim - ini);
     const G = {}, alem = L.filter(z => z.r > fim); L.filter(z => z.r <= fim).forEach(z => { const k = Math.round(Math.max(z.r, ini) / 25) * 25; (G[k] = G[k] || []).push(z); });
     const cor = r => velho ? '#9AA0A6' : r < 0 ? '#C5221F' : r <= viag ? '#B06000' : '#16244A';
-    let g = `<rect x="${X(0)}" y="30" width="${Math.max(0, X(viag) - X(0))}" height="34" fill="#FEF3E0"/><text x="${X(0) + 4}" y="27" font-size="9.5" fill="#B06000">próxima viagem · ${nf(viag)} h${rota ? ' · ' + esc(rota.nome) : ''}</text>`;
+    let g = rota ? `<rect x="${X(0)}" y="30" width="${Math.max(0, X(viag) - X(0))}" height="34" fill="#FEF3E0"/><text x="${X(0) + 4}" y="27" font-size="9.5" fill="#B06000">viagem em curso · ${esc(rota.nome)} · até ${nf(viag)} h${rota.saida ? ' · saiu em ' + brD(rota.saida) : ''}</text>` : '';
     if (ini < 0) g += `<rect x="${X(ini)}" y="30" width="${X(0) - X(ini)}" height="34" fill="#FCE8E6"/><text x="${X(ini) + 4}" y="27" font-size="9.5" fill="#C5221F">vencido</text>`;
     g += `<line x1="${E}" x2="${W - D}" y1="47" y2="47" stroke="#1F2A44" stroke-width="1"/><line x1="${X(0)}" x2="${X(0)}" y1="24" y2="70" stroke="#1F2A44" stroke-width="1.5"/>`;
     g += `<text x="${X(0)}" y="84" text-anchor="middle" font-size="10" font-weight="700" fill="#1F2A44">agora · ${hr ? nf(hr.h) + ' h' : '—'}</text>`;
@@ -101,9 +101,9 @@ function enxLinhaTempo(v, x) {
     return `<div class="elt"><div class="elt-h"><b>${esc(posCurtoE(v, pos))}</b>${velho ? ` <span class="pill p-mut">horímetro ${dias == null ? 'sem leitura' : 'de ' + dias + ' dias atrás'} · posição aproximada</span>` : ''}</div>
       <svg viewBox="0 0 ${W} 92" width="100%" style="display:block" data-nodrag>${g}</svg>
       ${venc.length ? `<p class="elt-l"><span class="pill p-bad">vencidos · ${venc.length}</span> ${venc.sort((a, b) => a.r - b.r).map(z => nome(z) + ' <span class="note">há ' + nf(-z.r) + ' h</span>').join(' · ')}</p>` : ''}
-      ${antes.length ? `<p class="elt-l"><span class="pill p-warn">vencem antes de voltar · ${antes.length}</span> ${antes.map(z => nome(z) + ' <span class="note">em ' + nf(z.r) + ' h</span>').join(' · ')}</p>` : `<p class="elt-l note">Nada vence durante a próxima viagem.</p>`}
+      ${!rota ? '' : antes.length ? `<p class="elt-l"><span class="pill p-warn">vencem antes de voltar · ${antes.length}</span> ${antes.map(z => nome(z) + ' <span class="note">em ' + nf(z.r) + ' h</span>').join(' · ')}</p>` : `<p class="elt-l note">Nada vence durante esta viagem.</p>`}
       ${cs && cs.st === 'fora' ? `<p class="elt-l"><b style="color:#7B1FA2">Compressão abaixo do limite de serviço (1,27 MPa): inspeção de overhaul.</b></p>` : ovh != null ? `<p class="elt-l note">Compressão: limite de serviço em ~${nf(ovh)} h${ovh <= viag ? ' · <b style="color:#7B1FA2">antes de voltar</b>' : ''}.</p>` : ''}</div>`; });
-  return `<div class="card"><h2>Linha do tempo em horas · ${esc(v.nome)}</h2><p class="note" style="margin-top:0">Serviços que vencem por horas no MCP e no reversor do mesmo bordo, a partir do horímetro de agora · faixa âmbar = horas da próxima viagem · vermelho = vencido, âmbar = vence antes de voltar, azul = depois · número no círculo = serviços no mesmo ponto (passe o mouse para ver) · ▼ = limite de compressão (overhaul)</p>${blocos.join('')}</div>`;
+  return `<div class="card"><h2>Linha do tempo em horas · ${esc(v.nome)}</h2><p class="note" style="margin-top:0">Serviços que vencem por horas no MCP e no reversor do mesmo bordo, a partir do horímetro de agora · em viagem, faixa âmbar = horas da viagem pela rota escolhida na saída (no porto não há faixa: a rota é definida no dia da saída) · vermelho = vencido, âmbar = vence antes de voltar, azul = depois · número no círculo = serviços no mesmo ponto (passe o mouse para ver) · ▼ = limite de compressão (overhaul)</p>${blocos.join('')}</div>`;
 }
 // itens críticos da NP = prioridade Crítica no Anexo I E equipamento da tabela da NP 055 item 6.3 (Supervisor, 28/10/2026: “não acredito que coloque geladeira como item crítico na NP”)
 // 6.3: 1 propulsão (MCP, reversores) · 2 governo · 3 geração (MCA, alternador 30 kVA) · 4 motobomba de incêndio · 5 porão e linha de eixos · 6 Racor e válvulas de fechamento rápido · 7 VHF, luzes e parada remota · 8 amarra

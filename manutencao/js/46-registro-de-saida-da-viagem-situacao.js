@@ -28,7 +28,7 @@ function saidaModal(vid, fr) {
   const F = saidaFoto(v); F.nc = (fr ? fr.nc || [] : []).concat((F.no || []).filter(x => !fr || x.rec !== fr.id)); if (fr && F.sit < 3) F.sit = Math.max(F.sit, (FR27_LIB[fr.lib] || [0, 0])[1]);   // vale a pior: plano (SMF) ou check-list (FR 027_L)
   const [cls, nome] = SAI_SIT[F.sit], d = new Date(), hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   const hr = horAtual(v.id, mpos(v.id)), hrHoje = hr && hr.date === isoD(hoje());
-  let img = null; const rt = rotaDe(v);
+  let img = null; const rt = null; ROTA_SAIDA.delete(v.id);   // rota escolhida aqui, no dia da saída
   const i53 = `<div class="f s6 i53"><div class="row" style="align-items:center"><b>Inspeção antes da saída · NP 5.3</b><span class="note" style="margin-left:6px">CTF/MFM, antes de ligar os motores · registrada no Diário de Máquinas</span><span class="sp"></span><button type="button" class="mbtn sm" id="i53All">Marcar todos</button></div>
     <div class="i53-l">${INSP53.map((t, i) => `<label><input type="checkbox" data-i53="${i}"> ${esc(t)}</label>`).join('')}</div>
     <div class="g" style="margin-top:6px"><label class="f s3">Feita por (CTF ou MFM)<input id="i53Q" placeholder="Nome de quem fez"></label><label class="f s3">Irregularidade ou item não feito<input id="i53O" placeholder="Obrigatório se algum item ficar sem marcar"></label></div>
@@ -37,7 +37,7 @@ function saidaModal(vid, fr) {
    <p class="note">Fica gravado como estava a parte técnica na hora da saída e quem assumiu cada pendência. A decisão de sair é da Operação; aqui fica o registro.</p>
    <div class="row" style="gap:8px;align-items:center;margin:6px 0 10px"><span class="fs-p ${cls}">${nome}</span><span class="note">${F.pend.filter(x => x.st === 'venc').length} vencido(s) · ${F.corr.length} corretiva(s) aberta(s)${fr ? ' · FR 027_L: ' + esc(FR27_LIB[fr.lib][0]) + ', ' + (fr.nc || []).length + ' NO' : ''}</span></div>
    ${saidaLista(F)}
-   <div class="g" style="margin-top:10px"><label class="f s6">Rota desta viagem<select id="saRota"><option value="">—</option>${rotas().map(x => `<option value="${x.id}"${rt && rt.id === x.id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label><label class="f s2">Data<input type="date" id="saD" value="${isoD(hoje())}"></label><label class="f s1">Hora<input type="time" id="saH" value="${hh}"></label>
+   <div class="g" style="margin-top:10px"><label class="f s6">Rota desta viagem (obrigatória)<select id="saRota" onchange="ROTA_SAIDA.set('${v.id}', this.value); if (!this.value) ROTA_SAIDA.delete('${v.id}')"><option value="">— escolha —</option>${rotas().map(x => `<option value="${x.id}"${rt && rt.id === x.id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label><label class="f s2">Data<input type="date" id="saD" value="${isoD(hoje())}"></label><label class="f s1">Hora<input type="time" id="saH" value="${hh}"></label>
     <div class="f s3"><span>Horímetro</span><div class="note" style="padding-top:6px">${hr ? 'último: ' + nf(hr.h) + ' h em ' + brD(hr.date) : 'sem leitura'}${hrHoje ? '' : ' · <label style="display:inline;font-weight:400"><input type="checkbox" id="saHor" checked> lançar o de saída (FR 027_L) depois de salvar</label>'}</div></div>
     ${F.sit ? `<label class="f s6">Justificativa ${F.sit >= 2 ? '(por que sai mesmo assim)' : '(por que sai com o vencido)'}<textarea id="saJ" rows="2" placeholder="Ex.: item programado para a próxima janela; risco avaliado com a Operação"></textarea></label>` : ''}
     ${F.sit >= 2 ? `<label class="f s6">Autorizado por · Coordenador de Operações<input id="saC" placeholder="Nome de quem autorizou a saída" value="${esc(fr ? ((fr.ass || [])[2] || {}).nome || '' : '')}"></label>` : ''}
@@ -49,6 +49,7 @@ function saidaModal(vid, fr) {
   $('#saOk').onclick = async () => {
     const ok53 = [...document.querySelectorAll('#modal [data-i53]')].filter(c => c.checked).map(c => +c.dataset.i53), q53 = $('#i53Q').value.trim(), o53 = $('#i53O').value.trim(), rid = $('#saRota').value;
     const j = ($('#saJ') || {}).value || '', c = ($('#saC') || {}).value || '', E = $('#saE');
+    if (!rid) { E.textContent = 'Escolha a rota desta viagem.'; return; }
     if (!q53) { E.textContent = 'Informe quem fez a inspeção antes da saída (CTF ou MFM) · NP 5.3.'; return; }
     if (ok53.length < INSP53.length && !o53) { E.textContent = 'Algum item da inspeção 5.3 ficou sem marcar: escreva a irregularidade ou o que não foi feito.'; return; }
     if (F.sit && !j.trim()) { E.textContent = 'Escreva a justificativa.'; return; }
@@ -60,7 +61,7 @@ function saidaModal(vid, fr) {
     if (img) { if (S.url) { try { const r = await api('foto', { b64: await fotoParaEnvio(img), vessel: v.id, nome: 'FR027L_saida_' + v.nome + '_' + date }); foto = r.ok ? { fotoId: r.fileId } : { fotoMin: fotoMini(img) }; } catch (er) { foto = { fotoMin: fotoMini(img) }; } } else foto = { fotoMin: fotoMini(img) }; }
     await saveRec(Object.assign({ id: uid('sai'), kind: 'saida', vessel: v.id, date, hora, at: Date.now(), sit: F.sit, sitTxt: nome, pend: F.pend, corr: F.corr, nc: F.nc || [], fr027: fr ? fr.id : '', frLib: fr ? fr.lib : '', just: j.trim(), autorizou: c.trim(), by: S.session ? S.session.name : '', hr: hr ? { h: hr.h, date: hr.date } : null }, foto, rid ? { rota: rid, rotaNome: (rotas().find(x => x.id === rid) || {}).nome || '' } : {},
       { insp53: { ok: ok53, falta: INSP53.map((t, i) => i).filter(i => !ok53.includes(i)), quem: q53, obs: o53, completa: ok53.length === INSP53.length } }));
-    await situSalvar(v.id, 'viagem'); closeModal();
+    await situSalvar(v.id, 'viagem'); ROTA_SAIDA.delete(v.id); closeModal();
     toast(v.nome + ' saiu de viagem · ' + nome.toLowerCase() + ' registrada.');
     if ($('#saHor') && $('#saHor').checked) horModal(v.id); else render();
     if (ok53.length < INSP53.length) toast('Saída registrada com a inspeção 5.3 incompleta: ' + o53); };

@@ -16,8 +16,15 @@ const ROTAS0 = [
 const rotas = () => ROTAS0.map(r => Object.assign({}, r, ((S.cfg.rotas || {})[r.id]) || {}));
 const rotaDe = v => v && v.rotaProx ? rotas().find(r => r.id === v.rotaProx) || null : null;
 const rotaHmcp = r => r.nav * 24, rotaHmca = r => r.ciclo * 12;
-const ROTA_PADRAO = 'pvh';   // sem rota escolhida: a mais comum, pela máxima (antes eram 120 h fixas)
-const rotaUso = v => rotaDe(v) || (v && !(+v.viagH > 0) ? rotas().find(r => r.id === ROTA_PADRAO) : null);
+// SMF 3.119 (Supervisor, 01/11/2026: “não pode aparecer próxima rota porque é definido no dia que sai”): a rota vem do registro de saída
+// da viagem em curso; no porto não há rota (nada de rota padrão inventada). ROTA_SAIDA = rota escolhida na janela de saída ainda aberta
+// (as Ordens de Máquinas impressas ali já saem com ela)
+const ROTA_SAIDA = new Map();
+function rotaViagem(v) { if (!v || typeof situLocal !== 'function' || situLocal(v.id) !== 'viagem') return null;
+  const s = recs('saida').filter(r => r.vessel === v.id && r.rota).sort((a, b) => (a.at || 0) - (b.at || 0)).pop(); if (!s) return null;
+  const E = situEventos(v.id), ult = E.filter(e => e.st !== 'viagem').pop(); if (ult && ult.ts > (s.at || 0)) return null;   // chegou depois dessa saída
+  const r = rotas().find(x => x.id === s.rota); return r ? Object.assign({}, r, { saida: s.date }) : null; }
+const rotaUso = v => (v && ROTA_SAIDA.has(v.id) ? rotas().find(r => r.id === ROTA_SAIDA.get(v.id)) : null) || rotaViagem(v);
 const horasViagem = (v, pos) => { const r = rotaUso(v); return r ? (MCAS.includes(pos) ? rotaHmca(r) : rotaHmcp(r)) : viagemDe(v); };
 async function salvarRota(vid, rid) { const v = vessel(vid), r = rotas().find(x => x.id === rid); if (!v) return;
   if (!r) { delete v.rotaProx; delete v.viagHmca; await salvarViagem(vid, v.viagH || 0); return; }
