@@ -6,4 +6,4 @@ let OMSF = 'todas';
 
 
 document.addEventListener('click', e => { const b = e.target.closest('[data-omsf]'); if (!b || VIEW !== 'oms') return; e.preventDefault(); e.stopPropagation(); OMSF = b.dataset.omsf; render(); }, true);
-{ const st = document.createElement('style'); st.textContent = `.tp-pv,.tp-cr{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:5px;color:#fff;white-space:nowrap}.tp-pv{background:#188038}.tp-cr{background:#C5221F}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = ``; document.head.appendChild(st); }

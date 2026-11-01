@@ -14,5 +14,5 @@ function f2Agora() { const L = agoraLista(), G = new Map();
     return { p: g.p, txt: `${esc(tipo)} · ${nomes.length === 1 ? `<b>${esc(nomes[0])}</b>` : `<b>${nomes.length} empurradores</b> <span class="note">(${nomes.map(esc).join(', ')})</span>`}${g.itens.length > nomes.length ? ` <span class="note">· ${g.itens.length} motores</span>` : ''}`, btn: g.btn }; }).sort((a, b) => a.p - b.p); }
    /* janelas livres, como Compressão e Óleo */
 { const st = document.createElement('style'); st.textContent = `.f2-ks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}.f2-k{background:#fff;border:1px solid #E3E6EA;border-radius:10px;padding:12px 14px}.f2-k span{display:block;font-size:12px;color:#5F6368}.f2-k b{font-size:22px;font-weight:600;white-space:nowrap}.cm-v .f2-ks{margin:4px 0 0}
-.f2-ac{text-align:right;white-space:nowrap}.f2-ac .mbtn{margin-left:6px}
+
 @media(max-width:760px){.f2-ks{grid-template-columns:1fr 1fr}}`; document.head.appendChild(st); }

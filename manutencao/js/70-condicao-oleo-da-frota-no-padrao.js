@@ -2,7 +2,7 @@
    Óleo da frota: Resumo em números (olResumo) no lugar dos anéis "Condição por sistema"; filtro por sistema em chips na tabela (olSisChips, mesmo data-olg); "Empurrador" na tabela; Saldo para a troca com o gráfico original e o eixo legível.
    Horímetros (view horfrota, 1ª aba da Condição): uma linha por empurrador, uma coluna por motor (horímetro total e data da leitura; âmbar com mais de MCA_SEM_LEITURA_D dias); o registro (#hor) sai de Administração e fica nesta seção. */
 'use strict';
-{ const st = document.createElement('style'); st.textContent = `.ol-old{background:#FEF7E0;color:#B06000;border-radius:4px;padding:0 3px}.ol-br .mono small{display:block;color:#5F6368;font-size:11px;font-weight:400}.o1-r{display:grid;grid-template-columns:minmax(110px,1fr) minmax(120px,.9fr) minmax(220px,2.6fr) minmax(110px,.9fr) minmax(95px,.8fr);gap:10px;align-items:center;padding:3px 0;line-height:1.25;border-bottom:1px solid #F1F3F4}.o1-hd{font-size:11px;color:#5F6368;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #E3E6EA;padding:4px 0}.o1-r small{display:block;font-size:11px;line-height:1.25;color:#5F6368;font-weight:400;white-space:nowrap}.o1-r .r{text-align:right}.o1-h{font-size:14px}.o1-b{display:grid;grid-template-columns:35% 65%;align-items:center}.o1-hd .o1-b span{padding:0 6px}.o1-L,.o1-R{height:10px;display:flex}.o1-L{justify-content:flex-end;border-right:1px solid #9AA0A6}.o1-L i{background:#D93025;border-radius:6px 0 0 6px}.o1-R i{border-radius:0 6px 6px 0}.o1-green{background:#1967D2}.o1-amber{background:#E3A008}.o1-red{background:#D93025}.o1-sem{background:#BDC1C6}.o1-s{white-space:nowrap;font-size:13px}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = `.ol-old{background:#FEF7E0;color:#B06000;border-radius:4px;padding:0 3px}`; document.head.appendChild(st); }
 function olSisChips(ENG) { const c = g => ENG.filter(e => e.g === g).length;
   return `<div class="cm-chips" style="margin:-2px 0 10px"><span class="note" style="margin-right:4px">Sistema</span><button class="cm-chip${OLF.g ? '' : ' on'}" data-olg="${OLF.g}">Todos</button>${OL_SIS.filter(([g]) => c(g)).map(([g, nome]) => `<button class="cm-chip${OLF.g === g ? ' on' : ''}" data-olg="${g}">${nome} <b>${c(g)}</b></button>`).join('')}</div>`; }
 
@@ -12,5 +12,5 @@ function olSisChips(ENG) { const c = g => ENG.filter(e => e.g === g).length;
 
 { SECOES.forEach(s => { if (s.id !== 'cond2') s.views = s.views.filter(x => x[0] !== 'hor'); });
   const c = SECOES.find(s => s.id === 'cond2'); if (c) { if (!c.views.some(x => x[0] === 'horfrota')) c.views.unshift(['horfrota', 'Horímetros']); c.extra = (c.extra || []).filter(x => x !== 'hor').concat('hor'); } }
-{ const st = document.createElement('style'); st.textContent = `.ol-ax .ol-axl{display:block;text-align:right;padding-right:6px}.ol-ax .ol-axr{display:block;padding-left:6px}
-.hf-t td,.hf-t th{white-space:nowrap}.hf-t td b{font-size:14px}.hf-old{background:#FEF7E0}.hf-old b{color:#B06000}.hf-est b{color:#5F6368;font-weight:500}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = `
+`; document.head.appendChild(st); }

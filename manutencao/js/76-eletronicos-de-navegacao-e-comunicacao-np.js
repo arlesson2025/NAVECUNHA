@@ -19,4 +19,4 @@ document.addEventListener('click', async e => { const a = e.target.closest('[dat
   if (a) { const o = S.recs.get(a.dataset.timodal); if (o) tiModal(o); return; }
   if (!precisa(false)) return; const [id, s] = b.dataset.tieletr.split('|'), o = S.recs.get(id); if (!o) return; o.eletr = s === '1'; await saveRec(o); render(); }, true);
 /* "→ TI" nas corretivas em andamento */
-{ const st = document.createElement('style'); st.textContent = `.ti-c{border-left:5px solid #E3A008}.ti-c.ok{border-left-color:#188038}.ti-c.ti{border-left-color:#1967D2}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = ``; document.head.appendChild(st); }

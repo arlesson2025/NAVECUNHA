@@ -3,4 +3,4 @@
    kitsMes(): por modelo de motor, as trocas de óleo previstas no mês seguinte (o3Dados, proxD de cada equipamento) + as já vencidas, o óleo em litros (capacidade do cárter
    da matriz de lubrificação) e as revisões do cronograma (prLinhas) que levam filtros ou correias. Os códigos dos filtros e correias ficam na Matriz técnica (o SMF não os tem). */
 'use strict';
-{ const st = document.createElement('style'); st.textContent = `.kt-c{border-left:5px solid #1967D2}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = ``; document.head.appendChild(st); }

@@ -309,8 +309,8 @@ function lubPrepClone(doc) {
   st.textContent = `.toolbar,.svm,.noprint{display:none!important}
  input.in,select.in,.obs .r input.in{background:transparent!important;box-shadow:none!important}
  .miss,tr.miss td,input.in.bad{background:transparent!important}
- .ph-empty svg,.ph-empty .tip{display:none}
- .ph-band{background:none!important;border-bottom:1px solid #3A4A6B}
+ 
+ 
  .grp-pv{position:relative;width:5mm;height:5mm;margin:auto}.grp-pv span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);white-space:nowrap;font-size:6.6pt;font-weight:600;color:#3A4A6B;letter-spacing:.4pt}
  .cbx-pv{display:inline-block;width:2.6mm;height:2.6mm;border:.5pt solid #3A4A6B;background:#fff;vertical-align:-.5mm;margin:0 .8mm 0 0;flex:none}
  .chk td.c .cbx-pv{margin:0}
