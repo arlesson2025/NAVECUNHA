@@ -115,7 +115,6 @@ function vEnxViag() {
   let mAnt = '', sai = '';
   Ls.forEach(x => { const m = +x.date.slice(5, 7); if (m !== mAnt) { mAnt = m; sai += `<tr class="vg-m"><td colspan="6">${VG_MES[m - 1]} · ${Ls.filter(y => +y.date.slice(5, 7) === m).length} saída(s)</td></tr>`; }
     sai += `<tr><td class="nowrap">${brD(x.date)}</td><td><b>${esc(vName(x.vessel))}</b></td><td>${x.balsas.map(b => `<span class="vg-b" data-vgb="${esc(b)}">${esc(vName(b))}</span>`).join('') || '<span class="note">sem balsa</span>'}</td><td class="nowrap"><i class="vg-dot" style="background:${VG_COR[x.rota] || '#9AA5B4'}"></i>${esc(vgRotaCurta(x.rota))}</td><td class="nowrap">${x.cheg ? brD(x.cheg) : `<span class="note">~${brD(x.fim)} est.</span>`}</td><td class="nowrap">${can.edit() ? `<button class="mbtn sm" data-vged="${x.id}">Editar</button>` : ''}</td></tr>`; });
-  const RF = vgReformas().slice().reverse();
   const opE = `<option value="">Todos os empurradores</option>${S.cfg.frota.map(v => `<option value="${v.id}"${VG.fe === v.id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}`;
   const opB = `<option value="">Todas as balsas</option>${vgBalsas().map(b => `<option value="${b.id}"${VG.fb === b.id ? ' selected' : ''}>${esc(b.nome)}</option>`).join('')}`;
   const opR = `<option value="">Todas as rotas</option>${rotas().map(r => `<option value="${r.id}"${VG.fr === r.id ? ' selected' : ''}>${esc(vgRotaCurta(r.id))}</option>`).join('')}`;
@@ -125,15 +124,13 @@ function vEnxViag() {
     `<label class="f">Ano<select id="vgA">${anos.map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select></label><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Resumo · ${ano}</h2><div class="sf-k">${nk('Comboios no ano', TA.length)}${nk('Empurradores em viagem', n(LE, 'via'))}${nk('Balsas em viagem', n(LB, 'via'))}${nk('No porto', n(LE, 'por') + ' emp. · ' + n(LB, 'por') + ' balsas')}${nk('Em reforma', n(LE, 'ref') + n(LB, 'ref'), n(LE, 'ref') + n(LB, 'ref') ? 'var(--warnt)' : '')}</div></div>
    ${vgAgora(LE)}
-   <div class="card"><div class="row"><h2>Operação por ${eb ? 'balsa' : 'empurrador'}</h2><span class="sp"></span>${seg}</div>${tab}<p class="note">Dias em viagem e no porto contam de 01/01 até hoje; o período em reforma não entra. “est.” = tem chegada estimada pela rota. Parado há = desde a última chegada (ou do fim da reforma); acima de 60 dias fica em destaque.</p></div>
+   <div class="card"><div class="row"><h2>Operação por ${eb ? 'balsa' : 'empurrador'}</h2><span class="sp"></span>${seg}</div>${tab}<p class="note">Dias em viagem e no porto contam de 01/01 até hoje; o período em reforma não entra. “est.” = tem chegada estimada pela rota. Parado há = desde a última chegada (ou do fim da reforma); acima de 60 dias fica em destaque. Reformas: lançar e consultar no <a href="#enxeq">Histórico dos equipamentos</a>.</p></div>
    <div class="card"><div class="row"><h2>Linha do tempo · ${ano}</h2><span class="sp"></span>${seg}</div>${vgLeg(true)}${vgGantt(N, V, ano, eb)}<p class="note">Barra = viagem; espaço vazio = no porto; linha vermelha = hoje. Passe o mouse na barra para ver o comboio.</p></div>
    <div class="card"><h2>Comboios por mês · ${ano}</h2>${vgLeg(false)}${vgMeses(V, ano)}</div>
    <div class="card"><div class="row"><h2>% do ano em viagem</h2><span class="sp"></span>${seg}</div>${pctH}<p class="note">Dias em viagem ÷ dias do ano até hoje, sem o período em reforma.</p></div>
    <div class="card"><h2>Tempo de viagem por rota · ${ano}</h2><div class="tw"><table class="t"><thead><tr><th>Rota</th><th class="num">Comboios</th><th class="num">Médio real</th><th class="num">Médio com estimadas</th><th class="num">Ciclo previsto</th></tr></thead><tbody>${RR || '<tr><td colspan="5" class="note">Nenhuma viagem no ano.</td></tr>'}</tbody></table></div><p class="note">Real = com chegada pelo FR 027_L ou digitada. Ciclo previsto = o da rota (Administração → Rotas), usado para estimar a chegada.</p></div>
    <div class="card"><h2>Saídas · ${Ls.length}</h2><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><select id="vgFe" style="width:auto;min-width:190px">${opE}</select><select id="vgFb" style="width:auto;min-width:170px">${opB}</select><select id="vgFr" style="width:auto;min-width:200px">${opR}</select>${VG.fe || VG.fb || VG.fr ? '<button class="mbtn sm" data-vgx>Limpar</button>' : ''}</div>
      <div class="tw"><table class="t"><thead><tr><th>Saída</th><th>Empurrador</th><th>Balsas do comboio</th><th>Rota</th><th>Chegada</th><th></th></tr></thead><tbody>${sai || '<tr><td colspan="6" class="note">Nenhuma saída. As novas entram pelo “Saiu de viagem”; as antigas, pelo “Colar histórico de saídas” abaixo.</td></tr>'}</tbody></table></div></div>
-   <div class="card"><h2>Reformas</h2><div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Início</th><th>Fim</th><th>Estaleiro / local</th><th>Observação</th><th></th></tr></thead><tbody>${RF.map(r => `<tr><td><b>${esc(vName(r.vessel))}</b></td><td>${r.ini ? brD(r.ini) : '—'}</td><td>${r.fim ? brD(r.fim) : '<span class="pill p-warn">em reforma</span>'}</td><td>${esc(r.local || '')}</td><td class="note">${esc(r.obs || '')}</td><td class="nowrap">${can.edit() ? `<button class="mbtn sm" data-vgref="${r.id}">${r.fim ? 'Editar' : 'Encerrar / editar'}</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="note">Nenhuma reforma registrada.</td></tr>'}</tbody></table></div>
-     <div class="row" style="margin-top:8px;align-items:center"><span class="note" style="flex:1">As reformas ficam no <a href="#enxeq">Histórico dos equipamentos</a>, com o documento e as fotos; aqui só se vê quem está em reforma.</span>${can.edit() ? '<button class="mbtn pri" data-vgrnova>+ Lançar reforma</button>' : ''}</div></div>
    ${can.edit() ? `<div class="card"><h2>Colar histórico de saídas</h2><p class="note">Cole a lista como você escreve: “CJA I – VDA I, VDA III e VDA IX” e embaixo “FLUXO: MAO X ITC X PVH (07/01/2026)”. O SMF reconhece o empurrador, as balsas, a rota (MAO, ITC, PVH, VLC/Vila do Conde, BRE, Munguba) e a data. Saída repetida (mesmo empurrador e data) é ignorada.</p><textarea id="vgC" rows="6" placeholder="CJA I – VDA I, VDA III e VDA IX&#10;FLUXO: MAO X ITC X PVH (07/01/2026)"></textarea><div class="row end" style="margin-top:6px"><button class="mbtn" data-vgcola>Ler e conferir</button></div></div>` : ''}</div></div>`;
 }
 // ---------- histórico colado ----------
@@ -172,15 +169,6 @@ function vgEditar(id) {
     Object.assign(r, { rota: $('#veR').value, balsas: [...sel], cheg: ch }); if (r.kind === 'saida') r.rotaNome = (vgRota(r.rota) || {}).nome || ''; else r.date = d; await saveRec(r); closeModal(); toast('Viagem salva.'); render(); };
   const del = $('#veX'); if (del) del.onclick = async () => { if (!confirm('Excluir esta saída do histórico?')) return; r.excluido = true; await saveRec(r); closeModal(); render(); };
 }
-function vgRefEditar(id) {
-  const r = S.recs.get(id); if (!r) return; if (!S.session) return loginModal();
-  modal(`<h2>Reforma · ${esc(vName(r.vessel))}</h2><div class="g"><label class="f s2">Início<input type="date" id="reI" value="${esc(r.ini || '')}"></label><label class="f s2">Fim (saída da reforma)<input type="date" id="reF" value="${esc(r.fim || '')}"></label><label class="f s2">Estaleiro / local<input id="reL" value="${esc(r.local || '')}"></label><label class="f s6">Observação<input id="reO" value="${esc(r.obs || '')}"></label></div>
-    ${vessel(r.vessel) && foraOp(r.vessel) ? '<p class="note">Este empurrador também está marcado “fora de operação” em Administração. Ao encerrar a reforma, tire a marca lá para ele voltar às contas da frota.</p>' : ''}
-    <div class="note" id="reE" style="color:var(--badt)"></div><div class="row end">${can.admin() ? '<button class="mbtn" id="reX">Excluir</button><span class="sp"></span>' : ''}<button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="reOk">Salvar</button></div>`);
-  $('#reOk').onclick = async () => { const i = $('#reI').value, f = $('#reF').value; if (i && f && f < i) return $('#reE').textContent = 'O fim não pode ser antes do início.';
-    Object.assign(r, { ini: i, fim: f, local: $('#reL').value.trim(), obs: $('#reO').value.trim() }); await saveRec(r); closeModal(); toast(f ? vName(r.vessel) + ' saiu da reforma em ' + brD(f) + '.' : 'Reforma salva.'); render(); };
-  const del = $('#reX'); if (del) del.onclick = async () => { if (!confirm('Excluir este registro de reforma?')) return; r.excluido = true; await saveRec(r); closeModal(); render(); };
-}
 // ---------- campo “Balsas do comboio” no registro de saída (js/46) ----------
 function vgSaidaCampo() {
   return `<div class="f s6"><span>Balsas do comboio <span class="note">(deixe vazio se saiu sem balsa)</span></span><div class="vg-ch" id="saB">${vgBalsas().map(b => { const rf = vgEmReforma(b.id); return `<span class="vg-c${rf ? ' off' : ''}" data-vgc="${b.id}" title="${rf ? 'em reforma' : esc(b.nome)}">${esc(b.nome.replace('VDA ', ''))}</span>`; }).join('')}</div></div>`;
@@ -190,13 +178,11 @@ document.addEventListener('click', e => { const c = e.target.closest('#saB [data
 // ---------- telas, cliques e menu ----------
 VX.enxviag = vEnxViag;
 AFTER.enxviag = () => { const m = $('#main');
-  m.onclick = e => { const t = e.target.closest('[data-vgm],[data-vgb],[data-vgx],[data-vged],[data-vgref],[data-vgrnova],[data-vgcola]'); if (!t) return; const d = t.dataset;
+  m.onclick = e => { const t = e.target.closest('[data-vgm],[data-vgb],[data-vgx],[data-vged],[data-vgcola]'); if (!t) return; const d = t.dataset;
     if (d.vgm) { VG.modo = d.vgm; return render(); }
     if (d.vgb) { VG.fb = d.vgb; return render(); }
     if (d.vgx !== undefined) { VG.fe = VG.fb = VG.fr = ''; return render(); }
     if (d.vged) return vgEditar(d.vged);
-    if (d.vgref) { const r = S.recs.get(d.vgref); return r && r.tipo === 'evento' ? heModal(r.id) : vgRefEditar(d.vgref); }
-    if (d.vgrnova !== undefined) return heModal('', { eq: 'UN', tp: 'ref', vessel: S.cfg.frota[0] && S.cfg.frota[0].id });
     if (d.vgcola !== undefined) return vgColar(); };
   m.onchange = e => { const t = e.target;
     if (t.id === 'vgA') { VG.ano = +t.value; return render(); }
