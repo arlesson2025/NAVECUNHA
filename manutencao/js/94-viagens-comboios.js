@@ -20,7 +20,10 @@ const vgRota = id => rotas().find(r => r.id === id) || null;
 const vgRotaCurta = id => { const r = vgRota(id); return r ? r.nome.replace(/Manaus/g, 'MAO').replace(/Itacoatiara/g, 'ITC').replace(/Porto Velho/g, 'PVH').replace(/Vila do Conde/g, 'VLC').replace(/Bretaña \(Peru, via Iquitos\)/g, 'BRE').replace(/Barcarena/g, 'BAR') : (id || 'rota não informada'); };
 const vgBalsas = () => typeof BALSAS !== 'undefined' ? BALSAS : [];
 // ---------- reformas ----------
-const vgReformas = id => recs('snap').filter(r => r.tipo === 'reforma' && !r.excluido && (!id || r.vessel === id)).sort((a, b) => (a.ini || '') < (b.ini || '') ? -1 : 1);
+// reformas: lançadas no Histórico dos equipamentos (snap 'evento', equipamento UN, tipo ref/parc; SMF 3.132) + as antigas da 1.3 (snap 'reforma') até migrarem
+const vgReformas = id => recs('snap').filter(r => !r.excluido && (!id || r.vessel === id) && (r.tipo === 'reforma' || (r.tipo === 'evento' && r.eq === 'UN' && (r.tp === 'ref' || r.tp === 'parc'))))
+  .map(r => r.tipo === 'reforma' ? r : { id: r.id, vessel: r.vessel, ini: r.date, fim: r.fim || (r.emRef ? '' : r.date), local: r.local || '', obs: r.txt || '', por: r.por, ev: true })
+  .sort((a, b) => (a.ini || '') < (b.ini || '') ? -1 : 1);
 function vgEmReforma(id) {
   const R = vgReformas(id).filter(r => !r.fim); if (R.length) return R[R.length - 1];
   const v = vessel(id), f = v && foraOp(v); return f && /reforma/i.test(f.motivo) ? { vessel: id, ini: '', fim: '', obs: f.obs || '', cfg: true } : null;
@@ -116,7 +119,6 @@ function vEnxViag() {
   const opE = `<option value="">Todos os empurradores</option>${S.cfg.frota.map(v => `<option value="${v.id}"${VG.fe === v.id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}`;
   const opB = `<option value="">Todas as balsas</option>${vgBalsas().map(b => `<option value="${b.id}"${VG.fb === b.id ? ' selected' : ''}>${esc(b.nome)}</option>`).join('')}`;
   const opR = `<option value="">Todas as rotas</option>${rotas().map(r => `<option value="${r.id}"${VG.fr === r.id ? ' selected' : ''}>${esc(vgRotaCurta(r.id))}</option>`).join('')}`;
-  const opV = sel => `<optgroup label="Empurradores">${S.cfg.frota.map(v => `<option value="${v.id}"${sel === v.id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</optgroup><optgroup label="Balsas">${vgBalsas().map(b => `<option value="${b.id}"${sel === b.id ? ' selected' : ''}>${esc(b.nome)}</option>`).join('')}</optgroup>`;
   const seg = `<div class="seg"><button data-vgm="E" class="${eb ? '' : 'on'}">Empurradores</button><button data-vgm="B" class="${eb ? 'on' : ''}">Balsas</button></div>`;
   const nk = (l, v, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
   return enxCab('1.3 Viagens e comboios', 'Saídas de Manaus com as balsas do comboio, tempo de viagem, tempo parado no porto e reformas · a chegada vem do FR 027_L; sem ela, é estimada pela rota',
@@ -131,7 +133,7 @@ function vEnxViag() {
    <div class="card"><h2>Saídas · ${Ls.length}</h2><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><select id="vgFe" style="width:auto;min-width:190px">${opE}</select><select id="vgFb" style="width:auto;min-width:170px">${opB}</select><select id="vgFr" style="width:auto;min-width:200px">${opR}</select>${VG.fe || VG.fb || VG.fr ? '<button class="mbtn sm" data-vgx>Limpar</button>' : ''}</div>
      <div class="tw"><table class="t"><thead><tr><th>Saída</th><th>Empurrador</th><th>Balsas do comboio</th><th>Rota</th><th>Chegada</th><th></th></tr></thead><tbody>${sai || '<tr><td colspan="6" class="note">Nenhuma saída. As novas entram pelo “Saiu de viagem”; as antigas, pelo “Colar histórico de saídas” abaixo.</td></tr>'}</tbody></table></div></div>
    <div class="card"><h2>Reformas</h2><div class="tw"><table class="t"><thead><tr><th>Embarcação</th><th>Início</th><th>Fim</th><th>Estaleiro / local</th><th>Observação</th><th></th></tr></thead><tbody>${RF.map(r => `<tr><td><b>${esc(vName(r.vessel))}</b></td><td>${r.ini ? brD(r.ini) : '—'}</td><td>${r.fim ? brD(r.fim) : '<span class="pill p-warn">em reforma</span>'}</td><td>${esc(r.local || '')}</td><td class="note">${esc(r.obs || '')}</td><td class="nowrap">${can.edit() ? `<button class="mbtn sm" data-vgref="${r.id}">${r.fim ? 'Editar' : 'Encerrar / editar'}</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="note">Nenhuma reforma registrada.</td></tr>'}</tbody></table></div>
-     ${can.edit() ? `<div class="g" style="margin-top:8px"><label class="f s2">Embarcação<select id="vgRv">${opV('')}</select></label><label class="f s1">Início<input type="date" id="vgRi"></label><label class="f s1">Fim (vazio = em reforma)<input type="date" id="vgRf"></label><label class="f s2">Estaleiro / local<input id="vgRl"></label><label class="f s6">Observação<input id="vgRo" placeholder="ex.: motores novos; casco e convés"></label></div><div class="note" id="vgRe" style="color:var(--badt)"></div><div class="row end"><button class="mbtn pri" data-vgrnova>Registrar reforma</button></div>` : ''}</div>
+     <div class="row" style="margin-top:8px;align-items:center"><span class="note" style="flex:1">As reformas ficam no <a href="#enxeq">Histórico dos equipamentos</a>, com o documento e as fotos; aqui só se vê quem está em reforma.</span>${can.edit() ? '<button class="mbtn pri" data-vgrnova>+ Lançar reforma</button>' : ''}</div></div>
    ${can.edit() ? `<div class="card"><h2>Colar histórico de saídas</h2><p class="note">Cole a lista como você escreve: “CJA I – VDA I, VDA III e VDA IX” e embaixo “FLUXO: MAO X ITC X PVH (07/01/2026)”. O SMF reconhece o empurrador, as balsas, a rota (MAO, ITC, PVH, VLC/Vila do Conde, BRE, Munguba) e a data. Saída repetida (mesmo empurrador e data) é ignorada.</p><textarea id="vgC" rows="6" placeholder="CJA I – VDA I, VDA III e VDA IX&#10;FLUXO: MAO X ITC X PVH (07/01/2026)"></textarea><div class="row end" style="margin-top:6px"><button class="mbtn" data-vgcola>Ler e conferir</button></div></div>` : ''}</div></div>`;
 }
 // ---------- histórico colado ----------
@@ -170,14 +172,6 @@ function vgEditar(id) {
     Object.assign(r, { rota: $('#veR').value, balsas: [...sel], cheg: ch }); if (r.kind === 'saida') r.rotaNome = (vgRota(r.rota) || {}).nome || ''; else r.date = d; await saveRec(r); closeModal(); toast('Viagem salva.'); render(); };
   const del = $('#veX'); if (del) del.onclick = async () => { if (!confirm('Excluir esta saída do histórico?')) return; r.excluido = true; await saveRec(r); closeModal(); render(); };
 }
-async function vgRefNova() {
-  if (!S.session) return loginModal(); const v = $('#vgRv').value, i = $('#vgRi').value, f = $('#vgRf').value, E = $('#vgRe');
-  if (!v || (!i && !f)) return E.textContent = 'Escolha a embarcação e informe ao menos o início (ou o fim, se não souber o início).';
-  if (i && f && f < i) return E.textContent = 'O fim não pode ser antes do início.';
-  if (!f && vgReformas(v).some(r => !r.fim)) return E.textContent = vName(v) + ' já tem uma reforma em aberto: encerre-a na lista.';
-  await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'reforma', vessel: v, ini: i, fim: f, local: $('#vgRl').value.trim(), obs: $('#vgRo').value.trim(), por: S.session.name });
-  toast('Reforma registrada · ' + vName(v) + (f ? '' : ' (em reforma)')); render();
-}
 function vgRefEditar(id) {
   const r = S.recs.get(id); if (!r) return; if (!S.session) return loginModal();
   modal(`<h2>Reforma · ${esc(vName(r.vessel))}</h2><div class="g"><label class="f s2">Início<input type="date" id="reI" value="${esc(r.ini || '')}"></label><label class="f s2">Fim (saída da reforma)<input type="date" id="reF" value="${esc(r.fim || '')}"></label><label class="f s2">Estaleiro / local<input id="reL" value="${esc(r.local || '')}"></label><label class="f s6">Observação<input id="reO" value="${esc(r.obs || '')}"></label></div>
@@ -201,15 +195,15 @@ AFTER.enxviag = () => { const m = $('#main');
     if (d.vgb) { VG.fb = d.vgb; return render(); }
     if (d.vgx !== undefined) { VG.fe = VG.fb = VG.fr = ''; return render(); }
     if (d.vged) return vgEditar(d.vged);
-    if (d.vgref) return vgRefEditar(d.vgref);
-    if (d.vgrnova !== undefined) return vgRefNova();
+    if (d.vgref) { const r = S.recs.get(d.vgref); return r && r.tipo === 'evento' ? heModal(r.id) : vgRefEditar(d.vgref); }
+    if (d.vgrnova !== undefined) return heModal('', { eq: 'UN', tp: 'ref', vessel: S.cfg.frota[0] && S.cfg.frota[0].id });
     if (d.vgcola !== undefined) return vgColar(); };
   m.onchange = e => { const t = e.target;
     if (t.id === 'vgA') { VG.ano = +t.value; return render(); }
     if (t.id === 'vgFe') { VG.fe = t.value; return render(); }
     if (t.id === 'vgFb') { VG.fb = t.value; return render(); }
     if (t.id === 'vgFr') { VG.fr = t.value; return render(); } };
-  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxviag_lay', '[data-enxreset]'); };
+  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxviag_lay', '[data-enxreset]'); if (typeof heMigraReformas === 'function') heMigraReformas(); };
 ENX_OK.push('enxviag'); PCM_ETAPAS[0][2].push('enxviag');
 PCM_MENU.find(g => /^1 /.test(g[0]))[1].push(['enxviag', '1.3 Viagens e comboios', 'viag']);
 ICO.viag = '<path d="M3 17h18l-2 3H5z"/><path d="M6 17V9h8l3 4v4"/><path d="M9 9V5h3v4"/>';
