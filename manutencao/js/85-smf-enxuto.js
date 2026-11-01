@@ -285,8 +285,16 @@ function hpGrupos(G, cores) {
     vt += `<text x="${u[0] + 7}" y="${u[1] + 3}" font-size="9.5" fill="#B06000" stroke="#fff" stroke-width="2.5" paint-order="stroke">${nf(u[2])} h</text>`; }
   return `<svg viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${Math.round(W * 1.45)}px;max-width:100%" data-nodrag>${g}${vt}</svg>`;
 }
+// início do mês sem nenhuma leitura ainda (dia 1º, por exemplo): “Este mês” mostra o mês passado com o aviso, para o gráfico não sumir
+function enxHorMesVazio() {
+  if (typeof rmeHoras !== 'function') return false;
+  const I = rmeHorIdx(), h0 = hoje(), a = isoD(new Date(h0.getFullYear(), h0.getMonth(), 1)), b = isoD(h0);
+  return !S.cfg.frota.filter(v => !foraOp(v)).some(v => [...mcpPos(v), ...MCAS.filter(p => v.mca && v.mca[p])].some(p => rmeHoras(I, v.id, p, a, b).h > 0));
+}
 function enxHorPareto() {
   if (typeof rmeHoras !== 'function') return '';
+  if (ENXHP.mes === 0 && enxHorMesVazio()) { const m0 = MESES[hoje().getMonth()] + '/' + hoje().getFullYear(); ENXHP.mes = 1;
+    try { return enxHorPareto().replace(/(<div class="cm-chips"[^>]*>)/g, `<p class="note" style="margin:0 0 4px;color:var(--warnt)">${m0} ainda sem leitura de horímetro · mostrando o mês passado</p>$1`).replace(/cm-chip on" data-ehpm="1"/g, 'cm-chip" data-ehpm="1"').replace(/cm-chip" data-ehpm="0"/g, 'cm-chip on" data-ehpm="0"'); } finally { ENXHP.mes = 0; } }
   const ac = ENXHP.mes === 'ac', I = rmeHorIdx(), h0 = hoje(), d0 = new Date(h0.getFullYear(), h0.getMonth() - (ac ? 0 : ENXHP.mes), 1), a = isoD(d0), b = isoD(ENXHP.mes === 1 ? new Date(d0.getFullYear(), d0.getMonth() + 1, 0) : h0);
   const V = S.cfg.frota.filter(v => !foraOp(v)).slice().sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR', { numeric: true })), ref = ac ? 'última leitura' : MESES[d0.getMonth()] + '/' + d0.getFullYear();
   // Horímetro acumulado (Supervisor, 30/10/2026): a barra é o horímetro total de cada motor na última leitura; sem a linha da soma
@@ -305,19 +313,19 @@ function enxHorPareto() {
 // horas de um empurrador no mês = o MCP que mais rodou (os MCPs rodam juntos na viagem; somar BB + BE contaria a viagem duas vezes); frota = soma dos empurradores
 function enxHorFrota() {
   if (typeof rmeHoras !== 'function') return '';
-  const I = rmeHorIdx(), h0 = hoje(), V = S.cfg.frota.filter(v => !foraOp(v)), M = [...Array(12).keys()].map(i => { const d = new Date(h0.getFullYear(), h0.getMonth() - 11 + i, 1);
+  const I = rmeHorIdx(), h0 = hoje(), z = enxHorMesVazio() ? 1 : 0, V = S.cfg.frota.filter(v => !foraOp(v)), M = [...Array(12).keys()].map(i => { const d = new Date(h0.getFullYear(), h0.getMonth() - 11 - z + i, 1);
     return [MESES[d.getMonth()] + '/' + String(d.getFullYear()).slice(2), isoD(d), isoD(new Date(Math.min(+new Date(d.getFullYear(), d.getMonth() + 1, 0), +h0)))]; });
   const T = M.map(([, a, b]) => V.reduce((s, v) => s + Math.max(0, ...mcpPos(v).map(p => rmeHoras(I, v.id, p, a, b).h)), 0)).map(Math.round);
   const tot = T.reduce((s, x) => s + x, 0), med = Math.round(tot / 12);
   const g = lineChart(T, M.map(x => x[0]), med, ' h', 0, { h: 190 }).replace(/(lnc-p(?: u)?) f"/g, '$1"').replace(/>meta /, '>média ');
-  return `<div class="card"><h2>Horas de operação da frota por mês</h2><p class="note" style="margin-top:0">${V.length} empurradores · 12 meses: <b>${nf(tot)} h</b> · média <b>${nf(med)} h/mês</b> · linha tracejada = média</p>${g}
+  return `<div class="card"><h2>Horas de operação da frota por mês</h2><p class="note" style="margin-top:0">${z ? `<span style="color:var(--warnt)">${MESES[h0.getMonth()]}/${h0.getFullYear()} ainda sem leitura · curva até o mês passado</span> · ` : ''}${V.length} empurradores · 12 meses: <b>${nf(tot)} h</b> · média <b>${nf(med)} h/mês</b> · linha tracejada = média</p>${g}
     <p class="note">Horas de cada empurrador no mês = o MCP que mais rodou (os MCPs rodam juntos na viagem) · frota = soma dos empurradores · mês sem leitura de horímetro entra com 0 h, então lance as leituras na chegada para a curva ficar certa.</p></div>`;
 }
 // horas de operação por mês do empurrador escolhido, últimos 12 meses, um gráfico por MCP (Supervisor, 29/10/2026)
 // mesma conta do relatório mensal (rmeHoras: soma leitura a leitura, só o que sobe e cabe no tempo) e o mesmo gráfico (rmeGraf)
 function enxHorGraf(v) {
   if (!v || typeof rmeHoras !== 'function') return '';
-  const I = rmeHorIdx(), h0 = hoje(), M = [...Array(12).keys()].map(i => { const d = new Date(h0.getFullYear(), h0.getMonth() - 11 + i, 1);
+  const I = rmeHorIdx(), h0 = hoje(), z = enxHorMesVazio() ? 1 : 0, M = [...Array(12).keys()].map(i => { const d = new Date(h0.getFullYear(), h0.getMonth() - 11 - z + i, 1);
     return [MESES[d.getMonth()].slice(0, 3).toLowerCase() + '/' + String(d.getFullYear()).slice(2), isoD(d), isoD(new Date(Math.min(+new Date(d.getFullYear(), d.getMonth() + 1, 0), +h0)))]; });
   const G = mcpPos(v).map(p => { const R = M.map(([l, a, b]) => [l, rmeHoras(I, v.id, p, a, b)]), L = R.map(([l, r]) => [l, Math.round(r.h)]), tot = L.reduce((s, x) => s + x[1], 0);
     const sem = R.filter(([, r]) => r.sem).length, inc = R.some(([, r]) => r.inc);

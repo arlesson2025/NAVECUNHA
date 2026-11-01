@@ -51,7 +51,7 @@ async function pcmAcaoSt(id, st) { const a = S.recs.get(id); if (!a || !can.admi
 // ---------- 3.3 Calibração do MCP ----------
 // matriz motor × serviço (3.26, Supervisor: “calibração está com uma planilha gigante, terrível”): uma linha por motor, célula colorida com o restante
 const PCM_CAB = { '1.1.11': 'Folga de válvulas', '1.1.12': 'Bicos injetores', '1.1.13': 'Ponto de injeção', '1.1.15': 'Rótulas do comb.', '1.1.17': 'Trocador de calor', '1.4.1': 'Caixa de mar' };
-// gráfico de horas restantes por motor: o mesmo do relatório (rmeBarH, js/86) — regra do Supervisor: usar os gráficos que já existem no SMF
+// gráfico de horas restantes por motor — regra do Supervisor: usar os gráficos que já existem no SMF
 function pcmCalGraf(D, id) {   // 3.76: no modelo do “Intervalo remanescente até a troca de óleo” (Supervisor, 29/10/2026): linha do meio = vence agora, à esquerda quanto atrasou, à direita quanto falta
   const C = { venc: '#D93025', viag: '#F9AB00', ok: '#1E8E3E', sem: '#BDC1C6' }, T = { venc: '#C5221F', viag: '#B06000', ok: '#137333', sem: '#5F6368' }, iv = intervalo(A1M[id]).h || 1000;
   const L = D.filter(x => x.t.id === id).sort((a, b) => (a.s.rest == null ? 9e9 : a.s.rest) - (b.s.rest == null ? 9e9 : b.s.rest));
