@@ -10,6 +10,8 @@
      reformas do empurrador (snap 'reforma', 1.3) e docagens (docaHist). Esses só se corrigem na tela de origem.
    · Para cada equipamento: modelo e nº de série da Matriz técnica (MATRIZ_VG, js/87), última reforma geral e última
      substituição com as horas trabalhadas desde então (horímetro atual − horímetro do acontecimento).
+   · Fotos (SMF 3.130): fotos[] {tipo:'FOTO', src, at, fid} no próprio evento; sobem ao Drive pelo fotosEnviar (js/08), pasta <empurrador>/Fotos,
+     e o stripForCloud manda à planilha só a referência; noutro aparelho a imagem vem do Drive (getFile, HE_FT).
    · Planilha com filtros, “Colar planilha” (do Excel) e “Baixar planilha” (CSV para o Excel).
    ===================================================================== */
 const HE = { v: '', eq: '', arg: '' };
@@ -32,7 +34,7 @@ const heEqNome = (v, k) => { const e = heEqs(v).find(x => x.k === k); return e ?
 // acontecimentos: os lançados + os que o SMF já registra
 function heEventos(vid) {
   const F = vid ? [vessel(vid)].filter(Boolean) : S.cfg.frota, L = [];
-  recs('snap').forEach(r => { if (r.tipo === 'evento' && !r.excluido && (!vid || r.vessel === vid)) L.push({ id: r.id, vessel: r.vessel, eq: r.eq || 'UN', date: r.date, tp: r.tp || 'outro', txt: r.txt || '', h: r.h, doc: r.doc || '', quem: r.quem || '', obs: r.obs || '', man: true }); });
+  recs('snap').forEach(r => { if (r.tipo === 'evento' && !r.excluido && (!vid || r.vessel === vid)) L.push({ id: r.id, vessel: r.vessel, eq: r.eq || 'UN', date: r.date, tp: r.tp || 'outro', txt: r.txt || '', h: r.h, doc: r.doc || '', quem: r.quem || '', obs: r.obs || '', fotos: r.fotos || [], man: true }); });
   F.forEach(v => {
     const vis = {}; recs('base').forEach(b => { if (b.vessel !== v.id || !b.revTroca || b.excluido) return; const k = b.pos + b.date; if (vis[k]) return; vis[k] = 1; const t = b.revTroca;
       L.push({ vessel: v.id, eq: 'R' + b.pos, date: b.date, tp: 'subst', txt: `Troca do reversor (${(t.unidade || '').toLowerCase() || 'unidade'})${t.anterior && t.modelo && t.anterior !== t.modelo ? ': ' + (EQN[t.anterior] || t.anterior) + ' → ' + (EQN[t.modelo] || t.modelo) : ''}${t.serie ? ' · série ' + t.serie : ''}`, h: b.h, doc: t.om ? 'OM ' + t.om : '', quem: b.by || '', src: '1.1 Horímetros · troca do reversor' }); });
@@ -55,8 +57,26 @@ function heFaixas(F, E, dimNome) {
   const xh = xx(isoD(hoje())); s += `<line x1="${xh}" x2="${xh}" y1="18" y2="${h - 6}" stroke="#C5221F" stroke-dasharray="3 3"/><text x="${xh - 3}" y="${h - 1}" font-size="9.5" fill="#C5221F" text-anchor="end">hoje</text>`;
   F.forEach((f, i) => { const y = y0 + i * H + H / 2; s += `<rect x="0" y="${y - H / 2 + 2}" width="${W}" height="${H - 4}" fill="${i % 2 ? '#fff' : '#F6F8FB'}" opacity=".7"/><text x="8" y="${y + 4}" font-size="11.5" fill="#202124"${f.b ? ' font-weight="600"' : ''}>${esc(f.nome)}</text><line x1="${X0}" x2="${X1}" y1="${y}" y2="${y}" stroke="#D5DAE1"/>`;
     E.filter(x => dimNome(x) === f.k).forEach(x => { const c = (HE_TP[x.tp] || HE_TP.outro)[1];
-      s += `<g class="he-dot" data-nodrag${x.man ? ` data-heed="${esc(x.id)}"` : ''}><title>${esc(brD(x.date) + ' · ' + (HE_TP[x.tp] || HE_TP.outro)[0] + ' · ' + x.txt + (x.doc ? ' · ' + x.doc : ''))}</title><circle cx="${xx(x.date)}" cy="${y}" r="7" fill="${c}" stroke="#fff" stroke-width="2"/></g>`; }); });
+      s += `<g class="he-dot" data-nodrag${x.man ? ` data-heed="${esc(x.id)}"` : ''}><title>${esc(brD(x.date) + ' · ' + (HE_TP[x.tp] || HE_TP.outro)[0] + ' · ' + x.txt + (x.doc ? ' · ' + x.doc : '') + ((x.fotos || []).length ? ' · ' + x.fotos.length + ' foto(s)' : ''))}</title><circle cx="${xx(x.date)}" cy="${y}" r="7" fill="${c}" stroke="#fff" stroke-width="2"/></g>`; }); });
   return s + '</svg>';
+}
+// fotos: a imagem fica no aparelho até subir ao Drive (fotosEnviar, js/08); depois só a referência (fid) vai à planilha e a imagem vem do Drive
+const HE_FT = {};
+const heMini = (x, k, cls) => { const f = x.fotos[k], src = f.src || HE_FT[f.fid] || ''; return `<img class="${cls || 'he-mi'}" data-hefoto="${esc(x.id)}|${k}"${!src && f.fid ? ` data-hefid="${esc(f.fid)}"` : ''} src="${src}" alt="foto ${k + 1}" title="${f.fid ? 'no Google Drive' : 'só neste aparelho · sobe ao Drive quando houver sinal'}">`; };
+const heMinis = x => (x.fotos || []).length ? `<div class="he-ms">${x.fotos.map((_, k) => heMini(x, k)).join('')}</div>` : '';
+async function heCarregaFotos() {
+  const L = [...document.querySelectorAll('img[data-hefid]')]; if (!L.length || !S.url || !S.session) return;
+  for (const im of L) { const fid = im.dataset.hefid; if (!HE_FT[fid]) { try { const j = await api('getFile', { fileId: fid }); if (j.ok) HE_FT[fid] = 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data; } catch (e) { } }
+    if (HE_FT[fid]) { document.querySelectorAll(`img[data-hefid="${fid}"]`).forEach(i => { i.src = HE_FT[fid]; i.removeAttribute('data-hefid'); }); } }
+}
+function heGaleria(id, k) {
+  const x = heEventos(HE.v).concat(heEventos('')).find(y => y.id === id); if (!x || !x.fotos.length) return; let i = +k || 0;
+  const des = () => { const f = x.fotos[i], src = f.src || HE_FT[f.fid] || '';
+    $('#heGal').innerHTML = `<div class="he-gi">${src ? `<img src="${src}" alt="">` : '<p class="note">Carregando do Google Drive…</p>'}</div><div class="row" style="align-items:center"><button class="mbtn" id="heGa"${i ? '' : ' disabled'}>‹ Anterior</button><span class="note" style="flex:1;text-align:center">Foto ${i + 1} de ${x.fotos.length} · ${f.fid ? '☁ no Google Drive' : 'só neste aparelho'}</span><button class="mbtn" id="heGp"${i < x.fotos.length - 1 ? '' : ' disabled'}>Próxima ›</button></div>`;
+    $('#heGa').onclick = () => { i--; des(); }; $('#heGp').onclick = () => { i++; des(); };
+    if (!src && f.fid && S.url && S.session) api('getFile', { fileId: f.fid }).then(j => { if (j.ok) { HE_FT[f.fid] = 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.data; des(); } }).catch(() => { }); };
+  const vx = vessel(x.vessel);
+  modal(`<h2>${esc(vx ? vx.nome : '')} · ${esc(heEqNome(vx, x.eq))} · ${brD(x.date)}</h2><p class="note">${esc(x.txt)}</p><div id="heGal"></div><div class="row end"><button class="mbtn" data-close>Fechar</button></div>`); des();
 }
 // linha do tempo vertical de um equipamento
 function heVertical(v, e, E) {
@@ -64,7 +84,7 @@ function heVertical(v, e, E) {
   return `<div class="he-vt">${E.slice().reverse().map(x => { const d = heDesde(v.id, e.hp, x);
     return `<div class="he-vi" style="--c:${(HE_TP[x.tp] || HE_TP.outro)[1]}"><div class="he-vd"><b>${brD(x.date)}</b><span>há ${heAnos(x.date)}</span></div><div class="he-vc">${hePill(x.tp)}<div class="he-vtx">${esc(x.txt)}</div>
       <div class="he-vm">${x.h != null && x.h !== '' ? `<span>Horímetro <b>${nf(+x.h)} h</b>${d != null ? ` · ${nf(d)} h trabalhadas desde então` : ''}</span>` : ''}${x.doc ? `<span>📄 ${esc(x.doc)}</span>` : '<span class="he-sd">sem documento informado</span>'}${x.quem ? `<span>${esc(x.quem)}</span>` : ''}${x.src ? `<span class="note">do SMF · ${esc(x.src)}</span>` : ''}</div>
-      ${x.obs ? `<div class="note">${esc(x.obs)}</div>` : ''}${x.man ? `<button class="mbtn sm" data-heed="${esc(x.id)}">Editar</button>` : ''}</div></div>`; }).join('')}</div>`;
+      ${x.obs ? `<div class="note">${esc(x.obs)}</div>` : ''}${heMinis(x)}${x.man ? `<button class="mbtn sm" data-heed="${esc(x.id)}">Editar</button>` : ''}</div></div>`; }).join('')}</div>`;
 }
 // ficha resumida de cada equipamento do empurrador
 function heFicha(v, e, E) {
@@ -87,8 +107,8 @@ function vEnxEq() {
   else if (!eqSel) corpo = `<div class="card"><h2>Linha do tempo · ${esc(v.nome)} por equipamento</h2>${leg}${heFaixas(Eqs.map(e => ({ k: e.k, nome: e.nome, b: e.tp !== 'emp' })), E, x => x.eq)}<p class="note">Passe o mouse num ponto para ver o acontecimento; clique para editar o que foi lançado aqui.</p></div>
     <div class="card"><h2>Equipamentos · ${esc(v.nome)}</h2><div class="he-eqs">${Eqs.map(e => { const Ee = E.filter(x => x.eq === e.k); return `<div class="he-eq" data-heeq="${e.k}"><div class="he-eqh"><b>${esc(e.nome)}</b><span class="note">${Ee.length} acontecimento${Ee.length === 1 ? '' : 's'}</span></div>${heFicha(v, e, Ee)}</div>`; }).join('')}</div></div>`;
   else corpo = `<div class="card"><h2>${esc(v.nome)} · ${esc(eqSel.nome)}</h2>${heFicha(v, eqSel, Ef)}</div><div class="card"><h2>Linha do tempo · ${esc(eqSel.nome)}</h2>${heVertical(v, eqSel, Ef)}</div>`;
-  const tab = `<div class="card"><h2>Planilha de acontecimentos · ${v ? esc(v.nome) + (eqSel ? ' · ' + esc(eqSel.nome) : '') : 'toda a frota'} · ${Ef.length}</h2>${Ef.length ? `<div class="tw"><table class="t he-t"><thead><tr><th>Data</th>${v ? '' : '<th>Empurrador</th>'}<th>Equipamento</th><th>Tipo</th><th>O que foi feito</th><th class="num">Horímetro</th><th>Documento</th><th>Executado por</th><th></th></tr></thead><tbody>${Ef.slice().reverse().map(x => { const vx = vessel(x.vessel);
-      return `<tr><td class="nowrap">${brD(x.date)}</td>${v ? '' : `<td class="nowrap"><b>${esc(vx ? vx.nome : '?')}</b></td>`}<td class="nowrap">${esc(heEqNome(vx, x.eq))}</td><td>${hePill(x.tp)}</td><td>${esc(x.txt)}${x.obs ? `<div class="note">${esc(x.obs)}</div>` : ''}</td><td class="num nowrap">${x.h != null && x.h !== '' ? nf(+x.h) + ' h' : '—'}</td><td>${x.doc ? esc(x.doc) : '<span class="he-sd">—</span>'}</td><td>${esc(x.quem || '')}</td><td class="nowrap">${x.man ? `<button class="mbtn sm" data-heed="${esc(x.id)}">Editar</button>` : `<span class="note" title="${esc(x.src || '')}">do SMF</span>`}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="note">Nada lançado para esta escolha.</p>'}
+  const tab = `<div class="card"><h2>Planilha de acontecimentos · ${v ? esc(v.nome) + (eqSel ? ' · ' + esc(eqSel.nome) : '') : 'toda a frota'} · ${Ef.length}</h2>${Ef.length ? `<div class="tw"><table class="t he-t"><thead><tr><th>Data</th>${v ? '' : '<th>Empurrador</th>'}<th>Equipamento</th><th>Tipo</th><th>O que foi feito</th><th class="num">Horímetro</th><th>Documento</th><th>Executado por</th><th>Fotos</th><th></th></tr></thead><tbody>${Ef.slice().reverse().map(x => { const vx = vessel(x.vessel);
+      return `<tr><td class="nowrap">${brD(x.date)}</td>${v ? '' : `<td class="nowrap"><b>${esc(vx ? vx.nome : '?')}</b></td>`}<td class="nowrap">${esc(heEqNome(vx, x.eq))}</td><td>${hePill(x.tp)}</td><td>${esc(x.txt)}${x.obs ? `<div class="note">${esc(x.obs)}</div>` : ''}</td><td class="num nowrap">${x.h != null && x.h !== '' ? nf(+x.h) + ' h' : '—'}</td><td>${x.doc ? esc(x.doc) : '<span class="he-sd">—</span>'}</td><td>${esc(x.quem || '')}</td><td class="nowrap">${(x.fotos || []).length ? `<span class="he-fc">${heMini(x, 0, 'he-mi he-mi1')}${x.fotos.length > 1 ? '<b>+' + (x.fotos.length - 1) + '</b>' : ''}</span>` : ''}</td><td class="nowrap">${x.man ? `<button class="mbtn sm" data-heed="${esc(x.id)}">Editar</button>` : `<span class="note" title="${esc(x.src || '')}">do SMF</span>`}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="note">Nada lançado para esta escolha.</p>'}
     <p class="note">“do SMF” = já registrado em outra tela (troca de reversor e de horímetro em 1.1, reforma em 1.3, docagem): corrija lá. O documento é onde o acontecimento está comprovado (OM do Sankhya, relatório da oficina, nota fiscal, laudo).</p></div>`;
   return enxCab('Histórico dos equipamentos', 'Reformas, substituições e grandes reparos de cada MCP, reversor e MCA, com a data, o horímetro e o documento que comprova',
     `${can.edit() ? '<button class="mbtn pri" data-henovo>+ Lançar acontecimento</button><button class="mbtn" data-hecola>Colar planilha</button>' : ''}<button class="mbtn" data-hecsv>Baixar planilha</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
@@ -107,16 +127,21 @@ function heModal(id) {
     <label class="f s2">Horímetro do motor (h)<input id="heH" inputmode="decimal" value="${esc(r && r.h != null ? String(r.h) : '')}" placeholder="opcional"></label>
     <label class="f s4">Documento onde está registrado<input id="heDoc" value="${esc(r ? r.doc || '' : '')}" placeholder="Ex.: OM 12345 do Sankhya · relatório da oficina · NF 9876"></label>
     <label class="f s3">Executado por<input id="heQ" value="${esc(r ? r.quem || '' : '')}" placeholder="equipe própria ou empresa"></label>
-    <label class="f s3">Observação<input id="heO" value="${esc(r ? r.obs || '' : '')}"></label></div>
+    <label class="f s3">Observação<input id="heO" value="${esc(r ? r.obs || '' : '')}"></label>
+    ${r && (r.fotos || []).length ? `<div class="f s6"><span>Fotos já salvas · clique no ✕ para tirar</span><div class="he-ms" id="heFx">${r.fotos.map((f, k) => `<span class="fx-t"><img src="${f.src || HE_FT[f.fid] || ''}" alt=""><button type="button" data-herm="${k}" title="Tirar esta foto">✕</button></span>`).join('')}</div></div>` : ''}
+    ${enxFotoCampo('heF', 'Fotos (até 6 por vez) · antes, depois, plaqueta, peça trocada, relatório')}</div>
     <p class="note">Reversor: o horímetro é o do MCP do mesmo bordo. Use para o que muda a vida do equipamento (reforma, substituição, grande reparo); serviço do plano preventivo vai na 2.2.</p>
     <div class="row end">${r ? '<button class="mbtn" id="heDel" style="margin-right:auto;color:var(--badt)">Excluir</button>' : ''}<button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="heOk">Salvar</button></div>`);
   $('#heV').onchange = e => { $('#heE').innerHTML = opE(e.target.value); };
+  const tirar = new Set(); const fx = $('#heFx'); if (fx) fx.onclick = e => { const b = e.target.closest('[data-herm]'); if (!b) return; const k = +b.dataset.herm, sp = b.parentNode; if (tirar.has(k)) { tirar.delete(k); sp.style.opacity = ''; } else { tirar.add(k); sp.style.opacity = '.25'; } };
   $('#heOk').onclick = async () => {
     const d = $('#heD').value, tx = $('#heX').value.trim(), hs = $('#heH').value.trim().replace(/\./g, '').replace(',', '.'), h = hs === '' ? '' : +hs;
     if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.'); if (!tx) return toast('Escreva o que foi feito.'); if (h !== '' && (isNaN(h) || h < 0)) return toast('Horímetro inválido.');
+    const novas = []; for (const f of fxArq('heF').slice(0, 6)) novas.push({ tipo: 'FOTO', src: await comprimir(f), at: Date.now() });
     const o = r || { id: uid('snap'), kind: 'snap', tipo: 'evento', por: S.session.name };
+    o.fotos = (o.fotos || []).filter((_, k) => !tirar.has(k)).concat(novas);
     Object.assign(o, { vessel: $('#heV').value, eq: $('#heE').value, date: d, tp: $('#heT').value, txt: tx, h, doc: $('#heDoc').value.trim(), quem: $('#heQ').value.trim(), obs: $('#heO').value.trim() });
-    await saveRec(o); HE.v = o.vessel; closeModal(); toast('Acontecimento salvo.'); render(); };
+    await saveRec(o); HE.v = o.vessel; closeModal(); toast('Acontecimento salvo' + (novas.length ? ' · ' + novas.length + ' foto(s) sobem ao Google Drive em seguida' : '') + '.'); render(); };
   const del = $('#heDel'); if (del) del.onclick = async () => { if (!confirm('Excluir este acontecimento?')) return; r.excluido = true; await saveRec(r); closeModal(); render(); };
 }
 // ---------- colar do Excel ----------
@@ -158,14 +183,15 @@ function heCsv() {
 // ---------- tela, cliques e menu ----------
 VX.enxeq = vEnxEq;
 AFTER.enxeq = () => { const m = $('#main');
-  m.onclick = e => { const t = e.target.closest('[data-hev],[data-heeq],[data-heed],[data-henovo],[data-hecola],[data-hecsv]'); if (!t) return; const d = t.dataset;
+  m.onclick = e => { const t = e.target.closest('[data-hefoto],[data-hev],[data-heeq],[data-heed],[data-henovo],[data-hecola],[data-hecsv]'); if (!t) return; const d = t.dataset;
+    if (d.hefoto) { const [id, k] = d.hefoto.split('|'); return heGaleria(id, k); }
     if (d.hev !== undefined) { HE.v = d.hev; HE.eq = ''; return render(); }
     if (d.heed !== undefined) return heModal(d.heed);
     if (d.heeq !== undefined) { HE.eq = d.heeq; return render(); }
     if (d.henovo !== undefined) return heModal('');
     if (d.hecola !== undefined) return heColar();
     if (d.hecsv !== undefined) return heCsv(); };
-  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxeq_lay', '[data-enxreset]'); };
+  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxeq_lay', '[data-enxreset]'); heCarregaFotos(); };
 ENX_OK.push('enxeq');
 { const ap = PCM_MENU.find(g => g[0] === 'Apoio'); if (ap) ap[1].unshift(['enxeq', 'Histórico dos equipamentos', 'hist']); }
 ICO.hist = '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/>';
@@ -184,5 +210,8 @@ table.he-f{width:100%;border-collapse:collapse;font-size:12.5px}table.he-f th{te
 .he-vi::before{content:'';position:absolute;left:117px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid #fff;box-shadow:0 0 0 1px var(--c)}
 .he-vi::after{content:'';position:absolute;left:123px;top:20px;bottom:0;width:2px;background:#E3E6EA}.he-vi:last-child::after{display:none}
 .he-vd{text-align:right;font-size:12.5px}.he-vd span{display:block;color:#5F6368;font-size:11px}.he-vc{padding-left:22px}.he-vtx{margin:4px 0 3px;font-size:13.5px}
+.he-ms{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}.he-mi{width:74px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #D5DAE1;background:#EEF1F5;cursor:zoom-in}
+.he-fc{display:inline-flex;align-items:center;gap:4px}.he-fc b{font-size:11px;color:#5F6368}.he-mi1{width:44px;height:34px}
+.he-gi{text-align:center;margin:6px 0}.he-gi img{max-width:100%;max-height:62vh;border-radius:8px}
 .he-vm{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:#3C4043;margin-bottom:4px}
 `; document.head.appendChild(st); }
