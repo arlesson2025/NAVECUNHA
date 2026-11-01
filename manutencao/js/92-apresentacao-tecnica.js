@@ -33,7 +33,7 @@ function atpCols(lab, val, o) {   // colunas por mês: o último mês em azul-ma
 function atpBarsH(rows, o) {   // rows = [rótulo, valor, detalhe, cor, texto do valor]
   o = o || {}; if (!rows.length) return `<div class="at-vz">${o.vazio || 'Sem registros no período'}</div>`;
   const mx = o.mx || Math.max(1, ...rows.map(r => r[1] || 0));
-  return `<div class="at-hb">${rows.map((r, i) => `<div><span>${esc(r[0])}${r[2] ? `<em>${esc(r[2])}</em>` : ''}</span><i>${r[1] != null ? `<b style="width:${Math.max(1.5, Math.min(1, r[1] / mx) * 100)}%;background:${r[3] || (i === 0 ? (o.cor || ATP_C.bad) : (o.cor2 || '#E3A598'))}"></b>` : ''}</i><strong>${r[4] != null ? esc(r[4]) : nf(r[1])}</strong></div>`).join('')}</div>`;
+  return `<div class="at-hb${o.sm ? ' at-hbs' : ''}">${rows.map((r, i) => `<div><span>${esc(r[0])}${r[2] ? `<em>${esc(r[2])}</em>` : ''}</span><i>${r[1] != null ? `<b style="width:${Math.max(1.5, Math.min(1, r[1] / mx) * 100)}%;background:${r[3] || (i === 0 ? (o.cor || ATP_C.bad) : (o.cor2 || '#E3A598'))}"></b>` : ''}</i><strong>${r[4] != null ? esc(r[4]) : nf(r[1])}</strong></div>`).join('')}</div>`;
 }
 function atpSeg(parts) {   // barra 100% com legenda
   const t = parts.reduce((a, p) => a + p[1], 0);
@@ -120,11 +120,12 @@ function atpSlides(R, P) {
       <td>${atpDot(cD[x.lst])}${x.ul ? brD(x.ul.date) + (x.ls && x.ls.alertas && x.ls.alertas.length ? ' · ' + esc(x.ls.alertas.slice(0, 2).map(z => z.nome.split(' (')[0]).join(', ')) : ' · normal') : 'sem laudo'}</td>
       <td class="at-nw">${atpDot(cD[x.cst])}${x.clv.length ? 'vencida' : x.cst === 'sem' ? 'sem registro' : 'em dia'}</td><td style="color:${cD[x.rc] === ATP_C.gr ? ATP_C.mut : cD[x.rc]};font-weight:700">${esc(x.rec)}</td></tr>`).join('')}</table>${MD.length > MDv.length ? `<p class="at-n">Mais ${MD.length - MDv.length} motor(es) sem alerta nos sinais: manter.</p>` : ''}`));
   // 12 · compressão e calibração: quem está mais perto do overhaul e da calibração
-  const CM = R.cmp.filter(x => x[2] != null).map(x => ({ x, h: x[2] < 1.27 ? 0 : x[5] < 0 ? Infinity : x[5] })).sort((u, w) => u.h - w.h).slice(0, 8);
-  const cmF = CM.filter(u => isFinite(u.h)).map(u => u.h), cmMx = Math.max(1000, ...cmF);
+  // compressão pela pressão medida do pior cilindro, como no 4.3 (SMF 3.112): todos os motores com ensaio, do pior para o melhor; a vida estimada vai no texto
+  const CM = R.cmp.filter(x => x[2] != null).sort((u, w) => u[2] - w[2]), cmSem = R.cmp.filter(x => x[2] == null), cmAmb = x => x[6] === 'prog' || x[6] === 'aten' || x[2] < COMP.aten;
+  const cmDet = x => x[6] === 'fora' ? 'abaixo do limite · overhaul' : x[6] === 'aten' && x[4] > CMP.dif ? 'variação ' + fMPa(x[4]) + ' entre cilindros' : x[5] == null ? '1 ensaio · sem projeção' : x[5] < 0 ? 'sem tendência de queda' : '≈ ' + nf(x[5]) + ' h até o limite';
   const nmP = (vid, pos) => { const v = vessel(vid); return vName(vid) + (v && mcpPos(v).length > 1 ? ' · ' + pos : ''); };
   const CA = R.cal.filter(x => x[3] != null).sort((u, w) => u[3] - w[3]).slice(0, 8), caMx = Math.max(1000, ...CA.map(x => x[3]));
-  L.push(sl(head('Condição', 'Compressão e calibração dos MCP', 'motores mais perto do limite de compressão e da próxima calibração') + `<div class="at-2 at-eq"><div><h4>Horas até o limite de compressão (1,27 MPa)</h4>${atpBarsH(CM.map(({ x, h }) => [nmP(x[0], x[1]), isFinite(h) ? h : null, 'pior cilindro ' + fMPa(x[2]) + ' MPa', x[2] < 1.27 ? ATP_C.bad : x[6] === 'ok' ? ATP_C.nv : '#B07A10', x[2] < 1.27 ? 'abaixo' : isFinite(h) ? nf(h) + ' h' : 'estável']), { mx: cmMx, vazio: 'Sem ensaio de compressão' })}</div>
+  L.push(sl(head('Condição', 'Compressão e calibração dos MCP', 'pressão medida do pior cilindro de cada motor e horas até a próxima calibração') + `<div class="at-2 at-eq"><div><h4>Pressão do pior cilindro · acima do limite de ${fMPa(COMP.lim)} MPa</h4>${atpBarsH(CM.map(x => [nmP(x[0], x[1]), Math.max(.004, x[2] - COMP.lim), cmDet(x), x[6] === 'fora' ? ATP_C.bad : cmAmb(x) ? '#B07A10' : ATP_C.nv, fMPa(x[2]) + ' MPa']), { mx: COMP.pad - COMP.lim, vazio: 'Sem ensaio de compressão', sm: 1 })}${cmSem.length ? `<p class="at-n">Sem ensaio: ${esc(cmSem.map(x => nmP(x[0], x[1])).join(', '))}</p>` : ''}</div>
     <div><h4>Horas até a próxima calibração</h4>${atpBarsH(CA.map(x => [nmP(x[0], x[1]), Math.max(0, x[3]), x[2] === '1.1.11' ? 'folga de válvulas' : 'bicos injetores', x[3] < 0 ? ATP_C.bad : x[4] === 'ok' ? ATP_C.nv : '#B07A10', x[3] < 0 ? 'vencida ' + nf(-x[3]) + ' h' : nf(x[3]) + ' h']), { mx: caMx, vazio: 'Sem calibração registrada' })}</div></div>`));
   // 13 · preventivas em fotos (4 por slide)
   const PF = FO.filter(x => x.t !== 'C' && (x.antes || x.depois)).sort((u, w) => (!!w.antes + !!w.depois) - (!!u.antes + !!u.depois)).slice(0, 12).sort((u, w) => u.date < w.date ? -1 : 1);
@@ -233,7 +234,7 @@ ICO.apres = '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M12 16v4M
 .at-tile.at-ok{border-left-color:#137333}.at-tile.at-ok b{color:#137333}.at-tile.at-bad{border-left-color:#C5221F}.at-tile.at-bad b{color:#C5221F}.at-tile.at-warn{border-left-color:#B07A10}.at-tile.at-warn b{color:#B06000}
 .at-2{display:grid;grid-template-columns:1.1fr 1fr;gap:40px;flex:1;min-height:0}.at-2.at-eq{grid-template-columns:1fr 1fr}
 .at-hb{display:flex;flex-direction:column;gap:11px}.at-hb>div{display:grid;grid-template-columns:200px 1fr 92px;gap:12px;align-items:center;font-size:15.5px}
-.at-hb span{line-height:1.2}.at-hb em{display:block;font-style:normal;font-size:12.5px;color:#8A98A8}
+.at-hbs{gap:2px}.at-hbs>div{font-size:13px;line-height:1.05;grid-template-columns:240px 1fr 92px}.at-hbs i{height:12px}.at-hbs strong{font-size:14px}.at-hbs em{font-size:11px}.at-hbs+.at-n{margin-top:6px}.at-hb span{line-height:1.2}.at-hb em{display:block;font-style:normal;font-size:12.5px;color:#8A98A8}
 .at-hb i{display:block;height:20px;background:#F1F4F8;border-radius:5px;overflow:hidden}.at-hb i b{display:block;height:100%;border-radius:5px}.at-hb strong{font-size:17px;text-align:right;white-space:nowrap}
 .at-seg{display:flex;height:42px;border-radius:9px;overflow:hidden;gap:2px}.at-seg b{display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;min-width:34px}
 .at-leg{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:15px;color:#41536A}.at-leg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px}
