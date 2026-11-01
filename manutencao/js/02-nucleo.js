@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.126';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.127';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -17,7 +17,7 @@ const isMcp = p => p === 'BB' || p === 'BE' || p === 'CE';
 const fixP = (vid, pos) => { const v = vessel(vid); if (!v) return pos; if (isMcp(pos) && !mcpPos(v).includes(pos)) return mcpPos(v)[0]; if (MCAS.includes(pos) && !v.mca[pos]) return 'UN'; return pos; };
 const optsPos = vid => { const v = vessel(vid); if (!v) return ''; return posicoes(v).map(p => `<option value="${p}"${p === 'UN' ? ' selected' : ''}>${p === 'UN' ? 'N/A (empurrador)' : isMcp(p) ? (p === 'CE' ? 'MCP central' : 'MCP ' + p) : posNome(v, p) + ' · ' + mcaNome(v, p)}</option>`).join(''); };
 // modelos de MCA da frota → bloco do Anexo I (3.1 MWM / 3.2 Yanmar)
-const MCA_MOD = { 'MWM D229-4NA': 'MWM', 'MWM D229-4': 'MWM', 'MWM D229-3T': 'MWM', 'MWM L229-4': 'MWM', 'Yanmar 4TNV98-GGE': 'YANMAR', 'Yanmar NSB18': 'YANMAR' };
+const MCA_MOD = { 'MWM D229-4NA': 'MWM', 'MWM D229-4': 'MWM', 'MWM D229-3T': 'MWM', 'MWM L229-4': 'MWM', 'Yanmar 4TNV98-GGE': 'YANMAR', 'Yanmar NSB18': 'YANMAR', 'Yanmar 4TNV88-GGE': 'YANMAR' };
 // cadastro da frota conforme a Matriz técnica de equipamentos e lubrificação (17/10/2026)
 const FROTA_MATRIZ = {
   'CJA I':     { mcp: 'bi',   mod: 'S6R2-T2MPTK',   rev: 'REINTJES', mca: [['MWM', 'Yanmar 4TNV98-GGE', 'Bombordo'], ['MWM', 'MWM L229-4', 'Boreste']] },
@@ -31,7 +31,7 @@ const FROTA_MATRIZ = {
   'CJA XVIII': { mcp: 'mono', mod: 'S6R2-T2MPTK3M', rev: 'HITACHI',  mca: [['', 'MWM D229-4NA', 'Bombordo'], ['', 'MWM D229-4NA', 'Boreste']] },
   'CJA XIX':   { mcp: 'bi',   mod: 'S6R2-T2MPTK3M', rev: 'HITACHI',  mca: [['', 'MWM D229-4NA', 'Bombordo'], ['', 'Yanmar 4TNV98-GGE', 'Boreste']] },
   'CJA XX':    { mcp: 'bi',   mod: 'S6R2-T2MPTK3M', rev: 'HITACHI',  mca: [['', 'Yanmar 4TNV98-GGE', 'Bombordo'], ['', 'Yanmar 4TNV98-GGE', 'Boreste'], ['', 'MWM D229-4', 'Linha de centro (canhão SCI)']] },
-  'CJA XXI':   { mcp: 'bi',   mod: 'S6R-T2MPTK2',   rev: 'MASSON',   mca: [['', 'MWM D229-4', 'Bombordo'], ['', 'MWM D229-4', 'Boreste']] },
+  'CJA XXI':   { mcp: 'bi',   mod: 'S6R-T2MPTK2',   rev: 'MASSON',   mca: [['', 'MWM D229-4NA', 'Central'], ['209606', 'Yanmar 4TNV88-GGE', 'Cabinado']] },   // 01/11/2026: Supervisor — D229-4NA central e gerador cabinado Yanmar (não dois D229-4)
 };
 const mcpPos = v => v && v.mcp === 'mono' ? ['CE'] : ['BB', 'BE'];
 const mpos = vid => mcpPos(vessel(vid))[0];
@@ -45,7 +45,7 @@ function vesselDaMatriz(v) {
   v.mca = {}; v.mcaMod = {}; v.mcaLoc = {}; m.mca.forEach((x, i) => { const k = MCAS[i]; v.mcaMod[k] = x[1]; v.mca[k] = MCA_MOD[x[1]]; v.mcaLoc[k] = x[2]; });
   v.off = v.off || []; return v;
 }
-const normFrota = cfg => { (cfg.frota || []).forEach(v => { if (!v.mcp) vesselDaMatriz(v); if (v.nome === 'CJA XIV' && v.mcaLoc && v.mcaLoc.MCA2 === 'Boreste') v.mcaLoc.MCA2 = 'Linha de centro';   /* 01/11/2026: posição corrigida pelo Supervisor */ if (!v.mcp) { v.mcp = 'bi'; } v.rev = v.rev || {}; v.mca = v.mca || {}; }); return cfg; };
+const normFrota = cfg => { (cfg.frota || []).forEach(v => { if (!v.mcp) vesselDaMatriz(v); if (v.nome === 'CJA XIV' && v.mcaLoc && v.mcaLoc.MCA2 === 'Boreste') v.mcaLoc.MCA2 = 'Linha de centro'; if (v.nome === 'CJA XXI' && v.mcaMod && v.mcaMod.MCA2 === 'MWM D229-4') { v.mcaMod.MCA1 = 'MWM D229-4NA'; v.mcaMod.MCA2 = 'Yanmar 4TNV88-GGE'; v.mca = Object.assign(v.mca || {}, { MCA1: 'MWM', MCA2: 'YANMAR' }); v.mcaLoc = Object.assign(v.mcaLoc || {}, { MCA1: 'Central', MCA2: 'Cabinado' }); }   /* 01/11/2026: posição corrigida pelo Supervisor */ if (!v.mcp) { v.mcp = 'bi'; } v.rev = v.rev || {}; v.mca = v.mca || {}; }); return cfg; };
 const CLASSES = { 'Crítica':{h:0, cor:'var(--bad)', fundo:'var(--badb)', prazo:'Imediato', acao:'Interdição + RNC'}, 'Alta':{h:4, cor:'var(--warn)', fundo:'var(--warnb)', prazo:'≤ 4 horas', acao:'Prioridade + RNC'}, 'Média':{h:48, cor:'var(--acc)', fundo:'#E3EEFA', prazo:'≤ 48 horas', acao:'Programação'}, 'Baixa':{h:360, cor:'var(--ok)', fundo:'var(--okb)', prazo:'≤ 15 dias', acao:'Rotina'} };
 const FROTA_PADRAO = ['CJA I','CJA II','CJA X','CJA XIII','CJA XIV','CJA XV','CJA XVI','CJA XVII','CJA XVIII','CJA XIX','CJA XX','CJA XXI'];
 const ETAPAS_P = [['emitida','Emitida'],['abordo','A bordo'],['executada','Executada'],['conferencia','Em conferência'],['encerrada','Encerrada']];
