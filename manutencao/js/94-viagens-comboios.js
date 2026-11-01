@@ -83,6 +83,17 @@ function vgMeses(V, ano) {   // barras empilhadas por rota: 16 px como as do SMF
   return `<div style="text-align:center"><svg viewBox="0 0 ${W} ${H}" width="${W}" style="max-width:100%">${s}</svg></div>`;
 }
 const vgLeg = (ref) => `<div class="vg-lg">${VG_GR.map(g => `<span><i style="background:${g[1]}"></i>${g[0]}</span>`).join('')}${ref ? '<span><i style="background:#9AA5B4"></i>Em reforma</span>' : ''}</div>`;
+// ---------- comboios em viagem agora (SMF 3.131, pedido do Supervisor: “enxergar os comboios que estão em viagem”) ----------
+function vgAgora(LE) {
+  const H = isoD(hoje()), d = (a, b) => Math.round((pD(b) - pD(a)) / 864e5);
+  const L = LE.filter(x => x.st === 'via' && x.u).map(x => x.u).sort((a, b) => a.fim < b.fim ? -1 : 1);
+  const lin = L.map(u => { const dv = Math.max(0, d(u.date, H)), resta = d(H, u.fim);
+    const prev = resta >= 0 ? `${brD(u.fim)} <span class="note">· em ${resta} d</span>` : `${brD(u.fim)} <span class="pill p-warn">passou ${-resta} d</span>`;
+    return `<tr><td class="nowrap"><b>${esc(vName(u.vessel))}</b></td><td>${u.balsas.map(b => `<span class="vg-b">${esc(vName(b))}</span>`).join('') || '<span class="note">sem balsa</span>'}</td><td class="nowrap"><i class="vg-dot" style="background:${VG_COR[u.rota] || '#9AA5B4'}"></i>${esc(vgRotaCurta(u.rota))}</td><td class="nowrap">${brD(u.date)}</td><td class="num nowrap"><b>${dv}</b> d</td><td class="nowrap">${prev}</td><td class="nowrap"><button class="mbtn sm" data-vged="${esc(u.id)}">Editar</button></td></tr>`; }).join('');
+  const nb = L.reduce((a, u) => a + u.balsas.length, 0);
+  return `<div class="card"><h2>Comboios em viagem agora · ${L.length} empurrador${L.length === 1 ? '' : 'es'} · ${nb} balsa${nb === 1 ? '' : 's'}</h2>${L.length ? `<div class="tw"><table class="t vg-ag"><thead><tr><th>Empurrador</th><th>Balsas do comboio</th><th>Rota</th><th>Saída</th><th class="num">Em viagem há</th><th>Chegada prevista</th><th></th></tr></thead><tbody>${lin}</tbody></table></div>` : '<p class="note">Nenhum comboio em viagem agora.</p>'}
+    <p class="note">Da saída registrada (“Saiu de viagem”) até o FR 027_L de chegada. Chegada prevista = saída + ciclo da rota; “passou” = já devia ter chegado e ainda não há FR 027_L de chegada (confira ou informe a chegada em Editar).</p></div>`;
+}
 // ---------- tela ----------
 function vEnxViag() {
   const V = vgViagens(), anos = [...new Set([hoje().getFullYear(), ...V.map(x => +x.date.slice(0, 4))])].sort((a, b) => b - a); if (!VG.ano) VG.ano = anos[0]; const ano = VG.ano, eb = VG.modo === 'B';
@@ -111,6 +122,7 @@ function vEnxViag() {
   return enxCab('1.3 Viagens e comboios', 'Saídas de Manaus com as balsas do comboio, tempo de viagem, tempo parado no porto e reformas · a chegada vem do FR 027_L; sem ela, é estimada pela rota',
     `<label class="f">Ano<select id="vgA">${anos.map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select></label><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `<div class="card"><h2>Resumo · ${ano}</h2><div class="sf-k">${nk('Comboios no ano', TA.length)}${nk('Empurradores em viagem', n(LE, 'via'))}${nk('Balsas em viagem', n(LB, 'via'))}${nk('No porto', n(LE, 'por') + ' emp. · ' + n(LB, 'por') + ' balsas')}${nk('Em reforma', n(LE, 'ref') + n(LB, 'ref'), n(LE, 'ref') + n(LB, 'ref') ? 'var(--warnt)' : '')}</div></div>
+   ${vgAgora(LE)}
    <div class="card"><div class="row"><h2>Operação por ${eb ? 'balsa' : 'empurrador'}</h2><span class="sp"></span>${seg}</div>${tab}<p class="note">Dias em viagem e no porto contam de 01/01 até hoje; o período em reforma não entra. “est.” = tem chegada estimada pela rota. Parado há = desde a última chegada (ou do fim da reforma); acima de 60 dias fica em destaque.</p></div>
    <div class="card"><div class="row"><h2>Linha do tempo · ${ano}</h2><span class="sp"></span>${seg}</div>${vgLeg(true)}${vgGantt(N, V, ano, eb)}<p class="note">Barra = viagem; espaço vazio = no porto; linha vermelha = hoje. Passe o mouse na barra para ver o comboio.</p></div>
    <div class="card"><h2>Comboios por mês · ${ano}</h2>${vgLeg(false)}${vgMeses(V, ano)}</div>
