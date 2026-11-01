@@ -211,14 +211,42 @@ function sfMatriz(L) {
       </tr>`).join('')}</tbody>${sfTotais(L)}</table></div>
     <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; Liberação = o que bloqueia ou restringe a saída (item crítico da NP 6.3 vencido, corretiva aberta); as colunas de condição (3.1 e as cinco abas da 3.2) e as corretivas abrem a tela de origem com o empurrador destacado. Análise de óleo: número = amostra vencida ou do mês, <b>!</b> = último laudo com alerta. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
 }
+// identificação dos equipamentos nos cartões = Visão por embarcação da Matriz técnica (docs/Matriz_tecnica…html, seção 6; Supervisor, 01/11/2026)
+// ao mudar a Matriz, atualize aqui (gerado da seção 6 do documento)
+const MATRIZ_VG = {
+  "CJA I": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R2-T2MPTK, 480 kW, nº 80862"], ["Boreste", "S6R2-T2MPTK, 480 kW, nº 80864"]], "red": [["Bombordo", "Reintjes WAF 364, 4,920:1"], ["Boreste", "Reintjes WAF 364, 4,920:1"]], "aux": [["Bombordo", "Yanmar 4TNV98-GGE, 40,8 kW"], ["Boreste", "MWM L229-4, 61,0 kW"]]},
+  "CJA II": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R-T2MPTK2, 610 kW, nº 70996"], ["Boreste", "S6R-T2MPTK2, 610 kW, nº 70995"]], "red": [["Bombordo", "Masson Marine MMW3700, 4,913:1"], ["Boreste", "Masson Marine MMW3700, 4,913:1"]], "aux": [["Bombordo", "MWM D229-3T, 52,2 kW"], ["Boreste", "MWM D229-3T, 52,2 kW"]]},
+  "CJA X": {"cfg": "Monomotor", "prop": [["Central", "S6R2-T2MPTK, 480 kW, nº 80859"]], "red": [["Central", "Reintjes WAF 364, 4,920:1"]], "aux": [["Bombordo", "Yanmar 4TNV98-GGE, 40,8 kW"], ["Boreste", "Yanmar NSB18, 12,5 kW"]]},
+  "CJA XIII": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R-T2MPTK2, 610 kW, nº 71112"], ["Boreste", "S6R-T2MPTK2, 610 kW, nº 71111"]], "red": [["Bombordo", "Masson Marine MMW3700, 4,913:1"], ["Boreste", "Masson Marine MMW3700, 4,913:1"]], "aux": [["Bombordo", "MWM D229-3T, 52,2 kW"], ["Boreste", "MWM D229-3T, 52,2 kW"]]},
+  "CJA XIV": {"cfg": "Monomotor", "prop": [["Central", "S6R2MPTK3, 683 kW, nº 74041"]], "red": [["Central", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "MWM D229-4, 48,5 kW"], ["Linha de centro", "MWM D229-4, 48,5 kW"]]},
+  "CJA XV": {"cfg": "Monomotor", "prop": [["Central", "S6R2MPTK3, 683 kW, nº 79435"]], "red": [["Central", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "MWM D229-3T, 52,2 kW"], ["Boreste", "MWM D229-4NA, 61,0 kW"]]},
+  "CJA XVI": {"cfg": "Monomotor", "prop": [["Central", "S6R2MPTK3, 683 kW, nº 79406"]], "red": [["Central", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Linha de centro", "MWM D229-4NA, 61,0 kW"], ["Boreste", "MWM L229-4, 61,0 kW"]]},
+  "CJA XVII": {"cfg": "Monomotor", "prop": [["Central", "S6R2-T2MPTK3M, 691 kW, nº 81157"]], "red": [["Central", "Masson Marine MMW3700, 5,077:1"]], "aux": [["Linha de centro", "Yanmar 4TNV98-GGE, 40,8 kW"], ["Boreste", "MWM D229-4NA, 61,0 kW"]]},
+  "CJA XVIII": {"cfg": "Monomotor", "prop": [["Central", "S6R2-T2MPTK3M, 691 kW, nº 81598"]], "red": [["Central", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "MWM D229-4NA, 61,0 kW"], ["Boreste", "MWM D229-4NA, 61,0 kW"]]},
+  "CJA XIX": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R2-T2MPTK3M, 691 kW, nº 81600"], ["Boreste", "S6R2-T2MPTK3M, 691 kW, nº 81599"]], "red": [["Bombordo", "Hitachi MGN91BL, 5,04:1"], ["Boreste", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "MWM D229-4NA, 61,0 kW"], ["Boreste", "Yanmar 4TNV98-GGE, 40,8 kW"]]},
+  "CJA XX": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R2-T2MPTK3M, 691 kW, nº 82477"], ["Boreste", "S6R2-T2MPTK3M, 691 kW, nº 82481"]], "red": [["Bombordo", "Hitachi MGN91BL, 5,04:1"], ["Boreste", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "Yanmar 4TNV98-GGE, 40,8 kW"], ["Boreste", "Yanmar 4TNV98-GGE, 40,8 kW"], ["Linha de centro (canhão SCI)", "MWM D229-4, 48,5 kW"]]},
+  "CJA XXI": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R-T2MPTK2, 610 kW, nº 70997"], ["Boreste", "S6R-T2MPTK2, 610 kW, nº 70998"]], "red": [["Bombordo", "Masson Marine MMW3700, 4,913:1"], ["Boreste", "Masson Marine MMW3700, 4,913:1"]], "aux": [["Bombordo", "MWM D229-4, 48,5 kW"], ["Boreste", "MWM D229-4, 48,5 kW"]]},
+};
+function sfIdent(x) {
+  const g = MATRIZ_VG[x.v.nome]; if (!g) return null;
+  const fm = (FROTA_MATRIZ[x.v.nome] || {}).mca || [], hm = p => x.mot.find(m => m.p === p);
+  const hr = m => !m ? '' : (m.h ? nf(m.h.h) + ' h' : '—') + (m.d != null && m.d > 14 ? ` <span class="sf-red">${m.d} d</span>` : '');
+  const sn = i => { const n = (fm[i] || [])[0] || ''; return /\d|ileg/i.test(n) ? ', nº ' + n.replace(/^plaqueta /i, '') : ''; };
+  const mp = mcpPos(x.v), L = [];
+  const bloco = (tit, R, f) => R.forEach(([pos, eq], i) => { const r = f(i); L.push(`<tr${i ? '' : ' class="sf-i1"'}><th>${i ? '' : tit}</th><td>${r.dot || ''}${esc(pos)}: ${esc(eq)}${r.sn || ''}</td><td class="r nowrap">${r.h || ''}</td></tr>`); });
+  bloco('Propulsão', g.prop, i => ({ dot: '<span class="sf-dot mcp"></span>', h: hr(hm(mp[i])) }));
+  bloco('Redução', g.red, () => ({ dot: '<span class="sf-dot" style="visibility:hidden"></span>' }));
+  bloco('Auxiliares', g.aux, i => ({ dot: '<span class="sf-dot mca"></span>', sn: esc(sn(i)), h: hr(hm(MCAS[i])) }));
+  return { cfg: g.cfg, html: `<table class="sf-id">${L.join('')}</table>` };
+}
 function sfCartoes(L) {
-  return `<div class="sf-cards">${L.map(x => { const t = x.venc + x.mes + x.ok || 1;
-    return `<div class="sf-cd" data-pcmv="${x.v.id}"><div class="sf-cdh"><b>${esc(x.v.nome)}</b><span class="sf-tag ${SF_SIT[x.sit][0]}">${SF_SIT[x.sit][1]}</span></div>
-      <table class="sf-mt">${x.mot.map(m => `<tr><td><span class="sf-dot ${isMcp(m.p) ? 'mcp' : 'mca'}"></span>${m.p}</td><td>${esc(m.m)}</td><td class="r nowrap">${m.h ? nf(m.h.h) + ' h' : '—'}${m.d != null && m.d > 14 ? ` <span class="sf-red">${m.d} d</span>` : ''}</td></tr>`).join('')}</table>
+  return `<div class="sf-cards">${L.map(x => { const t = x.venc + x.mes + x.ok || 1, id = sfIdent(x);
+    return `<div class="sf-cd" data-pcmv="${x.v.id}"><div class="sf-cdh"><b>${esc(x.v.nome)}</b>${id ? `<span class="sf-cfg">${id.cfg}</span>` : ''}<span class="sf-tag ${SF_SIT[x.sit][0]}">${SF_SIT[x.sit][1]}</span></div>
+      ${id ? id.html : `<table class="sf-mt">${x.mot.map(m => `<tr><td><span class="sf-dot ${isMcp(m.p) ? 'mcp' : 'mca'}"></span>${m.p}</td><td>${esc(m.m)}</td><td class="r nowrap">${m.h ? nf(m.h.h) + ' h' : '—'}${m.d != null && m.d > 14 ? ` <span class="sf-red">${m.d} d</span>` : ''}</td></tr>`).join('')}</table>`}
       <div class="sf-mut">${x.loc ? x.loc[0].toUpperCase() + x.loc.slice(1) : 'Local não informado'}${x.cor ? ` · <b class="sf-red">${x.cor} corretiva${x.cor === 1 ? '' : 's'} aberta${x.cor === 1 ? '' : 's'}</b>` : ''}</div>
       <div class="sf-st"><i style="width:${x.venc / t * 100}%;background:#C5221F"></i><i style="width:${x.mes / t * 100}%;background:#F9AB00"></i><i style="width:${x.ok / t * 100}%;background:#1E8E3E"></i></div>
       <div class="sf-pl">${x.venc ? `<span class="pill p-bad">${x.venc} vencido${x.venc === 1 ? '' : 's'}</span>` : ''}${x.crit ? `<span class="pill p-bad"><b>${x.crit} crítico${x.crit === 1 ? '' : 's'} NP 6.3</b></span>` : ''}${x.mes ? `<span class="pill p-warn">${x.mes} no mês</span>` : ''}<span class="pill p-ok">${x.ok} em dia</span>${x.sem ? `<span class="pill p-mut">${x.sem} sem histórico</span>` : ''}</div></div>`; }).join('')}</div>
-    <p class="note">Clique no cartão para abrir o empurrador na 2.2. Barra: vencidos · vencem no mês · em dia.</p>`;
+    <p class="note">Equipamentos como na Matriz técnica (visão por embarcação); horímetro na frente de cada motor. Clique no cartão para abrir o empurrador na 2.2. Barra: vencidos · vencem no mês · em dia.</p>`;
 }
 // por que cada empurrador não está liberado, em palavras, cada motivo levando à tela que resolve (Supervisor, 29/10/2026)
 function sfPorque(L) {
