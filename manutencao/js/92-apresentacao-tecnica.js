@@ -166,21 +166,23 @@ function atpSel(R) {
   el.innerHTML = (F.length ? F.map(x => `<label class="at-it"><input type="checkbox" data-atpf="${esc(x.id)}"${ATP.fora.has(x.id) ? '' : ' checked'}><span class="at-thm">${th(x.antes)}${th(x.depois)}</span><span><b>${esc(x.tit)}</b><small>${esc(x.sub)} · ${x.n} foto(s)</small></span></label>`).join('') : '<p class="note">Nenhuma foto registrada no mês.</p>')
     + (ATP.extra.length ? `<div class="at-exs">${ATP.extra.map((x, i) => `<div><img src="${x.src}" alt=""><input data-atpleg="${i}" value="${esc(x.leg || '')}" placeholder="Legenda"><button class="mbtn sm" data-atprm="${i}" aria-label="Remover foto">✕</button></div>`).join('')}</div>` : '');
 }
-function atpShow(i0) {
-  const P = atpPer(), L = atpSlides(atpR(P), P); ATP.i = Math.max(0, Math.min(L.length - 1, i0 || 0));
+function atpShow(i0, L0, min) {   // L0 = outra lista de slides no mesmo desenho (5.2 Reunião de sexta, js/93) · min = cronômetro regressivo em minutos
+  const P = L0 ? null : atpPer(), L = L0 || atpSlides(atpR(P), P); ATP.i = Math.max(0, Math.min(L.length - 1, i0 || 0));
+  const t0 = Date.now(), rel = () => { if (!min) return ''; const r = Math.round(min * 60 - (Date.now() - t0) / 1000), a = Math.abs(r); return `<span class="at-cr${r < 0 ? ' at-cr0' : r < 60 ? ' at-cr1' : ''}">${r < 0 ? '−' : ''}${Math.floor(a / 60)}:${String(a % 60).padStart(2, '0')}</span>`; };
   const ov = document.createElement('div'); ov.className = 'at-ov'; document.body.appendChild(ov);
-  const draw = () => { const k = Math.min(innerWidth / 1280, innerHeight / 720); ov.innerHTML = `<div class="at-st" style="width:${1280 * k}px;height:${720 * k}px"><div style="transform:scale(${k});transform-origin:0 0">${L[ATP.i]}</div></div><div class="at-nav"><button data-n="-1" aria-label="Anterior">‹</button><span>${ATP.i + 1} / ${L.length}</span><button data-n="1" aria-label="Próximo">›</button><button data-n="x" aria-label="Sair">✕</button></div>`; };
-  const sair = () => { document.removeEventListener('keydown', key); removeEventListener('resize', draw); ov.remove(); if (document.fullscreenElement) document.exitFullscreen().catch(() => { }); };
+  const draw = () => { const k = Math.min(innerWidth / 1280, innerHeight / 720); ov.innerHTML = `<div class="at-st" style="width:${1280 * k}px;height:${720 * k}px"><div style="transform:scale(${k});transform-origin:0 0">${L[ATP.i]}</div></div><div class="at-nav">${rel()}<button data-n="-1" aria-label="Anterior">‹</button><span>${ATP.i + 1} / ${L.length}</span><button data-n="1" aria-label="Próximo">›</button><button data-n="x" aria-label="Sair">✕</button></div>`; };
+  const tk = min ? setInterval(() => { const c = ov.querySelector('.at-cr'); if (c) c.outerHTML = rel(); }, 1000) : 0;
+  const sair = () => { clearInterval(tk); document.removeEventListener('keydown', key); removeEventListener('resize', draw); ov.remove(); if (document.fullscreenElement) document.exitFullscreen().catch(() => { }); };
   const ir = d => { ATP.i = Math.max(0, Math.min(L.length - 1, ATP.i + d)); draw(); };
   const key = e => { if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); ir(1); } if (['ArrowLeft', 'PageUp'].includes(e.key)) ir(-1); if (e.key === 'Escape') sair(); };
   ov.onclick = e => { const b = e.target.closest('[data-n]'); if (b) { if (b.dataset.n === 'x') sair(); else ir(+b.dataset.n); return; } ir(e.clientX > innerWidth / 3 ? 1 : -1); };
   document.addEventListener('keydown', key); addEventListener('resize', draw); draw();
   if (ov.requestFullscreen) ov.requestFullscreen().catch(() => { });
 }
-async function atpPdf() {
+async function atpPdf(L0, nome) {   // L0/nome: outra lista de slides e o nome do arquivo (js/93)
   try { await carregarLibsPdf(); } catch (e) { return toast('Bibliotecas de PDF não carregaram.'); }
   toast('Gerando a apresentação em PDF…', 2500);
-  const P = atpPer(), L = atpSlides(atpR(P), P), { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: 'px', format: [1280, 720], orientation: 'landscape', compress: true });
+  const P = L0 ? null : atpPer(), L = L0 || atpSlides(atpR(P), P), { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: 'px', format: [1280, 720], orientation: 'landscape', compress: true });
   const W = document.createElement('div'); W.style.cssText = 'position:fixed;left:-20000px;top:0;width:1280px'; document.body.appendChild(W);
   try {
     for (let i = 0; i < L.length; i++) {
@@ -189,7 +191,7 @@ async function atpPdf() {
       const c = await html2canvas(el, { scale: 1.5, backgroundColor: '#ffffff', logging: false, width: 1280, height: 720, windowWidth: 1280 });
       if (i) pdf.addPage([1280, 720], 'landscape'); pdf.addImage(c.toDataURL('image/jpeg', .9), 'JPEG', 0, 0, 1280, 720);
     }
-    pdf.save('Apresentacao_Manutencao_' + ATP.mes + '.pdf');
+    pdf.save((nome || 'Apresentacao_Manutencao_' + ATP.mes) + '.pdf');
   } catch (e) { toast('Não foi possível gerar o PDF: ' + e.message); }
   finally { W.remove(); }
 }
@@ -219,6 +221,7 @@ ICO.apres = '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M12 16v4M
 .at-grid{display:flex;flex-wrap:wrap;gap:16px}.at-th{overflow:hidden;border-radius:8px;box-shadow:0 1px 4px rgba(16,24,40,.18);cursor:pointer;background:#fff;flex:none}.at-th:hover{outline:2px solid #1A73E8}
 .at-ov{position:fixed;inset:0;z-index:6000;background:#0B1F3A;display:flex;align-items:center;justify-content:center}.at-st{overflow:hidden;background:#fff}
 .at-nav{position:fixed;right:16px;bottom:14px;display:flex;gap:8px;align-items:center;color:#C9D6EA;font-size:13px;opacity:.55}.at-nav:hover{opacity:1}
+.at-cr{font:600 15px/1 Arial,sans-serif;color:#fff;background:rgba(255,255,255,.12);padding:8px 10px;border-radius:8px;font-variant-numeric:tabular-nums}.at-cr1{background:#B06000}.at-cr0{background:#C5221F}
 .at-nav button{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:8px;width:36px;height:32px;font-size:18px;cursor:pointer}
 .at-sl{width:1280px;height:720px;background:#fff;color:#14233B;font-family:Arial,Helvetica,sans-serif;position:relative;padding:40px 56px 60px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;overflow:hidden;text-align:left}
 .at-sl *{box-sizing:border-box}.at-sl h4{margin:0 0 10px;font-size:17px;color:#5B6B80;font-weight:600}
