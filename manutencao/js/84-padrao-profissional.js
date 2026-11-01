@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.125', data: '01/11/2026', itens: ['Reversor do CJA XIV (Matriz técnica e cartões da Situação da frota): Hitachi MGN91BL, nº de série MG911100130, redução 5,04:1.'] },
   { v: '3.124', data: '01/11/2026', itens: ['Situação da frota (cartões): equipamentos identificados como na Matriz técnica (visão por embarcação) — Propulsão, Redução e Auxiliares com posição, modelo, potência e nº de série, relação de redução e o horímetro na frente de cada motor.'] },
   { v: '3.123', data: '01/11/2026', itens: ['Matriz técnica de equipamentos e lubrificação: sai a coluna Cód. Sankhya do plano de lubrificação (não havia código em nenhum item).'] },
   { v: '3.122', data: '01/11/2026', itens: ['MCAs do CJA XIV (Matriz técnica e cadastro do SMF): bombordo MWM D229-4, nº de série 229.04.236494; o segundo MCA fica na linha de centro, não no boreste (MWM D229-4, plaqueta de série ilegível). Correção C8 da Matriz.'] },
