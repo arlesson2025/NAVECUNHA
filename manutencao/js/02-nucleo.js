@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.121';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.122';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -24,7 +24,7 @@ const FROTA_MATRIZ = {
   'CJA II':    { mcp: 'bi',   mod: 'S6R-T2MPTK2',   rev: 'MASSON',   mca: [['', 'MWM D229-3T', 'Bombordo'], ['', 'MWM D229-3T', 'Boreste']] },
   'CJA X':     { mcp: 'mono', mod: 'S6R2-T2MPTK',   rev: 'REINTJES', mca: [['', 'Yanmar 4TNV98-GGE', 'Bombordo'], ['', 'Yanmar NSB18', 'Boreste']] },
   'CJA XIII':  { mcp: 'bi',   mod: 'S6R-T2MPTK2',   rev: 'MASSON',   mca: [['', 'MWM D229-3T', 'Bombordo'], ['', 'MWM D229-3T', 'Boreste']] },
-  'CJA XIV':   { mcp: 'mono', mod: 'S6R2MPTK3',     rev: 'HITACHI',  mca: [['', 'MWM D229-4', 'Bombordo'], ['', 'MWM D229-4', 'Boreste']] },
+  'CJA XIV':   { mcp: 'mono', mod: 'S6R2MPTK3',     rev: 'HITACHI',  mca: [['229.04.236494', 'MWM D229-4', 'Bombordo'], ['plaqueta ilegível', 'MWM D229-4', 'Linha de centro']] },   // 01/11/2026: o 2º MCA é da linha de centro (não do boreste)
   'CJA XV':    { mcp: 'mono', mod: 'S6R2MPTK3',     rev: 'HITACHI',  mca: [['', 'MWM D229-3T', 'Bombordo'], ['', 'MWM D229-4NA', 'Boreste']] },
   'CJA XVI':   { mcp: 'mono', mod: 'S6R2MPTK3',     rev: 'HITACHI',  mca: [['', 'MWM D229-4NA', 'Linha de centro'], ['', 'MWM L229-4', 'Boreste']] },
   'CJA XVII':  { mcp: 'mono', mod: 'S6R2-T2MPTK3M', rev: 'MASSON',   mca: [['', 'Yanmar 4TNV98-GGE', 'Linha de centro'], ['', 'MWM D229-4NA', 'Boreste']] },
@@ -45,7 +45,7 @@ function vesselDaMatriz(v) {
   v.mca = {}; v.mcaMod = {}; v.mcaLoc = {}; m.mca.forEach((x, i) => { const k = MCAS[i]; v.mcaMod[k] = x[1]; v.mca[k] = MCA_MOD[x[1]]; v.mcaLoc[k] = x[2]; });
   v.off = v.off || []; return v;
 }
-const normFrota = cfg => { (cfg.frota || []).forEach(v => { if (!v.mcp) vesselDaMatriz(v); if (!v.mcp) { v.mcp = 'bi'; } v.rev = v.rev || {}; v.mca = v.mca || {}; }); return cfg; };
+const normFrota = cfg => { (cfg.frota || []).forEach(v => { if (!v.mcp) vesselDaMatriz(v); if (v.nome === 'CJA XIV' && v.mcaLoc && v.mcaLoc.MCA2 === 'Boreste') v.mcaLoc.MCA2 = 'Linha de centro';   /* 01/11/2026: posição corrigida pelo Supervisor */ if (!v.mcp) { v.mcp = 'bi'; } v.rev = v.rev || {}; v.mca = v.mca || {}; }); return cfg; };
 const CLASSES = { 'Crítica':{h:0, cor:'var(--bad)', fundo:'var(--badb)', prazo:'Imediato', acao:'Interdição + RNC'}, 'Alta':{h:4, cor:'var(--warn)', fundo:'var(--warnb)', prazo:'≤ 4 horas', acao:'Prioridade + RNC'}, 'Média':{h:48, cor:'var(--acc)', fundo:'#E3EEFA', prazo:'≤ 48 horas', acao:'Programação'}, 'Baixa':{h:360, cor:'var(--ok)', fundo:'var(--okb)', prazo:'≤ 15 dias', acao:'Rotina'} };
 const FROTA_PADRAO = ['CJA I','CJA II','CJA X','CJA XIII','CJA XIV','CJA XV','CJA XVI','CJA XVII','CJA XVIII','CJA XIX','CJA XX','CJA XXI'];
 const ETAPAS_P = [['emitida','Emitida'],['abordo','A bordo'],['executada','Executada'],['conferencia','Em conferência'],['encerrada','Encerrada']];
