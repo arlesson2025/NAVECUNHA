@@ -225,7 +225,7 @@ const MATRIZ_VG = {
   "CJA XVIII": {"cfg": "Monomotor", "prop": [["Central", "S6R2-T2MPTK3M, 691 kW, nº 81598"]], "red": [["Central", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "MWM D229-4NA, 61,0 kW"], ["Boreste", "MWM D229-4NA, 61,0 kW"]]},
   "CJA XIX": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R2-T2MPTK3M, 691 kW, nº 81600"], ["Boreste", "S6R2-T2MPTK3M, 691 kW, nº 81599"]], "red": [["Bombordo", "Hitachi MGN91BL, 5,04:1"], ["Boreste", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "MWM D229-4NA, 61,0 kW"], ["Boreste", "Yanmar 4TNV98-GGE, 40,8 kW"]]},
   "CJA XX": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R2-T2MPTK3M, 691 kW, nº 82477"], ["Boreste", "S6R2-T2MPTK3M, 691 kW, nº 82481"]], "red": [["Bombordo", "Hitachi MGN91BL, 5,04:1"], ["Boreste", "Hitachi MGN91BL, 5,04:1"]], "aux": [["Bombordo", "Yanmar 4TNV98-GGE, 40,8 kW"], ["Boreste", "Yanmar 4TNV98-GGE, 40,8 kW"], ["Linha de centro (canhão SCI)", "MWM D229-4, 48,5 kW"]]},
-  "CJA XXI": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R-T2MPTK2, 610 kW, nº 70997"], ["Boreste", "S6R-T2MPTK2, 610 kW, nº 70998"]], "red": [["Bombordo", "Masson Marine MMW3700, 4,913:1"], ["Boreste", "Masson Marine MMW3700, 4,913:1"]], "aux": [["Bombordo", "MWM D229-4, 48,5 kW"], ["Boreste", "MWM D229-4, 48,5 kW"]]},
+  "CJA XXI": {"cfg": "Bimotor", "prop": [["Bombordo", "S6R-T2MPTK2, 610 kW, nº 70997"], ["Boreste", "S6R-T2MPTK2, 610 kW, nº 70998"]], "red": [["Bombordo", "Masson Marine MMW3700, 4,913:1"], ["Boreste", "Masson Marine MMW3700, 4,913:1"]], "aux": [["Central", "MWM D229-4NA, 61,0 kW, plano de componentes 9.229.81.07.404.9"], ["Cabinado", "Yanmar 4TNV88-GGE, 21,6 kW"]]},
 };
 function sfIdent(x) {
   const g = MATRIZ_VG[x.v.nome]; if (!g) return null;
