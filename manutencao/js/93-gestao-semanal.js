@@ -9,7 +9,7 @@
      situação no Sankhya (stSk), aplicação (apl → empurrador ou balsa), necessidade (nec), requisito (vira o txt) e os itens
      (itens = [[item, código, descrição, unidade, quantidade]]). O tipo vem do botão (o impresso é igual para SC e RM; Supervisor:
      “é melhor ter algo que fale para o sistema se é solicita ou requisição”); nº igual só atualiza se for do mesmo tipo. Valores unitário e total NÃO são lidos (Supervisor: “fictícios, não considero”).
-   · 5.2 Reunião de sexta (semreun): semana de segunda a domingo; números da semana calculados dos registros (frota, balsas,
+   · (3.126: a 5.2 Reunião de sexta saiu a pedido do Supervisor; texto histórico) 5.2 Reunião de sexta (semreun): semana de segunda a domingo; números da semana calculados dos registros (frota, balsas,
      corretivas, preventivas, óleo, disponibilidade, SC/RM), entregas, riscos e decisões, próxima semana; o texto do Supervisor
      e a conferência dos compromissos da semana anterior em snap tipo 'semana' (id snap-semana-<segunda>).
      4 slides 16:9 no mesmo desenho da 4.4 (classes at-*; atpShow/atpPdf recebem a lista de slides) e resumo em texto
@@ -186,106 +186,8 @@ async function gsAtendida(id) {
   const r = S.recs.get(id); if (!r) return; if (!S.session) return loginModal();
   Object.assign(r, { st: 'fim', fim: isoD(hoje()), hist: [...(r.hist || []), [isoD(hoje()), 'fim', S.session.name]] }); await saveRec(r); toast(r.tp + ' ' + r.num + ' ' + gsStTx(r).toLowerCase() + '.'); render();
 }
-// ---------- reunião de sexta ----------
-const GR = { i: 0 };   // 0 = esta semana, 1 = a anterior…
-const grSem = i => { const s = knpSemana(i), dom = new Date(s.fim.getFullYear(), s.fim.getMonth(), s.fim.getDate() - 1); return { ini: isoD(s.ini), fim: isoD(dom), D0: s.ini, D1: s.fim, nome: brD(isoD(s.ini)).slice(0, 5) + ' a ' + brD(isoD(dom)) }; };
-const grNota = ini => S.recs.get('snap-semana-' + ini) || null;
-const grLinhas = t => String(t || '').split(/\r?\n/).map(x => x.replace(/^\s*[-•*\d.)]+\s*/, '').trim()).filter(Boolean);
-function grDados(W) {
-  const dentro = d => { d = String(d || '').slice(0, 10); return d >= W.ini && d <= W.fim; }, D = {};
-  try { const L = sfDados(), n = k => L.filter(x => x.sit === k).length; D.fr = { n: L.length, lib: n(0), rest: n(1), bloq: n(2) + n(3), via: L.filter(x => x.loc === 'em viagem').length, bq: L.filter(x => x.sit >= 2).map(x => x.v.nome) }; } catch (e) { D.fr = null; }
-  D.fora = (S.cfg.frota || []).filter(v => foraOp(v)).map(v => v.nome + ' · ' + foraOp(v).motivo.toLowerCase());
-  try { const B = BALSAS.map(balEstado), c = k => B.filter(x => x.st === k).length; D.bal = { n: B.length - c('ref'), lib: c('lib'), rest: c('rest'), bloq: c('bloq'), sem: c('sem'), ref: c('ref'), bq: B.filter(x => x.st === 'bloq').map(x => x.b.nome) }; D.fora.push(...B.filter(x => x.st === 'ref').map(x => x.b.nome + ' · em reforma')); } catch (e) { D.bal = null; }
-  const C = oms().filter(o => o.tipo === 'C' && !o.excluido && vessel(o.vessel));
-  D.cAb = C.filter(o => dentro(o.abertura)); D.cLib = C.filter(o => o.liberacao && dentro(o.liberacao));
-  D.cPend = C.filter(o => !o.liberacao && !['encerrada', 'cancelada'].includes(o.status)); D.cCrit = D.cPend.filter(o => o.classe === 'Crítica' || o.classe === 'Alta');
-  const B = recs('base').filter(r => !r.excluido && !r.nf && !r.insp && !r.seed && r.om && dentro(r.date) && (r.bal || (vessel(r.vessel) && A1M[r.item]))), G = {};
-  B.forEach(r => { const k = r.vessel + '|' + (r.om || '') + '|' + r.date; (G[k] = G[k] || { v: r.vessel, om: r.om, date: r.date, n: 0, bal: !!r.bal, quem: r.quem || '' }).n++; });
-  D.prev = Object.values(G).sort((a, b) => a.date < b.date ? -1 : 1); D.nServ = B.length;
-  D.oleo = recs('lub').filter(r => r.tipo === 'fr049' && !r.excluido && dentro(r.date));
-  try { const x = knpDisp(W.D0, W.D1); D.disp = x ? x.v : null; } catch (e) { D.disp = null; }
-  try { D.sai = vgViagens().filter(x => dentro(x.date)); } catch (e) { D.sai = []; }
-  const R = gsReqs(); D.sc = { A: R.filter(gsAberta), novas: R.filter(r => dentro(r.date)), fim: R.filter(r => r.st === 'fim' && dentro(r.fim)) };
-  D.sc.vel = D.sc.A.filter(r => gsDias(r) > 30 || (r.urg && gsDias(r) > 7)).sort((a, b) => gsDias(b) - gsDias(a));
-  try { const E = enxDados(); D.pvVenc = E.reduce((a, x) => a + x.venc.length, 0); D.pvMes = E.reduce((a, x) => a + x.mes.length, 0); D.pvTop = E.filter(x => x.venc.length).sort((a, b) => b.venc.length - a.venc.length).slice(0, 4).map(x => x.v.nome + ' (' + x.venc.length + ')'); } catch (e) { D.pvVenc = D.pvMes = null; D.pvTop = []; }
-  const N = grNota(W.ini) || {}, ant = grNota(grSem(GR.i + 1).ini) || {};
-  D.dest = grLinhas(N.dest); D.dec = grLinhas(N.dec); D.prox = grLinhas(N.prox); D.antP = grLinhas(ant.prox); D.cump = N.cump || {};
-  return D;
-}
-const grCorTx = o => vName(o.vessel) + ' · ' + rmeEqN(o.equip) + (o.num ? ' · OM ' + o.num : '');
-function grRiscos(D) {   // riscos automáticos (o Supervisor completa com as decisões que precisa da diretoria)
-  const L = [];
-  if (D.fr && D.fr.bq.length) L.push(['Empurrador bloqueado: ' + D.fr.bq.join(', '), 'bad']);
-  if (D.bal && D.bal.bq.length) L.push(['Balsa bloqueada: ' + D.bal.bq.join(', '), 'bad']);
-  D.cCrit.slice(0, 4).forEach(o => L.push(['Corretiva ' + (o.classe || '') + ' em aberto: ' + grCorTx(o), o.classe === 'Crítica' ? 'bad' : 'warn']));
-  D.sc.vel.slice(0, 4).forEach(r => L.push([`${r.tp} ${r.num} há ${gsDias(r)} dias: ${r.txt}${r.vessel ? ' (' + gsOnde(r.vessel) + ')' : ''}`, gsDias(r) > 30 ? 'bad' : 'warn']));
-  return L;
-}
-function grSlides(W, D) {
-  const head = (n, t, sub) => `<div class="at-h"><div><small>${n} · semana de ${W.nome}</small><h2>${t}</h2>${sub ? `<p>${sub}</p>` : ''}</div><img src="${LOGOS.nav}" alt=""></div>`;
-  const sl = b => `<div class="at-sl">${b}<div class="at-f"><span>Manutenção · Reunião semanal com a diretoria${S.session && S.session.name ? ' · ' + esc(S.session.name) : ''}</span><span>@P</span></div></div>`;
-  const lista = (L, vz, mx) => L.length ? `<div class="at-ac" style="grid-template-columns:1fr">${L.slice(0, mx || 5).map((x, i) => `<div><b${x[1] === 'bad' ? ' style="background:#C5221F"' : x[1] === 'warn' ? ' style="background:#B06000"' : ''}>${i + 1}</b><div><h4>${esc(rmeTxt(x[0], 110))}</h4>${x[2] ? `<p>${esc(x[2])}</p>` : ''}</div></div>`).join('')}</div>` : `<div class="at-vz">${vz}</div>`;
-  const out = [], fr = D.fr || { n: 0, lib: 0, rest: 0, bloq: 0, via: 0 }, bal = D.bal || { n: 0, lib: 0, rest: 0, bloq: 0 };
-  // 1 · números
-  out.push(sl(head('1 · Números', 'A semana em números', 'situação de hoje e o que foi feito de segunda a domingo') + `<div class="at-tiles at-sm">
-    ${atpTile(fr.lib + ' / ' + fr.n, 'Empurradores liberados', fr.bloq ? 'bad' : fr.rest ? 'warn' : 'ok', fr.rest + ' com restrição · ' + fr.bloq + ' bloqueado(s) · ' + fr.via + ' em viagem')}
-    ${atpTile(bal.lib + ' / ' + bal.n, 'Balsas liberadas', bal.bloq ? 'bad' : bal.rest ? 'warn' : 'ok', bal.rest + ' com restrição · ' + bal.bloq + ' bloqueada(s)')}
-    ${atpTile(D.disp == null ? '—' : nf(D.disp, 1) + '%', 'Disponibilidade na semana', D.disp == null ? '' : D.disp >= 95 ? 'ok' : 'bad', 'empurradores · meta ≥ 95%')}
-    ${atpTile(D.cLib.length + ' / ' + D.cAb.length, 'Corretivas liberadas / abertas', '', D.cPend.length + ' aguardando reparo hoje')}
-    ${atpTile(D.prev.length, 'OMs preventivas executadas', '', D.nServ + ' serviço(s) do plano · ' + D.oleo.length + ' troca(s) de óleo')}
-    ${atpTile(D.sc.A.length, 'SC e RM em aberto', D.sc.vel.length ? 'bad' : '', D.sc.fim.length + ' atendida(s) na semana · ' + D.sc.vel.length + ' atrasada(s)')}</div>`
-    + (D.fora.length ? `<p class="at-n">Fora de operação: ${esc(D.fora.join(' · '))}</p>` : '')));
-  // 2 · entregas
-  const auto = [...(D.sai || []).map(x => ['Saída: ' + vName(x.vessel) + (x.balsas.length ? ' com ' + x.balsas.map(vName).join(', ') : ''), '', brD(x.date) + ' · ' + vgRotaCurta(x.rota)]), ...D.cLib.map(o => ['Corretiva liberada: ' + grCorTx(o), '', rmeTxt(o.servicos || '', 110)]), ...D.prev.slice(0, 6).map(g => [`Preventiva ${gsOnde(g.v)}: ${g.n} serviço(s)${g.om ? ' · OM ' + g.om : ''}`, '', brD(g.date) + (g.quem ? ' · ' + g.quem : '')])];
-  out.push(sl(head('2 · Entregas', 'O que foi feito na semana', D.dest.length ? 'destaques do Supervisor' : 'registros da semana no SMF') + (D.dest.length
-    ? `<div class="at-2"><div><h4>Destaques</h4>${lista(D.dest.map(t => [t, 'ok']), '', 3)}</div><div><h4>Também na semana</h4>${lista(auto, 'Nenhum registro de OM na semana', 5)}</div></div>`
-    : lista(auto, 'Nenhum registro de OM na semana. Escreva os destaques na tela 5.2.', 6))));
-  // 3 · riscos e decisões
-  const RS = grRiscos(D);
-  out.push(sl(head('3 · Riscos e decisões', 'O que preciso da diretoria', 'decisões pedidas e riscos para a operação') + `<div class="at-2"><div><h4>Decisões pedidas</h4>${lista(D.dec.map(t => [t, 'warn']), 'Nenhuma decisão pendente nesta semana', 4)}</div><div><h4>Riscos acompanhados</h4>${lista(RS, 'Nenhum empurrador ou balsa bloqueado, nenhuma corretiva crítica em aberto e nenhum pedido atrasado', 5)}</div></div>`));
-  // 4 · próxima semana
-  const ant = D.antP.map((t, i) => [t, D.cump[i] ? 'ok' : 'bad', D.cump[i] ? 'cumprido' : 'não cumprido']), feitos = D.antP.filter((_, i) => D.cump[i]).length;
-  const pv = D.pvVenc == null ? '' : `<p class="at-n">Plano preventivo: ${D.pvVenc} serviço(s) vencido(s) e ${D.pvMes} vencendo no mês${D.pvTop.length ? ' · mais vencidos: ' + esc(D.pvTop.join(', ')) : ''}</p>`;
-  out.push(sl(head('4 · Próxima semana', 'Compromissos para a próxima semana', D.antP.length ? `semana passada: ${feitos} de ${D.antP.length} compromisso(s) cumprido(s)` : 'cada compromisso é conferido na próxima reunião') + `<div class="at-2"><div><h4>Compromissos</h4>${lista(D.prox.map(t => [t, '']), 'Escreva os compromissos na tela 5.2', 5)}</div><div><h4>Semana passada</h4>${ant.length ? `<table class="at-t at-q"><tbody>${ant.slice(0, 7).map(x => `<tr><td>${atpDot(x[1] === 'ok' ? '#137333' : '#C5221F')}${esc(rmeTxt(x[0], 80))}</td><td class="at-nw">${x[2]}</td></tr>`).join('')}</tbody></table>` : '<div class="at-vz">Sem compromissos registrados na semana passada</div>'}</div></div>` + pv));
-  return out.map((s, i) => s.replace('@P', (i + 1) + ' / ' + out.length));
-}
-function grTexto(W, D) {   // resumo para WhatsApp ou e-mail
-  const fr = D.fr || {}, bal = D.bal || {}, L = [`*Manutenção · semana de ${W.nome}*`, '',
-    `*Números*`, `• Empurradores liberados: ${fr.lib}/${fr.n} (${fr.rest} com restrição, ${fr.bloq} bloqueado(s), ${fr.via} em viagem)`, `• Balsas liberadas: ${bal.lib}/${bal.n}`,
-    `• Disponibilidade na semana: ${D.disp == null ? '—' : nf(D.disp, 1) + '%'}`, `• Corretivas: ${D.cAb.length} aberta(s), ${D.cLib.length} liberada(s), ${D.cPend.length} aguardando reparo`,
-    `• Comboios que saíram: ${(D.sai || []).length}${(D.sai || []).length ? ' (' + D.sai.map(x => vName(x.vessel) + (x.balsas.length ? ' + ' + x.balsas.length + ' balsa(s)' : '')).join('; ') + ')' : ''}`,
-    `• Preventivas: ${D.prev.length} OM(s), ${D.nServ} serviço(s); ${D.oleo.length} troca(s) de óleo`, `• SC/RM em aberto: ${D.sc.A.length} (${D.sc.vel.length} atrasada(s))`, ''];
-  if (D.dest.length) L.push('*Destaques*', ...D.dest.map(t => '• ' + t), '');
-  const RS = grRiscos(D); if (D.dec.length || RS.length) L.push('*Riscos e decisões*', ...D.dec.map(t => '• Decisão: ' + t), ...RS.map(r => '• ' + r[0]), '');
-  if (D.prox.length) L.push('*Próxima semana*', ...D.prox.map(t => '• ' + t));
-  return L.join('\n').trim();
-}
-function vSemReun() {
-  const W = grSem(GR.i), D = grDados(W), N = grNota(W.ini) || {}, ops = []; for (let i = 0; i < 9; i++) { const w = grSem(i); ops.push([i, (i === 0 ? 'Esta semana · ' : i === 1 ? 'Semana passada · ' : '') + w.nome]); }
-  const ta = (id, k, ph, rows) => `<textarea id="${id}" data-grk="${k}" rows="${rows || 4}" placeholder="${ph}">${esc(N[k] || '')}</textarea>`;
-  return enxCab('5.2 Reunião de sexta', '8 minutos com a diretoria por videoconferência em 4 slides (2 min cada): números · entregas · riscos e decisões · próxima semana · compartilhe a tela em ▶ Apresentar (cronômetro de 8 min) e cole o resumo no chat',
-    `<label class="f">Semana<select id="grW">${ops.map(([i, l]) => `<option value="${i}"${GR.i === i ? ' selected' : ''}>${l}</option>`).join('')}</select></label><button class="mbtn" data-grtxt>Copiar resumo</button><button class="mbtn" data-grshow>▶ Apresentar</button><button class="mbtn pri" data-grpdf>⬇ Baixar PDF</button>`)
-   + `<div class="card"><h2>Seu texto da semana</h2><p class="note">Uma linha por item. Fica gravado no SMF e vai nos slides e no resumo. ${can.edit() ? '' : 'Entre no SMF para escrever.'}</p><div class="g">
-     <label class="f s2">Destaques da semana (até 3)${ta('grD', 'dest', 'ex.: CJA XIII liberado da reforma com motores novos')}</label>
-     <label class="f s2">Decisões que preciso da diretoria${ta('grC', 'dec', 'ex.: aprovar a compra da bomba Darka H53 (SC 4512)')}</label>
-     <label class="f s2">Compromissos da próxima semana${ta('grP', 'prox', 'ex.: docagem do CJA V no estaleiro até quarta')}</label></div>
-     ${D.antP.length ? `<h3 style="margin:14px 0 6px">Compromissos da semana passada · marque o que foi cumprido</h3><div class="cm-chips" style="flex-direction:column;align-items:flex-start;gap:4px">${D.antP.map((t, i) => `<label><input type="checkbox" data-grc="${i}"${D.cump[i] ? ' checked' : ''}${can.edit() ? '' : ' disabled'}> ${esc(t)}</label>`).join('')}</div>` : ''}</div>
-   <div class="card"><h2>Slides <span class="note">· clique num slide para apresentar em tela cheia</span></h2><div class="at-grid" id="grGrid"></div></div>
-   <div class="card"><h2>Resumo em texto <span class="note">· para WhatsApp ou e-mail</span></h2><pre id="grTx" style="white-space:pre-wrap;font:13px/1.45 inherit;margin:0">${esc(grTexto(W, D))}</pre></div></div></div>`;
-}
-async function grSalvar(k, v) {
-  if (!S.session) return loginModal(); const W = grSem(GR.i), id = 'snap-semana-' + W.ini;
-  const r = S.recs.get(id) || { id, kind: 'snap', tipo: 'semana', date: W.ini, fim: W.fim, cump: {} };
-  if (k === 'cump') r.cump = v; else r[k] = v; r.por = S.session.name; await saveRec(r);
-}
-function grDesenha() {
-  const g = $('#grGrid'); if (!g) return; const W = grSem(GR.i), D = grDados(W), L = grSlides(W, D), cw = g.clientWidth || 900, w = Math.floor(Math.min(520, (cw - 16) / (cw > 760 ? 2 : 1))), k = w / 1280;
-  g.innerHTML = L.map((s, i) => `<div class="at-th" data-grsl="${i}" style="width:${w}px;height:${Math.round(720 * k)}px"><div style="transform:scale(${k});transform-origin:0 0">${s}</div></div>`).join('');
-  const t = $('#grTx'); if (t) t.textContent = grTexto(W, D); return L;
-}
-const grLista = () => { const W = grSem(GR.i); return grSlides(W, grDados(W)); };
 // ---------- telas, cliques e menu ----------
-Object.assign(VX, { semsc: vSemSc, semreun: vSemReun });
+VX.semsc = vSemSc;
 AFTER.semsc = () => { const m = $('#main');
   m.onclick = async e => { const t = e.target.closest('[data-gsf],[data-gsnova],[data-gscola],[data-gsed],[data-gsfim]'); if (!t) return; const d = t.dataset;
     if (d.gsf) { GS.f = d.gsf; return render(); }
@@ -296,18 +198,7 @@ AFTER.semsc = () => { const m = $('#main');
   m.onchange = e => { const tp = e.target.dataset.gspdf; if (tp) { const f = e.target.files[0]; e.target.value = ''; if (f) gsPdfLer(f, tp); } };
   m.oninput = e => { if (e.target.id === 'gsQ') { GS.q = e.target.value; clearTimeout(m._gs); m._gs = setTimeout(() => { render(); const q = $('#gsQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 400); } };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_semsc_lay', '[data-enxreset]'); };
-AFTER.semreun = () => { const m = $('#main');
-  m.onchange = async e => { const t = e.target;
-    if (t.id === 'grW') { GR.i = +t.value; return render(); }
-    if (t.dataset.grk) { await grSalvar(t.dataset.grk, t.value); return grDesenha(); }
-    if (t.dataset.grc !== undefined) { const c = Object.assign({}, (grNota(grSem(GR.i).ini) || {}).cump); c[t.dataset.grc] = t.checked; await grSalvar('cump', c); return grDesenha(); } };
-  m.onclick = async e => { const s = e.target.closest('[data-grsl]'); if (s) return atpShow(+s.dataset.grsl, grLista(), 8);
-    if (e.target.closest('[data-grshow]')) return atpShow(0, grLista(), 8);
-    if (e.target.closest('[data-grpdf]')) return atpPdf(grLista(), 'Reuniao_Manutencao_semana_' + grSem(GR.i).ini);
-    if (e.target.closest('[data-grtxt]')) { const W = grSem(GR.i), tx = grTexto(W, grDados(W)); try { await navigator.clipboard.writeText(tx); toast('Resumo copiado.'); } catch (x) { toast('Não foi possível copiar: selecione o texto no fim da tela.'); } } };
-  grDesenha(); };
-ENX_OK.push('semsc', 'semreun');
-PCM_MENU.splice(PCM_MENU.findIndex(g => g[0] === 'Apoio'), 0, ['5 · Gestão semanal', [['semsc', '5.1 Solicitações e requisições', 'screq'], ['semreun', '5.2 Reunião de sexta', 'reun']]]);
+ENX_OK.push('semsc');
+PCM_MENU.splice(PCM_MENU.findIndex(g => g[0] === 'Apoio'), 0, ['5 · Gestão semanal', [['semsc', '5.1 Solicitações e requisições', 'screq']]]);
 { const st = document.createElement('style'); st.textContent = '.gs-it summary{cursor:pointer;margin-top:2px}.gs-it table{margin:4px 0 0;font-size:12.5px}.gs-it td{padding:2px 6px}'; document.head.appendChild(st); }
 ICO.screq = '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>';
-ICO.reun = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M3 4l3-1M21 4l-3-1"/>';
