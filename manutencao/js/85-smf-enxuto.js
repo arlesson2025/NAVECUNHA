@@ -592,8 +592,8 @@ function enxCrGrade(ano, imp) {
 function crAprovQuando(B) { if (!B || !B.aprovAt) return '—'; const d = Math.round((pD(isoD(hoje())) - pD(B.aprovAt)) / 864e5), hr = B.aprovEm ? ' às ' + new Date(B.aprovEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
   return brD(B.aprovAt) + hr + ' (' + (d <= 0 ? 'hoje' : d === 1 ? 'ontem' : 'há ' + d + ' dias') + ')'; }
 function enxCrAprovTxt(V, ano) { const B = V.map(v => cronoBase(ano, v.id)).filter(Boolean); if (!B.length) return 'Cronograma ainda não aprovado';
-  const u = B.slice().sort((a, b) => String(a.aprovAt) + (a.aprovEm || 0) < String(b.aprovAt) + (b.aprovEm || 0) ? 1 : -1)[0], rev = Math.max(...B.map(b => +b.rev || 0));
-  return (B.length === V.length ? 'Aprovado' : `Aprovado para ${B.length} de ${V.length} empurradores`) + ` · revisão ${rev} · última aprovação em ${crAprovQuando(u)} por ${u.aprovBy || '—'}`; }
+  const u = B.slice().sort((a, b) => String(a.aprovAt) + (a.aprovEm || 0) < String(b.aprovAt) + (b.aprovEm || 0) ? 1 : -1)[0];
+  return (B.length === V.length ? 'Aprovado' : `Aprovado para ${B.length} de ${V.length} empurradores`) + ` em ${crAprovQuando(u)} por ${u.aprovBy || '—'}`; }
 const ENX_LEG = '<div class="ecr-lg"><span><i class="ok"></i>executado no prazo</span><span><i class="lt"></i>executado com atraso</span><span><i class="ms"></i>vencido sem execução</span><span><i class="hj"></i>mês atual</span><span><i class="fut"></i>previsto</span><span>⚓ docagem</span><span>número = executado/previsto no mês</span></div>';
 function vEnxCr() {
   const ano = ENXC.ano, v = vessel(ENXC.v), anos = [ano - 1, ano, ano + 1], seg = `<div class="seg">${anos.map(a => `<button data-ecrano="${a}" class="${a === ano ? 'on' : ''}">${a}</button>`).join('')}</div>`;
@@ -605,8 +605,8 @@ function vEnxCr() {
        ${ENX_LEG}<div class="tw">${G.html}</div></div></div></div>`; }
   const B = cronoBase(ano, v.id);
   return enxCab(`Cronograma anual · ${esc(v.nome)}`, `${ano} · serviço por serviço: ● previsto · ✓ feito no prazo · ✓ âmbar com atraso · ✗ venceu sem fazer · passe o mouse para ver data e OM`, `<button class="mbtn" data-ecrv="">← Frota</button>` + seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
-   + `<div class="card"><h2>Situação do cronograma</h2><p>${B ? `Previsto <b>aprovado</b> · revisão ${B.rev} · aprovada em <b>${crAprovQuando(B)}</b> por ${esc(B.aprovBy)}` : '<b style="color:#B06000">Previsto ainda não aprovado</b> · a aderência mede contra o plano calculado, que muda conforme os serviços são feitos'}
-     ${can.admin() ? ` <button class="mbtn sm${B ? '' : ' pri'}" data-ecraprov="${v.id}">${B ? 'Aprovar de novo (nova revisão)' : 'Aprovar o cronograma ' + ano}</button>` : ''} <a class="mbtn sm" href="#enx" data-enxir="${v.id}">Executar: o que vence agora →</a></p></div>
+   + `<div class="card"><h2>Situação do cronograma</h2><p>${B ? `Previsto <b>aprovado</b> em <b>${crAprovQuando(B)}</b> por ${esc(B.aprovBy)}` : '<b style="color:#B06000">Previsto ainda não aprovado</b> · a aderência mede contra o plano calculado, que muda conforme os serviços são feitos'}
+     ${can.admin() && !B ? ` <button class="mbtn sm pri" data-ecraprov="${v.id}">Aprovar o cronograma ${ano}</button>` : ''} <a class="mbtn sm" href="#enx" data-enxir="${v.id}">Executar: o que vence agora →</a></p></div>
    <div class="card"><h2>Serviços · ${ano}</h2><div class="tw">${prTabela(v, ano)}</div></div></div></div>`;
 }
 function enxCrImprimir() {
@@ -619,7 +619,7 @@ function enxCrImprimir() {
 }
 async function enxCrAprovar(id) {
   if (!can.admin()) return toast('Só o Supervisor aprova o cronograma.'); const ano = ENXC.ano, vs = id === 'todos' ? S.cfg.frota.filter(v => !foraOp(v)) : [vessel(id)];
-  confirmar(`Aprovar o cronograma ${ano} de ${id === 'todos' ? 'toda a frota' : vs[0].nome}? O previsto fica congelado como linha de base (nova revisão se já houver).`, async () => { await prAprovar(vs, ano); toast('Cronograma aprovado.'); render(); });
+  confirmar(`Aprovar o cronograma ${ano} de ${id === 'todos' ? 'toda a frota' : vs[0].nome}? O previsto fica congelado como linha de base.`, async () => { await prAprovar(vs, ano); toast('Cronograma aprovado.'); render(); });
 }
 { const st = document.createElement('style'); st.textContent = `.ecr{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}.ecr th{background:#1F2A44;color:#fff;font-weight:600;padding:6px 4px;font-size:11px;letter-spacing:.04em;text-align:center}.ecr th.hj{background:#1967D2}.ecr th.ecr-n{text-align:left;padding-left:10px}
 .ecr td{border:1px solid #E3E8EF;padding:5px 3px;text-align:center;position:relative}.ecr td.ecr-n{text-align:left;padding:5px 10px;white-space:nowrap}.ecr td.ecr-n small{display:block;font-size:10.5px;color:#5F6368}.ecr td.ecr-n a{color:inherit;text-decoration:none}.ecr td.ecr-n a:hover{color:#1967D2;text-decoration:underline}
