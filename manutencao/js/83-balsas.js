@@ -104,11 +104,12 @@ function balSit(b, t) {
 const balAvarias = vid => recs('avaria').filter(r => r.vessel === vid && !r.excluido && !r.fim);
 // situação da balsa para operar: bloqueada = item Crítico vencido ou falha Crítica aberta (NP 024 6.1) · com restrição = algum vencido ou falha Alta · sem histórico = nenhum serviço registrado
 function balEstado(b) {
+  if (typeof vgEmReforma === 'function' && vgEmReforma(b.id)) return { b, P: [], A: balAvarias(b.id), venc: [], crit: [], prox: [], sem: [], st: 'ref' };   // em reforma (js/94): fora das contas
   const P = balItens(b).map(t => ({ t, s: balSit(b, t) })), A = balAvarias(b.id), venc = P.filter(x => x.s.st === 'venc'), crit = venc.filter(x => x.t.prio === 'Crítica');
   const st = crit.length || A.some(a => a.c === 'Crítica') ? 'bloq' : venc.length || A.some(a => a.c === 'Alta') ? 'rest' : P.every(x => x.s.st === 'sem') ? 'sem' : 'lib';
   return { b, P, A, venc, crit, prox: P.filter(x => x.s.st === 'prox'), sem: P.filter(x => x.s.st === 'sem'), st };
 }
-const BAL_ST = { bloq: ['p-bad', 'Bloqueada'], rest: ['p-warn', 'Com restrição'], lib: ['p-ok', 'Liberada'], sem: ['p-mut', 'Sem histórico'] };
+const BAL_ST = { ref: ['p-mut', 'Em reforma'], bloq: ['p-bad', 'Bloqueada'], rest: ['p-warn', 'Com restrição'], lib: ['p-ok', 'Liberada'], sem: ['p-mut', 'Sem histórico'] };
 const BAL_SIT = { venc: ['p-bad', 'Vencido'], prox: ['p-warn', 'Vence em breve'], ok: ['p-ok', 'Em dia'], sem: ['p-mut', 'Sem histórico'] };
 const balPil = (M, k) => `<span class="pill ${M[k][0]}">${M[k][1]}</span>`;
 const balIvTx = t => t.doca ? 'na docagem (CSN)' : [t.h ? nf(t.h) + ' h' : '', t.m ? (t.m === 1 ? 'mensal' : t.m === 6 ? 'semestral' : t.m === 12 ? 'anual' : t.m + ' meses') : ''].filter(Boolean).join(' ou ');
