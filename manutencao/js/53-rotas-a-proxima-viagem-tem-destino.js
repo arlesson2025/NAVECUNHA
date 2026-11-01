@@ -11,7 +11,9 @@ const ROTAS0 = [
   { id: 'bip', nome: 'Manaus × Barcarena × Itacoatiara × Porto Velho × Manaus', nav: 30, ciclo: 80, fonte: 'estimado', obs: 'até Porto Velho ~42 d medidos; volta estimada' },
   { id: 'bpv', nome: 'Manaus × Barcarena × Porto Velho × Manaus', nav: 30, ciclo: 75, fonte: 'estimado', obs: 'sem datas nos boletins lidos' },
   { id: 'bma', nome: 'Manaus × Barcarena × Manaus', nav: 12, ciclo: 22, fonte: 'estimado', obs: 'Manaus → Barcarena 4,5 d medidos; volta e parada estimadas' },
-  { id: 'vdc', nome: 'Manaus × Vila do Conde × Manaus', nav: 12, ciclo: 22, fonte: 'estimado', obs: 'mesma região de Barcarena; sem datas nos boletins lidos' }
+  { id: 'vdc', nome: 'Manaus × Vila do Conde × Manaus', nav: 12, ciclo: 22, fonte: 'estimado', obs: 'mesma região de Barcarena; sem datas nos boletins lidos' },
+  { id: 'mun', nome: 'Manaus × Vila do Conde × Munguba × Manaus', nav: 16, ciclo: 30, fonte: 'estimado', obs: 'histórico de saídas de 2026 do Supervisor (SMF 3.121); duração a medir pelo FR 027_L de chegada' },
+  { id: 'vlp', nome: 'Manaus × Vila do Conde × Porto Velho × Manaus', nav: 30, ciclo: 75, fonte: 'estimado', obs: 'histórico de saídas de 2026 do Supervisor (SMF 3.121); como Barcarena × Porto Velho' }
 ];
 const rotas = () => ROTAS0.map(r => Object.assign({}, r, ((S.cfg.rotas || {})[r.id]) || {}));
 const rotaDe = v => v && v.rotaProx ? rotas().find(r => r.id === v.rotaProx) || null : null;

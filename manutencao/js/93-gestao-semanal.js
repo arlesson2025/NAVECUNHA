@@ -195,7 +195,7 @@ function grDados(W) {
   const dentro = d => { d = String(d || '').slice(0, 10); return d >= W.ini && d <= W.fim; }, D = {};
   try { const L = sfDados(), n = k => L.filter(x => x.sit === k).length; D.fr = { n: L.length, lib: n(0), rest: n(1), bloq: n(2) + n(3), via: L.filter(x => x.loc === 'em viagem').length, bq: L.filter(x => x.sit >= 2).map(x => x.v.nome) }; } catch (e) { D.fr = null; }
   D.fora = (S.cfg.frota || []).filter(v => foraOp(v)).map(v => v.nome + ' · ' + foraOp(v).motivo.toLowerCase());
-  try { const B = BALSAS.map(balEstado), c = k => B.filter(x => x.st === k).length; D.bal = { n: B.length, lib: c('lib'), rest: c('rest'), bloq: c('bloq'), sem: c('sem'), bq: B.filter(x => x.st === 'bloq').map(x => x.b.nome) }; } catch (e) { D.bal = null; }
+  try { const B = BALSAS.map(balEstado), c = k => B.filter(x => x.st === k).length; D.bal = { n: B.length - c('ref'), lib: c('lib'), rest: c('rest'), bloq: c('bloq'), sem: c('sem'), ref: c('ref'), bq: B.filter(x => x.st === 'bloq').map(x => x.b.nome) }; D.fora.push(...B.filter(x => x.st === 'ref').map(x => x.b.nome + ' · em reforma')); } catch (e) { D.bal = null; }
   const C = oms().filter(o => o.tipo === 'C' && !o.excluido && vessel(o.vessel));
   D.cAb = C.filter(o => dentro(o.abertura)); D.cLib = C.filter(o => o.liberacao && dentro(o.liberacao));
   D.cPend = C.filter(o => !o.liberacao && !['encerrada', 'cancelada'].includes(o.status)); D.cCrit = D.cPend.filter(o => o.classe === 'Crítica' || o.classe === 'Alta');
@@ -204,6 +204,7 @@ function grDados(W) {
   D.prev = Object.values(G).sort((a, b) => a.date < b.date ? -1 : 1); D.nServ = B.length;
   D.oleo = recs('lub').filter(r => r.tipo === 'fr049' && !r.excluido && dentro(r.date));
   try { const x = knpDisp(W.D0, W.D1); D.disp = x ? x.v : null; } catch (e) { D.disp = null; }
+  try { D.sai = vgViagens().filter(x => dentro(x.date)); } catch (e) { D.sai = []; }
   const R = gsReqs(); D.sc = { A: R.filter(gsAberta), novas: R.filter(r => dentro(r.date)), fim: R.filter(r => r.st === 'fim' && dentro(r.fim)) };
   D.sc.vel = D.sc.A.filter(r => gsDias(r) > 30 || (r.urg && gsDias(r) > 7)).sort((a, b) => gsDias(b) - gsDias(a));
   try { const E = enxDados(); D.pvVenc = E.reduce((a, x) => a + x.venc.length, 0); D.pvMes = E.reduce((a, x) => a + x.mes.length, 0); D.pvTop = E.filter(x => x.venc.length).sort((a, b) => b.venc.length - a.venc.length).slice(0, 4).map(x => x.v.nome + ' (' + x.venc.length + ')'); } catch (e) { D.pvVenc = D.pvMes = null; D.pvTop = []; }
@@ -235,7 +236,7 @@ function grSlides(W, D) {
     ${atpTile(D.sc.A.length, 'SC e RM em aberto', D.sc.vel.length ? 'bad' : '', D.sc.fim.length + ' atendida(s) na semana · ' + D.sc.vel.length + ' atrasada(s)')}</div>`
     + (D.fora.length ? `<p class="at-n">Fora de operação: ${esc(D.fora.join(' · '))}</p>` : '')));
   // 2 · entregas
-  const auto = [...D.cLib.map(o => ['Corretiva liberada: ' + grCorTx(o), '', rmeTxt(o.servicos || '', 110)]), ...D.prev.slice(0, 6).map(g => [`Preventiva ${gsOnde(g.v)}: ${g.n} serviço(s)${g.om ? ' · OM ' + g.om : ''}`, '', brD(g.date) + (g.quem ? ' · ' + g.quem : '')])];
+  const auto = [...(D.sai || []).map(x => ['Saída: ' + vName(x.vessel) + (x.balsas.length ? ' com ' + x.balsas.map(vName).join(', ') : ''), '', brD(x.date) + ' · ' + vgRotaCurta(x.rota)]), ...D.cLib.map(o => ['Corretiva liberada: ' + grCorTx(o), '', rmeTxt(o.servicos || '', 110)]), ...D.prev.slice(0, 6).map(g => [`Preventiva ${gsOnde(g.v)}: ${g.n} serviço(s)${g.om ? ' · OM ' + g.om : ''}`, '', brD(g.date) + (g.quem ? ' · ' + g.quem : '')])];
   out.push(sl(head('2 · Entregas', 'O que foi feito na semana', D.dest.length ? 'destaques do Supervisor' : 'registros da semana no SMF') + (D.dest.length
     ? `<div class="at-2"><div><h4>Destaques</h4>${lista(D.dest.map(t => [t, 'ok']), '', 3)}</div><div><h4>Também na semana</h4>${lista(auto, 'Nenhum registro de OM na semana', 5)}</div></div>`
     : lista(auto, 'Nenhum registro de OM na semana. Escreva os destaques na tela 5.2.', 6))));
@@ -252,6 +253,7 @@ function grTexto(W, D) {   // resumo para WhatsApp ou e-mail
   const fr = D.fr || {}, bal = D.bal || {}, L = [`*Manutenção · semana de ${W.nome}*`, '',
     `*Números*`, `• Empurradores liberados: ${fr.lib}/${fr.n} (${fr.rest} com restrição, ${fr.bloq} bloqueado(s), ${fr.via} em viagem)`, `• Balsas liberadas: ${bal.lib}/${bal.n}`,
     `• Disponibilidade na semana: ${D.disp == null ? '—' : nf(D.disp, 1) + '%'}`, `• Corretivas: ${D.cAb.length} aberta(s), ${D.cLib.length} liberada(s), ${D.cPend.length} aguardando reparo`,
+    `• Comboios que saíram: ${(D.sai || []).length}${(D.sai || []).length ? ' (' + D.sai.map(x => vName(x.vessel) + (x.balsas.length ? ' + ' + x.balsas.length + ' balsa(s)' : '')).join('; ') + ')' : ''}`,
     `• Preventivas: ${D.prev.length} OM(s), ${D.nServ} serviço(s); ${D.oleo.length} troca(s) de óleo`, `• SC/RM em aberto: ${D.sc.A.length} (${D.sc.vel.length} atrasada(s))`, ''];
   if (D.dest.length) L.push('*Destaques*', ...D.dest.map(t => '• ' + t), '');
   const RS = grRiscos(D); if (D.dec.length || RS.length) L.push('*Riscos e decisões*', ...D.dec.map(t => '• Decisão: ' + t), ...RS.map(r => '• ' + r[0]), '');
