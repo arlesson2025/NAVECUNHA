@@ -148,7 +148,6 @@ function frotaMatriz() {
 /* ---------- 8 · cronograma de manutenção (projetado do Anexo I) ---------- */
 const CRONO_FORA = ['11.1.2', '11.3.2'];   // motor de popa e motobomba 5 HP: troca a cada saída, fora do cronograma
 
-
 /* ---------- 9 · menu na ordem do ciclo de gestão (PDCA) ---------- */
 {
   const N = [
@@ -167,69 +166,9 @@ const CRONO_FORA = ['11.1.2', '11.3.2'];   // motor de popa e motobomba 5 HP: tr
 
 /* ---------- 10 · Plano de manutenção (Anexo I) no modelo do GitHub: agrupado por sistema e equipamento ---------- */
 MX.prio = MX.prio || ''; MX.ab = MX.ab || new Set();
-const PRIO_C = { 'Crítica': 'cr', 'Alta': 'al', 'Média': 'me', 'Baixa': 'ba' };
 /* Anexo I num bloco só (24/10/2026): cabeçalho com Imprimir e PDF completo, e a lista dentro do cartão "Itens do plano" (antes eram 3 camadas por cima) */
-function vMatriz() {
-  const q = MX.q.toLowerCase();
-  const l = A1.filter(t => t.kind !== 'sup' && (!MX.sis || t.sis.startsWith(MX.sis)) && (!MX.prio || t.prio === MX.prio) && (!q || [t.id, t.eqn, t.item, t.chk, t.desc, t.norm].join(' ').toLowerCase().includes(q)));
-  const grupos = []; l.forEach(t => { let g = grupos[grupos.length - 1]; if (!g || g.sis !== t.sis) { g = { sis: t.sis, eqs: [] }; grupos.push(g); } let e = g.eqs[g.eqs.length - 1]; if (!e || e.eqn !== t.eqn) { e = { eq: t.eq, eqn: t.eqn, eqd: t.eqd, itens: [] }; g.eqs.push(e); } e.itens.push(t); });
-  const freq = t => { const ov = (S.cfg.intervalos || {})[t.id], iv = intervalo(t); return `<b class="a1-fq">${esc(t.freq)}</b>${ov ? `<div><span class="pill p-warn">ajustado: ${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' meses' : ''].filter(Boolean).join(' ou ')}</span></div>` : ''}`; };
-  const linha = t => `<tr class="a1-it${MX.open === t.id ? ' on' : ''}" data-mx="${t.id}"><td class="a1-n">${t.id}</td><td>${freq(t)}</td><td><div class="a1-item">${esc(t.item)}</div><div class="a1-chk">${esc(t.chk)}</div></td><td><span class="a1-p ${PRIO_C[t.prio] || ''}">${esc(t.prio)}</span></td><td class="a1-rg">${t.regs.map(r => `<span>${r.toUpperCase()}</span>`).join('')}</td><td class="a1-x">${MX.open === t.id ? '−' : '+'}</td></tr>
-    ${MX.open === t.id ? `<tr class="a1-det"><td colspan="6"><div class="a1-dg"><div><h4>Descrição / ação</h4><p>${esc(t.desc)}</p><h4>Página do manual</h4><p>${esc(t.pag)}</p><h4>Base normativa</h4><p class="note">${esc(t.norm)}</p></div><div><h4>Método executivo</h4><ol>${t.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol><h4>Registro NP 055</h4><p class="note">${esc(t.reg)}</p></div></div></td></tr>` : ''}`;
-  return `<div class="vh"><div><h1>Plano de manutenção · Anexo I</h1><p>Matriz de Manutenção Preventiva da NP 055 (item 7.2): o que fazer, intervalo (horas OU meses, o que ocorrer primeiro), prioridade e registro. Clique num item para ver a descrição, o método executivo e a base normativa. O cronograma é calculado a partir deste plano.</p></div><span class="sp"></span><button class="mbtn" data-a1pr="0" title="Nº, frequência, item, prioridade, página do manual e registros">🖨 Imprimir</button><details class="pt-mais"><summary class="mbtn" title="Mais opções">⋯</summary><div><button class="mbtn" data-a1pr="1" title="Inclui descrição, método executivo e base normativa">🖨 PDF completo</button><button class="mbtn" data-a1crit title="Equipamentos com itens Críticos ou Alta, para a auditoria">🖨 PDF dos equipamentos críticos (NP 6)</button></div></details></div>
-   <div class="card"><h2>Itens do plano</h2><div class="a1-bar"><input id="mxQ" placeholder="Buscar por nº, equipamento, item, norma…" value="${esc(MX.q)}"><select id="mxS"><option value="">Todos os sistemas</option>${SISTEMAS.map(s => { const k = s.split(' ')[0].replace('.0', '.'); return `<option value="${k}"${MX.sis === k ? ' selected' : ''}>${s}</option>`; }).join('')}</select><select id="mxP"><option value="">Todas as prioridades</option>${['Crítica', 'Alta', 'Média', 'Baixa'].map(p => `<option${MX.prio === p ? ' selected' : ''}>${p}</option>`).join('')}</select><span class="sp"></span><span class="note">${l.length} de ${A1.filter(t => t.kind !== 'sup').length} itens</span></div>
-   <div class="a1-leg"><button class="mbtn sm" data-a1all="1">＋ Expandir todos</button><button class="mbtn sm" data-a1all="0">− Recolher todos</button><span style="width:10px"></span>Prioridade (NP 055 · 5.5.1): <span class="a1-p cr">Crítica</span><span class="a1-p al">Alta</span><span class="a1-p me">Média</span><span class="a1-p ba">Baixa</span></div>
-   <div class="a1-lista">${grupos.length ? grupos.map(g => { const n = parseInt(g.sis), filtro = !!(q || MX.sis || MX.prio), ab = filtro || MX.ab.has(n); return `<section class="a1-sis${ab ? ' ab' : ''}"><header data-a1s="${n}" role="button" aria-expanded="${ab}" tabindex="0"><span class="a1-num">${n}</span><h3>${esc(g.sis.replace(/^\d+\.\s*/, ''))}</h3><span class="note">${g.eqs.length} equipamento(s) · ${g.eqs.reduce((a, e) => a + e.itens.length, 0)} itens${g.eqs.some(e => e.itens.some(t => t.prio === 'Crítica')) ? ` · <span class="a1-crn">${g.eqs.reduce((a, e) => a + e.itens.filter(t => t.prio === 'Crítica').length, 0)} críticos</span>` : ''}</span><span class="a1-tg">${ab ? '−' : '+'}</span></header>${!ab ? '' : `
-     ${g.eqs.map(e => `<div class="a1-eq"><div class="a1-eqh"><span class="a1-code">${esc(e.eq)}</span><div><b>${esc(e.eqn)}</b>${e.eqd ? `<div class="note">${esc(e.eqd)}</div>` : ''}</div></div>
-      <table class="a1-t"><thead><tr><th style="width:70px">Nº</th><th style="width:170px">Frequência</th><th>Item · serviço</th><th style="width:96px">Prioridade</th><th style="width:170px">Registros</th><th style="width:28px"></th></tr></thead><tbody>${e.itens.map(linha).join('')}</tbody></table></div>`).join('')}`}</section>`; }).join('') : '<div class="card note">Nenhum item com esse filtro.</div>'}</div></div>`;
-}
-AFTER.matriz = () => { const m = $('#main');
-  m.oninput = e => { if (e.target.id === 'mxQ') { MX.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#mxQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); } };
-  m.onchange = e => { if (e.target.id === 'mxP') { MX.prio = e.target.value; render(); } if (e.target.id === 'mxS') { MX.sis = e.target.value; render(); } };
-  m.onclick = e => { const p = e.target.closest('[data-a1pr]'); if (p) { a1Imprimir(p.dataset.a1pr === '1'); return; } if (e.target.closest('[data-a1crit]')) { critPDF(); return; }
-    const h = e.target.closest('[data-a1s]'); if (h) { const n = +h.dataset.a1s; if (q0()) return; MX.ab.has(n) ? MX.ab.delete(n) : MX.ab.add(n); render(); return; }
-    const a = e.target.closest('[data-a1all]'); if (a) { MX.ab = a.dataset.a1all === '1' ? new Set(SISTEMAS.map((_, i) => i + 1)) : new Set(); render(); return; }
-    const r = e.target.closest('[data-mx]'); if (r) { MX.open = MX.open === r.dataset.mx ? '' : r.dataset.mx; render(); } };
-  m.onkeydown = e => { const h = e.target.closest && e.target.closest('[data-a1s]'); if (h && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); h.click(); } }; };
-const q0 = () => !!(MX.q || MX.sis || MX.prio);
 
 /* ---------- 11 · Anexo I em A4 (imprimir ou salvar em PDF) ---------- */
-function a1Imprimir(completo) {
-  const q = MX.q.toLowerCase(), filtro = !!(q || MX.sis || MX.prio);
-  const l = A1.filter(t => t.kind !== 'sup' && (!MX.sis || t.sis.startsWith(MX.sis)) && (!MX.prio || t.prio === MX.prio) && (!q || [t.id, t.eqn, t.item, t.chk, t.desc, t.norm].join(' ').toLowerCase().includes(q)));
-  const G = []; l.forEach(t => { let g = G[G.length - 1]; if (!g || g.sis !== t.sis) { g = { sis: t.sis, eqs: [] }; G.push(g); } let e = g.eqs[g.eqs.length - 1]; if (!e || e.eqn !== t.eqn) { e = { eq: t.eq, eqn: t.eqn, eqd: t.eqd, itens: [] }; g.eqs.push(e); } e.itens.push(t); });
-  const pc = { 'Crítica': 'cr', 'Alta': 'al', 'Média': 'me', 'Baixa': 'ba' }, data = hoje().toLocaleDateString('pt-BR');
-  const fq = t => { const ov = (S.cfg.intervalos || {})[t.id], iv = intervalo(t); return esc(t.freq) + (ov ? `<br><i>ajustado: ${[iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' meses' : ''].filter(Boolean).join(' ou ')}</i>` : ''); };
-  const linhas = e => e.itens.map(t => `<tr><td class="n">${t.id}</td><td class="fq">${fq(t)}</td><td><b>${esc(t.item)}</b><br>${esc(t.chk)}</td><td><span class="p ${pc[t.prio] || ''}">${esc(t.prio)}</span></td><td class="pg">${esc(t.pag)}</td><td class="rg">${t.regs.map(r => r.toUpperCase()).join(' · ')}</td></tr>
-     ${completo ? `<tr class="det"><td></td><td colspan="5"><div class="dg"><div><h5>Descrição / ação</h5><p>${esc(t.desc)}</p></div><div><h5>Método executivo</h5><ol>${t.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol><h5>Base normativa</h5><p class="mut">${esc(t.norm)}</p></div></div></td></tr>` : ''}`).join('');
-  const corpo = G.map(g => `<section><h2><span>${parseInt(g.sis)}</span>${esc(g.sis.replace(/^\d+\.\s*/, ''))}</h2>${g.eqs.map(e => `<table><thead><tr><th colspan="6" class="eq"><b>${esc(e.eq)}</b> ${esc(e.eqn)}${e.eqd ? ` <em>· ${esc(e.eqd)}</em>` : ''}</th></tr><tr><th style="width:6%">Nº</th><th style="width:13%">Frequência</th><th>Item · serviço</th><th style="width:8%">Prioridade</th><th style="width:16%">Página do manual</th><th style="width:12%">Registros</th></tr></thead><tbody>${linhas(e)}</tbody></table>`).join('')}</section>`).join('');
-  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Anexo I · NP Navecunha 055 · Plano de Manutenção</title><style>
-@page{size:A4 landscape;margin:12mm 10mm 14mm}
-*{box-sizing:border-box}body{margin:0;font:9pt/1.35 "Segoe UI",Arial,sans-serif;color:#1D2730;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.cab{display:flex;align-items:center;gap:14px;border-bottom:2px solid #1F4466;padding-bottom:6px;margin-bottom:8px}.cab img{height:34px}.cab .t{flex:1}.cab h1{margin:0;font-size:14pt;color:#1F4466}.cab p{margin:1px 0 0;color:#5B6874;font-size:8.5pt}
-.cab .id{text-align:right;font-size:8pt;color:#5B6874;line-height:1.4}
-.leg{font-size:8pt;color:#5B6874;margin:0 0 6px}
-section{break-inside:auto;margin-bottom:6px}
-h2{font-size:10.5pt;margin:8px 0 4px;background:#1F4466;color:#fff;padding:4px 8px;border-radius:4px;break-after:avoid;display:flex;gap:8px;align-items:center}h2 span{background:rgba(255,255,255,.18);border-radius:3px;padding:0 6px}
-table{width:100%;border-collapse:collapse;margin:0 0 6px;break-inside:auto}thead{display:table-header-group}tr{break-inside:avoid}tr.det{break-before:avoid}
-th{background:#E1ECF6;color:#1F4466;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:.03em;padding:3px 5px;border:.5pt solid #C9D6E3}
-th.eq{background:#F1F6FB;text-transform:none;letter-spacing:0;font-size:9pt;color:#1D2730}th.eq b{color:#1F4466;background:#E1ECF6;border-radius:3px;padding:0 4px;margin-right:4px}th.eq em{font-style:normal;color:#5B6874;font-size:8pt}
-td{padding:3px 5px;border:.5pt solid #D5DEE7;vertical-align:top}td.n{font-weight:700;color:#1F4466;white-space:nowrap}td.fq{color:#1F4466;font-weight:600}td.fq i{color:#B26A00;font-weight:400}td.pg,td.rg{font-size:8pt;color:#3C6E95}
-.p{display:inline-block;border-radius:8px;padding:0 6px;font-size:7.5pt;font-weight:700}.p.cr{background:#FFFFFF;color:#C5221F}.p.al{background:#E1ECF6;color:#1F4466}.p.me{background:#FBEFD9;color:#B26A00}.p.ba{background:#E3F1E9;color:#2D7A55}
-tr.det td{background:#FAFCFE;font-size:8pt}.dg{display:grid;grid-template-columns:1.2fr 1fr;gap:10px}h5{margin:2px 0;font-size:7.5pt;text-transform:uppercase;color:#1F4466;letter-spacing:.04em}.dg p{margin:0 0 4px;white-space:pre-line}.dg ol{margin:0 0 4px;padding-left:14px}.mut{color:#5B6874}
-.fim{margin-top:8px;font-size:7.5pt;color:#5B6874;border-top:.5pt solid #C9D6E3;padding-top:4px}
-</style></head><body>
-<div class="cab"><img src="${LOGOS.nav}" alt=""><div class="t"><h1>Anexo I · Plano de Manutenção Preventiva dos Empurradores</h1><p>NP Navecunha 055 · item 7.2 · intervalo: horas OU meses, o que ocorrer primeiro${filtro ? ' · <b>impressão filtrada</b>' : ''}</p></div><div class="id">${l.length} itens · ${G.length} sistema(s)<br>Emitido em ${data}<br>${completo ? 'Versão completa' : 'Versão resumida'}</div><img src="${LOGOS.vda}" alt=""></div>
-<div class="leg">Prioridade (NP 055 · 5.5.1): <span class="p cr">Crítica</span> <span class="p al">Alta</span> <span class="p me">Média</span> <span class="p ba">Baixa</span> · Registros: FR049 = FR 049_B · FR016 = FR 016_E · INSTR = instrumento calibrado · TERC = serviço de terceiro · LOTE = lote/validade do óleo</div>
-${corpo}
-<p class="fim">Documento controlado pelo SGI · NP Navecunha 055 · Anexo I · gerado pelo SMF em ${data}. Cópia impressa não controlada: confira a revisão vigente antes do uso.</p>
-</body></html>`;
-  const fr = document.createElement('iframe'); fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(fr);
-  const d = fr.contentWindow.document; d.open(); d.write(html); d.close();
-  const go = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { toast('Não foi possível abrir a impressão.'); } setTimeout(() => fr.remove(), 60e3); };
-  const imgs = [...d.images]; Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => setTimeout(go, 150));
-}
-VX.matriz = vMatriz;
 
 /* ---------- 12 · Horímetro do MCP por empurrador: colunas vitrificadas com 3 visões ---------- */
 

@@ -102,7 +102,6 @@ function hbar(rows, unit, meta, dec = 0) {
    ${meta != null ? `<div class="hb2-r hb2-mr"><span class="hb2-l"></span><span class="hb2-t" style="background:none"><span class="hb2-ml" style="left:${meta / mx * 100}%">meta ${fmtU(meta, dec, unit)}</span></span><b class="hb2-v"></b></div>` : ''}</div>`;
 }
 
-
 /* ---------- minimizar e maximizar cada painel (sem entrar no modo Organizar) ---------- */
 ['crono', 'pecas'].forEach(v => { if (!LAY_VIEWS.includes(v)) LAY_VIEWS.push(v); });
 function layCtl() {
@@ -127,7 +126,6 @@ document.addEventListener('click', async e => {
     const fechar = () => { ov.remove(); document.removeEventListener('keydown', esc1); }, esc1 = ev => { if (ev.key === 'Escape') fechar(); };
     ov.addEventListener('click', ev => { if (ev.target === ov || ev.target.closest('.pmax-x')) fechar(); }); document.addEventListener('keydown', esc1); return; }
 }, true);
-
 
 /* ---------- tamanho livre (alça no canto) e mover livre (pegador), com salvamento automático ---------- */
 function layAltura(w) { const c = w.querySelector(':scope > .card'); if (!c) return; if (w.dataset.h) { c.style.height = w.dataset.h + 'px'; c.style.overflow = 'auto'; } else { c.style.height = ''; c.style.overflow = ''; } }

@@ -49,7 +49,6 @@ function docaReg(vid, rid) {
     closeModal(); toast('Docagem salva.'); render(); };
   const x = $('#dgX'); if (x) x.onclick = () => confirmar('Excluir esta docagem do histórico?', async () => { await saveRec(Object.assign({}, r, { deleted: true, excluido: true })); S.recs.delete(r.id); try { await DB.del(r.id); } catch (er) { } closeModal(); toast('Docagem excluída.'); render(); });
 }
-VX.doca = vDoca;
 document.addEventListener('click', e => { if (VIEW !== 'doca' && VIEW !== 'controle') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
   if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);
 

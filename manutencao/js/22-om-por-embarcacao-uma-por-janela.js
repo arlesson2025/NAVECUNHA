@@ -4,7 +4,6 @@ ETAPAS_P[1][1] = 'Em execução'; ETAPAS_P[2][1] = 'Executada';
 const omGrupo = g => oms().filter(o => o.tipo === 'P' && o.grupo === g).sort((a, b) => (a.parte || 0) - (b.parte || 0));
 const grpOrd = ETAPAS_P.map(x => x[0]);
 const grpStatus = P => grpOrd[Math.min(...P.map(o => Math.max(0, grpOrd.indexOf(o.status))))];
-const grpItens = P => P.reduce((a, o) => a + (o.itensProg || o.items || []).length, 0);
 const grpNext = { emitida: ['abordo', 'Registrar início do serviço'], abordo: ['executada', 'Terminou a execução'], executada: ['conferencia', 'Lançar a ficha'] };
 const ivEmb = (t, v, p) => { const iv = intervalo(t, v, p); return [iv.h ? nf(iv.h) + ' h' : '', iv.m ? iv.m + ' m' : ''].filter(Boolean).join(' / '); };
 const ladoMCA = (v, p) => { const l = v && v.mcaLoc && v.mcaLoc[p] ? v.mcaLoc[p] : ''; return /^bomb/i.test(l) ? 'BB' : /^bores/i.test(l) ? 'BE' : ''; };
@@ -32,7 +31,6 @@ function embTexto(v, partes) {
 
 /* ---------- 2 · Ficha impressa: checklist em poucas folhas ---------- */
 
-
 /* ---------- 3 · Quadro de OMs: uma linha por OM do empurrador ---------- */
 async function grpAvancar(g, st) {
   const P = omGrupo(g), i = grpOrd.indexOf(st);
@@ -40,13 +38,10 @@ async function grpAvancar(g, st) {
 }
 
 /* ---------- 4 · Lançamento rápido da ficha (OM inteira numa tela) ---------- */
-const RG = { t: null };
 function rgDados(P) { const o = P[0]; o.rap = o.rap || { res: {}, obs: {}, med: {}, hr: {}, regs: {} }; ['res', 'obs', 'med', 'hr', 'regs'].forEach(k => o.rap[k] = o.rap[k] || {}); return o.rap; }
-function rgSalvar(P) { clearTimeout(RG.t); RG.t = setTimeout(() => saveRec(P[0]), 700); }
 const rgRegs = P => { const s = new Set(); P.forEach(o => regsDe({ items: o.itensProg || o.items }).forEach(r => s.add(r))); return [...s].filter(r => ['end', 'cert'].includes(r)); };   // lote do lubrificante, FR 049_B e instrumento ficam no formulário de troca de óleo
 /* Lançar OM num bloco só (24/10/2026): faixa-guia (guiaOM) + lançamento + histórico; antes eram 3 camadas por cima (troca de "ficha", histórico e faixa-guia) */
 function vOmg() { const P = omGrupo(ARG); if (!P.length) return omgCorpo(); return guiaOM(P[0], P) + emTroca(omgCorpo()) + omHistHTML(P[0]); }
-VX.omg = vOmg;
 function omgCorpo() {
   const g = ARG, P = omGrupo(g); if (!P.length) return '<div class="empty">OM não encontrada. Talvez ainda não tenha sincronizado.</div>';
   const o1 = P[0], v = vessel(o1.vessel), R = rgDados(P), st = grpStatus(P), fechada = st === 'encerrada', ro = fechada || !can.edit(), idx = grpOrd.indexOf(st);
@@ -84,62 +79,9 @@ function omgCorpo() {
     ${fechada ? '<p class="note">Encerrada.</p>' : pend.length ? `<div class="banner warn"><b>Falta:</b> ${pend.map(esc).join(' · ')}</div>` : '<div class="banner ok">Tudo preenchido. Pode aprovar.</div>'}
     ${fechada ? '' : `<div class="row"><button class="mbtn" data-rgact="salvar">💾 Salvar</button>${st !== 'conferencia' ? '<button class="mbtn" data-rgact="conf">Enviar para conferência</button>' : ''}<span class="sp"></span><button class="mbtn ok" data-rgact="aprovar" ${pend.length ? 'disabled' : ''}>✓ Aprovar a OM inteira e gerar os PDFs</button></div><p class="note">Ao aprovar, cada parte (motor / empurrador) gera o seu Anexo II-B com a mesma OM ${esc(o1.num)}. Itens OK passam a contar como feitos; NOK/NA continuam vencidos.</p>`}</div>`;
 }
-async function rgAplicar(P) {
-  const R = rgDados(P), v = vessel(P[0].vessel), regs = rgRegs(P);
-  P.forEach((o, n) => { const ids = o.itensProg = o.itensProg || (o.items || []).slice();
-    o.items = ids.filter(id => R.res[o.pos + '|' + id] === 'ok');
-    o.naoExec = ids.filter(id => R.res[o.pos + '|' + id] && R.res[o.pos + '|' + id] !== 'ok').map(id => ({ id, r: R.res[o.pos + '|' + id], motivo: R.obs[o.pos + '|' + id] || '' }));
-    o.conf = {}; o.passosFicha = true; o.items.forEach(id => { const k = o.pos + '|' + id; o.conf[id] = { steps: [], meds: (R.med[k] || []).map(x => ({ enc: x.enc || '', dei: x.dei || '' })) }; });   // passos: conforme o formulário assinado (foto), nunca marcados automaticamente
-    o.dreal = R.dreal || ''; o.inicio = R.inicio || o.inicio || ''; o.termino = R.termino || ''; rgExecAplicar(o, R);
-    o.hreal = o.pos === 'UN' ? (R.hr[mpos(o.vessel)] || Object.values(R.hr)[0] || '') : (R.hr[o.pos] || '');
-    if (o.pos === 'UN' && !o.hreal) { const hr = horAtual(o.vessel, mpos(o.vessel)); o.hreal = hr ? hr.h : ''; }
-    o.indispH = n === 0 ? (R.indispH || '0') : '0'; o.resid = R.resid || ''; o.residT = R.resid === 'Sim' ? (o.residT || ['Óleo usado']) : []; o.fr016 = R.fr016 || ''; o.pt = R.pt || ''; o.justif = R.justif || '';
-    o.obsGeral = R.obsGeral || ''; o.mats = String(R.matsTxt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => { const c = l.split(/\s*[·;|]\s*/); return [c[0] || '', c[1] || '', c.slice(2).join(' ') || '']; });   // vão para o PDF do Anexo II-B
-    o.reg = Object.assign({}, o.reg || {}, R.regs); o.teste = 'Itens conferidos conforme o formulário de execução assinado pelo executor e por quem recebeu a bordo (foto anexa à OM)' + (o.naoExec.length ? '; não executados: ' + o.naoExec.map(x => x.id + ' (' + x.r.toUpperCase() + (x.motivo ? ': ' + x.motivo : '') + ')').join(', ') : '');
-    o.criterio = 'Especificação do Anexo I (NP 055)'; o.resultado = 'Conforme'; o.anomalia = o.anomalia && o.anomalia !== 'Não' ? o.anomalia : 'Não'; o.omCorr = o.omCorr || 'N/A';
-    o.condEnc = o.condEnc || 'Conforme ficha de execução da OM ' + o.num + '.'; o.origem = o.origem || 'Plano (ClickUp)';
-    o.liberacao = o.liberacao || (R.termino || (R.dreal ? R.dreal + 'T17:00' : '')); });
-  for (const o of P) await saveRec(o);
-}
-AFTER.omg = function () {
-  const m = $('#main'), P = omGrupo(ARG); if (!P.length) return; const R = rgDados(P);
-  const cnt = () => { let t = 0, a = 0, b = 0, c = 0; m.querySelectorAll('.rg-it').forEach(el => { t++; if (el.classList.contains('ok')) a++; if (el.classList.contains('nok')) b++; if (el.classList.contains('na')) c++; }); const x = $('#rgCnt'); if (x) x.textContent = `${a} OK · ${b} NOK · ${c} NA · ${t - a - b - c} sem marcação`; };
-  m.oninput = m.onchange = async e => { const t = e.target; if (!can.edit()) return;
-    if (t.dataset.rg) { R[t.dataset.rg] = t.value; if (e.type === 'change' && ['execTipo', 'relTerc'].includes(t.dataset.rg)) { await saveRec(P[0]); render(); return; } } else if (t.dataset.rgh) R.hr[t.dataset.rgh] = t.value.replace(/\D/g, ''); else if (t.dataset.rgo) R.obs[t.dataset.rgo] = t.value; else if (t.dataset.rgr) R.regs[t.dataset.rgr] = t.value;
-    else if (t.dataset.rgm) { const [p, id, i, f] = t.dataset.rgm.split('|'), k = p + '|' + id; R.med[k] = R.med[k] || []; R.med[k][i] = R.med[k][i] || {}; R.med[k][i][f] = t.value; if (f === 'dei') t.classList.toggle('out', medFora(A1M[id].meds[i], t.value)); }
-    else if (t.dataset.rgf) { const [i, f] = t.dataset.rgf.split('|'); P[0].fotos[i][f] = t.value; }
-    else if (t.dataset.rgprova && e.type === 'change') { const tipo = t.dataset.rgprova; for (const f of t.files) { const src = await comprimir(f); P[0].fotos = (P[0].fotos || []).filter(x => x.tipo !== tipo); P[0].fotos.push({ src, tipo, leg: tipo === 'FORMULÁRIO ASSINADO' ? 'Formulário de execução assinado pelo executor e por quem recebeu a bordo' : 'Relatório técnico do fornecedor (NP 5.8)', at: Date.now() }); } await saveRec(P[0]); render(); return; }
-    else if (t.id === 'rgFoto' && e.type === 'change') { for (const f of t.files) { const src = await comprimir(f); P[0].fotos = P[0].fotos || []; P[0].fotos.push({ src, tipo: P[0].fotos.some(x => x.tipo === 'ANTES') ? 'DEPOIS' : 'ANTES', leg: '', at: Date.now() }); } await saveRec(P[0]); render(); return; }
-    else return;
-    rgSalvar(P); };
-  m.onclick = async e => { const t = e.target.closest('button,a'); if (!t) return;
-    if (t.dataset.ficha) return fichaModal(S.recs.get(t.dataset.ficha));
-    if (t.dataset.rv) { if (!can.edit()) return; const s = t.closest('[data-rk]'), k = s.dataset.rk, it = t.closest('.rg-it'), v = R.res[k] === t.dataset.rv ? '' : t.dataset.rv; R.res[k] = v;
-      s.querySelectorAll('button').forEach(b => b.className = b.dataset.rv === v ? 'on ' + v : ''); it.className = 'rg-it ' + v; const ob = it.querySelector('.rg-obs'); if (ob) ob.placeholder = v === 'nok' || v === 'na' ? 'Motivo (obrigatório)' : 'Obs.'; cnt(); rgSalvar(P); return; }
-    if (t.dataset.rgall) { if (!can.edit()) return; P.forEach(o => (o.itensProg || o.items || []).forEach(id => { const k = o.pos + '|' + id; if (!R.res[k]) R.res[k] = 'ok'; })); await saveRec(P[0]); render(); return; }
-    if (t.dataset.rgfdel) { P[0].fotos.splice(+t.dataset.rgfdel, 1); await saveRec(P[0]); render(); return; }
-    if (t.dataset.rgact === 'salvar') { clearTimeout(RG.t); await saveRec(P[0]); toast('Salvo.'); render(); return; }
-    if (t.dataset.rgact === 'conf') { if (!precisa(false)) return; clearTimeout(RG.t); await rgAplicar(P); await grpAvancar(ARG, 'conferencia'); toast('OM ' + P[0].num + ' enviada para conferência.'); render(); return; }
-    if (t.dataset.rgact === 'aprovar') { if (!precisa(true)) return; clearTimeout(RG.t); if (rgPend(P).length) return toast('Ainda há pendências.');
-      t.disabled = true; t.textContent = 'Gerando PDFs…'; await rgAplicar(P); await grpAvancar(ARG, 'conferencia');
-      const falha = []; P.forEach(o => { const g = gateIIB(o).filter(x => !x[1]); if (g.length) falha.push(posCurtoE(vessel(o.vessel), o.pos) + ': ' + g.map(x => x[0]).join(', ')); });
-      if (falha.length) { toast('Não foi possível aprovar: ' + falha.join(' | '), 9000); render(); return; }
-      for (const o of P) await aprovarOM(o); toast('OM ' + P[0].num + ' aprovada: ' + P.length + (P.length === 1 ? ' PDF gerado.' : ' PDFs gerados.'), 5000); render(); return; } };
-};
 { const s = SECOES.find(x => x.id === 'exec'); if (s) s.extra = (s.extra || []).concat(['omg']); }
 
 /* ---------- 5 · Rotina do dia: o que fazer, em ordem, por empurrador ---------- */
-function rotinaDados() {
-  return S.cfg.frota.map(v => {
-    if (foraOp(v)) return { v, fora: true };
-    const P = painelVessel(v), venc = P.filter(x => x.t.kind === 'prog' && x.s.st === 'venc' && !x.om && !foraJanela(x.t.id, x.v || v, x.pos)), viag = P.filter(x => x.t.kind === 'prog' && x.s.st === 'viag' && !x.om && !foraJanela(x.t.id, x.v || v, x.pos));
-    const abertas = oms().filter(o => o.vessel === v.id && o.tipo === 'P' && o.status !== 'encerrada'), gs = [...new Set(abertas.map(o => o.grupo || o.id))];
-    const om = gs.map(g => { const L = abertas.filter(o => (o.grupo || o.id) === g); return { g, L, num: L[0].num, st: grpStatus(L), grp: !!L[0].grupo, id: L[0].id }; }).sort((a, b) => grpOrd.indexOf(a.st) - grpOrd.indexOf(b.st))[0];
-    const corr = oms().filter(o => o.vessel === v.id && o.tipo === 'C' && o.status !== 'encerrada');
-    const hr = horAtual(v.id, mpos(v.id)), dHr = hr ? Math.floor((hoje() - pD(hr.date)) / 864e5) : null, crit = bloqueioSaida(v.id).length;
-    return { v, venc, viag, om, corr, hr, dHr, crit };
-  });
-}
 { const s = SECOES.find(x => x.id === 'inicio'); if (s) { s.nome = '0 · Rotina do dia'; s.views.unshift(['rotina', 'Rotina do dia']); s.views = s.views.slice(0, 1); }
   const pg = { id: 'painel', nome: '1 · Painel de gestão', views: [['geral', 'Painel de gestão']] }; ICO.painel = ICO.inicio; const i = SECOES.findIndex(x => x.id === 'inicio'); SECOES.splice(i + 1, 0, pg);
   ICO.inicio = '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'; }

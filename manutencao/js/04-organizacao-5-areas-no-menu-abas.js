@@ -33,5 +33,3 @@ function abasHtml() {
 
 /* ---------- painel de comando ---------- */
 
-
-

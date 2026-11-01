@@ -15,8 +15,6 @@ function omHistHTML(o) {
   const dt = t => { const d = new Date(t); return isNaN(d) ? '—' : brD(isoD(d)) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   return `<div class="card"><div class="row"><h2>Histórico da OM</h2><span class="sp"></span><span class="note">trilha de auditoria: cada mudança de etapa, com quem fez e quando</span></div><div class="tw"><table class="t"><thead><tr><th>Data e hora</th><th>Quem</th><th>O que aconteceu</th></tr></thead><tbody>${H.map(h => `<tr><td class="mono">${dt(h.at)}</td><td>${esc(h.by || '—')}</td><td>${esc(h.ev || '')}${h.motivo ? ' · ' + esc(h.motivo) : ''}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
-function omOrigemHTML(o) { if (!o || !o.fr027) return ''; const r = S.recs.get(o.fr027); if (!r) return '';
-  return `<div class="banner info">Aberta pelo <b>FR 027_L de ${r.mov === 'saida' ? 'saída' : 'chegada'}</b> de ${brD(r.date)} ${esc(r.hora || '')} · ${esc(((r.ass || [])[0] || {}).nome || '')}${((r.ass || [])[1] || {}).nome ? ' · CTF ' + esc(r.ass[1].nome) : ''}<span class="sp"></span>${drivePdf(r.pdfFileId, '📄 Abrir o FR 027_L')}</div>`; }
 // 6 · Hoje: o que precisa de você agora
 function agoraLista() {
   const out = [], add = (p, txt, btn) => out.push({ p, txt, btn }), FM = frotaMatriz();

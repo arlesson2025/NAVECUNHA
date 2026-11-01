@@ -22,14 +22,6 @@ function rgProvaHTML(o1, R) {
   return `<div class="rg-prova"><p class="note" style="margin:8px 0 6px">Prova da execução: o formulário de execução volta assinado pelo executor e por quem recebeu a bordo. A foto dele fica na OM e no PDF; os passos do Anexo I contam como feitos <b>conforme o formulário assinado</b>, não por marcação na tela.${R.execTipo === 'terceiro' && R.relTerc === RG_REL[1] ? ' Sem relatório do fornecedor: preencha os itens e as medições abaixo a partir do que foi verificado (NP 5.8).' : ''}</p>
    <div class="phgrid">${caixa(RG_PROVA[0], ficha, 'Foto do formulário assinado')}${precisaRel ? caixa(RG_PROVA[1], rel, 'Relatório do fornecedor') : ''}</div></div>`;
 }
-function rgExecAplicar(o, R) {
-  const terc = R.execTipo === 'terceiro', T = terc ? S.recs.get(R.terc) : null;
-  o.exec = terc ? 'Terceiro' : 'Equipe de manutenção';
-  o.execn = terc ? [(T && T.empresa) || '', (R.execn || '').trim()].filter(Boolean).join(' · resp. técnico: ') : (R.execn || '').trim();
-  o.terc = terc ? R.terc || '' : ''; o.relTerc = terc ? R.relTerc || '' : ''; o.relNum = terc && R.relTerc === RG_REL[0] ? R.relNum || '' : '';
-  o.receb = { func: R.recFunc || '', nome: (R.recNome || '').trim() };
-  o.ass = Object.assign({}, o.ass || {}, { exec: terc ? (R.execn || '').trim() + (T ? ' (' + T.empresa + ')' : '') : (R.execn || '').trim(), cmd: o.receb.nome ? o.receb.nome + ' (' + o.receb.func + ')' : '' });
-}
 // conferência: no lançamento rápido a prova dos passos é a ficha assinada (não a marcação passo a passo)
 { const g1 = gateIIB;  }
 { const st = document.createElement('style'); st.textContent = `.rg-prova .addph{min-height:110px}.rg-prova .addph.rg-pok{border-color:var(--okt,#137333);color:var(--okt,#137333)}`; document.head.appendChild(st); }

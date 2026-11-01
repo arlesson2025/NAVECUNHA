@@ -54,14 +54,6 @@ document.addEventListener('click', e => { if (VIEW !== 'rotina') return;
 { const st = document.createElement('style'); st.textContent = `
 .pf .vh{margin-bottom:12px}
 
-
-
-
-
-
-
-
-
 .pf-st{margin-left:auto;font-size:11.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 8px;border-radius:5px;color:#fff}
 .lib .pf-st{background:#188038}.res .pf-st{background:#E3A008}.blo .pf-st{background:#D93025}.via .pf-st{background:#1967D2}.sem .pf-st{background:#80868B}
 .pf-o{font-size:12.5px;color:#5F6368}.pf-p{font-size:14px;font-weight:600;color:#202124;min-height:38px}.pf-p small{display:block;font-size:11px;font-weight:500;color:#80868B;text-transform:uppercase;letter-spacing:.3px}
