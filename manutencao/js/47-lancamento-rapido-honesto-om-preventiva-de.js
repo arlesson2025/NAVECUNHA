@@ -12,4 +12,4 @@
 
 // conferência: no lançamento rápido a prova dos passos é a ficha assinada (não a marcação passo a passo)
 { const g1 = gateIIB;  }
-{ const st = document.createElement('style'); st.textContent = `.rg-prova .addph{min-height:110px}.rg-prova .addph.rg-pok{border-color:var(--okt,#137333);color:var(--okt,#137333)}`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = ``; document.head.appendChild(st); }

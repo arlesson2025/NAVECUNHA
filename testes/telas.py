@@ -15,8 +15,8 @@ from playwright.async_api import async_playwright
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAIDA = os.path.join(RAIZ, 'testes', 'saida')
 DATA = datetime.datetime(2026, 10, 24, 10, 0, 0)
-TELAS = ['rotina', 'barco/v1', 'emitir', 'emitir/v3', 'oms', 'acomp', 'omconf', 'falhas2', 'cxr', 'crono', 'audit', 'matriz',
-         'controle', 'horfrota', 'hor', 'oleo', 'anoleo', 'parmcp', 'compr', 'kpi', 'regs', 'bib', 'pecas', 'terc', 'trein', 'lubcons', 'admin']
+TELAS = ['enxhoje', 'enxpend', 'enxhor', 'enxcor', 'enxfal', 'enxcr', 'enx', 'enx/v1', 'enxrisco', 'oleo', 'enxcal', 'compr', 'anoleo', 'enxarr', 'enxsen',
+         'enxdiag', 'enxkpi', 'enxacao', 'enxrel', 'enxapres', 'enxbib', 'cxr', 'admin']   # telas do menu atual (SMF enxuto); 'enx/v1' = 2.2 com o empurrador escolhido; as balsas vão à parte
 INICIO = """
 (() => { let s = 20261024; Math.random = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
   try { sessionStorage.setItem('sgmf_ok', '1'); localStorage.clear(); } catch (e) {} })();
@@ -64,22 +64,21 @@ async def fotografar(b, url):
         n0 = n
     await pg.evaluate("async () => { S.url = ''; S.session = { name: 'Teste', role: 'admin', token: null }; await kvSet('session', S.session); }")
     fotos = {}
-    alvos = TELAS + await pg.evaluate("""() => { const P = oms().filter(o => o.tipo === 'P' && o.grupo).sort((a, b) => a.id < b.id ? -1 : 1)[0], C = oms().filter(o => o.tipo === 'C').sort((a, b) => a.id < b.id ? -1 : 1)[0];
-      return [P ? 'omg/' + P.grupo : '', C ? 'om/' + C.id : ''].filter(Boolean); }""")
+    alvos = TELAS
     for t in alvos:   # primeira volta só aquece (memórias e gravações em segundo plano); a foto é da segunda
         v, _, a = t.partition('/')
         await pg.evaluate("([v, a]) => { try { VIEW = v; ARG = a; render(); } catch (e) {} }", [v, a])
     await pg.wait_for_timeout(1500)
     for t in alvos:
         v, _, a = t.partition('/')
-        html = await pg.evaluate("""async ([v, a]) => { if (v === 'emitir') { EM.sel.clear(); EM.draft = null; EM.vid = null; EM.pvVid = null; EM.pvIni = false; EM.passo = 1; }   // estado da tela de programação parte do zero
+        html = await pg.evaluate("""async ([v, a]) => { if (v === 'enx') { ENX.v = a || null; a = ''; }
           try { history.replaceState(null, '', '#' + v + (a ? '/' + a : '')); VIEW = v; ARG = a; render(); await new Promise(r => setTimeout(r, 500)); VIEW = v; ARG = a; render(); } catch (e) { return 'ERRO: ' + e.message; }
           await new Promise(r => setTimeout(r, 500)); return document.getElementById('nav').innerHTML + '\\n=====\\n' + document.getElementById('main').innerHTML; }""", [v, a])
         fotos[t] = html
         fotos['estilo ' + t] = await pg.evaluate(ESTILO)
-    # Programar preventiva nos passos 2 (o que entra) e 3 (abrir a OM)
-    for nome, js in (('emitir/v3 passo 2', "EM.passo = 2; EM.draft = null;"), ('emitir/v3 passo 3', "EM.draft = { emb: true };")):
-        fotos[nome] = await pg.evaluate("async () => { EM.sel.clear(); EM.draft = null; EM.vid = null; EM.pvVid = null; EM.pvIni = false; EM.passo = 1; VIEW = 'emitir'; ARG = 'v3'; render(); " + js + " render(); await new Promise(r => setTimeout(r, 400)); const h = document.getElementById('main').innerHTML; EM.draft = null; EM.passo = 1; return h; }")
+    # frota de balsas
+    fotos.update(await pg.evaluate("""async () => { const out = {}; FROTA_TIPO = 'bal'; for (const [v] of BAL_VIEWS) { VIEW = v; ARG = ''; try { render(); await new Promise(r => setTimeout(r, 300)); out['balsas ' + v] = document.getElementById('main').innerHTML; } catch (e) { out['balsas ' + v] = 'ERRO: ' + e.message; } }
+      FROTA_TIPO = 'emp'; return out; }"""))
     docs = await pg.evaluate("""() => { const out = {}; const P = oms().filter(o => o.tipo === 'P').sort((a, b) => a.id < b.id ? -1 : 1).slice(0, 3), C = oms().filter(o => o.tipo === 'C').sort((a, b) => a.id < b.id ? -1 : 1).slice(0, 3);
       P.forEach(o => { try { out['doc II-B ' + o.num] = docIIB(o).join('\\n'); } catch (e) { out['doc II-B ' + o.num] = 'ERRO: ' + e.message; } });
       C.forEach(o => { try { out['doc II-A ' + o.num] = docIIA(o).join('\\n'); } catch (e) { out['doc II-A ' + o.num] = 'ERRO: ' + e.message; } }); return out; }""")

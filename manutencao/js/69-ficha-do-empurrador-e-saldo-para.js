@@ -9,4 +9,4 @@
 { const st = document.createElement('style'); st.textContent = `
 
 
-.fb-v{max-width:1180px}.fb-t td{padding:4px 8px}.fb-sep td{font-size:11px;color:#5F6368;text-transform:uppercase;letter-spacing:.3px;padding-top:12px!important;border-bottom:1px solid #E3E6EA}a.f2-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #9AA0A6}a.f2-nm:hover{color:#1967D2;border-bottom-color:#1967D2}`; document.head.appendChild(st); }
+a.f2-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #9AA0A6}a.f2-nm:hover{color:#1967D2;border-bottom-color:#1967D2}`; document.head.appendChild(st); }
