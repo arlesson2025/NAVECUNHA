@@ -21,7 +21,7 @@ if node:
 else:
     print('AVISO  sintaxe não conferida: node não encontrado')
 
-for t in ['fumaca.py', 'cliques.py', 'horimetro.py', 'sincronizacao.py']:
+for t in ['fumaca.py', 'cliques.py', 'horimetro.py', 'sincronizacao.py', 'comecar_do_zero.py']:
     print('\n— ' + t)
     r = subprocess.run([sys.executable, os.path.join(AQUI, t)], cwd=RAIZ, env=dict(os.environ, PYTHONIOENCODING='utf-8'))
     ok &= r.returncode == 0

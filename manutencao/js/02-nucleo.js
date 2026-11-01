@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.117';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.118';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -265,7 +265,7 @@ function ultServBase(vid, pos, itemId) {
   if (best) return best;
   if (itemId === DOCA.item) return null;   // docagem não conta do marco zero
   const v = vessel(vid), m = v && v.marco; if (!m || !m.date) return null;   // marco zero da implantação
-  const t = A1M[itemId], hp = t ? posHor(pos, t, vid) : pos; const h = m.h && m.h[hp] != null ? m.h[hp] : null; return { h, date: (m.dates && m.dates[hp]) || m.date, src: 'marco' };
+  const t = A1M[itemId], hp = t ? posHor(pos, t, vid) : pos, x = marcoHor(v, hp); return { h: x ? x.h : null, date: (m.dates && m.dates[hp]) || m.date, src: 'marco' };
 }
 function omAberta(vid, pos, itemId) { return oms().find(o => o.tipo === 'P' && o.status !== 'encerrada' && o.vessel === vid && o.pos === pos && (o.items || []).includes(itemId)); }
 // situação de um item: venc | viag | ok | sem (sem histórico) | cond (por condição)
@@ -1209,10 +1209,10 @@ function vAdmin() {
     ${A1.filter(t => t.kind === 'prog' && (!ADM.q || (t.id + ' ' + t.chk + ' ' + t.item + ' ' + EQN[t.eq]).toLowerCase().includes(ADM.q.toLowerCase()))).slice(0, 60).map(t => { const o = (S.cfg.intervalos || {})[t.id] || {}; return `<tr><td class="mono">${t.id}</td><td>${esc(t.chk)}<div class="note">${esc(EQN[t.eq])}</div></td><td class="note">${esc(t.freq)}</td><td><input data-iv="${t.id}|h" value="${o.h ?? ''}" placeholder="${t.h ?? '—'}" style="width:90px" ${a ? '' : 'disabled'}></td><td><input data-iv="${t.id}|m" value="${o.m ?? ''}" placeholder="${t.m ?? '—'}" style="width:70px" ${a ? '' : 'disabled'}></td></tr>`; }).join('')}
     </tbody></table></div><div class="row end"><button class="mbtn pri" data-act="salvarCfg" ${a ? '' : 'disabled'}>Salvar intervalos</button></div></div>
    <div class="card"><h2>Dados</h2><div class="row">
-    ${temExemplo() ? `<button class="mbtn bad" data-act="limparEx" ${a ? '' : 'disabled'}>Limpar dados de exemplo</button>` : `<button class="mbtn" data-act="carregarEx" ${a ? '' : 'disabled'}>Carregar dados de exemplo</button>`}
+    ${temExemplo() ? `<button class="mbtn bad" data-act="limparEx" ${a ? '' : 'disabled'}>Limpar dados de exemplo</button>` : typeof zeroInicio === 'function' && zeroInicio() ? '' : `<button class="mbtn" data-act="carregarEx" ${a ? '' : 'disabled'}>Carregar dados de exemplo</button>`}
     <button class="mbtn" data-act="exportar">⬇ Cópia de segurança (JSON)</button><label class="mbtn" style="position:relative" ${a ? '' : 'onclick="toast(\'Entre como Supervisor (botão Entrar, embaixo à esquerda) para importar.\')"'}>⬆ Importar / restaurar (JSON)<input type="file" id="adImp" accept=".json,application/json,text/plain,*/*" style="position:absolute;inset:0;opacity:0" ${a ? '' : 'disabled'}></label>
     <button class="mbtn" data-act="instalar" id="btnInstall" ${window._bip ? '' : 'hidden'}>📲 Instalar app</button></div>
-    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML() + (typeof admMenuHTML === 'function' ? admMenuHTML() : '') + (typeof enxAdminHTML === 'function' ? enxAdminHTML() : '') + (typeof versoesHTML === 'function' ? versoesHTML() : '');   /* fora de operação e marco zero ficam nos blocos deles */
+    <p class="note">${[...S.recs.values()].length} registros neste aparelho · ${S.pending.size} aguardando envio · versão ${VERSAO_APP}</p></div>` + admForaHTML() + admMarcoHTML() + (typeof zeroAdminHTML === 'function' ? zeroAdminHTML() : '') + (typeof admMenuHTML === 'function' ? admMenuHTML() : '') + (typeof enxAdminHTML === 'function' ? enxAdminHTML() : '') + (typeof versoesHTML === 'function' ? versoesHTML() : '');   /* fora de operação e marco zero ficam nos blocos deles */
 }
 AFTER.admin = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'adQ') { ADM.q = e.target.value; clearTimeout(m._t); m._t = setTimeout(() => { render(); const i = $('#adQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 350); } };

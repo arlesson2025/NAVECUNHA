@@ -11,12 +11,22 @@ async function aplicarMarco(date, ids) {
   if (S.url) { try { const j = await api('setConfig', { cfg: { frota: S.cfg.frota } }); if (j.ok) { S.cfg.cfgAt = j.cfgAt; await kvSet('cfg', S.cfg); } else toast('A planilha não aceitou: ' + j.error); } catch (e) { } }
   return n;
 }
+// horímetro do marco de um motor: o gravado no marco; no início do uso (marco.inicio, js/94) sem leitura no dia, a primeira leitura real
+// até MARCO_D dias depois (decisão do Supervisor, 01/11/2026: “marco hoje, horímetro depois”) — devolve { h, date } ou null; memória até mudar S.recs ou a frota
+const MARCO_HC = { v: -1, c: null, m: new Map() };
+function marcoHor(v, hp) { const m = v && v.marco; if (!m) return null; if (m.h && m.h[hp] != null) return { h: m.h[hp], date: (m.dates && m.dates[hp]) || m.date };
+  if (!m.inicio) return null;
+  if (MARCO_HC.v !== S.recs.__v || MARCO_HC.c !== S.cfg.cfgAt) { MARCO_HC.v = S.recs.__v; MARCO_HC.c = S.cfg.cfgAt; MARCO_HC.m = new Map(); }
+  const k = v.id + '|' + hp + '|' + m.date; if (MARCO_HC.m.has(k)) return MARCO_HC.m.get(k);
+  const lim = isoD(new Date(pD(m.date).getTime() + MARCO_D * 864e5)); let b = null;
+  recs('hor').forEach(r => { if (r.vessel !== v.id || r.pos !== hp || r.est || r.h == null || r.h === '' || r.date < m.date || r.date > lim) return; if (!b || r.date < b.date || (r.date === b.date && +r.h < b.h)) b = { h: +r.h, date: r.date }; });
+  MARCO_HC.m.set(k, b); return b; }
 function admMarcoHTML() { const a = can.admin(), F = S.cfg.frota, sem = F.filter(v => !v.marco && !foraOp(v));
   return `<div class="card" id="cardMarco"><div class="row"><h2>Marco zero da implantação</h2><span class="sp"></span><span class="note">${F.filter(v => v.marco).length} de ${F.length} empurradores com marco</span></div>
    <p class="note">Os itens do Anexo I que ainda não têm último serviço registrado passam a contar a partir desta data e do horímetro de cada motor <b>nesta data</b> (leitura do dia ou de até 30 dias antes; lance a leitura em 1.1 Horímetros antes). Use a data real do início do controle no SMF. Quando uma OM for encerrada ou um último serviço real for lançado, ele substitui o marco automaticamente. Empurradores fora de operação ficam de fora.</p>
    <div class="row"><label class="f" style="max-width:200px">Data do marco<input type="date" id="mzD" value="${isoD(hoje())}" ${a ? '' : 'disabled'}></label>
     <button class="mbtn pri" id="mzB" ${a && sem.length ? '' : 'disabled'}>Aplicar marco zero em ${sem.length} empurrador(es)</button></div>
-   <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Marco</th><th>Horímetros no marco</th><th></th></tr></thead><tbody>${F.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td>${v.marco ? brD(v.marco.date) : foraOp(v) ? '<span class="note">fora de operação</span>' : '<span class="note">sem marco</span>'}</td><td class="mono">${v.marco ? Object.entries(v.marco.h || {}).map(([p, h]) => (MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p) + ' ' + nf(h)).join(' · ') || '—' : ''}</td><td>${v.marco && a ? `<button class="mbtn sm" data-mzdel="${v.id}">Remover</button>` : !v.marco && foraOp(v) && a ? `<button class="mbtn sm" data-mzone="${v.id}">Aplicar</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }
+   <div class="tw"><table class="t"><thead><tr><th>Empurrador</th><th>Marco</th><th>Horímetros no marco</th><th></th></tr></thead><tbody>${F.map(v => `<tr><td><b>${esc(v.nome)}</b></td><td>${v.marco ? brD(v.marco.date) : foraOp(v) ? '<span class="note">fora de operação</span>' : '<span class="note">sem marco</span>'}</td><td class="mono">${v.marco ? (v.marco.inicio ? [...mcpPos(v), ...MCAS.filter(p => v.mca && v.mca[p])].map(p => { const x = marcoHor(v, p), n = MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p; return x ? n + ' ' + nf(x.h) + (x.date !== v.marco.date ? ' (' + brD(x.date) + ')' : '') : n + ' <span class="note">aguardando leitura</span>'; }).join(' · ') : Object.entries(v.marco.h || {}).map(([p, h]) => (MCAS.includes(p) ? p.replace('MCA', 'MCA ') : p) + ' ' + nf(h)).join(' · ') || '—') : ''}</td><td>${v.marco && a ? `<button class="mbtn sm" data-mzdel="${v.id}">Remover</button>` : !v.marco && foraOp(v) && a ? `<button class="mbtn sm" data-mzone="${v.id}">Aplicar</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`; }
 document.addEventListener('click', async e => {
   const b = e.target.closest('#mzB,[data-mzdel],[data-mzone]'); if (!b || !can.admin()) return;
   if (b.id === 'mzB') { const d = $('#mzD').value; if (!d) return toast('Informe a data.'); const ids = S.cfg.frota.filter(v => !v.marco && !foraOp(v)).map(v => v.id);
