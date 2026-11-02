@@ -38,10 +38,10 @@ function balPorque(E) {
 }
 function vBal2() {
   const E = BALSAS.map(balLinhas), md = BALM.modo === 'lista' ? 'lista' : 'matriz';
-  if (md === 'lista') return vBal().replace('<button class="mbtn" data-balfalha="">', balModoBt(md) + '<button class="mbtn" data-balfalha="">');
+  if (md === 'lista') return vBal().replace('<button class="mbtn" data-balfalha="">', balModoBt(md) + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">');
   const cnt = k => E.filter(x => x.e.st === k).length, ord = { bloq: 0, rest: 1, lib: 2, sem: 3, ref: 4 };
   const F = E.filter(x => BALF.f === 'todas' || x.e.st === BALF.f).sort((a, b) => ord[a.e.st] - ord[b.e.st] || b.e.venc.length - a.e.venc.length || (a.e.b.nome < b.e.b.nome ? -1 : 1));
-  return balCab('Situação das balsas', `${BALSAS.length} balsas petroleiras · para operar pela NP 024 6.1: bloqueada = serviço Crítico vencido ou falha Crítica aberta; com restrição = outro vencido ou falha Alta`, balModoBt(md) + '<button class="mbtn" data-balfalha="">⚠ Registrar falha</button>')
+  return balCab('Situação das balsas', `${BALSAS.length} balsas petroleiras · para operar pela NP 024 6.1: bloqueada = serviço Crítico vencido ou falha Crítica aberta; com restrição = outro vencido ou falha Alta`, balModoBt(md) + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">⚠ Registrar falha</button>')
    + `<div class="cm-chips">${[['todas', 'Todas', E.length], ['bloq', 'Bloqueadas', cnt('bloq')], ['rest', 'Com restrição', cnt('rest')], ['lib', 'Liberadas', cnt('lib')], ['sem', 'Sem histórico', cnt('sem')], ['ref', 'Em reforma', cnt('ref')]].map(([k, t, n]) => `<button class="cm-chip${BALF.f === k ? ' on' : ''}" data-balf="${k}">${t} <b>${n}</b></button>`).join('')}</div>
    <div class="card"><h2>Matriz das balsas · equipamento por equipamento</h2>${balMatriz(F)}</div>
    <div class="card"><h2>Por que não está liberada</h2>${balPorque(E)}</div>`;

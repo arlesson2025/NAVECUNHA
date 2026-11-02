@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<!--
+=====================================================================
+ FR 027_A – CHECK-LIST PARA INSPEÇÃO DE BALSA TANQUE · NP NAVECUNHA 024
+ Versão digital do FR 027_A Rev. 04 (texto das perguntas igual ao papel;
+ a numeração foi corrigida: o papel repete o 09 e pula o 29 com um "39").
+ Arquivo único (HTML + CSS + JavaScript), no padrão visual do FR 027_L.
+
+ GUIA DE EDIÇÃO RÁPIDA (Ctrl+F)
+ ---------------------------------------------------------------------
+ 1. ITENS ......... procure "const SECOES". Cada item é [texto, inv?].
+                    inv = 1 quando "SIM" é a condição ruim (ex.: fiação
+                    exposta). O SMF lê as chaves "a-N" (N = nº do item).
+ 2. BALSAS ........ procure "const BALSAS".
+ 3. REVISÃO ....... procure "Rev. 04".
+ 4. NÃO ALTERE .... os ids #bal #dt #hr #loc #hmb #obs, name=mov,
+                    td.c[data-k], table.nc, #sec-ass .sgg e .sheet:
+                    o SMF (js/100-fr-027-a.js) lê o formulário por eles.
+=====================================================================
+-->
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FR 027_A – Check-list para Inspeção de Balsa Tanque · NP Navecunha 024 · Rev. 04</title>
+<style>
+:root{--ice:#F4F7FA;--ice2:#EAF0F5;--line:#D3DCE5;--line2:#B9C5D1;--ink:#1D2B3A;--mut:#5E6E7F;--navy:#1F3A5F;--blue:#2F6FA8;--paper:#FFFFFF;--nok:#B5462F;--okc:#2E7D4F}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#DFE6ED}
+body{font-family:'Google Sans','Product Sans','Segoe UI',system-ui,sans-serif;color:var(--ink);font-size:9.5pt;line-height:1.35;padding:16px 0 40px}
+.toolbar{position:sticky;top:0;z-index:9;background:var(--ice);border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;justify-content:center;padding:10px 16px;margin:-16px 0 18px;flex-wrap:wrap}
+.toolbar b{font-weight:500;color:var(--navy)}
+.toolbar button{font-family:inherit;font-size:8.5pt;font-weight:500;border:1px solid var(--navy);background:#fff;color:var(--navy);padding:6px 12px;border-radius:4px;cursor:pointer}
+.toolbar .st{font-size:8.5pt;color:var(--mut);display:flex;gap:10px;flex-wrap:wrap} .toolbar .st b{margin-right:2px} .toolbar .st .bad b{color:var(--nok)}
+.sheet{width:210mm;min-height:297mm;margin:0 auto 18px;background:var(--ice);box-shadow:0 1px 6px rgba(20,40,60,.18);padding:8mm 11mm 6mm;display:flex;flex-direction:column}
+.sh{display:grid;grid-template-columns:32mm 1fr 32mm;border:1px solid var(--line2);background:var(--paper);font-size:7.5pt;margin-bottom:2.5mm}
+.sh>div{padding:1.4mm 3mm;display:flex;flex-direction:column}
+.sh .lg{align-items:center;justify-content:center;padding:1mm 2mm} .sh .lg img{width:auto;object-fit:contain} .sh .lg img.ln{height:10.5mm} .sh .lg img.lv{height:12.5mm}
+.sh .c{text-align:center;justify-content:center;border-left:1px solid var(--line2);border-right:1px solid var(--line2)} .sh b{font-weight:600;color:var(--navy)} .sh span{color:var(--mut)} .sh .np{font-size:7pt;color:var(--blue)!important;margin-top:.4mm}
+.sb{flex:1;display:flex;flex-direction:column}
+.sf{display:flex;justify-content:space-between;font-size:7pt;color:var(--mut);border-top:1px solid var(--line);padding-top:2mm;margin-top:3mm} .sf .pg{color:var(--ink);font-weight:500}
+.fs{background:var(--paper);border:1px solid var(--line);padding:1.4mm 2mm 1.6mm;margin-bottom:1.6mm}
+.fs h4{font-size:7.8pt;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:2.5mm;margin-bottom:1mm}
+.fs h4 .code{background:var(--navy);color:#fff;padding:.3mm 1.6mm;border-radius:2px;letter-spacing:0} .fs h4 .ref{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;color:var(--mut);font-size:6.6pt}
+.g{display:grid;grid-template-columns:repeat(12,1fr);gap:1mm 2.5mm}
+.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s12{grid-column:span 12}
+.fl{display:block;font-size:6.3pt;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+input[type=text],input[type=date],select{width:100%;font-family:inherit;font-size:8.3pt;color:var(--ink);background:var(--ice);border:1px solid var(--line2);border-radius:3px;padding:.6mm 1.4mm;height:6.4mm}
+textarea{width:100%;font-family:inherit;font-size:8.3pt;color:var(--ink);background:var(--ice);border:1px solid var(--line2);border-radius:3px;padding:1mm 1.4mm;resize:vertical;min-height:16mm;display:block}
+input:focus,select:focus,textarea:focus{outline:2px solid #9DC0E0;outline-offset:-1px;background:#fff}
+.opts{display:flex;flex-wrap:wrap;gap:.8mm 3.5mm;padding-top:.8mm} .opt{display:inline-flex;align-items:center;gap:1.2mm;font-size:8.3pt;cursor:pointer} .opt input{width:3.4mm;height:3.4mm;accent-color:var(--navy)}
+.legend{display:flex;flex-wrap:wrap;gap:1mm 4mm;align-items:center;background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--blue);padding:1mm 2.5mm;margin-bottom:1.6mm;font-size:7pt}
+.legend i{font-style:normal;display:inline-block;font-size:6.3pt;font-weight:600;color:#fff;border-radius:2px;padding:.3mm 1.4mm;margin-right:1.2mm} .legend i.ok{background:var(--okc)} .legend i.nok{background:var(--nok)} .legend i.na{background:var(--mut)}
+table.ckt{width:100%;border-collapse:collapse;font-size:7.4pt}
+table.ckt th{background:var(--navy);color:#fff;font-weight:500;font-size:6.6pt;padding:.5mm 1.2mm;text-align:left} table.ckt th.c{text-align:center;white-space:nowrap}
+table.ckt td{border-bottom:1px solid var(--line);padding:.35mm 1.2mm;vertical-align:middle;line-height:1.18}
+table.ckt tbody tr:nth-child(even) td{background:var(--ice)}
+table.ckt td.n{width:6mm;color:var(--navy);font-weight:600;text-align:center}
+table.ckt td.c{text-align:center;white-space:nowrap;width:1%}
+table.ckt td .iv{display:inline-block;font-size:5.8pt;font-weight:600;color:var(--blue);border:1px solid var(--blue);border-radius:2px;padding:0 .6mm;margin-left:1mm;vertical-align:.3mm}
+.sg3{display:inline-flex;border:1px solid var(--line2);border-radius:3px;overflow:hidden;background:var(--paper)}
+.sg3 label{cursor:pointer;position:relative} .sg3 input{position:absolute;opacity:0;width:0;height:0}
+.sg3 span{display:block;font-size:6pt;font-weight:600;line-height:1;padding:.6mm 1mm;min-width:6.4mm;text-align:center;color:var(--mut);border-right:1px solid var(--line)} .sg3 label:last-child span{border-right:0}
+.sg3 input:checked+span.bom{background:var(--okc);color:#fff} .sg3 input:checked+span.ruim{background:var(--nok);color:#fff} .sg3 input:checked+span.na{background:var(--mut);color:#fff}
+tr.miss td{background:#FCEFD2!important}
+table.nc{width:100%;border-collapse:collapse;font-size:7.6pt}
+table.nc th{background:var(--ice2);color:var(--navy);font-weight:500;text-align:left;padding:.6mm 1.4mm;border:1px solid var(--line2);font-size:7pt}
+table.nc td{border:1px solid var(--line2);height:5.6mm;padding:0;vertical-align:middle}
+table.nc td.nci{padding:.5mm 1.4mm;font-size:7pt;background:var(--ice);width:36%}
+table.nc input,table.nc select{width:100%;border:0;border-radius:0;background:transparent;font-size:7.8pt;height:5.4mm}
+table.nc .vz td{color:var(--mut);font-style:italic;padding:1mm 1.4mm;text-align:center}
+.sgg{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5mm;margin-top:1mm}
+.sgg>div{display:flex;flex-direction:column} .sgg i{display:block;border-bottom:1px solid var(--ink);min-height:12mm;margin-top:.2mm}
+.note{font-size:6.6pt;font-style:italic;color:var(--mut);margin-top:.6mm}
+@media screen and (max-width:840px){body{padding:0} .sheet{width:100%;min-height:0;margin:0 0 10px;box-shadow:none;padding:4mm} .g{grid-template-columns:repeat(6,1fr)} .s2,.s3,.s4,.s5{grid-column:span 6} .sgg{grid-template-columns:1fr} table.ckt{font-size:9.5pt} .sg3 span{font-size:8.5pt;padding:2mm 2.4mm;min-width:9mm} .fl{white-space:normal}}
+@media print{@page{size:A4 portrait;margin:0} html,body{background:#fff;padding:0} .toolbar,.noprint{display:none!important} .sheet{margin:0;box-shadow:none;height:297mm;min-height:0;overflow:hidden;break-after:page;-webkit-print-color-adjust:exact;print-color-adjust:exact} .sheet:last-child{break-after:auto} tr.miss td{background:transparent!important} ::placeholder{color:transparent} select{-webkit-appearance:none;appearance:none}}
+</style>
+</head>
+<body>
+<div class="toolbar"><b>FR 027_A · Check-list da Balsa Tanque</b>
+<span class="st" aria-live="polite"><span><b id="s-ok">0</b>conformes</span><span class="bad"><b id="s-nc">0</b>não conformes</span><span><b id="s-na">0</b>N/A</span><span><b id="s-p">0</b>pendentes</span></span>
+<button onclick="conferir()">Conferir preenchimento</button><button onclick="window.print()">Imprimir</button><button onclick="if(confirm('Apagar tudo o que foi marcado?'))location.reload()">Limpar</button></div>
+<div id="folhas"></div>
+<script>
+'use strict';
+/* ===== BALSAS (planilha de características principais, NP 024) ===== */
+const BALSAS=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX'].map(r=>'VDA '+r);
+/* ===== ITENS (texto do FR 027_A Rev. 04) · [texto, inv] — inv = 1: "SIM" é a condição ruim ===== */
+const SECOES=[
+ ['Sistema elétrico',[
+  ['As luzes de navegação de BB (112,5° encarnada) e BE (112,5° verde) estão funcionando e prontas a operar a qualquer tempo?'],
+  ['A luz de operação noturna (360° encarnada) está funcionando e pronta a operar a qualquer tempo?'],
+  ['A luz de fundeio (360° branca) está funcionando e pronta a operar a qualquer tempo?'],
+  ['A luz de mastro (225° branca) está funcionando e pronta a operar a qualquer tempo?'],
+  ['Os refletores da área de operação estão funcionando e prontos a operar a qualquer tempo?'],
+  ['As luzes da casa de bomba e praça de máquina estão funcionando?'],
+  ['As tomadas de recebimento de energia (vante e ré) são apropriadas e estão funcionando?'],
+  ['Existe alguma fiação elétrica exposta?',1],
+  ['Existe alguma fuga de corrente, fluxo de energia indesejado/inesperado por baixa isolação?',1]]],
+ ['Alarme de nível',[
+  ['Existe bateria, caixa de madeira, manta de borracha e cabo PP com bornes para funcionamento do alarme de nível?'],
+  ['O painel do alarme de nível está funcionando e sincronizado apontando corretamente todos os tanques?'],
+  ['Todos os sensores do alarme de nível estão funcionando e pronto a operar a qualquer tempo?'],
+  ['A sirene de sinalização está funcionando e pronta a operar a qualquer tempo?'],
+  ['O giroflex de sinalização está funcionando e pronto a operar a qualquer tempo?']]],
+ ['Convés e casco',[
+  ['A escada móvel está satisfatória para utilização a qualquer tempo?'],
+  ['A bandeira BRAVO está devidamente posicionada em seu suporte e sua pintura está em bom estado?'],
+  ['Os descritivos das placas de advertência estão visivelmente satisfatórias?'],
+  ['As identificações das escotilhas dos tanques de carga estão visíveis e corretas (identificação do tanque e volume)?'],
+  ['As escotilhas e atracadores dos tanques de carga estão livres de avarias ao ponto de comprometer a estanqueidade?'],
+  ['As borrachas de vedações das escotilhas dos tanques de carga estão satisfatórias para estanqueidade?'],
+  ['As identificações dos tubos de medição estão visivelmente satisfatórias?'],
+  ['As identificações das datas e pressões dos testes de rede e válvulas estão visivelmente satisfatórias?'],
+  ['O teste de rede e teste de válvulas estão dentro da validade?'],
+  ['As identificações das redes de carga e descarga estão visivelmente satisfatórias?'],
+  ['Os manômetros das redes de carga / descarga estão livres de avarias e com o visor visível?'],
+  ['As juntas das tomadas de carga e descarga foram substituídas?'],
+  ['A identificação de capacidade da bandeja de respingo das tomadas de carga e descarga está visivelmente satisfatória?'],
+  ['A identificação da parada de emergência está visivelmente satisfatória?'],
+  ['Os embornais da barreira de contenção estão engraxados?'],
+  ['Os corrimãos das escadas estão satisfatórios para utilização a qualquer tempo?'],
+  ['As identificações dos espaços vazios, cofferdams e pique-tanques estão visivelmente satisfatórias?'],
+  ['Os escotilhões e atracadores dos espaços vazios, cofferdam e pique-tanques estão livres de avarias ao ponto de comprometer a estanqueidade?'],
+  ['Os atracadores das escotilhas de carga e dos escotilhões dos espaços vazios, cofferdam e pique-tanques estão engraxados?'],
+  ['As borrachas de vedações dos escotilhões dos espaços vazios, cofferdams e pique-tanques estão satisfatórias para estanqueidade?'],
+  ['Os escotilhões dos espaços vazios, cofferdam e pique-tanques que forem parafusados estão com parafusos completos e com borracha?'],
+  ['As identificações dos suspiros dos espaços vazios estão visivelmente satisfatórias?'],
+  ['As identificações dos aterramentos estão visivelmente satisfatórias?'],
+  ['As barras de aterramento estão limpas?'],
+  ['As identificações de tonelagem dos cabeços estão visivelmente satisfatórias?'],
+  ['Os cabeços estão livres de avarias que possam comprometer a navegação?'],
+  ['As identificações de calado, porto de inscrição, disco de Plimsoll, nome da embarcação e nome da empresa estão visivelmente satisfatórias?'],
+  ['O costado de BB e BE, espelho de proa e popa estão livres de avarias que possam comprometer a navegação?'],
+  ['Os cabos de reboque a vante e ré estão posicionados e prontos a operar a qualquer tempo?'],
+  ['A embarcação está limpa de materiais das últimas operações?'],
+  ['As condições de pintura da embarcação como um todo estão satisfatórias?'],
+  ['Existem defensas nos bordos de BB e BE? Elas estão em bom estado ou satisfatórias para operação?']]],
+ ['Sala de máquina e bomba',[
+  ['A caixa de descarga molhada (inibidor de centelha) contém água e a tampa de vedação está livre de ferrugem ou algo que venha a dificultar sua retirada?'],
+  ['A descarga do motor está devidamente isolada (proteção térmica)?'],
+  ['A água do radiador está dentro do nível aceitável conforme instruções do fabricante?'],
+  ['O óleo lubrificante do cárter do motor está dentro do nível aceitável para a próxima operação?'],
+  ['O tanque de óleo do motor dispõe de visor transparente com proteção e está limpo?'],
+  ['Existe bateria, caixa de madeira, manta de borracha e cabo PP com bornes para funcionamento do motor?'],
+  ['Todas as partes móveis do motor, mancal e bomba estão devidamente protegidas?'],
+  ['Os termômetros do mancal estão livres de avarias?'],
+  ['O termômetro da bomba está livre de avaria?'],
+  ['Os instrumentos do motor estão em perfeito estado de funcionamento?'],
+  ['O motor está livre de vazamentos quando de seu funcionamento?'],
+  ['A parada de emergência está pronta a operar a qualquer tempo?'],
+  ['A casa de bomba e máquina está limpa, sem resíduo oleoso, livre de corrosão e com pintura satisfatória?'],
+  ['Os embornais da casa de bombas estão engraxados?'],
+  ['A identificação de capacidade da bandeja de respingo do tanque de óleo do motor está visivelmente satisfatória?'],
+  ['O Diagrama Esquemático da Rede dentro da praça de máquina está em bom estado e visível?'],
+  ['As instruções de funcionamento do motor (NP Navecunha 039) estão à vista na casa de máquina?']]],
+ ['SESMT',[
+  ['As identificações das boias salva-vidas estão visivelmente satisfatórias?'],
+  ['As identificações dos extintores e validade estão visivelmente satisfatórias?'],
+  ['O machado está pintado e as identificações estão visivelmente satisfatórias?'],
+  ['O(s) machado(s) para emergência posicionado(s) na(s) lateral(is) da casaria de máquina e bomba está(ão) pronto(s) a operar a qualquer tempo?'],
+  ['A caixa do Kit SOPEP está devidamente identificada com os dizeres “KIT SOPEP”?'],
+  ['O Kit SOPEP está completo conforme relação à vista na caixa do Kit e conforme a NORMAM 02?'],
+  ['Todas as boias salva-vidas dispõem de cabo de náilon formando alças, assim como cabo com retinida de 20 m de comprimento por 8 mm de diâmetro?']]]];
+/* folhas: [seção, do item, até o item] (nº do item, contado de 1 a 70) */
+const FOLHAS=[[[0,1,9],[1,10,14],[2,15,28]],[[2,29,46],[3,47,63]],[[4,64,70]]];
+const ASS=['Operador / Inspetor','Coordenador de Logística','Coordenador de Operações'];
+const ITENS=[];let n=0;SECOES.forEach(([s,L],si)=>L.forEach(([t,inv])=>ITENS.push({n:++n,s,si,t,inv:!!inv})));
+const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LOGO=(k,c)=>`<img class="${c}" alt="${k==='nav'?'Navecunha':'Grupo VDA'}" src="img/logo-${k}.png" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='../img/logo-${k}.png'}">`;
+const cab=()=>`<div class="sh"><div class="lg">${LOGO('nav','ln')}</div><div class="c"><b>FR 027_A – CHECK-LIST PARA INSPEÇÃO DE BALSA TANQUE</b><span>Inspeção de chegada e saída</span><span class="np">NP Navecunha 024 · Rev. 04</span></div><div class="lg">${LOGO('vda','lv')}</div></div>`;
+const linha=i=>`<tr data-n="${i.n}"><td class="n">${String(i.n).padStart(2,'0')}</td><td>${e(i.t)}${i.inv?'<span class="iv" title="Aqui SIM é a condição ruim">SIM = NC</span>':''}</td><td class="c" data-k="a-${i.n}"><div class="sg3" role="radiogroup" aria-label="Item ${i.n}"><label><input type="radio" name="a-${i.n}" value="S"><span class="${i.inv?'ruim':'bom'}">SIM</span></label><label><input type="radio" name="a-${i.n}" value="N"><span class="${i.inv?'bom':'ruim'}">NÃO</span></label><label><input type="radio" name="a-${i.n}" value="NA"><span class="na">N/A</span></label></div></td></tr>`;
+const bloco=([si,a,b],cont)=>`<section class="fs"><h4><span class="code">${si+1}</span>${e(SECOES[si][0])}${cont?' (continuação)':''}</h4><table class="ckt"><thead><tr><th>Item</th><th>Descrição</th><th class="c">Conformidade</th></tr></thead><tbody>${ITENS.filter(i=>i.n>=a&&i.n<=b).map(linha).join('')}</tbody></table></section>`;
+const rod=(p,t)=>`<div class="sf"><span>Documento controlado pelo SGI · Toda não conformidade vira OM no Sankhya (NP 024 6.1)</span><span class="pg">Página ${p} de ${t}</span></div>`;
+const ident=`<section class="fs"><h4><span class="code">ID</span>Identificação</h4><div class="g">
+<div class="s3"><label class="fl" for="bal">Balsa</label><select id="bal"><option value=""></option>${BALSAS.map(b=>`<option>${b}</option>`).join('')}</select></div>
+<div class="s2"><label class="fl" for="dt">Data</label><input type="date" id="dt"></div>
+<div class="s2"><label class="fl" for="hr">Hora</label><input type="text" id="hr" placeholder="hh:mm"></div>
+<div class="s5"><label class="fl" for="loc">Local</label><input type="text" id="loc" value="Terminal Navecunha – Manaus"></div>
+<div class="s4"><label class="fl">Movimento</label><div class="opts"><label class="opt"><input type="radio" name="mov" value="chegada"><span>Chegada</span></label><label class="opt"><input type="radio" name="mov" value="saida"><span>Saída</span></label></div></div>
+<div class="s4"><label class="fl" for="hmb">Horímetro do motor-bomba (h)</label><input type="text" id="hmb" inputmode="decimal" placeholder="leitura do painel"></div>
+</div></section>
+<div class="legend"><span><i class="ok">verde</i>conforme</span><span><i class="nok">vermelho</i>não conforme → descrever no quadro de não conformidades</span><span><i class="na">N/A</i>não se aplica</span><span>Nos itens marcados “SIM = NC” a resposta SIM é a condição ruim.</span></div>`;
+const ncq=`<section class="fs" id="sec-nc"><h4><span class="code">NC</span>Não conformidades<span class="ref">Crítica impede a operação · Alta deixa com restrição (NP 024 6.1)</span></h4>
+<table class="nc"><thead><tr><th>Item</th><th>O que foi encontrado</th><th class="cm" style="width:30mm">Modo de falha</th><th style="width:19mm">Criticidade</th><th style="width:20mm">Nº da OM</th></tr></thead><tbody></tbody></table>
+<p class="note">Cada não conformidade vira OM no Sankhya. Itens com o mesmo nº de OM ficam numa falha só.</p></section>
+<section class="fs"><h4><span class="code">OBS</span>Observações oriundas do check-list</h4><textarea id="obs" rows="5"></textarea></section>
+<section class="fs" id="sec-ass"><h4><span class="code">AS</span>Assinaturas</h4><div class="sgg">${ASS.map(a=>`<div><span class="fl">${a}</span><input type="text" placeholder="Nome"><i></i></div>`).join('')}</div></section>`;
+document.getElementById('folhas').innerHTML=FOLHAS.map((F,p)=>`<div class="sheet" id="pg${p+1}">${cab()}<div class="sb">${p===0?ident:''}${F.map(b=>bloco(b,p>0&&b[1]!==SECOES.slice(0,b[0]).reduce((a,s)=>a+s[1].length,0)+1)).join('')}${p===FOLHAS.length-1?ncq:''}</div>${rod(p+1,FOLHAS.length)}</div>`).join('');
+const nc=i=>{const c=document.querySelector(`input[name="a-${i.n}"]:checked`);return c&&c.value!=='NA'&&(c.value==='S')===i.inv;};
+function atualiza(){
+ const tb=document.querySelector('table.nc tbody'),ant={};const M=window.NC_MODOS||[];document.querySelectorAll('table.nc th.cm').forEach(th=>th.style.display=M.length?'':'none');tb.querySelectorAll('tr[data-k]').forEach(tr=>ant[tr.dataset.k]=[tr.querySelector('.ncd').value,tr.querySelector('.ncc').value,tr.querySelector('.nco').value,(tr.querySelector('.ncm')||{}).value||'']);
+ const L=ITENS.filter(nc);
+ tb.innerHTML=L.length?L.map(i=>{const k='a-'+i.n,a=ant[k]||['',i.si===0&&i.n<=4?'Crítica':'','',''];return `<tr data-k="${k}"><td class="nci">${String(i.n).padStart(2,'0')} · ${e(i.s)} › ${e(i.t)}</td><td><input type="text" class="ncd" aria-label="O que foi encontrado" value="${e(a[0])}"></td>${M.length?`<td><select class="ncm" aria-label="Modo de falha">${['',...M].map(c=>`<option${c===a[3]?' selected':''}>${e(c)}</option>`).join('')}</select></td>`:''}<td><select class="ncc" aria-label="Criticidade">${['','Crítica','Alta','Média','Baixa'].map(c=>`<option${c===a[1]?' selected':''}>${c}</option>`).join('')}</select></td><td><input type="text" class="nco" inputmode="numeric" aria-label="Nº da OM" value="${e(a[2])}"></td></tr>`;}).join(''):`<tr class="vz"><td colspan="${M.length?5:4}">Nenhuma não conformidade marcada.</td></tr>`;
+ let ok=0,na=0,p=0;ITENS.forEach(i=>{const c=document.querySelector(`input[name="a-${i.n}"]:checked`);if(!c)p++;else if(c.value==='NA')na++;else if(!nc(i))ok++;});
+ document.getElementById('s-ok').textContent=ok;document.getElementById('s-nc').textContent=L.length;document.getElementById('s-na').textContent=na;document.getElementById('s-p').textContent=p;}
+document.addEventListener('change',ev=>{if(ev.target.name&&/^a-\d+$/.test(ev.target.name)){const tr=ev.target.closest('tr');if(tr)tr.classList.remove('miss');atualiza();}});
+function conferir(){const F=ITENS.filter(i=>!document.querySelector(`input[name="a-${i.n}"]:checked`));document.querySelectorAll('tr[data-n]').forEach(tr=>tr.classList.toggle('miss',F.some(i=>i.n==tr.dataset.n)));
+ if(F.length){document.querySelector(`tr[data-n="${F[0].n}"]`).scrollIntoView({behavior:'smooth',block:'center'});alert(F.length+' item(ns) sem marcação (destacados em amarelo).');}else alert('Todos os itens marcados.');}
+atualiza();
+</script>
+</body></html>
