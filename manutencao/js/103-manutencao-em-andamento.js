@@ -351,9 +351,9 @@ function vgOcDetalhe(key, i) {
 function vgFotoGrande(key, i, k) {
   const L = ((VG_PAINEL.oc[key] || [])[+i] || {}).fotos || []; let n = +k; if (!L.length) return;
   const d = document.createElement('div'); d.className = 'vgt-g'; document.body.appendChild(d);
-  const des = () => { d.innerHTML = `${vgFotoImg(L[n], '')}<div class="vgt-gb">${L.length > 1 ? '<button data-g="-1">‹</button>' : ''}<span>${n + 1} de ${L.length} · clique fora ou Esc para fechar</span>${L.length > 1 ? '<button data-g="1">›</button>' : ''}</div>`; if (typeof heCarregaFotos === 'function') heCarregaFotos(); };
+  const des = () => { d.innerHTML = `${vgFotoImg(L[n], '')}<div class="vgt-gb">${L.length > 1 ? '<button data-g="-1">‹</button>' : ''}<span>${n + 1} de ${L.length} · clique na foto para voltar</span>${L.length > 1 ? '<button data-g="1">›</button>' : ''}</div>`; if (typeof heCarregaFotos === 'function') heCarregaFotos(); };
   const sai = () => { d.remove(); document.removeEventListener('keydown', kb); }, kb = e => { if (e.key === 'Escape') sai(); else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { n = (n + (e.key === 'ArrowRight' ? 1 : -1) + L.length) % L.length; des(); } };
-  d.onclick = e => { const g = e.target.closest('[data-g]'); if (g) { n = (n + +g.dataset.g + L.length) % L.length; des(); } else if (e.target === d) sai(); };
+  d.onclick = e => { const g = e.target.closest('[data-g]'); if (g) { n = (n + +g.dataset.g + L.length) % L.length; des(); } else sai(); };
   document.addEventListener('keydown', kb); des();
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc],[data-vgfg],[data-vgpx],[data-vgdet],[data-vgg]'); if (!t || VIEW !== 'enxviag') return;
