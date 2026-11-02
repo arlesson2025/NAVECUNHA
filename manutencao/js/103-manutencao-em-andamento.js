@@ -225,43 +225,122 @@ function vgPainelFix(k, ids) {
     <p class="note">O SMF não registra onde cada balsa fica: aqui estão as que chegaram com esses empurradores na última viagem de cada uma, e as que estão em reforma neste lugar.</p>` : '';
   const nE = E.length, nB = E.filter(e => e.sit[2] >= 2).length, nR = E.filter(e => e.sit[2] === 1).length;
   const tR = IR.length ? vgRefTabela(IR) + '<p class="note">Clique na linha para ver os serviços, a linha do tempo (quadrado verde = serviço concluído, losango laranja = previsão mudou), o histórico da previsão e as fotos da evolução por semana.</p>' : '';
-  VG_PAINEL.apr = { k, E, Bs };
-  return `${nE ? '<div class="row" style="margin:-30px 0 6px"><span class="sp"></span><button class="mbtn sm pri" data-vgapr data-nodrag style="margin-right:70px">Apresentar</button></div>' : ''}<div class="vgp-t" style="font-size:15px">${esc(k)}${nE ? ` · ${nE} empurrador${nE === 1 ? '' : 'es'}` : ''}${nB ? ` · <span style="color:var(--badt)">${nB} impedido${nB > 1 ? 's' : ''} de operar</span>` : ''}${nR ? ` · <span style="color:var(--warnt)">${nR} com restrição</span>` : ''}${IR.length ? ` · ${IR.length} em reforma` : ''}</div>
+  VG_PAINEL.pf = { k, E, Bs, IR };
+  return `<div class="vgp-t" style="font-size:15px">${esc(k)}${nE ? ` · ${nE} empurrador${nE === 1 ? '' : 'es'}` : ''}${nB ? ` · <span style="color:var(--badt)">${nB} impedido${nB > 1 ? 's' : ''} de operar</span>` : ''}${nR ? ` · <span style="color:var(--warnt)">${nR} com restrição</span>` : ''}${IR.length ? ` · ${IR.length} em reforma` : ''}</div>
     ${nE ? '<p class="note" style="margin:0 0 4px">Pendências primeiro. Clique na linha para ver as ocorrências e a linha do tempo. Clique na pendência para ir à tela que resolve.</p>' : ''}${tR}${tE}${tB}`;
 }
-/* modo Apresentar do porto (Supervisor, 02/11/2026: “apresentação para a diretoria em 8 min… números objetivos e maiores”): tela cheia com a faixa de
-   números e uma linha por empurrador, termos da NP 055 (Liberado à operação, Liberado com restrição, Impedido de operar, Interditado). Corretiva Baixa ou
-   Média aberta não impede a saída e aparece em cinza; horímetro sem leitura e chegada não registrada vão para o rodapé (dados a atualizar). */
+/* ===== painel da diretoria abaixo do mapa (SMF 3.170, Supervisor 02/11/2026: “algo que fique embaixo do mapa mesmo, com destaques grandes onde for
+   preciso para apresentar… informações técnicas para a diretoria”): quatro visões, Manaus (porto da Navecunha e Boia 2), Porto Velho (filial), Estaleiro e
+   Em viagem, cada uma com a faixa de números, a conclusão em uma frase e um cartão por embarcação que precisa de atenção; termos da NP 055. A tabela de
+   trabalho continua em “Detalhes técnicos”. Horímetro sem leitura e chegada não registrada vão para o rodapé (dados a atualizar). */
 const vgTxt = h => String(h || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-function vgApresentar() {
-  const A = VG_PAINEL.apr; if (!A) return; const H = isoD(hoje());
-  const L = A.E.map(e => { const reg = !!(e.z.dt && !e.z.o.est), im = e.sit[2] >= 2, P = e.P.filter(p => !/Horímetro/.test(p[1])), cor = e.z.Oc.filter(y => y.ab);
-    const pr = im ? vgTxt((P.find(p => p[0] === 'bad') || P[0] || [])[1]) : P.find(p => p[0] !== 'bad') ? vgTxt(P.find(p => p[0] !== 'bad')[1]) : '';
-    const cb = !im && cor.length ? `Corretiva aberta (${cor.map(c => c.c || '').join(', ')}) · ${cor.map(c => c.eq || '').join('; ')} · não impede a saída` : '';
-    return { e, reg, im, pr, cb, hor: e.P.some(p => /Horímetro/.test(p[1])) }; });
-  const nLib = L.filter(x => x.e.sit[2] <= 1).length, nRes = L.filter(x => x.e.sit[2] === 1).length, nIm = L.filter(x => x.im).length, R = L.filter(x => x.reg);
+const VGD_C = { ok: '#137333', at: '#B06000', bad: '#C5221F', nv: '#16244A', mut: '#5B6B80' };
+const VG_GRP = [['man', 'Manaus · porto e Boia 2'], ['pvh', 'Porto Velho · filial'], ['est', 'Estaleiro'], ['via', 'Em viagem']];
+const vgGrupoDe = k => /eram|estaleiro/i.test(k) ? 'est' : /porto velho/i.test(k) ? 'pvh' : /boia|manaus|navecunha|cimento/i.test(k) ? 'man' : 'p:' + k;
+function vgGrupos() {
+  const D = vgMapaDados(), G = { man: [], pvh: [], est: [], via: [] }, nomes = {};
+  Object.entries(D.P).forEach(([k, L]) => { const g = vgGrupoDe(k); (G[g] = G[g] || []).push(...L.map(o => o.id)); if (g.startsWith('p:')) nomes[g] = k; });
+  Object.values(D.F).forEach(L => G.est.push(...L.map(o => o.id)));
+  G.via = S.cfg.frota.filter(v => { try { return vgOndeDe(v.id, false).st === 'via'; } catch (e) { return false; } }).map(v => v.id);
+  return { G, nomes };
+}
+const vgdK = (v, l, sub, cor) => `<div class="vgd-k"><b${cor ? ` style="color:${cor}"` : ''}>${v}</b><span>${l}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+const vgdTec = t => vgTxt(t).replace(/^Serviços vencidos:/, 'Preventivas vencidas por sistema:');
+const vgdPl = (n, s, p) => n + ' ' + (n === 1 ? s : p);
+// ---------- porto (Manaus, Porto Velho e outros portos) ----------
+function vgDirPorto(tit, ids) {
+  const det = vgPainelFix(tit, ids), A = VG_PAINEL.pf || { E: [], Bs: [] }, H = isoD(hoje());
+  // corretiva aberta pela classe: Crítica e Alta entram como restrição; Média e Baixa só como nota (não impedem a operação), sem repetir
+  const L = A.E.map(e => { const reg = !!(e.z.dt && !e.z.o.est), ab = e.z.Oc.filter(y => y.ab), cor = ab.filter(y => !/Crítica|Alta/.test(y.c || ''));
+    const P = e.P.filter(p => !/Horímetro|corretivas? abertas?$|^Sem previsão de término: Corretiva (Média|Baixa)/.test(vgTxt(p[1])))
+      .concat(ab.filter(y => /Crítica|Alta/.test(y.c || '')).map(y => ['bad', `Corretiva aberta (${y.c}): ${y.eq || ''}${y.om ? ' · OM ' + y.om : ''}`]));
+    return { e, reg, P, cor, hor: e.P.some(p => /Horímetro/.test(p[1])), n: e.sit[2] }; });
+  if (!L.length) return `<p class="vgd-c">Nenhum empurrador em porto${A.Bs.length ? '' : ''}.</p><details class="vgd-det"><summary>Detalhes técnicos</summary>${det}</details>`;
+  const im = L.filter(x => x.n >= 2), rs = L.filter(x => x.n === 1), lb = L.filter(x => x.n === 0), R = L.filter(x => x.reg);
   const med = R.length ? Math.round(R.reduce((s, x) => s + x.e.z.dd, 0) / R.length) : null;
-  const cor = ['#188038', '#B06000', '#C5221F', '#C5221F'], nBi = A.Bs.filter(x => x.e.st === 'bloq').length, nBs = A.Bs.filter(x => x.e.st === 'sem').length;
-  const tile = (n, t, s, c) => `<div class="vga-k"><b style="color:${c || '#16244A'}">${n}</b><span>${t}</span>${s ? `<small>${s}</small>` : ''}</div>`;
-  const d = document.createElement('div'); d.className = 'vga';
-  d.innerHTML = `<div class="vga-h"><div><h1>Empurradores em porto</h1><p>${esc(A.k)} · ${brD(H)}</p></div><button class="mbtn" data-vgax>Fechar (Esc)</button></div>
-    <div class="vga-ks">${tile(L.length, 'Empurradores em porto')}${tile(nLib, 'Liberados à operação', nRes ? `dos quais ${nRes} com restrição` : 'sem restrição', '#188038')}${tile(nIm, 'Impedidos de operar', 'item crítico vencido ou falha crítica sem OM', nIm ? '#C5221F' : '#188038')}${tile(med == null ? '—' : med + ' d', 'Permanência média em porto', `${R.length} de ${L.length} com chegada registrada`)}</div>
-    <table class="vga-t"><thead><tr><th>Empurrador</th><th>Condição operacional</th><th>Permanência em porto</th><th>Principal restrição à operação</th><th>Previsão de liberação</th></tr></thead><tbody>${L.map(x => `<tr>
-      <td><i style="background:${cor[x.e.sit[2]] || '#9AA0A6'}"></i><b>${esc(x.e.z.o.nome)}</b></td><td style="color:${cor[x.e.sit[2]] || '#5F6368'};font-weight:700">${esc(x.e.sit[1])}</td>
-      <td>${x.reg ? x.e.z.dd + ' dias' : '<span class="vga-m">não registrada</span>'}</td><td>${x.pr ? esc(x.pr) : x.cb ? `<span class="vga-m">${esc(x.cb)}</span>` : '<span class="vga-m">—</span>'}</td>
-      <td>${x.e.z.prev ? brD(x.e.z.prev) + (x.e.z.prev < H ? ` <b style="color:#C5221F">(${-vgDD(H, x.e.z.prev)} d de atraso)</b>` : '') : x.im ? '<span style="color:#C5221F">sem previsão</span>' : '<span class="vga-m">—</span>'}</td></tr>`).join('')}</tbody></table>
-    <div class="vga-r">${A.Bs.length ? `<span><b>${A.Bs.length}</b> balsas em porto · <b style="color:${nBi ? '#C5221F' : '#188038'}">${nBi}</b> impedidas de operar${nBs ? ` · ${nBs} sem plano preventivo lançado` : ''}</span>` : ''}
-      <span class="vga-m">Dados a atualizar: ${[L.filter(x => x.hor).length ? `horímetro sem leitura em ${L.filter(x => x.hor).length} empurrador${L.filter(x => x.hor).length > 1 ? 'es' : ''}` : '', L.length - R.length ? `chegada não registrada em ${L.length - R.length}` : ''].filter(Boolean).join(' · ') || 'nenhum'}</span></div>`;
-  document.body.appendChild(d);
-  const sai = () => { document.removeEventListener('keydown', kb); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (er) { } d.remove(); }, kb = ev => { if (ev.key === 'Escape') sai(); };
-  d.querySelector('[data-vgax]').onclick = sai; document.addEventListener('keydown', kb); document.addEventListener('fullscreenchange', function f() { if (!document.fullscreenElement && d.isConnected) { document.removeEventListener('fullscreenchange', f); sai(); } });
-  try { d.requestFullscreen && d.requestFullscreen(); } catch (er) { }
+  const ks = vgdK(L.length, 'Empurradores em porto') + vgdK(lb.length + rs.length, 'Liberados à operação', rs.length ? `${vgdPl(rs.length, 'liberado', 'liberados')} com restrição` : 'sem restrição', VGD_C.ok)
+    + vgdK(im.length, 'Impedidos de operar', 'item crítico NP 6.3 vencido sem OM, falha crítica sem OM ou interdição', im.length ? VGD_C.bad : VGD_C.ok)
+    + vgdK(med == null ? '—' : med + ' d', 'Permanência média em porto', R.length ? `${R.length} de ${L.length} com chegada registrada (FR 027_L)` : 'chegadas não registradas');
+  const pri = x => vgdTec((x.P.find(p => p[0] === 'bad') || x.P[0] || [])[1]);
+  const conc = im.length ? `${lb.length + rs.length} de ${L.length} empurradores liberados à operação. ${vgdPl(im.length, 'impedido', 'impedidos')} de operar: ${im.map(x => `<b>${esc(x.e.z.o.nome)}</b> (${esc(pri(x))})`).join('; ')}.`
+    : `Todos os ${L.length} empurradores em porto estão liberados à operação${rs.length ? `, ${rs.length} com restrição` : ''}.`;
+  const card = x => { const c = x.n >= 2 ? VGD_C.bad : VGD_C.at, P = x.P.slice(0, 4);
+    return `<div class="vgd-cd" style="border-left-color:${c}"><div class="vgd-ct"><b>${esc(x.e.z.o.nome)}</b><span style="color:${c}">${esc(x.e.sit[1])}</span></div>
+      <div class="vgd-cl">${x.reg ? `Permanência em porto: <b>${x.e.z.dd} dias</b>` : '<span class="vgd-m">Chegada não registrada</span>'}</div>
+      ${P.length ? `<div class="vgd-cr"><small>Restrições à operação</small>${P.map(p => `<div style="border-color:${p[0] === 'bad' ? VGD_C.bad : p[0] === 'at' ? VGD_C.at : '#C9D3DF'}">${esc(vgdTec(p[1]))}</div>`).join('')}${x.P.length > 4 ? `<div class="vgd-m">e mais ${x.P.length - 4}</div>` : ''}</div>` : ''}
+      ${x.cor.length ? `<div class="vgd-m">Corretiva aberta (${esc(x.cor.map(c0 => c0.c || '').join(', '))}): ${esc(x.cor.map(c0 => c0.eq || '').join('; '))} · não impede a operação</div>` : ''}
+      <div class="vgd-cp">Previsão de liberação: ${x.e.z.prev ? `<b>${brD(x.e.z.prev)}</b>${x.e.z.prev < H ? ` <b style="color:${VGD_C.bad}">(${-vgDD(H, x.e.z.prev)} d de atraso)</b>` : ''}` : x.n >= 2 ? `<b style="color:${VGD_C.bad}">sem previsão</b>` : '<span class="vgd-m">não se aplica</span>'}</div></div>`; };
+  const nBi = A.Bs.filter(x => x.e.st === 'bloq').length, nBr = A.Bs.filter(x => x.e.st === 'rest').length, nBs = A.Bs.filter(x => x.e.st === 'sem').length;
+  const dq = [L.filter(x => x.hor).length ? `horímetro do MCP sem leitura em ${vgdPl(L.filter(x => x.hor).length, 'empurrador', 'empurradores')}` : '', L.length - R.length ? `chegada não registrada em ${L.length - R.length}` : ''].filter(Boolean);
+  return `<div class="vgd-ks">${ks}</div><p class="vgd-c">${conc}</p>
+    ${im.length || rs.length ? `<div class="vgd-cs">${im.concat(rs).map(card).join('')}</div>` : ''}
+    ${lb.length ? `<p class="vgd-lb"><b style="color:${VGD_C.ok}">Liberados à operação sem restrição:</b> ${lb.map(x => esc(x.e.z.o.nome)).join(' · ')}</p>` : ''}
+    ${A.Bs.length ? `<p class="vgd-lb"><b>Balsas em porto:</b> ${A.Bs.length} · impedidas de operar <b style="color:${nBi ? VGD_C.bad : VGD_C.ok}">${nBi}</b> · liberadas com restrição ${nBr}${nBs ? ` · sem plano preventivo lançado ${nBs}` : ''} <span class="vgd-m">(as que chegaram com esses empurradores)</span></p>` : ''}
+    ${dq.length ? `<p class="vgd-m">Dados a atualizar: ${dq.join(' · ')}.</p>` : ''}
+    <details class="vgd-det"><summary>Detalhes técnicos (tabela de trabalho)</summary>${det}</details>`;
 }
-function vgPainelAbrir(tp, a, b) {
-  const el = $('#vgPainel'); if (!el) return; VG_PAINEL.oc = {};
-  el.innerHTML = `<div class="row" style="margin-bottom:4px"><span class="sp"></span><button class="mbtn sm" data-vgpx data-nodrag>Fechar</button></div>` + (tp === 'via' ? vgPainelVia(a) : vgPainelFix(a, b));
-  el.style.display = ''; if (typeof heCarregaFotos === 'function') heCarregaFotos(); try { el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { }
+// ---------- estaleiro ----------
+function vgDirEst(ids) {
+  const H = isoD(hoje()), Z = ids.map(vgRefDados).sort((a, b) => (a.prev || '9') < (b.prev || '9') ? -1 : 1), det = vgPainelFix('Estaleiro', ids);
+  if (!Z.length) return '<p class="vgd-c">Nenhuma embarcação em reforma no estaleiro.</p>';
+  const cS = Z.filter(z => z.serv.length), tS = cS.reduce((s, z) => s + z.serv.length, 0), fS = cS.reduce((s, z) => s + z.nF, 0), sp = Z.filter(z => !z.prev), at = Z.filter(z => z.prev && z.prev < H);
+  const p30 = Z.filter(z => z.prev && z.prev >= H && vgDD(H, z.prev) <= 30), rp = Z.reduce((s, z) => s + z.prevH.length, 0);
+  const ks = vgdK(Z.length, 'Em reforma', Z.map(z => esc(z.nome)).join(' · ')) + vgdK(tS ? Math.round(fS / tS * 100) + '%' : '—', 'Avanço físico', tS ? `${fS} de ${tS} serviços concluídos` : 'serviços não lançados', tS ? VGD_C.nv : VGD_C.mut)
+    + vgdK(p30.length, 'Entregas previstas em 30 dias', p30.length ? p30.map(z => esc(z.nome) + ' ' + brD(z.prev)).join(' · ') : 'nenhuma') + vgdK(sp.length + at.length, 'Sem previsão ou com atraso', [sp.length ? sp.length + ' sem previsão' : '', at.length ? at.length + ' com atraso' : ''].filter(Boolean).join(' · ') || 'todas no prazo', sp.length + at.length ? VGD_C.bad : VGD_C.ok);
+  const px = Z.find(z => z.prev && z.prev >= H);
+  const conc = `${vgdPl(Z.length, 'embarcação', 'embarcações')} em reforma.${px ? ` Próxima entrega prevista: <b>${esc(px.nome)}</b> em <b>${brD(px.prev)}</b>${px.serv.length ? ` (avanço físico ${Math.round(px.nF / px.serv.length * 100)}%)` : ''}.` : ''}${sp.length ? ` Sem previsão de entrega: <b>${sp.map(z => esc(z.nome)).join(', ')}</b>.` : ''}${at.length ? ` Entrega atrasada: <b>${at.map(z => esc(z.nome) + ' (' + -vgDD(H, z.prev) + ' d)').join(', ')}</b>.` : ''}${rp ? ` ${vgdPl(rp, 'reprogramação', 'reprogramações')} da entrega registradas.` : ''}`;
+  const card = z => { const pc = z.serv.length ? Math.round(z.nF / z.serv.length * 100) : null, key = 'd' + z.id, c = !z.prev || z.prev < H ? VGD_C.bad : VGD_C.nv;
+    VG_PAINEL.oc['g' + z.id] = [{ fotos: z.F.map(x => x.f) }];
+    const mk = [...z.serv.filter(s => s.ok && s.em).map(s => ({ d: s.em, cls: 'sv', tip: 'Concluído em ' + brD(s.em) + ': ' + s.t })), ...z.prevH.map(p => ({ d: p[0], cls: 'pv', tip: `Reprogramação em ${brD(p[0])} (era ${brD(p[1])})${p[2] ? ': ' + p[2] : ''}` }))];
+    VG_PAINEL.oc[key] = vgOcorr(z.id, z.ini || H);
+    return `<div class="vgd-cd vgd-est" style="border-left-color:${c}"><div class="vgd-ef">${z.F.length ? vgFotoImg(z.F[0].f, 'vgd-ft', ` data-vgfg="g${z.id}|0|0" data-nodrag`) + `<small>Último registro fotográfico: ${z.ult == null ? 'sem data' : z.ult === 0 ? 'hoje' : 'há ' + z.ult + ' d'} · ${z.F.length} foto(s)</small>` : '<div class="vgd-sf">Sem registro fotográfico</div>'}</div>
+      <div class="vgd-eb"><div class="vgd-ct"><b>${esc(z.nome)}</b><span>${z.bal ? 'balsa' : 'empurrador'} · ${esc(z.r.local || 'estaleiro')}</span></div>
+      <div class="vgd-cl">Tempo de estaleiro: <b>${z.dd != null ? z.dd + ' dias' : 'início não lançado'}</b>${z.ini ? ` (entrada ${brD(z.ini)})` : ''}</div>
+      <div class="vgd-cp">Previsão de entrega: ${z.prev ? `<b>${brD(z.prev)}</b> ${z.prev < H ? `<b style="color:${VGD_C.bad}">${-vgDD(H, z.prev)} d de atraso</b>` : `<span class="vgd-m">faltam ${vgDD(H, z.prev)} d</span>`}` : `<b style="color:${VGD_C.bad}">sem previsão</b>`}${z.prevH.length ? ` <span class="vgd-m">· ${vgdPl(z.prevH.length, 'reprogramação', 'reprogramações')}</span>` : ''}</div>
+      <div class="vgd-av"><div><i style="width:${pc || 0}%"></i></div><span>${pc == null ? 'Avanço físico: serviços não lançados' : `Avanço físico <b>${pc}%</b> · ${z.nF} de ${z.serv.length} serviços`}</span></div>
+      ${z.deps.length || z.serv.some(s => !s.ok && s.dep) ? `<div class="vgd-cl">Restrição de suprimento: <b>${esc([...z.deps.map(r => `${r.tp} ${r.num} (${gsDias(r)} d)`), ...z.serv.filter(s => !s.ok && s.dep && !z.deps.some(r => s.dep.includes(r.num))).map(s => s.dep)].join(' · '))}</b></div>` : ''}
+      ${vgLinhaTempo(key, z.ini || isoD(new Date(Date.now() - 30 * 864e5)), 'Entrada', z.prev, 'Entrega prevista', VG_PAINEL.oc[key], mk)}</div></div>`; };
+  return `<div class="vgd-ks">${ks}</div><p class="vgd-c">${conc}</p><div class="vgd-cs vgd-cs1">${Z.map(card).join('')}</div>
+    <p class="vgd-m">Linha do tempo: quadrado verde = serviço concluído · losango laranja = reprogramação da entrega · ponto = ocorrência (clique para ver). Clique na foto para ampliar.</p>
+    <details class="vgd-det"><summary>Detalhes técnicos (tabela de trabalho)</summary>${det}</details>`;
 }
+// ---------- em viagem ----------
+function vgDirVia(ids, sel) {
+  const H = isoD(hoje());
+  const L = ids.map(id => { const o = vgOndeDe(id, false), r = vgRota(o.rota), d0 = o.saida || H, Oc = vgOcorr(id, d0);
+    return { id, o, r, d0, Oc, ab: Oc.filter(x => !x.ok), dest: r ? r.nome.split('×').pop().trim() : '', par: o.parD > VG_PARADO_D }; })
+    .sort((a, b) => (b.id === sel) - (a.id === sel) || b.ab.length - a.ab.length || (a.o.prev || '9') < (b.o.prev || '9') ? -1 : 1);
+  if (!L.length) return '<p class="vgd-c">Nenhum comboio em viagem.</p>';
+  const nAb = L.reduce((s, x) => s + x.ab.length, 0), par = L.filter(x => x.par), pv = L.filter(x => x.o.prev).sort((a, b) => a.o.prev < b.o.prev ? -1 : 1)[0];
+  const ks = vgdK(L.length, 'Comboios em viagem', L.reduce((s, x) => s + (x.o.balsas || []).length, 0) + ' balsas em comboio') + vgdK(nAb, 'Ocorrências em andamento', nAb ? L.filter(x => x.ab.length).map(x => esc(x.o.nome)).join(' · ') : 'nenhuma', nAb ? VGD_C.bad : VGD_C.ok)
+    + vgdK(par.length, `Parados há mais de ${VG_PARADO_D} dias`, par.length ? par.map(x => esc(x.o.nome)).join(' · ') : 'nenhum', par.length ? VGD_C.bad : VGD_C.ok) + vgdK(pv ? brD(pv.o.prev) : '—', 'Próxima chegada prevista', pv ? esc(pv.o.nome) + (pv.dest ? ' em ' + esc(pv.dest) : '') + ' · estimada pela rota' : 'rotas não informadas');
+  const conc = `${vgdPl(L.length, 'comboio', 'comboios')} em viagem. ${nAb ? `${vgdPl(nAb, 'ocorrência', 'ocorrências')} em andamento: ${L.filter(x => x.ab.length).map(x => `<b>${esc(x.o.nome)}</b> (${esc(x.ab.map(a => a.eq || 'falha').join('; '))})`).join(', ')}.` : 'Nenhuma ocorrência em andamento.'}${par.length ? ` Parado há mais de ${VG_PARADO_D} dias: <b>${par.map(x => esc(x.o.nome)).join(', ')}</b>.` : ''}`;
+  const card = x => { const o = x.o, dv = vgDD(x.d0, H), c = x.ab.length || x.par ? VGD_C.bad : VGD_C.nv, key = 'w' + x.id; VG_PAINEL.oc[key] = x.Oc;
+    return `<div class="vgd-cd${x.id === sel ? ' vgd-sel' : ''}" style="border-left-color:${c}"><div class="vgd-ct"><b>Comboio ${esc(o.nome)}</b><span>${o.rota ? esc(vgRotaCurta(o.rota)) : 'rota não informada'}</span></div>
+      ${o.balsas && o.balsas.length ? `<div class="vgd-cl">${esc(o.balsas.map(vName).join(' · '))}</div>` : ''}
+      <div class="vgd-cl">${o.saida ? `Em viagem há <b>${dv} dias</b> (saída ${brD(o.saida)})` : '<span class="vgd-m">Saída não registrada</span>'}${x.par ? ` · <b style="color:${VGD_C.bad}">parado há ${o.parD} dias</b>` : ''}</div>
+      <div class="vgd-cp">Chegada prevista${x.dest ? ' em ' + esc(x.dest) : ''}: ${o.prev ? `<b>${brD(o.prev)}</b> ${vgDD(H, o.prev) >= 0 ? `<span class="vgd-m">faltam ${vgDD(H, o.prev)} d · estimada pela rota</span>` : `<b style="color:${VGD_C.bad}">passou ${-vgDD(H, o.prev)} d</b>`}` : '<span class="vgd-m">rota não informada</span>'}</div>
+      <div class="vgd-cl">${x.Oc.length ? `${vgdPl(x.Oc.length, 'ocorrência', 'ocorrências')} · ${x.Oc.length - x.ab.length} resolvida(s) · ${x.ab.length ? `<b style="color:${VGD_C.bad}">${x.ab.length} em andamento</b> (${esc(x.ab.map(a => a.eq || 'falha').join('; '))})` : '0 em andamento'}` : 'Nenhuma ocorrência na viagem'}</div>
+      ${o.local ? `<div class="vgd-m">Última posição: ${esc(o.local)}${o.at ? ' · ' + vgDH(o.at) : ''}</div>` : ''}
+      ${o.saida ? vgLinhaTempo(key, x.d0, 'Saída', o.prev, 'Chegada prevista', x.Oc) : ''}</div>`; };
+  return `<div class="vgd-ks">${ks}</div><p class="vgd-c">${conc}</p><div class="vgd-cs">${L.map(card).join('')}</div>
+    <p class="vgd-m">Chegada prevista = saída + duração da rota (estimada). Clique no ponto da linha do tempo para ver a ocorrência e as fotos.</p>`;
+}
+// ---------- abrir ----------
+function vgDirTabs(g) {
+  let n = {}; try { const R = vgGrupos(); n = R; } catch (e) { n = { G: {}, nomes: {} }; }
+  const L = VG_GRP.concat(Object.keys(n.nomes || {}).map(k => [k, n.nomes[k]]));
+  return L.map(([k, t]) => `<button class="vgd-tb${k === g ? ' on' : ''}" data-vgg="${esc(k)}" data-nodrag>${esc(t)} <b>${((n.G || {})[k] || []).length}</b></button>`).join('');
+}
+function vgDirAbrir(g, sel) {
+  const el = $('#vgPainel'); if (!el) return; VG_PAINEL.oc = {}; VG_PAINEL.g = g;
+  const { G, nomes } = vgGrupos(), ids = G[g] || [], tit = (VG_GRP.find(x => x[0] === g) || [g, nomes[g] || ''])[1];
+  const corpo = g === 'est' ? vgDirEst(ids) : g === 'via' ? vgDirVia(ids, sel) : vgDirPorto(tit, ids);
+  const tb = $('#vgTabs'); if (tb) tb.innerHTML = vgDirTabs(g);
+  el.innerHTML = `<div class="vgd-h"><div><h3>${esc(tit)}</h3><span>${brD(isoD(hoje()))} · ${vgdPl(ids.length, 'embarcação', 'embarcações')}</span></div><button class="mbtn sm" data-vgpx data-nodrag>Fechar</button></div>${corpo}`;
+  el.style.display = ''; if (typeof heCarregaFotos === 'function') heCarregaFotos(); try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { }
+}
+function vgPainelAbrir(tp, a, b) { return tp === 'via' ? vgDirAbrir('via', a) : vgDirAbrir(vgGrupoDe(a)); }
 // detalhe da ocorrência clicada na linha do tempo, com as fotos (clique na foto = tela cheia)
 function vgOcDetalhe(key, i) {
   const x = (VG_PAINEL.oc[key] || [])[+i], el = $('#vgtd-' + key); if (!x || !el) return;
@@ -277,21 +356,23 @@ function vgFotoGrande(key, i, k) {
   d.onclick = e => { const g = e.target.closest('[data-g]'); if (g) { n = (n + +g.dataset.g + L.length) % L.length; des(); } else if (e.target === d) sai(); };
   document.addEventListener('keydown', kb); des();
 }
-document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc],[data-vgfg],[data-vgpx],[data-vgdet],[data-vgapr]'); if (!t || VIEW !== 'enxviag') return;
+document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc],[data-vgfg],[data-vgpx],[data-vgdet],[data-vgg]'); if (!t || VIEW !== 'enxviag') return;
   if (t.dataset.vgdet && e.target.closest('a')) return;   // clique na pendência: vai para a tela que resolve
   e.preventDefault(); e.stopPropagation(); const d = t.dataset;
   if (d.vgdet) { const r = $('#vgdet-' + d.vgdet), ab = r && r.style.display === 'none'; if (r) { r.style.display = ab ? '' : 'none'; t.classList.toggle('on', ab); if (ab && typeof heCarregaFotos === 'function') heCarregaFotos(); } return; }
-  if (d.vgapr !== undefined) return vgApresentar();
-  if (d.vgpx !== undefined) { const el = $('#vgPainel'); if (el) { el.innerHTML = ''; el.style.display = 'none'; } return; }
+  if (d.vgg) return vgDirAbrir(d.vgg);
+  if (d.vgpx !== undefined) { const el = $('#vgPainel'), tb = $('#vgTabs'); if (el) { el.innerHTML = ''; el.style.display = 'none'; } if (tb) tb.innerHTML = vgDirTabs(''); return; }
   if (d.vgoc) return vgOcDetalhe(...d.vgoc.split('|'));
   if (d.vgfg) return vgFotoGrande(...d.vgfg.split('|')); }, true);
 { const st = document.createElement('style'); st.textContent = '#vgPainel{margin-top:10px;border-top:1px solid #DCE3EC;padding-top:8px}.vgp-b{border:1px solid #DCE3EC;border-radius:8px;padding:10px 12px;margin:8px 0;background:#fff;line-height:1.55}.vgp-t{font-weight:700;color:#16244A;font-size:14px;margin-bottom:2px}'
   + '.vgt{margin:22px 4px 2px}.vgt-b{position:relative;height:8px;border-radius:4px;background:#E3E8EF;margin:10px 0}.vgt-f{position:absolute;left:0;top:0;bottom:0;background:#9DB4D3;border-radius:4px}.vgt-p{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(90deg,#C9D3E0 0 6px,transparent 6px 10px)}.vgt-h{position:absolute;top:-6px;bottom:-6px;width:2px;background:#C5221F;margin-left:-1px}'
   + '.vgt-o{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:pointer;padding:0}.vgt-b .vgt-o.ok{background:#188038!important}.vgt-b .vgt-o.ab{background:#D93025!important}.vgp-tab .vgp-l{cursor:pointer}.vgp-tab .vgp-l:hover td{background:#F3F6FA}.vgp-tab .vgp-l.on .vgp-sx{display:inline-block;transform:rotate(90deg)}.vgp-sx{color:#8A94A6;font-size:11px}.vgp-det>td{padding:0 6px 8px!important;background:#FAFBFD}.vgp-tab .sf-pm{margin:1px 0}.vgt-m{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}.vgt-m.sv{background:#188038;border-radius:2px}.vgt-m.pv{background:#E37400;transform:rotate(45deg)}.vgp-an{height:8px;background:#E3E8EF;border-radius:4px;overflow:hidden;margin:3px 0 2px}.vgp-an i{display:block;height:100%;background:#188038}'
-  + '.vga{position:fixed;inset:0;z-index:100000;background:#F7F9FC;color:#16244A;padding:28px 40px;overflow:auto;font-family:system-ui,sans-serif}.vga-h{display:flex;justify-content:space-between;align-items:flex-start}.vga-h h1{font-size:34px;margin:0}.vga-h p{font-size:18px;color:#5F6368;margin:4px 0 0}'
-  + '.vga-ks{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:22px 0}.vga-k{background:#fff;border:1px solid #DCE3EC;border-radius:12px;padding:16px 20px}.vga-k b{display:block;font-size:64px;line-height:1;font-weight:800}.vga-k span{display:block;font-size:19px;font-weight:600;margin-top:8px}.vga-k small{display:block;font-size:14px;color:#5F6368;margin-top:4px}'
-  + '.vga-t{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;font-size:21px}.vga-t th{text-align:left;font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:#5F6368;padding:12px 14px;border-bottom:2px solid #DCE3EC}.vga-t td{padding:14px;border-bottom:1px solid #E8EDF3;vertical-align:top}.vga-t td i{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:10px;vertical-align:1px}'
-  + '.vga-m{color:#80868B}.vga-r{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:16px;font-size:17px}.vgt-o:hover{transform:scale(1.25)}'
+  + '#vgPainel{margin-top:8px}#vgTabs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px}.vgd-tb{font:600 14px/1.2 system-ui,sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #C9D3DF;background:#fff;color:#16244A;cursor:pointer}.vgd-tb b{display:inline-block;min-width:22px;margin-left:6px;padding:1px 7px;border-radius:10px;background:#E8EEF5;font-size:13px}.vgd-tb.on{background:#16244A;color:#fff;border-color:#16244A}.vgd-tb.on b{background:rgba(255,255,255,.2)}'
+  + '.vgd-h{display:flex;justify-content:space-between;align-items:flex-start;margin:6px 0 10px}.vgd-h h3{font-size:26px;margin:0;color:#16244A}.vgd-h span{font-size:14px;color:#5B6B80}.vgd-ks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.vgd-k{background:#fff;border:1px solid #DCE3EC;border-radius:12px;padding:14px 18px}.vgd-k b{display:block;font-size:48px;line-height:1.05;font-weight:800;color:#16244A}.vgd-k span{display:block;font-size:16px;font-weight:700;color:#16244A;margin-top:6px}.vgd-k small{display:block;font-size:12.5px;color:#5B6B80;margin-top:3px;line-height:1.35}'
+  + '.vgd-c{font-size:19px;line-height:1.45;color:#16244A;background:#EEF3F9;border-left:5px solid #16244A;border-radius:8px;padding:12px 16px;margin:14px 0}.vgd-cs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}.vgd-cs1{grid-template-columns:1fr}.vgd-cd{background:#fff;border:1px solid #DCE3EC;border-left:6px solid #16244A;border-radius:10px;padding:14px 18px;font-size:15.5px;line-height:1.5}.vgd-sel{box-shadow:0 0 0 3px #9DB4D3}'
+  + '.vgd-ct{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}.vgd-ct b{font-size:22px;color:#16244A}.vgd-ct span{font-weight:700;font-size:15px;color:#5B6B80}.vgd-cl{margin:2px 0}.vgd-cp{margin:6px 0;font-size:16.5px}.vgd-cr small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5B6B80;margin:6px 0 2px}.vgd-cr div{border-left:3px solid;padding:1px 0 1px 8px;margin:3px 0}.vgd-m{color:#6B7785}.vgd-lb{font-size:16px;margin:10px 0}'
+  + '.vgd-est{display:grid;grid-template-columns:300px 1fr;gap:18px}.vgd-ft{width:100%;height:210px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:#E8EEF5}.vgd-ef small{display:block;font-size:12.5px;color:#5B6B80;margin-top:4px}.vgd-sf{height:210px;border:2px dashed #E3B4AF;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#C5221F;font-weight:700}.vgd-av{margin:8px 0}.vgd-av div{height:14px;background:#E3E8EF;border-radius:7px;overflow:hidden}.vgd-av i{display:block;height:100%;background:#137333}.vgd-av span{font-size:15px}'
+  + '.vgd-det{margin-top:16px;border-top:1px solid #DCE3EC;padding-top:8px}.vgd-det summary{cursor:pointer;font-weight:600;color:#5B6B80;font-size:13px}@media(max-width:760px){.vgd-est{grid-template-columns:1fr}.vgd-cs{grid-template-columns:1fr}.vgd-k b{font-size:36px}}.vgt-o:hover{transform:scale(1.25)}'
   + '.vgt-l{position:relative;display:flex;justify-content:space-between;font-size:11.5px;color:#5F6368;min-height:30px}.vgt-lh{position:absolute;top:-19px;transform:translateX(-50%);color:#C5221F;font-weight:600;font-size:11px;white-space:nowrap}.vgt-x{margin-top:6px;padding:8px 10px;background:#F6F8FB;border-radius:6px}.vgt-fs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}'
   + '.vgt-ft{width:120px;height:90px;object-fit:cover;border-radius:6px;cursor:zoom-in;background:#E8EEF5}.vgt-g{position:fixed;inset:0;z-index:100000;background:rgba(10,15,25,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out}.vgt-g img{max-width:94vw;max-height:86vh;object-fit:contain;border-radius:4px;cursor:default}'
   + '.vgt-gb{display:flex;gap:16px;align-items:center;color:#fff;font:13px system-ui;margin-top:10px}.vgt-gb button{font-size:26px;line-height:1;background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:6px;padding:4px 14px;cursor:pointer}'; document.head.appendChild(st); }
