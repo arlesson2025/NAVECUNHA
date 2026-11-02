@@ -165,12 +165,22 @@ function vgPosModal(id) {
     closeModal(); toast('Posição salva.'); render(); };
 }
 // boletim do Autotrac colado: cada trecho que cita um empurrador vira uma posição (conferida antes de gravar)
+// latitude e longitude no texto (decimal “-7,1234 -63,4567” ou “7°30'12\" S 63°02' W”); fora da região da frota (lat −15 a 6, lon −76 a −44) não conta
+function vgCoord(t) {
+  const ok = (a, o) => a >= -15 && a <= 6 && o >= -76 && o <= -44, n = v => +String(v).replace(',', '.');
+  let m = t.match(/(-?\d{1,2}[.,]\d{3,})\s*[,;/]?\s+(?:lon\w*\s*:?\s*)?(-?\d{1,3}[.,]\d{3,})/i);
+  if (m && ok(n(m[1]), n(m[2]))) return { lat: n(m[1]), lon: n(m[2]), t: t.replace(m[0], ' ').replace(/\blat\w*\s*:?/gi, ' ') };
+  const g = /(\d{1,3})\s*°\s*(\d{1,2})?\s*['’′]?\s*(\d{1,2}(?:[.,]\d+)?)?\s*["”″]?\s*([NSWOL])/gi, D = []; let x; while ((x = g.exec(t))) D.push(x);
+  if (D.length >= 2) { const v = q => (+q[1] + (q[2] ? +q[2] / 60 : 0) + (q[3] ? n(q[3]) / 3600 : 0)) * (/[SWO]/i.test(q[4]) ? -1 : 1), a = v(D[0]), o = v(D[1]);
+    if (ok(a, o)) return { lat: Math.round(a * 1e5) / 1e5, lon: Math.round(o * 1e5) / 1e5, t: t.replace(D[0][0], ' ').replace(D[1][0], ' ') }; }
+  return { lat: null, lon: null, t };
+}
 function vgLerBoletim(txt) {
   const F = S.cfg.frota.map(v => ({ v, re: new RegExp('\\b' + v.nome.replace(/\s+/g, '\\s*-?\\s*') + '(?![IVXL])', 'i') })).sort((a, b) => b.v.nome.length - a.v.nome.length);
   const it = []; let cur = null;
   String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => { const f = F.find(x => x.re.test(l)); if (f) { cur = { v: f.v, t: l.replace(f.re, ' ') }; it.push(cur); } else if (cur) cur.t += ' ' + l; });
   const H = hoje();
-  return it.map(x => { const t = x.t; const md = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); let date = isoD(H), hora = '';
+  return it.map(x => { const c = vgCoord(x.t), t = c.t.replace(/COMBOIO\s*:?/gi, ' ').replace(/\bVDA\s*-?\s*[IVXL]+\b\s*(?:,|\be\b)?/gi, ' ').replace(/HOR[IÍ]METRO\s*\/?\s*:?\s*[\d.,]+\s*h?/gi, ' ').replace(/[ÚU]LTIMA\s+ATUALIZA[CÇ][AÃ]O\s*:?/gi, ' ').replace(/^[\s\-–:]+/, ''); const md = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); let date = isoD(H), hora = '';
     if (md) { let y = md[3] ? +md[3] : H.getFullYear(); if (y < 100) y += 2000; if (!md[3] && +md[2] > H.getMonth() + 2) y--; date = `${y}-${String(+md[2]).padStart(2, '0')}-${String(+md[1]).padStart(2, '0')}`; }
     const mh = t.match(/(\d{1,2})\s*(?:h|:)\s*(\d{2})/i); if (mh) hora = `${String(+mh[1]).padStart(2, '0')}:${mh[2]}`;
     const n = vgNorm(t), parado = /parad|sem moviment|fundead/.test(n), porto = /atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado;
@@ -178,20 +188,21 @@ function vgLerBoletim(txt) {
     let local = t.replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/\s{2,}/g, ' ');
     for (let k = 0; k < 4; k++) local = local.replace(/^[\s,.;:\-–|·]+|[\s,.;:\-–|·]+$/g, '').replace(/\s+(?:às|as|desde|em|de)$/i, '');
     if (local.length > 140) local = local.slice(0, 137) + '…';
-    return { vessel: x.v.id, nome: x.v.nome, date: date > isoD(H) ? isoD(H) : date, hora, situ: porto ? 'por' : 'via', porto: porto ? pt || '' : '', local, parDesde: parado ? date : '' }; });
+    return { vessel: x.v.id, nome: x.v.nome, lat: c.lat, lon: c.lon, date: date > isoD(H) ? isoD(H) : date, hora, situ: porto ? 'por' : 'via', porto: porto ? pt || '' : '', local, parDesde: parado ? date : '' }; });
 }
-function vgBoletimModal() {
+function vgBoletimModal(txt0) {
   if (!can.edit()) return;
   modal(`<h2>Colar boletim do Autotrac</h2><p class="note">Cole o texto do e-mail do boletim. Cada linha (ou trecho) que cita um empurrador vira uma posição; a data e a hora são lidas do texto. Confira antes de gravar.</p>
-    <textarea id="vbT" rows="7" style="width:100%" placeholder="CJA I – Paraná do Miriti, a 145 km de Humaitá – 31/10 às 18h00"></textarea>
+    <textarea id="vbT" rows="7" style="width:100%" placeholder="CJA I – Paraná do Miriti, a 145 km de Humaitá – 31/10 às 18h00">${esc(txt0 || '')}</textarea>
     <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="vbL">Ler</button></div><div id="vbR"></div>`, true);
   let R = [];
   $('#vbL').onclick = () => { R = vgLerBoletim($('#vbT').value);
-    $('#vbR').innerHTML = !R.length ? '<p class="note" style="color:var(--badt)">Nenhum empurrador encontrado no texto.</p>' : `<div class="tw"><table class="t"><thead><tr><th></th><th>Empurrador</th><th>Situação</th><th>Data</th><th>Hora</th><th>Posição / porto</th><th>Parado</th></tr></thead><tbody>${R.map((r, k) => `<tr data-k="${k}"><td><input type="checkbox" class="vbI" checked></td><td><b>${esc(r.nome)}</b></td><td><select class="vbS"><option value="via"${r.situ === 'via' ? ' selected' : ''}>fora do porto</option><option value="por"${r.situ === 'por' ? ' selected' : ''}>no porto</option></select></td><td><input type="date" class="vbD" value="${r.date}"></td><td><input type="time" class="vbH" value="${r.hora}"></td><td><input class="vbLc" value="${esc(r.situ === 'por' && r.porto ? r.porto : r.local)}"></td><td><input type="checkbox" class="vbP"${r.parDesde ? ' checked' : ''}></td></tr>`).join('')}</tbody></table></div><div class="row end"><button class="mbtn pri" id="vbOk">Gravar ${R.length} posição(ões)</button></div>`;
+    $('#vbR').innerHTML = !R.length ? '<p class="note" style="color:var(--badt)">Nenhum empurrador encontrado no texto.</p>' : `<div class="tw"><table class="t"><thead><tr><th></th><th>Empurrador</th><th>Situação</th><th>Data</th><th>Hora</th><th>Posição / porto</th><th>Parado</th></tr></thead><tbody>${R.map((r, k) => `<tr data-k="${k}"><td><input type="checkbox" class="vbI" checked></td><td><b>${esc(r.nome)}</b></td><td><select class="vbS"><option value="via"${r.situ === 'via' ? ' selected' : ''}>fora do porto</option><option value="por"${r.situ === 'por' ? ' selected' : ''}>no porto</option></select></td><td><input type="date" class="vbD" value="${r.date}"></td><td><input type="time" class="vbH" value="${r.hora}"></td><td><input class="vbLc" value="${esc(r.situ === 'por' && r.porto ? r.porto : r.local)}">${r.lat != null ? `<div class="note">${nf(r.lat, 4)} · ${nf(r.lon, 4)}</div>` : ''}</td><td><input type="checkbox" class="vbP"${r.parDesde ? ' checked' : ''}></td></tr>`).join('')}</tbody></table></div><div class="row end"><button class="mbtn pri" id="vbOk">Gravar ${R.length} posição(ões)</button></div>`;
     const ok = $('#vbOk'); if (ok) ok.onclick = async () => { let n = 0;
       for (const tr of $$('#vbR tr[data-k]')) { if (!tr.querySelector('.vbI').checked) continue; const r = R[+tr.dataset.k], d = tr.querySelector('.vbD').value, st = tr.querySelector('.vbS').value, l = tr.querySelector('.vbLc').value.trim(); if (!d || d > isoD(hoje())) continue;
-        await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: r.vessel, date: d, at: d + 'T' + (tr.querySelector('.vbH').value || '00:00'), situ: st, local: l, porto: st === 'por' ? l : '', parDesde: st === 'via' && tr.querySelector('.vbP').checked ? d : '', obs: '', fonte: 'boletim', por: S.session.name }); n++; }
-      closeModal(); toast(n + ' posição(ões) gravada(s).'); render(); }; };
+        await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: r.vessel, date: d, at: d + 'T' + (tr.querySelector('.vbH').value || '00:00'), situ: st, local: l, porto: st === 'por' ? l : '', parDesde: st === 'via' && tr.querySelector('.vbP').checked ? d : '', obs: '', fonte: 'boletim', por: S.session.name, ...(r.lat != null ? { lat: r.lat, lon: r.lon } : {}) }); n++; }
+      closeModal(); toast(n + ' posição(ões) gravada(s).'); const ta = $('#vgMo'); if (ta) ta.value = ''; render(); }; };
+  if (txt0) $('#vbL').onclick();
 }
 // ---------- tela ----------
 function vEnxViag() {
@@ -217,7 +228,7 @@ function vEnxViag() {
   const seg = `<div class="seg"><button data-vgm="E" class="${eb ? '' : 'on'}">Empurradores</button><button data-vgm="B" class="${eb ? 'on' : ''}">Balsas</button></div>`;
   return enxCab('1.3 Viagens e comboios', 'Saídas de Manaus com as balsas do comboio, tempo de viagem, tempo parado no porto e reformas · a chegada vem do FR 027_L; sem ela, é estimada pela rota',
     `<label class="f">Ano<select id="vgA">${anos.map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select></label><button class="mbtn" data-enxreset>Reorganizar</button>`)
-   + `${vgOnde(V, TA.length, ano)}
+   + `${typeof vgMapaCard === 'function' ? vgMapaCard() : ''}${vgOnde(V, TA.length, ano)}
    <div class="card"><div class="row"><h2>Operação por ${eb ? 'balsa' : 'empurrador'}</h2><span class="sp"></span>${seg}</div>${tab}<p class="note">Dias em viagem e no porto contam de 01/01 até hoje; o período em reforma não entra. “est.” = tem chegada estimada pela rota. Parado há = desde a última chegada (ou do fim da reforma); acima de 60 dias fica em destaque. Reformas: lançar e consultar no <a href="#enxeq">Histórico dos equipamentos</a>.</p></div>
    <div class="card"><div class="row"><h2>Linha do tempo · ${ano}</h2><span class="sp"></span>${seg}</div>${vgLeg(true)}${vgGantt(N, V, ano, eb)}<p class="note">Barra = viagem; espaço vazio = no porto; linha vermelha = hoje. Passe o mouse na barra para ver o comboio.</p></div>
    <div class="card"><h2>Comboios por mês · ${ano}</h2>${vgLeg(false)}${vgMeses(V, ano)}</div>
@@ -225,6 +236,7 @@ function vEnxViag() {
    <div class="card"><h2>Tempo de viagem por rota · ${ano}</h2><div class="tw"><table class="t"><thead><tr><th>Rota</th><th class="num">Comboios</th><th class="num">Médio real</th><th class="num">Médio com estimadas</th><th class="num">Ciclo previsto</th></tr></thead><tbody>${RR || '<tr><td colspan="5" class="note">Nenhuma viagem no ano.</td></tr>'}</tbody></table></div><p class="note">Real = com chegada pelo FR 027_L ou digitada. Ciclo previsto = o da rota (Administração → Rotas), usado para estimar a chegada.</p></div>
    <div class="card"><h2>Saídas · ${Ls.length}</h2><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><select id="vgFe" style="width:auto;min-width:190px">${opE}</select><select id="vgFb" style="width:auto;min-width:170px">${opB}</select><select id="vgFr" style="width:auto;min-width:200px">${opR}</select>${VG.fe || VG.fb || VG.fr ? '<button class="mbtn sm" data-vgx>Limpar</button>' : ''}</div>
      <div class="tw"><table class="t"><thead><tr><th>Saída</th><th>Empurrador</th><th>Balsas do comboio</th><th>Rota</th><th>Chegada</th><th></th></tr></thead><tbody>${sai || '<tr><td colspan="6" class="note">Nenhuma saída. As novas entram pelo “Saiu de viagem”; as antigas, pelo “Colar histórico de saídas” abaixo.</td></tr>'}</tbody></table></div></div>
+   ${can.edit() ? `<div class="card"><h2>Colar e-mail do Monitoramento</h2><p class="note">Cole o texto do e-mail do Monitoramento (Autotrac) como vem: “COMBOIO: CJA XX - VDA II, VDA III, VDA IV … ULTIMA ATUALIZACAO: 23/5/2026”. O SMF acha o empurrador, a data, a hora, se está parado ou no porto e, se o e-mail trouxer, a latitude e a longitude. Confira antes de gravar.</p><textarea id="vgMo" rows="6" placeholder="COMBOIO: CJA XX - VDA II, VDA III, VDA IV&#10;HORÍMETRO: 22254  ULTIMA ATUALIZACAO: 23/5/2026 18:00"></textarea><div class="row end" style="margin-top:6px"><button class="mbtn" data-vgbolc>Ler e conferir</button></div></div>` : ''}
    ${can.edit() ? `<div class="card"><h2>Colar histórico de saídas</h2><p class="note">Cole a lista como você escreve: “CJA I – VDA I, VDA III e VDA IX” e embaixo “FLUXO: MAO X ITC X PVH (07/01/2026)”. O SMF reconhece o empurrador, as balsas, a rota (MAO, ITC, PVH, VLC/Vila do Conde, BRE, Munguba) e a data. Saída repetida (mesmo empurrador e data) é ignorada.</p><textarea id="vgC" rows="6" placeholder="CJA I – VDA I, VDA III e VDA IX&#10;FLUXO: MAO X ITC X PVH (07/01/2026)"></textarea><div class="row end" style="margin-top:6px"><button class="mbtn" data-vgcola>Ler e conferir</button></div></div>` : ''}</div></div>`;
 }
 // ---------- histórico colado ----------
@@ -272,8 +284,9 @@ document.addEventListener('click', e => { const c = e.target.closest('#saB [data
 // ---------- telas, cliques e menu ----------
 VX.enxviag = vEnxViag;
 AFTER.enxviag = () => { const m = $('#main');
-  m.onclick = e => { const t = e.target.closest('[data-vgm],[data-vgb],[data-vgx],[data-vged],[data-vgcola],[data-vgpos],[data-vgbol]'); if (!t) return; const d = t.dataset;
+  m.onclick = e => { const t = e.target.closest('[data-vgm],[data-vgb],[data-vgx],[data-vged],[data-vgcola],[data-vgpos],[data-vgbol],[data-vgbolc]'); if (!t) return; const d = t.dataset;
     if (d.vgpos !== undefined) return vgPosModal(d.vgpos);
+    if (d.vgbolc !== undefined) { const x = ($('#vgMo') || {}).value || ''; if (!x.trim()) return toast('Cole o texto do e-mail primeiro.'); return vgBoletimModal(x); }
     if (d.vgbol !== undefined) return vgBoletimModal();
     if (d.vgm) { VG.modo = d.vgm; return render(); }
     if (d.vgb) { VG.fb = d.vgb; return render(); }
@@ -285,7 +298,7 @@ AFTER.enxviag = () => { const m = $('#main');
     if (t.id === 'vgFe') { VG.fe = t.value; return render(); }
     if (t.id === 'vgFb') { VG.fb = t.value; return render(); }
     if (t.id === 'vgFr') { VG.fr = t.value; return render(); } };
-  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxviag_lay', '[data-enxreset]'); if (typeof heMigraReformas === 'function') heMigraReformas(); };
+  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxviag_lay', '[data-enxreset]'); if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
 ENX_OK.push('enxviag'); PCM_ETAPAS[0][2].push('enxviag');
 PCM_MENU.find(g => /^1 /.test(g[0]))[1].push(['enxviag', '1.3 Viagens e comboios', 'viag']);
 ICO.viag = '<path d="M3 17h18l-2 3H5z"/><path d="M6 17V9h8l3 4v4"/><path d="M9 9V5h3v4"/>';
