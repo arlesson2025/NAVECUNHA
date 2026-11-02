@@ -1,0 +1,38 @@
+# Gráficos que precisam continuar no SMF (tela | título do quadro). Gerado por: python testes/graficos.py --gravar
+# Tirar uma linha daqui = retirar o gráfico de propósito; só com aprovação do Supervisor e registro em VERSOES.
+anoleo | Tendência da frota
+balkpi | Aderência ao cronograma
+balkpi | Disponibilidade por balsa
+balkpi | Falhas por equipamento
+compr | Detalhe por cilindro
+compr | Histórico de compressão
+enxapres | Slides
+enxbib | Formulários padrão
+enxcal | Bicos injetores
+enxcal | Folga de válvulas
+enxdoca | Docagem
+enxeq | Linha do tempo da frota
+enxeq/… | Linha do tempo
+enxfal | A · Pareto de falhas por sistema
+enxfal | D · Modo de falha
+enxfal | E · Causa da falha
+enxhoje | Situação da frota
+enxhor | Horas de operação da frota por mês
+enxhor | Horas de operação dos MCA por empurrador
+enxhor | Horas de operação dos MCP por empurrador
+enxhor | Horas de operação por mês
+enxhor/… | Horas de operação da frota por mês
+enxhor/… | Horas de operação dos MCA por empurrador
+enxhor/… | Horas de operação dos MCP por empurrador
+enxhor/… | Horas de operação por mês
+enxkpi | Acompanhamento interno sem meta na NP
+enxkpi | Cumprimento do plano preditivo Trimestral
+enxkpi | Disponibilidade da frota Mensal
+enxkpi | MTBF Mensal
+enxkpi | MTTR Mensal
+enxkpi | Registro fotográfico Semanal
+enxrel | Checklist de fechamento
+enxviag | % do ano em viagem
+enxviag | Comboios por mês
+enxviag | Linha do tempo
+oleo | Intervalo remanescente até a troca de óleo
