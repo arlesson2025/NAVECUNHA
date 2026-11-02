@@ -469,10 +469,10 @@ const ENXB_DOCS = [
   ['form', 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', 'Preencher pelo SMF (Óleo) ou imprimir em branco', 'forms/FR_049_B.html'],
   ['form', 'FR 027_L Rev.05 · Check-list de chegada e saída', 'Operador de Medição / Líder, CTF e Coordenador de Operações', 'forms/FR_027_L.html'],
   ['form', 'FR 016_E · Controle de materiais Classe I e II', 'Entrega de resíduos ao SGI (NP 5.7)', 'forms/FR_016_E.html'],
-  ['ref', 'Matriz técnica de equipamentos e lubrificação', 'Modelos, óleos, volumes e intervalos da frota', '../docs/Matriz_tecnica.atual17.10.26.html'],
-  ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/Anexo_I_NP_055_visual_matriz.html'],
-  ['ref', 'Como a frota trabalha · resumo para reuniões', 'O ciclo da manutenção em uma folha: chegada, planejamento, execução, saída, fechamento do mês e o papel do Sankhya', '../docs/Como_a_frota_trabalha.html'],
-  ['ref', 'NP Navecunha 055 · Plano de Gestão de Manutenção', 'Procedimento vigente (revisão em aprovação)', '../docs/NP_Navecunha_055_corrigida.html'],
+  ['ref', 'Matriz técnica de equipamentos e lubrificação', 'Modelos, óleos, volumes e intervalos da frota', '../docs/empurradores/Matriz_tecnica.atual17.10.26.html'],
+  ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html'],
+  ['ref', 'Como a frota trabalha · resumo para reuniões', 'O ciclo da manutenção em uma folha: chegada, planejamento, execução, saída, fechamento do mês e o papel do Sankhya', '../docs/empurradores/Como_a_frota_trabalha.html'],
+  ['ref', 'NP Navecunha 055 · Plano de Gestão de Manutenção', 'Procedimento vigente (revisão em aprovação)', '../docs/empurradores/NP_Navecunha_055_corrigida.html'],
 ];
 function enxIIBBranco() {
   const L = n => Array.from({ length: n }, () => '<tr><td style="height:22px"></td><td></td><td style="width:8%"></td><td style="width:8%"></td><td style="width:8%"></td></tr>').join('');
