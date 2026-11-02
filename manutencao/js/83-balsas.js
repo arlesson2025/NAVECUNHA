@@ -277,10 +277,10 @@ function balCalModal(vid) {
     closeModal(); toast('Calibração registrada.'); render(); };
 }
 // ---------- compressão do motor-bomba (decisão do Supervisor, 25/10/2026) ----------
-// MWM 6.10 TCA: mínimo 20 bar, diferença máxima 2 bar (manual técnico de terceiros); D229: 19 bar usado, 21 novo (manual MWM Série 229, BAL_CMP_MOT) · Cummins: sem valor do fabricante —
+// MWM 6.10 TCA: mínimo 20 bar, novo 23 bar, diferença máxima 2 bar, motor frio (Apostila de Treinamento MWM Série 10 e manual de serviço MWM 6.10/T/TCA, cap. 15-40; o manual de oficina Série 10 não traz o valor); D229: 19 bar usado, 21 novo (manual MWM Série 229, BAL_CMP_MOT) · Cummins: sem valor do fabricante —
 // critério interno: diferença entre cilindros até 10% da média e queda de 10% desde o ensaio anterior; blow-by registrado junto · ensaio na revisão de 1.000 h
 const BAL_CMP = { min: 20, novo: 23, dif: 2, difPct: .10, queda: .10, int: 1000 };
-// D229 pelo manual de oficina MWM Série 229 (9.229.0.006.7260, p. 2-3: motor usado 19 bar, novo 21 bar, a 200 rpm e quente); o 6.10 TCA segue 20/23 bar (manual técnico de terceiros)
+// D229 pelo manual de oficina MWM Série 229 (9.229.0.006.7260, p. 2-3: motor usado 19 bar, novo 21 bar, a 200 rpm e quente); o 6.10 TCA segue 20/23 bar (MWM Série 10, motor frio)
 const BAL_CMP_MOT = { m229: { min: 19, novo: 21 } };
 const balCmpL = b => Object.assign({}, BAL_CMP, BAL_CMP_MOT[b && b.mot] || {});
 function balCmpHist(vid) { return recs('base').filter(r => r.vessel === vid && r.item === 'BCMP' && !r.excluido && r.date).map(r => { const v = (r.vals || []).map(x => x == null || x === '' ? null : +String(x).replace(',', '.')).filter(x => x != null && isFinite(x));
@@ -307,7 +307,7 @@ function vBalCmp() {
    ${D.map(d => `<tr title="${esc(d.mot.join(' · ') || 'sem alerta')}"><td><a href="#balft/${d.b.id}"><b>${esc(d.b.nome)}</b></a><div class="note">${esc(BAL_MOTOR[d.b.mot])}${d.b.mot === 'm229' ? ' · limite a confirmar' : ''}</div></td><td class="r">${d.hr ? nf(d.hr.h) + ' h' : '—'}</td><td>${d.u ? brD(d.u.date) + (d.u.h != null ? '<div class="note">' + nf(d.u.h) + ' h</div>' : '') : '—'}</td>
      <td class="r">${d.u ? `<b class="${d.mwm && d.u.min < balCmpL(d.b).min ? 'rl-ruim' : ''}">${nf(d.u.min, 1)} bar</b> C${d.u.cil}` : '—'}</td><td class="r">${d.dif != null ? nf(d.dif, 1) + ' bar' : '—'}</td><td>${esc(d.u && d.u.bb || '—')}</td><td class="r">${!d.mwm ? '<span class="mut">sem limite</span>' : d.st === 'fora' ? '<span class="rl-ruim">já abaixo</span>' : d.proj == null ? '—' : d.proj === Infinity ? 'sem queda' : nf(d.proj) + ' h'}</td>
      <td class="r">${d.prox != null ? nf(d.prox) + ' h' + (d.vencida ? `<div class="note rl-ruim">vencido há ${nf(-d.falta)} h</div>` : '') : '—'}</td><td>${balPil(BAL_CST, d.st)}${d.mot.length && d.st !== 'ok' ? '<div class="note">' + esc(d.mot[0]) + '</div>' : ''}</td><td class="nowrap"><button class="mbtn sm pri" data-balcmp="${d.b.id}">Lançar ensaio</button>${d.H.length ? ` <button class="mbtn sm" data-balcmph="${d.b.id}">Histórico</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
-   <p class="note">Valores em bar, motor frio, todos os bicos fora, na rotação de partida. Fontes: manual técnico MWM 6.10 TCA (23 bar novo, 20 bar mínimo, 2 bar de diferença; confiança moderada, documento de terceiros). Cummins não publica pressão de compressão para o 6CTA 8.3: acompanha-se a diferença entre cilindros, a tendência e o blow-by.</p></div>`;
+   <p class="note">Valores em bar, motor frio, todos os bicos fora, na rotação de partida. Fontes: MWM 6.10 TCA pela Apostila de Treinamento MWM Série 10 e pelo manual de serviço MWM 6.10/T/TCA, cap. 15-40 (23 bar novo, 20 bar mínimo, 2 bar de diferença, motor frio); D229-6 pelo manual de oficina MWM Série 229 p. 2-3 (21 bar novo, 19 bar usado, motor quente). Cummins não publica pressão de compressão para o 6CTA 8.3: acompanha-se a diferença entre cilindros, a tendência e o blow-by.</p></div>`;
 }
 function balCmpModal(vid) {
   if (!balPode()) return; const b = balsaDe(vid), hr = balHor(vid);
