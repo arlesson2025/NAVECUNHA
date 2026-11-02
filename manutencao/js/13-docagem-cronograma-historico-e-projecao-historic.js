@@ -15,15 +15,17 @@ function docaReg(vid, rid) {
   modal(`<h2>${r ? 'Corrigir' : 'Registrar'} docagem · ${esc(v.nome)}</h2>
    <div class="g"><label class="f s3">Entrada no estaleiro<input id="dgE" type="date" value="${r ? r.date : ''}"></label><label class="f s3">Saída<input id="dgS" type="date" value="${r ? r.saida || '' : ''}"></label>
    <label class="f s3">Estaleiro<input id="dgT" value="${esc(r ? r.estaleiro || '' : '')}"></label><label class="f s3">Custo (R$ mil)<input id="dgC" inputmode="decimal" value="${r && r.custo != null ? r.custo : ''}"></label>
-   <label class="f">Serviços<input id="dgV" placeholder="Casco, hélices e eixos, válvulas de fundo, pintura…" value="${esc(r ? r.servicos || '' : '')}"></label></div>
+   <label class="f">Serviços<input id="dgV" placeholder="Casco, hélices e eixos, válvulas de fundo, pintura…" value="${esc(r ? r.servicos || '' : '')}"></label>
+   <label class="f s3">Documento onde está registrado<input id="dgO" placeholder="OM do Sankhya, relatório do estaleiro, NF" value="${esc(r ? r.doc || (r.om ? 'OM ' + r.om : '') : '')}"></label><label class="f s3">Observação<input id="dgB" value="${esc(r ? r.obs || '' : '')}"></label>
+   ${r && (r.fotos || []).length ? `<div class="f s6"><span>Fotos já salvas: ${r.fotos.length} (veja no Histórico dos equipamentos)</span></div>` : ''}${enxFotoCampo('dgF', 'Fotos (até 6 por vez)')}</div>
    <div class="row end">${r ? '<button class="mbtn bad" id="dgX">Excluir</button><span class="sp"></span>' : ''}<button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="dgOk">Salvar</button></div>`);
   $('#dgOk').onclick = async () => { const e = $('#dgE').value; if (!e) return toast('Informe a data de entrada.'); const s = $('#dgS').value; if (s && s < e) return toast('A saída não pode ser antes da entrada.');
-    const c = $('#dgC').value.trim().replace(',', '.');
-    await saveRec(Object.assign(r ? Object.assign({}, r) : { id: uid('base'), kind: 'base', vessel: vid, pos: 'UN', item: DOCA.item, h: null }, { date: e, saida: s, estaleiro: $('#dgT').value.trim(), servicos: $('#dgV').value.trim(), custo: c === '' ? null : +c, by: S.session.name }));
+    const c = $('#dgC').value.trim().replace(',', '.'), novas = []; for (const f of fxArq('dgF').slice(0, 6)) novas.push({ tipo: 'FOTO', src: await comprimir(f), at: Date.now() });
+    await saveRec(Object.assign(r ? Object.assign({}, r) : { id: uid('base'), kind: 'base', vessel: vid, pos: 'UN', item: DOCA.item, h: null }, { date: e, saida: s, estaleiro: $('#dgT').value.trim(), servicos: $('#dgV').value.trim(), custo: c === '' ? null : +c, doc: $('#dgO').value.trim(), obs: $('#dgB').value.trim(), fotos: ((r && r.fotos) || []).concat(novas), by: S.session.name }));
     closeModal(); toast('Docagem salva.'); render(); };
   const x = $('#dgX'); if (x) x.onclick = () => confirmar('Excluir esta docagem do histórico?', async () => { await saveRec(Object.assign({}, r, { deleted: true, excluido: true })); S.recs.delete(r.id); try { await DB.del(r.id); } catch (er) { } closeModal(); toast('Docagem excluída.'); render(); });
 }
 
-document.addEventListener('click', e => { if (VIEW !== 'doca' && VIEW !== 'controle') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
+document.addEventListener('click', e => { if (VIEW !== 'enxdoca' && VIEW !== 'enxeq') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
   if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);
 

@@ -29,7 +29,7 @@ ICO.risco = '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>';
 ICO.kpi = '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>';
 ICO.relg = '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 15h7M9 18h4"/>';
 function enxNav() {
-  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo', 'enxarr', 'enxsen'].includes(VIEW)) || (k === 'enxcor' && VIEW === 'enxfal') ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n"${k === 'enx' ? ' title="Empurradores com serviço preventivo vencido"' : ''}>${cnt}</span>` : ''}</a>`;
+  const it = (k, n, ic, cnt) => `<a href="#${k}" class="${VIEW === k || (k === 'enxcal' && ['compr', 'anoleo', 'enxarr', 'enxsen', 'enxdoca'].includes(VIEW)) || (k === 'enxcor' && VIEW === 'enxfal') ? 'on' : ''}">${ico(ic)}<span>${n}</span>${cnt ? `<span class="n"${k === 'enx' ? ' title="Empurradores com serviço preventivo vencido"' : ''}>${cnt}</span>` : ''}</a>`;
   let C = {}; try { C = typeof pcmContagem === 'function' ? pcmContagem() : {}; } catch (e) { }
   return PCM_MENU.map(([g, L]) => (g ? `<div class="grp-t${g === 'Apoio' ? ' grp-apoio' : ''}">${g}</div>` : '') + L.map(([k, n, ic]) => it(k, n, ic, C[k])).join('')).join('');
 }
