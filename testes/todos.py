@@ -25,7 +25,8 @@ else:
 node = shutil.which('node')
 if node:
     js = ("const fs=require('fs');let a;try{a=require('acorn')}catch(e){console.log('SEM_ACORN');process.exit(0)}"
-          "let n=0;for(const f of fs.readdirSync('manutencao/js'))try{a.parse(fs.readFileSync('manutencao/js/'+f,'utf8'),{ecmaVersion:'latest',allowReturnOutsideFunction:true})}catch(e){n++;console.log(f,e.message)}process.exit(n?1:0)")
+          "const L=fs.readdirSync('manutencao/js').map(f=>'manutencao/js/'+f).concat(fs.readdirSync('manutencao/dados').filter(f=>f.endsWith('.js')).map(f=>'manutencao/dados/'+f),['manutencao/sw.js']);"
+          "let n=0;for(const f of L)try{a.parse(fs.readFileSync(f,'utf8'),{ecmaVersion:'latest',allowReturnOutsideFunction:true})}catch(e){n++;console.log(f,e.message)}process.exit(n?1:0)")
     r = subprocess.run([node, '-e', js], cwd=RAIZ, capture_output=True, text=True, encoding='utf-8')
     if 'SEM_ACORN' in r.stdout:
         print('AVISO  sintaxe não conferida: instale o acorn (npm install acorn)')
