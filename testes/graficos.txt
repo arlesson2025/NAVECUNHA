@@ -2,6 +2,7 @@
 # Tirar uma linha daqui = retirar o gráfico de propósito; só com aprovação do Supervisor e registro em VERSOES.
 anoleo | Tendência da frota
 balfal | A · Pareto de falhas por equipamento
+balfal | D · Causa da falha
 balkpi | Aderência ao cronograma
 balkpi | Disponibilidade por balsa
 balkpi | Falhas por equipamento
