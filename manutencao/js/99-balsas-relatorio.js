@@ -21,7 +21,7 @@ const BAL_MESN = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'j
 function balRelKpis(R) {
   const pc = v => v == null ? '—' : nf(v, 1) + '%', hh = v => v == null ? '—' : nf(v) + ' h', h1 = v => v == null ? '—' : nf(v, 1) + ' h';
   const L = [['Disponibilidade da frota', R.K.disp, R.A.disp, pc, '≥ 95%', v => v >= 95], ['MTBF', R.K.mtbf, R.A.mtbf, hh, '≥ 500 h', v => v >= 500], ['MTTR', R.K.mttr, R.A.mttr, h1, '≤ 8 h', v => v <= 8],
-    ['Backlog (hoje)', R.K.back, null, pc, '≤ 5%', v => v <= 5], ['% manutenção preditiva', R.K.pPred, R.A.pPred, pc, '≥ 30%', v => v >= 30], ['Aderência ao cronograma', R.ad, null, pc, '≥ 90%', v => v >= 90]];
+    ['Backlog (hoje)', R.K.back, null, pc, '≤ 5%', v => v <= 5], ['Cobertura preditiva (hoje)', R.K.pCob, null, pc, '≥ 90%', v => v >= 90], ['Aderência ao cronograma', R.ad, null, pc, '≥ 90%', v => v >= 90]];
   return `<table class="d"><thead><tr><th>Indicador (NP 024 item 10)</th><th>No mês</th><th>Mês anterior</th><th>Meta</th><th>Situação</th></tr></thead><tbody>${L.map(([n, v, a, f, mt, ok]) => `<tr><td>${n}</td><td><b>${f(v)}</b></td><td>${a == null ? '—' : f(a)}</td><td>${mt}</td><td>${v == null ? 'sem dados' : ok(v) ? '<span style="color:#188038">atende</span>' : '<b style="color:#C5221F">fora da meta</b>'}</td></tr>`).join('')}</tbody></table>`;
 }
 function balRelCorpo(R, imp) {

@@ -1,7 +1,8 @@
 /* ===== FR 027_A · check-list de chegada e saída da balsa tanque, dentro do SMF (formulário em forms/FR_027_A.html; NP 024) =====
    Mesmo padrão do FR 027_L: abre já com a balsa, assinatura pelo toque (Operador / Inspetor, Coordenador de Logística, Coordenador de Operações),
    "Salvar no SMF". Ao salvar: PDF das folhas no Drive (kind 'fr027a'), horímetro do motor-bomba lançado (hor, pos 'MB'),
-   cada não conformidade vira falha da balsa (avaria): itens com o mesmo nº de OM viram uma falha só; sem OM, uma falha por item. */
+   cada não conformidade com destino Manutenção vira falha da balsa (avaria): itens com o mesmo nº de OM viram uma falha só; sem OM, uma falha por item.
+   Destino Operação (NP 024 4.4.1: defensas, letreiros, extintores, embornais…) fica só no registro do FR 027_A, sem OM e sem falha. */
 'use strict';
 const F27A_FUNC = ['Operador / Inspetor', 'Coordenador de Logística', 'Coordenador de Operações'];
 const f27aS = vid => recs('fr027a').filter(r => r.vessel === vid).sort((a, b) => (a.at || 0) - (b.at || 0));
@@ -45,7 +46,7 @@ async function f27aAbrir(vid) {
 function f27aLer(win) {
   const doc = win.document, val = s => ((doc.querySelector(s) || {}).value || '').trim(), rad = n => (doc.querySelector(`input[name="${n}"]:checked`) || {}).value || '';
   const res = {}; doc.querySelectorAll('td.c[data-k]').forEach(td => { const c = td.querySelector('input:checked'); res[td.dataset.k] = c ? c.value : ''; });
-  const nc = [...doc.querySelectorAll('table.nc tbody tr[data-k]')].map(tr => ({ k: tr.dataset.k, n: +tr.dataset.k.slice(2), lab: tr.querySelector('.nci').textContent.trim(), d: tr.querySelector('.ncd').value.trim(), c: tr.querySelector('.ncc').value, m: (tr.querySelector('.ncm') || {}).value || '', o: tr.querySelector('.nco').value.trim().replace(/\D/g, '') }));
+  const nc = [...doc.querySelectorAll('table.nc tbody tr[data-k]')].map(tr => ({ k: tr.dataset.k, n: +tr.dataset.k.slice(2), lab: tr.querySelector('.nci').textContent.trim(), d: tr.querySelector('.ncd').value.trim(), c: tr.querySelector('.ncc').value, m: (tr.querySelector('.ncm') || {}).value || '', dst: (tr.querySelector('.ncx') || {}).value === 'op' ? 'op' : 'man', o: tr.querySelector('.nco').value.trim().replace(/\D/g, '') }));
   const ass = [...doc.querySelectorAll('#sec-ass .sgg > div')].map((d, i) => ({ func: F27A_FUNC[i], nome: ((d.querySelector('input') || {}).value || '').trim(), ok: !!d.querySelector('i img') }));
   return { bal: val('#bal'), date: val('#dt'), hora: val('#hr'), local: val('#loc'), mov: rad('mov'), hmb: val('#hmb'), res, nc, obs: val('#obs'), ass };
 }
@@ -56,7 +57,8 @@ function f27aFaltas(D) {
   if (sem) f.push(sem + ' item(ns) sem marcação (SIM / NÃO / N/A)');
   if (D.nc.some(x => !x.d)) f.push('O que foi encontrado, em toda não conformidade');
   if (D.nc.some(x => !x.c)) f.push('Criticidade de toda não conformidade');
-  if (D.nc.some(x => !x.m)) f.push('Modo de falha de toda não conformidade');
+  if (D.nc.some(x => x.dst === 'man' && !x.m)) f.push('Modo de falha de toda não conformidade da manutenção');
+  if (D.nc.some(x => x.dst === 'op' && x.o)) f.push('Não conformidade da operação não leva nº de OM (troque o destino para Manutenção)');
   D.ass.forEach(a => { if (!a.nome) f.push('Nome · ' + a.func); if (!a.ok) f.push('Assinatura · ' + a.func); });
   return f;
 }
@@ -73,7 +75,7 @@ async function f27aPdf(win) {   // cada folha numa página A4 (a folha que passa
 }
 async function f27aFalhas(rec, b) {   // não conformidades → falhas da balsa
   const G = {}, sem = [], at = +new Date(rec.date + 'T' + (rec.hora || '12:00')), by = S.session ? S.session.name : '', quem = (rec.ass[0] || {}).nome || by;
-  rec.nc.forEach(x => /^\d{3,}$/.test(x.o) ? (G[x.o] = G[x.o] || []).push(x) : sem.push([x]));
+  rec.nc.filter(x => x.dst !== 'op').forEach(x => /^\d{3,}$/.test(x.o) ? (G[x.o] = G[x.o] || []).push(x) : sem.push([x]));
   const grupos = Object.values(G).concat(sem); let n = 0;
   for (const L of grupos) { L.sort((a, c) => (FR27_GRAV[a.c] ?? 9) - (FR27_GRAV[c.c] ?? 9)); const om = L[0].o && /^\d{3,}$/.test(L[0].o) ? L[0].o : '';
     if (om && recs('avaria').some(r => r.vessel === b.id && r.om === om && !r.fim && !r.excluido)) continue;   // a falha dessa OM já está aberta
@@ -92,7 +94,7 @@ async function f27aSalvar(win, ov) {
   if (dup && !confirm('Já existe um FR 027_A de ' + (D.mov === 'saida' ? 'saída' : 'chegada') + ' da ' + b.nome + ' nesta data' + (dup.hora ? ' às ' + dup.hora : '') + '.\nSalvar outro mesmo assim?')) return;
   const hr = balHor(b.id), h = D.hmb ? numBR(D.hmb) : null; let hOk = h != null;
   if (hOk && hr && h < hr.h && D.date >= hr.date) { if (!confirm('Horímetro do motor-bomba ' + nf(h) + ' h é menor que a última leitura (' + nf(hr.h) + ' h em ' + brD(hr.date) + ').\nSalvar o FR 027_A sem lançar essa leitura?')) return; hOk = false; }
-  const semOM = D.nc.filter(x => !/^\d{3,}$/.test(x.o)).length;
+  const semOM = D.nc.filter(x => x.dst !== 'op' && !/^\d{3,}$/.test(x.o)).length, nOp = D.nc.filter(x => x.dst === 'op').length;
   if (semOM && !confirm(semOM + ' não conformidade(s) sem nº de OM. Salvar assim mesmo? Elas ficam como falha aberta “sem OM no Sankhya” na ficha da balsa.')) return;
   const busy = ov.querySelector('.fo-busy'), msg = t => { busy.hidden = false; busy.querySelector('.fo-msg').textContent = t; };
   try {
@@ -104,7 +106,7 @@ async function f27aSalvar(win, ov) {
     if (hOk && !(hr && hr.h === h && hr.date === D.date)) await saveRec({ id: uid('hor'), kind: 'hor', vessel: b.id, pos: 'MB', h, date: D.date, by: rec.by, bal: true, fr027a: rec.id });
     const nf27 = await f27aFalhas(rec, b);
     busy.hidden = true; lubFecharOverlay('f27aFO');
-    toast(`FR 027_A de ${D.mov === 'saida' ? 'saída' : 'chegada'} salvo · ${b.nome}: ${D.nc.length ? D.nc.length + ' não conformidade(s), ' + nf27 + ' falha(s) registrada(s)' + (semOM ? ', ' + semOM + ' sem OM' : '') : 'nenhuma não conformidade'}${hOk ? ' · horímetro lançado' : ''}.`, 7000); render();
+    toast(`FR 027_A de ${D.mov === 'saida' ? 'saída' : 'chegada'} salvo · ${b.nome}: ${D.nc.length ? D.nc.length + ' não conformidade(s), ' + nf27 + ' falha(s) registrada(s)' + (semOM ? ', ' + semOM + ' sem OM' : '') : 'nenhuma não conformidade'}${nOp ? ' · ' + nOp + ' encaminhada(s) à operação' : ''}${hOk ? ' · horímetro lançado' : ''}.`, 7000); render();
   } catch (e) { busy.hidden = true; console.error(e); alert('Não foi possível salvar o FR 027_A: ' + (e.message || e)); }
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-bal27a]'); if (!t) return; e.preventDefault(); f27aAbrir(t.dataset.bal27a); });

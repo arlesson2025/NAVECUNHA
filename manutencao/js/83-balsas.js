@@ -322,8 +322,8 @@ function balCmpHistModal(vid) {
    ${H.map(p => `<tr><td>${brD(p.date)}</td><td class="r">${p.h != null ? nf(p.h) : '—'}</td>${p.r.vals.map(v => `<td class="r"${+v === p.min ? ' style="font-weight:700;color:' + (b.mot !== 'cum' && p.min < BAL_CMP.min ? 'var(--badt)' : 'inherit') + '"' : ''}>${nf(+v, 1)}</td>`).join('')}<td class="r">${nf(p.max - p.min, 1)}</td><td>${esc(p.bb || '—')}</td><td>${esc(p.r.om || '—')}</td></tr>`).join('')}</tbody></table></div>`, true);
 }
 // ---------- indicadores das balsas (NP 024 item 10; aprovado pelo Supervisor em 25/10/2026) ----------
-// disponibilidade = horas sem falha Crítica aberta ÷ horas do período · MTBF = horas do motor-bomba ÷ falhas · MTTR = registro da falha → resolvida (com hora)
-// backlog = falhas abertas há mais de 15 dias ÷ abertas (NP 024) · % preditiva = ensaios de compressão ÷ (serviços preventivos + ensaios) · fotos: na OM do Sankhya
+// disponibilidade = horas sem falha Crítica aberta ÷ horas do período · MTBF = horas do motor-bomba ÷ falhas Crítica e Alta (NP 024 revisada, Supervisor 02/11/2026) · MTTR = registro da falha → resolvida (com hora)
+// backlog = falhas abertas há mais de 15 dias ÷ abertas (NP 024) · cobertura preditiva = balsas com ensaio de compressão em dia (último + 1.000 h não passou) ÷ balsas (NP 024 revisada; a fórmula antiga dava ~2%) · fotos: na OM do Sankhya
 const BALK = { p: 'mes' };
 function balPer() { const H = hoje(), y = H.getFullYear(), m = H.getMonth(), amanha = new Date(pD(isoD(H)).getTime() + 864e5);
   if (BALK.p === 'ant') return { ini: new Date(y, m - 1, 1), fim: new Date(y, m, 1), tx: 'Mês passado' };
@@ -340,11 +340,11 @@ function balKpi(ini, fim) {
   const ate = Math.min(+fim, Date.now()), horas = Math.max(0, (ate - ini) / 3600e3), F = recs('avaria').filter(a => !a.excluido && balsaDe(a.vessel));
   const parada = vid => F.filter(a => a.vessel === vid && a.c === 'Crítica').reduce((s, a) => { const x = Math.max(balAt(a), +ini), y = Math.min(balFim(a) || Date.now(), ate); return s + (y > x ? (y - x) / 3600e3 : 0); }, 0);
   const porB = BALSAS.map(b => ({ b, par: parada(b.id), disp: horas ? (1 - parada(b.id) / horas) * 100 : null, hMB: balHorasMB(b.id, ini, fim) }));
-  const fal = F.filter(a => balAt(a) >= +ini && balAt(a) < ate), hMB = porB.reduce((s, x) => s + x.hMB, 0);
+  const fal = F.filter(a => balAt(a) >= +ini && balAt(a) < ate), falCA = fal.filter(a => a.c === 'Crítica' || a.c === 'Alta'), hMB = porB.reduce((s, x) => s + x.hMB, 0);
   const res = F.filter(a => balFim(a) && balFim(a) >= +ini && balFim(a) < ate), mttr = res.length ? res.reduce((s, a) => s + (balFim(a) - balAt(a)) / 3600e3, 0) / res.length : null;
   const ab = F.filter(a => !a.fim), back = ab.length ? ab.filter(a => Date.now() - balAt(a) > 15 * 864e5).length / ab.length * 100 : 0;
-  const dI = isoD(ini), dF = isoD(new Date(ate - 1)), B = recs('base').filter(r => !r.excluido && balsaDe(r.vessel) && r.date >= dI && r.date <= dF), pred = B.filter(r => r.item === 'BCMP').length, prev = B.filter(r => BA1M[r.item]).length;
-  return { horas, porB, fal, res, ab, hMB, disp: horas ? porB.reduce((s, x) => s + x.disp, 0) / porB.length : null, mtbf: fal.length && hMB > 0 ? hMB / fal.length : null, mttr, back, pred, prev, pPred: pred + prev ? pred / (pred + prev) * 100 : null }; }
+  const dI = isoD(ini), dF = isoD(new Date(ate - 1)), B = recs('base').filter(r => !r.excluido && balsaDe(r.vessel) && r.date >= dI && r.date <= dF), pred = B.filter(r => r.item === 'BCMP').length, prev = B.filter(r => BA1M[r.item]).length, cob = BALSAS.filter(b => { const c = balCmpSit(b); return c.u && c.falta != null && c.falta >= 0; }).length;
+  return { horas, porB, fal, res, ab, hMB, disp: horas ? porB.reduce((s, x) => s + x.disp, 0) / porB.length : null, mtbf: falCA.length && hMB > 0 ? hMB / falCA.length : null, falCA, mttr, back, pred, prev, cob, pCob: cob / BALSAS.length * 100 }; }
 function balBarras(L, fmt, meta, alto) {   // barras verticais no desenho do SMF: rótulos embaixo, linha da meta tracejada
   const n = L.length, W = Math.max(640, n * 44), H = 220, E = 34, T = 18, B = 34, gw = (W - E - 10) / Math.max(1, n), bw = Math.min(42, gw * .62), mx = Math.max(100, ...L.map(x => x[1] || 0)), Y = v => T + (H - T - B) * (1 - v / mx);
   let g = [0, 50, 100].map(t => `<line x1="${E}" x2="${W - 10}" y1="${Y(t)}" y2="${Y(t)}" stroke="#EEF2F6"/><text x="${E - 6}" y="${Y(t) + 3}" text-anchor="end" font-size="10" fill="#64748B">${t}%</text>`).join('');
@@ -365,10 +365,10 @@ function vBalKpi() {
   return balCab('Indicadores', `${P.tx} · ${brD(isoD(P.ini))} a ${brD(isoD(new Date(Math.min(+P.fim, Date.now()) - 1)))} · metas da NP 024 item 10 · anterior = período de mesmo tamanho logo antes`,
     `<div class="seg">${[['mes', 'Este mês'], ['ant', 'Mês passado'], ['tri', '3 meses'], ['ano', 'Ano']].map(([k, t]) => `<button data-balkp="${k}" class="${BALK.p === k ? 'on' : ''}">${t}</button>`).join('')}</div>`)
    + `<div class="bal-kg">${card('Disponibilidade da frota', K.disp, ant.disp, pc, '≥ 95%', v => v >= 95, 'Horas sem falha Crítica aberta ÷ horas do período, média das 29 balsas. Serviço vencido não entra.')}
-     ${card('MTBF', K.mtbf, ant.mtbf, hh, '≥ 500 h', v => v >= 500, `Horas do motor-bomba (${nf(K.hMB)} h) ÷ falhas registradas (${K.fal.length}).${K.fal.length && !K.hMB ? ' Sem leitura de horímetro no período.' : ''}`)}
+     ${card('MTBF', K.mtbf, ant.mtbf, hh, '≥ 500 h', v => v >= 500, `Horas do motor-bomba (${nf(K.hMB)} h) ÷ falhas Crítica e Alta (${K.falCA.length}).${K.falCA.length && !K.hMB ? ' Sem leitura de horímetro no período.' : ''}`)}
      ${card('MTTR', K.mttr, ant.mttr, h1, '≤ 8 h', v => v <= 8, `Do registro da falha até “Resolvida”, nas ${K.res.length} falhas resolvidas no período.`)}
      ${card('Backlog', K.back, null, pc, '≤ 5%', v => v <= 5, `Hoje: falhas abertas há mais de 15 dias ÷ falhas abertas (${K.ab.length}).`)}
-     ${card('% manutenção preditiva', K.pPred, ant.pPred, pc, '≥ 30%', v => v >= 30, `Ensaios de compressão (${K.pred}) ÷ serviços preventivos e ensaios (${K.prev + K.pred}). Pela fórmula da NP, a meta de 30% não é alcançável com o plano atual: revisar na NP 024.`)}
+     ${card('Cobertura preditiva (hoje)', K.pCob, null, pc, '≥ 90%', v => v >= 90, `Balsas com ensaio de compressão em dia (${K.cob}) ÷ balsas (${BALSAS.length}). Em dia = o último ensaio + ${nf(BAL_CMP.int)} h ainda não passou no horímetro do motor-bomba; sem ensaio ou sem horímetro conta como fora.`)}
      <div class="card bal-k"><div class="bal-kn">Registro fotográfico</div><div class="bal-kv" style="color:#64748B">Sankhya</div><div class="bal-km"><span class="pill p-mut">meta 100%</span></div><div class="note">As fotos de antes e depois das balsas ficam na OM do Sankhya (NP 024 6.4 e 9); o SMF não tem como medir.</div></div></div>
    <div class="rl-2c bal-2c"><div class="card"><h2>Aderência ao cronograma · ${y}</h2>${balBarras(A.map((x, i) => [PR_MES[i], i <= hm && x.den ? x.ok / x.den * 100 : null]), v => Math.round(v) + '%', 90, true)}<p class="note">Feito no prazo ÷ o que venceu no mês (cronograma das balsas). Vermelho = abaixo de 90%.</p></div>
      <div class="card"><h2>Falhas por equipamento · ${K.fal.length}</h2>${E.length ? rmPareto(E) : '<p class="note">Nenhuma falha registrada no período.</p>'}${E.length ? '<p class="note">Clique numa barra para ver as falhas.</p>' : ''}
