@@ -168,25 +168,59 @@ function vBalCr() {
       const cR = M.map((m, i) => { const r = m.ok + m.late, tip = esc(m.tx.join('\n')); if (r) return `<td class="pr-c r ${m.late ? 'late' : 'ok'}${i === hm ? ' hj' : ''}" title="${tip}">${m.insp && !m.real ? '<b>I</b>' : r > 1 ? r + '×' : '✓'}</td>`; if (m.miss) return `<td class="pr-c r miss${i === hm ? ' hj' : ''}" title="${tip}">✗</td>`; return `<td class="pr-c r${i === hm ? ' hj' : ''}"></td>`; }).join('');
       rows += `<tr class="pr-p"><td class="pr-sv" rowspan="2"><b>${t.id} · ${esc(t.eq)}</b><small>${esc(t.serv)}</small></td><td class="pr-f" rowspan="2">${balIvTx(t)}</td><td class="pr-l">P</td>${cP}<td class="pr-t">${P.reduce((a, x) => a + x, 0)}</td></tr><tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${M.reduce((a, m) => a + m.ok + m.late, 0)}</td></tr>`; });
     const ok = D.Ok.slice(0, hm + 1).reduce((a, x) => a + x, 0), den = ok + D.Lt.slice(0, hm + 1).reduce((a, x) => a + x, 0) + D.Ms.slice(0, hm + 1).reduce((a, x) => a + x, 0), a = ad(ok, den);
-    return balCab(`Cronograma · ${sel.nome}`, `${esc(balMotTx(sel))} · ● previsto · ✓ feito no prazo · ✓ âmbar feito com atraso · ✗ venceu sem registro · passe o mouse para ver datas e OMs`, `<a class="mbtn" href="#balcr" data-balcrb="">← Frota de balsas</a>${anoBt}`)
+    return balCab(`Cronograma · ${sel.nome}`, `${esc(balMotTx(sel))} · ● previsto · ✓ feito no prazo · ✓ âmbar feito com atraso · ✗ venceu sem registro · passe o mouse para ver datas e OMs`, `<a class="mbtn" href="#balcr" data-balcrb="">← Frota de balsas</a>${anoBt}<select id="balcrPapel" style="width:auto">${['A4', 'A3'].map(p => `<option${p === (BALCR.papel || 'A4') ? ' selected' : ''}>${p}</option>`).join('')}</select><button class="mbtn pri" data-balcrimp>🖨 Imprimir</button>`)
+     + (B0 => `<div class="card"><h2>Situação do cronograma</h2><p>${B0 ? `Previsto <b>aprovado</b> em <b>${crAprovQuando(B0)}</b> por ${esc(B0.aprovBy || '—')}` : '<b style="color:#B06000">Previsto ainda não aprovado</b> · a aderência mede contra o plano calculado, que muda conforme os serviços são feitos'}${can.admin() && !B0 ? ` <button class="mbtn sm pri" data-balcraprov="${sel.id}">Aprovar o cronograma ${y}</button>` : ''}</p></div>`)(cronoBase(y, sel.id))
      + `<div class="card"><div class="cm-chips"><span class="cm-chip on">Aderência no prazo <b style="color:${adCor(a)}">${a == null ? '—' : a + '%'}</b></span><span class="cm-chip">Não realizados no prazo <b>${D.Ms.reduce((x, y2) => x + y2, 0)}</b></span><span class="cm-chip">Previsto no ano <b>${D.P.reduce((x, y2) => x + y2, 0)}</b></span></div>
        <div class="tw"><table class="pr-t"><colgroup><col style="width:260px"><col style="width:96px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:40px"></colgroup><thead><tr><th>Serviço</th><th>Frequência</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${rows}</tbody></table></div></div>`; }
-  const tot = PR_MES.map(() => ({ p: 0, r: 0, ok: 0, den: 0 })); let tF = 0;
-  const rows = BALSAS.map(b => { const d = balCxBalsa(b, y), venc = d.Ms.reduce((a, x) => a + x, 0), ok = d.Ok.slice(0, hm + 1).reduce((a, x) => a + x, 0), den = ok + d.Lt.slice(0, hm + 1).reduce((a, x) => a + x, 0) + d.Ms.slice(0, hm + 1).reduce((a, x) => a + x, 0), a = ad(ok, den);
-    tF += venc; d.P.forEach((x, i) => { tot[i].p += x; tot[i].r += d.R[i]; tot[i].ok += d.Ok[i]; if (i <= hm) tot[i].den += d.Ok[i] + d.Lt[i] + d.Ms[i]; });
-    const cP = d.P.map((n, i) => `<td class="pr-c p${i === hm ? ' hj' : ''}">${n || ''}</td>`).join('');
-    const cR = d.R.map((n, i) => `<td class="pr-c r ${i > hm ? '' : d.Ms[i] ? 'miss' : d.Lt[i] ? 'late' : n ? 'ok' : ''}${i === hm ? ' hj' : ''}" title="${n} realizados · ${d.Lt[i]} com atraso · ${d.Ms[i]} não feitos no prazo">${i > hm ? '' : (n || (d.P[i] ? '0' : '')) + (d.Ms[i] ? '<small> ✗' + d.Ms[i] + '</small>' : '')}</td>`).join('');
-    return `<tr class="pr-p"><td class="pr-sv" rowspan="2"><a href="#balcr" data-balcrb="${b.id}"><b>${esc(b.nome)}</b></a><small>${esc(BAL_MOTOR[b.mot])}</small></td><td class="pr-l">P</td>${cP}<td class="pr-t">${d.P.reduce((x, y2) => x + y2, 0)}</td><td class="pr-fa" rowspan="2">${venc ? `<b style="color:#C5221F">${venc} não realizado${venc > 1 ? 's' : ''}</b>` : '<span style="color:#188038">nada vencido</span>'}</td><td class="pr-ad" rowspan="2"><b style="color:${adCor(a)}">${a == null ? '—' : a + '%'}</b></td></tr>
-     <tr class="pr-r"><td class="pr-l">R</td>${cR}<td class="pr-t">${d.R.reduce((x, y2) => x + y2, 0)}</td></tr>`; }).join('');
-  const okT = tot.reduce((a, t) => a + t.ok, 0), dT = tot.reduce((a, t) => a + t.den, 0), aT = ad(okT, dT);
-  return balCab('Cronograma', 'Previsto × realizado mês a mês · aderência = feito no prazo ÷ o que já venceu · clique na balsa para ver serviço por serviço', anoBt)
-   + `<div class="card"><div class="cm-chips"><span class="cm-chip on">Aderência no prazo <b style="color:${adCor(aT)}">${aT == null ? '—' : aT + '%'}</b></span><span class="cm-chip">Serviços preventivos não realizados dentro do prazo <b>${tF}</b></span><span class="cm-chip">Previsto no ano <b>${tot.reduce((a, t) => a + t.p, 0)}</b></span></div>
-     <div class="tw"><table class="pr-t"><colgroup><col style="width:150px"><col style="width:22px">${PR_MES.map(() => '<col>').join('')}<col style="width:46px"><col style="width:150px"><col style="width:80px"></colgroup>
-     <thead><tr><th>Balsa</th><th></th>${PR_MES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>No prazo</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody>
-     <tfoot><tr class="pr-tot"><td colspan="2">Frota · previsto</td>${tot.map(x => `<td class="pr-c">${x.p || ''}</td>`).join('')}<td class="pr-t">${tot.reduce((a, x) => a + x.p, 0)}</td><td rowspan="3" class="pr-fa"><b style="color:${tF ? '#C5221F' : '#188038'}">${tF} não realizados</b></td><td rowspan="3" class="pr-ad"><b>${aT == null ? '—' : aT + '%'}</b></td></tr>
-     <tr class="pr-tot"><td colspan="2">Frota · realizado</td>${tot.map((x, i) => `<td class="pr-c">${i > hm ? '' : x.r}</td>`).join('')}<td class="pr-t">${tot.reduce((a, x) => a + x.r, 0)}</td></tr>
-     <tr class="pr-tot"><td colspan="2">Aderência</td>${tot.map((x, i) => `<td class="pr-c"><b>${i <= hm && x.den ? Math.round(x.ok / x.den * 100) + '%' : ''}</b></td>`).join('')}<td class="pr-t"></td></tr></tfoot></table></div>
-     <p class="note">Previsto pela data do último serviço e pelas horas no ritmo medido do motor-bomba (sem 2 leituras de horímetro, o serviço por horas só conta pelo prazo em meses). Feito até o fim do mês do vencimento = no prazo. Item sem nenhum serviço registrado não entra.</p></div>`;
+  return balCrFrota(y, anoBt);
+}
+// cronograma da frota de balsas no formato do 2.1 dos empurradores (SMF 3.137, Supervisor 01/11/2026: “revise o cronograma, o formato, layout”):
+// uma linha por balsa, executado/previsto em cada mês com a cor da situação, números do ano, aprovação da linha de base e impressão A4/A3
+const balCrLado = () => BALSAS.filter(b => { try { return balEstado(b).st !== 'ref'; } catch (e) { return true; } });
+function balCrGrade(y, imp) {
+  const hm = hoje().getFullYear() === y ? hoje().getMonth() : y < hoje().getFullYear() ? 12 : -1, T = Array.from({ length: 12 }, () => ({ p: 0, r: 0, ok: 0, lt: 0, ms: 0 })), L = balCrLado(); let aOk = 0, aDen = 0;
+  const rows = L.map(b => { const d = balCxBalsa(b, y), ds = balDocaSit(b), dm = ds.s.alvoD && ds.s.alvoD.getFullYear() === y ? ds.s.alvoD.getMonth() : -1;
+    const ok = d.Ok.slice(0, hm + 1).reduce((a, x) => a + x, 0), den = ok + d.Lt.slice(0, hm + 1).reduce((a, x) => a + x, 0) + d.Ms.slice(0, hm + 1).reduce((a, x) => a + x, 0), ad = den ? Math.round(ok / den * 100) : null; aOk += ok; aDen += den;
+    const cel = i => { const p = d.P[i], r = d.R[i], lt = d.Lt[i], ms = d.Ms[i]; T[i].p += p; T[i].r += r; T[i].ok += d.Ok[i]; T[i].lt += lt; T[i].ms += ms;
+      const cls = i > hm ? 'fut' : i === hm ? (ms ? 'ms' : 'hj') : ms ? 'ms' : lt ? 'lt' : p || r ? 'ok' : 'nd';
+      const tx = i > hm ? (p || '') : (p || r ? `${r}<small>/${p}</small>` : ''), tip = `${MESES[i]}: ${p} previsto${p === 1 ? '' : 's'} · ${d.Ok[i]} no prazo · ${lt} com atraso · ${ms} não executado${ms === 1 ? '' : 's'}${i === dm ? ' · docagem' : ''}`;
+      return `<td class="ecr-c ${cls}" title="${tip}">${tx ? (imp ? tx : `<span class="ecr-ch">${tx}</span>`) : ''}${i === dm ? '<span class="ecr-dk" title="Docagem">⚓</span>' : ''}</td>`; };
+    const nome = imp ? `<b>${esc(b.nome)}</b>` : `<a href="#balcr" data-balcrb="${b.id}"><b>${esc(b.nome)}</b></a>`;
+    return `<tr><td class="ecr-n">${nome}<small>${esc(BAL_MOTOR[b.mot] || '')}</small></td>${[...Array(12).keys()].map(cel).join('')}<td class="ecr-t">${d.P.reduce((a, x) => a + x, 0)}</td><td class="ecr-t"><b style="color:${ad == null ? '#5F6368' : ad >= 90 ? '#188038' : ad >= 75 ? '#B06000' : '#C5221F'}">${ad == null ? '—' : ad + '%'}</b></td></tr>`; }).join('');
+  const ad = aDen ? Math.round(aOk / aDen * 100) : null;
+  const foot = `<tr class="ecr-f"><td class="ecr-n"><b>Frota</b></td>${T.map((t, i) => `<td class="ecr-c">${i > hm ? t.p : `${t.r}<small>/${t.p}</small>`}</td>`).join('')}<td class="ecr-t">${T.reduce((a, t) => a + t.p, 0)}</td><td class="ecr-t"><b>${ad == null ? '—' : ad + '%'}</b></td></tr>
+    <tr class="ecr-f"><td class="ecr-n">Aderência no mês</td>${T.map((t, i) => { const dd = t.ok + t.lt + t.ms; return `<td class="ecr-c">${i <= hm && dd ? Math.round(t.ok / dd * 100) + '%' : ''}</td>`; }).join('')}<td></td><td></td></tr>`;
+  const ate = T.filter((t, i) => i <= hm), soma = (A, k) => A.reduce((a, t) => a + t[k], 0), B = L.map(b => cronoBase(y, b.id)).filter(Boolean);
+  let aprovTxt = 'Cronograma ainda não aprovado'; if (B.length) { const u = B.slice().sort((a, b) => String(a.aprovAt) + (a.aprovEm || 0) < String(b.aprovAt) + (b.aprovEm || 0) ? 1 : -1)[0]; aprovTxt = (B.length === L.length ? 'Aprovado' : `Aprovado para ${B.length} de ${L.length} balsas`) + ` em ${crAprovQuando(u)} por ${u.aprovBy || '—'}`; }
+  return { ad, n: L.length, aprov: B.length, aprovTxt, exe: soma(ate, 'r'), prevAte: soma(ate, 'p'), ms: soma(ate, 'ms'), lt: soma(ate, 'lt'), fut: soma(T.filter((t, i) => i > hm), 'p'),
+    html: `<table class="ecr${imp ? '' : ' ecr2'}"><thead><tr><th class="ecr-n">Balsa</th>${MESES.map((m, i) => `<th${i === hm ? ' class="hj"' : ''}>${m}</th>`).join('')}<th>Total</th><th>Aderência</th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>` };
+}
+const BAL_CR_LEG = '<div class="ecr-lg"><span><i class="ok"></i>executado no prazo</span><span><i class="lt"></i>executado com atraso</span><span><i class="ms"></i>vencido sem execução</span><span><i class="hj"></i>mês atual</span><span><i class="fut"></i>previsto</span><span>⚓ docagem (CSN)</span><span>número = executado/previsto no mês</span></div>';
+function balCrFrota(y, anoBt) {
+  const G = balCrGrade(y), k = (l, x, c, d) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${x}</b>${d ? `<small>${d}</small>` : ''}</div>`;
+  const imp = `<select id="balcrPapel" style="width:auto">${['A4', 'A3'].map(p => `<option${p === (BALCR.papel || 'A4') ? ' selected' : ''}>${p}</option>`).join('')}</select><button class="mbtn pri" data-balcrimp>🖨 Imprimir</button>`;
+  return balCab('Cronograma anual das balsas', `Frota de balsas petroleiras · ${y} · plano da NP Navecunha 024 item 8 · clique na balsa para ver serviço por serviço`, anoBt + imp)
+   + `<div class="card"><h2>Cronograma da Frota de Balsas ${y}</h2><p class="note" style="margin:-4px 0 8px">${esc(G.aprovTxt)}${can.admin() && G.aprov < G.n ? ` · <button class="mbtn sm pri" data-balcraprov="todas">Aprovar o cronograma ${y} das balsas</button>` : ''}</p>
+     <div class="sf-k ecr-k">${k('Aderência no ano', G.ad == null ? '—' : G.ad + '%', G.ad == null ? '' : G.ad >= 90 ? 'var(--okt)' : G.ad >= 75 ? 'var(--warnt)' : 'var(--badt)', 'meta 90%')}${k('Executado até agora', G.exe + ' de ' + G.prevAte, '', 'serviços previstos até o mês atual')}${k('Vencidos sem execução', G.ms, G.ms ? 'var(--badt)' : '')}${k('Executados com atraso', G.lt, G.lt ? 'var(--warnt)' : '')}${k('Previsto até dezembro', G.fut)}${k('Cronogramas aprovados', G.aprov + ' de ' + G.n, G.aprov < G.n ? 'var(--warnt)' : 'var(--okt)')}</div>
+     ${BAL_CR_LEG}<div class="tw">${G.html}</div>
+     <p class="note">Previsto pela data do último serviço e pelas horas no ritmo medido do motor-bomba (sem 2 leituras de horímetro, o serviço por horas só conta pelo prazo em meses). Feito até o fim do mês do vencimento = no prazo. Balsa em reforma fica fora. Item sem nenhum serviço registrado não entra.</p></div>`;
+}
+function balCrImprimir() {
+  const y = BALCR.ano, b = balsaDe(BALCR.b), pp = BALCR.papel || 'A4', css = [...document.querySelectorAll('style')].map(x => x.textContent).filter(x => x.includes('.ecr{') || x.includes('.pr-t')).join('\n'), w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
+  let corpo, tit, sub;
+  if (b) { tit = `CRONOGRAMA ANUAL · ${b.nome} · ${y}`; const B = cronoBase(y, b.id); sub = `${esc(balMotTx(b))} · ${B ? 'aprovado em ' + crAprovQuando(B) + ' por ' + esc(B.aprovBy || '—') : 'previsto ainda não aprovado'}`; const t = document.querySelector('#main table.pr-t'); corpo = t ? t.outerHTML : ''; }
+  else { const G = balCrGrade(y, true); tit = `CRONOGRAMA DA FROTA DE BALSAS ${y}`; sub = `${esc(G.aprovTxt)} · aderência no ano ${G.ad == null ? '—' : G.ad + '%'}`; corpo = BAL_CR_LEG + G.html; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cronograma balsas ${y}</title><style>${css}${DOC_CAB_CSS}@page{size:${pp} landscape;margin:8mm}body{margin:0;font-family:Arial,sans-serif;color:#202124}.ecr,.pr-t{font-size:${pp === 'A3' ? 11 : 9}px}
+   .ass{display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;margin-top:26px}.ass div{border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
+   ${docCab(tit, `${sub} · emitido em ${hoje().toLocaleDateString('pt-BR')}`, 'NP Navecunha 024 · item 8 · plano preventivo das balsas')}
+   ${corpo}<div class="ass"><div>Elaborado por · Supervisor de Manutenção</div><div>Aprovado por · Gerência</div><div>Data</div></div><script>setTimeout(function(){window.print()},600)<\/script></body></html>`); w.document.close();
+}
+function balCrAprovar(id) {
+  if (!can.admin()) return toast('Só o Supervisor aprova o cronograma.'); const y = BALCR.ano, L = id === 'todas' ? balCrLado() : [balsaDe(id)];
+  confirmar(`Aprovar o cronograma ${y} de ${id === 'todas' ? 'todas as balsas' : L[0].nome}? O previsto fica congelado como linha de base.`, async () => {
+    for (const b of L) { const d = balCxBalsa(b, y), linhasPR = {}; d.L.forEach(({ t, M }) => { linhasPR[t.id] = M.map(m => m.plan + m.ok + m.late + m.miss); });
+      await saveRec({ id: 'crono-' + y + '-' + b.id, kind: 'crono', ano: y, vessel: b.id, bal: true, rev: 0, aprovBy: S.session.name, aprovAt: isoD(hoje()), aprovEm: Date.now(), linhasPR }); }
+    toast('Cronograma aprovado.'); render(); });
 }
 // ---------- docagem: última, data-limite do CSN, histórico com estaleiro, dias parada e custo, projeção de 5 anos ----------
 const balDocas = vid => balExecs(vid, 'B10.1').filter(r => !r.insp && !r.nf).slice().reverse();   // inspeção sem necessidade de docar não é docagem
@@ -438,7 +472,9 @@ function balCsnModal(vid) {
   $('#bcOk').onclick = async () => { if (!$('#bcD').value) return toast('Informe a data.'); await saveRec({ id: uid('doclim'), kind: 'doclim', vessel: vid, date: $('#bcD').value, obs: $('#bcO').value.trim(), by: S.session.name, bal: true }); closeModal(); toast('Data-limite salva.'); render(); };
 }
 function balAfter() {
-  const m = $('#main'); m.onclick = async e => { const t = e.target.closest('[data-balexe],[data-balhor],[data-balfalha],[data-balcsn],[data-balfim],[data-balf],[data-balano],[data-balft],[data-balcrb],[data-baldoca],[data-balcal],[data-balcmp],[data-balcmph],[data-balkp]'); if (!t) return; const d = t.dataset;
+  const m = $('#main'); m.onchange = e => { if (e.target.id === 'balcrPapel') BALCR.papel = e.target.value; }; m.onclick = async e => { const t = e.target.closest('[data-balcrimp],[data-balcraprov],[data-balexe],[data-balhor],[data-balfalha],[data-balcsn],[data-balfim],[data-balf],[data-balano],[data-balft],[data-balcrb],[data-baldoca],[data-balcal],[data-balcmp],[data-balcmph],[data-balkp]'); if (!t) return; const d = t.dataset;
+    if (d.balcrimp !== undefined) return balCrImprimir();
+    if (d.balcraprov !== undefined) return balCrAprovar(d.balcraprov);
     if (d.balkp !== undefined) { BALK.p = d.balkp; RM_DET = null; return render(); }
     if (d.balcrb !== undefined) { e.preventDefault(); BALCR.b = d.balcrb; return render(); }
     if (d.baldoca !== undefined) return balDocaModal(d.baldoca);
