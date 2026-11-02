@@ -83,9 +83,9 @@ function balTextoOM(b, L) {
 const BAL_DOC_CSS = `@page{size:A4;margin:12mm}body{margin:0;font-family:Arial,sans-serif;color:#202124;font-size:11px}h3{font-size:12px;margin:12px 0 4px;color:#0B2A5B}table.d{width:100%;border-collapse:collapse}table.d th{background:#1F2A44;color:#fff;font-size:10px;padding:4px;text-align:left}table.d td{border:1px solid #CBD2DC;padding:4px;vertical-align:top}table.d td.c{text-align:center;width:46px}
   .id{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid #CBD2DC}.id div{padding:4px 6px;border:1px solid #E3E8EF}.id span{display:block;font-size:9px;color:#5F6368}.ln{border-bottom:1px solid #999;height:18px}
   .ass{display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px;margin-top:34px}.ass div{border-top:1px solid #000;padding-top:3px;text-align:center;font-size:10px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
-function balDocJanela(tit, sub, corpo) {
-  const w = window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${typeof tituloArq === 'function' ? tituloArq(tit) : 'Anexo II-B'}</title><style>${DOC_CAB_CSS}${BAL_DOC_CSS}</style></head><body>${docCab(tit, sub, 'NP Navecunha 024 · itens 6.4 e 8')}${corpo}<script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
+function balDocJanela(tit, sub, corpo, norma, w0) {
+  const w = w0 || window.open('', '_blank'); if (!w) return toast('Permita pop-ups para imprimir.');
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${typeof tituloArq === 'function' ? tituloArq(tit) : 'Anexo II-B'}</title><style>${DOC_CAB_CSS}${BAL_DOC_CSS}</style></head><body>${docCab(tit, sub, norma || 'NP Navecunha 024 · itens 6.4 e 8')}${corpo}<script>setTimeout(function(){window.print()},500)<\/script></body></html>`); w.document.close();
 }
 function balServTab(b, L, campo, R) {
   const G = {}; L.forEach(t => (G[balGr(t)] = G[balGr(t)] || []).push(t));

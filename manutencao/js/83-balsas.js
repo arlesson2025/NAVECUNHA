@@ -451,20 +451,31 @@ function balFalhaModal(vid) {
   if (!balPode()) return;
   modal(`<h2>Registrar falha · balsa</h2><p class="note">NP 024 6.1: toda irregularidade vira OM no Sankhya. Crítica impede a balsa de operar até a liberação do Supervisor; Alta deixa com restrição.</p>
    <div class="g"><label class="f s3">Balsa<select id="bfV">${BALSAS.map(b => `<option value="${b.id}"${b.id === vid ? ' selected' : ''}>${esc(b.nome)}</option>`).join('')}</select></label><label class="f s3">Data<input type="date" id="bfD" value="${isoD(hoje())}"></label><label class="f s3">Hora<input type="time" id="bfH" value="${new Date().toTimeString().slice(0, 5)}"></label><label class="f s3">Classe<select id="bfC">${['Crítica', 'Alta', 'Média', 'Baixa'].map(c => `<option>${c}</option>`).join('')}</select></label><label class="f s3">Nº da OM (Sankhya)<input id="bfO" inputmode="numeric" placeholder="se já aberta"></label></div>
-   <label class="f">Equipamento<select id="bfQ">${[...new Set(BA1.map(t => t.eq))].concat(['Rede de carga e tubulações', 'Tanques', 'Outro']).map(q => `<option>${esc(q)}</option>`).join('')}</select></label><label class="f">O que aconteceu<input id="bfX"></label>
+   <label class="f">Equipamento<select id="bfQ">${[...new Set(BA1.map(t => t.eq))].concat(['Rede de carga e tubulações', 'Tanques', 'Outro']).map(q => `<option>${esc(q)}</option>`).join('')}</select></label><label class="f">O que aconteceu<input id="bfX"></label><div class="g"><label class="f s3">Modo de falha${enxSel_('bfM', MODOS, '', 'Escolha…')}</label>${enxFotoCampo('bfF', 'Fotos de antes (até 6)')}</div>
    <p class="note">Crítica (NP 024 6.1): lubrificação, refrigeração e arrefecimento, injeção, sistema elétrico, estanqueidade, bombeio, dutos, válvulas de segurança, eixo ou rotor da bomba.</p><div class="note" id="bfE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="bfOk">Salvar</button></div>`, true);
   $('#bfOk').onclick = async () => { const desc = $('#bfX').value.trim(), hora = $('#bfH').value || '12:00'; if (!desc) return $('#bfE').textContent = 'Descreva a falha.'; if (!$('#bfD').value) return $('#bfE').textContent = 'Informe a data.';
-    await saveRec({ id: uid('avaria'), kind: 'avaria', vessel: $('#bfV').value, date: $('#bfD').value, c: $('#bfC').value, om: $('#bfO').value.trim(), sis: $('#bfQ').value, pos: 'UN', desc, quem: S.session.name, meio: 'FR 027_A / tripulação', hora, at: +new Date($('#bfD').value + 'T' + hora), by: S.session.name, bal: true });
+    const modo = $('#bfM').value; if (!modo) return $('#bfE').textContent = 'Escolha o modo de falha.';
+    const fotos = []; for (const f of fxArq('bfF').slice(0, 6)) fotos.push({ tipo: 'ANTES', src: await comprimir(f), at: Date.now() });
+    await saveRec({ id: uid('avaria'), kind: 'avaria', vessel: $('#bfV').value, date: $('#bfD').value, c: $('#bfC').value, om: $('#bfO').value.trim(), sis: $('#bfQ').value, pos: 'UN', desc, modo, fotos, quem: S.session.name, meio: 'FR 027_A / tripulação', hora, at: +new Date($('#bfD').value + 'T' + hora), by: S.session.name, bal: true });
     closeModal(); toast('Falha registrada.'); render(); };
 }
-function balFimModal(id) {   // liberação da balsa: data e hora contam no MTTR
+function balFimModal(id) {   // liberação da balsa (data e hora contam no MTTR) com o serviço executado e o Relatório de Manutenção Corretiva (II-A), como nos empurradores (SMF 3.139)
   if (!balPode()) return; const r = S.recs.get(id); if (!r) return; const a = new Date();
-  modal(`<h2>Falha resolvida · ${esc(vName(r.vessel))}</h2><p class="note">${esc(r.c)} · ${esc(r.desc)}. Data e hora em que a balsa foi liberada (o MTTR conta do registro da falha até aqui).</p>
-   <div class="g"><label class="f s3">Data<input type="date" id="bxD" value="${isoD(a)}"></label><label class="f s3">Hora<input type="time" id="bxH" value="${a.toTimeString().slice(0, 5)}"></label><label class="f s3">Nº da OM (Sankhya)<input id="bxO" value="${esc(r.om || '')}"></label></div>
-   <div class="note" id="bxE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="bxOk">Salvar</button></div>`);
-  $('#bxOk').onclick = async () => { const t = +new Date($('#bxD').value + 'T' + ($('#bxH').value || '12:00')), om = $('#bxO').value.trim(); if (!$('#bxD').value) return $('#bxE').textContent = 'Informe a data.';
-    if (t < balAt(r)) return $('#bxE').textContent = 'A liberação não pode ser antes do registro da falha.'; if (!om) return $('#bxE').textContent = 'Informe o nº da OM encerrada no Sankhya.';
-    await saveRec(Object.assign({}, r, { om, fim: { at: t, by: S.session.name } })); closeModal(); toast('Falha resolvida.'); render(); };
+  modal(`<h2>Falha resolvida · ${esc(vName(r.vessel))}</h2><p class="note">${esc(r.c)} · ${esc(r.desc)}${r.modo ? ' · ' + esc(r.modo) : ''}. Data e hora em que a balsa foi liberada (o MTTR conta do registro da falha até aqui).</p>
+   <div class="g"><label class="f s2">Data<input type="date" id="bxD" value="${isoD(a)}"></label><label class="f s2">Hora<input type="time" id="bxH" value="${a.toTimeString().slice(0, 5)}"></label><label class="f s2">Nº da OM (Sankhya)<input id="bxO" value="${esc(r.om || '')}"></label>
+   <label class="f s6">Serviço executado<textarea id="bxS" rows="2" placeholder="o que foi feito para corrigir"></textarea></label>
+   <label class="f s3">Causa da falha${enxSel_('bxC', CAUSAS, r.causaCat || '', 'Escolha…')}</label><label class="f s3">Análise da causa (opcional)<input id="bxA" placeholder="por que aconteceu"></label>
+   <label class="f s3">Peças e materiais<input id="bxP"></label><label class="f s3">Teste funcional<input id="bxT" placeholder="ex.: bomba testada em carga, sem vazamento"></label>
+   <label class="f s3">Executado por<select id="bxX"><option>Equipe própria</option><option>Terceiro</option></select></label><label class="f s3">Nome ou empresa<input id="bxQ"></label>
+   ${enxFotoCampo('bxF', 'Fotos de depois (até 6)')}</div>
+   <div class="note" id="bxE" style="color:var(--badt)"></div><div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="bxOk">Salvar e imprimir o II-A</button></div>`, true);
+  $('#bxOk').onclick = async () => { const t = +new Date($('#bxD').value + 'T' + ($('#bxH').value || '12:00')), om = $('#bxO').value.trim(), sv = $('#bxS').value.trim(), ca = $('#bxC').value, te = $('#bxT').value.trim(), E = $('#bxE'); if (!$('#bxD').value) return E.textContent = 'Informe a data.';
+    if (t < balAt(r)) return E.textContent = 'A liberação não pode ser antes do registro da falha.'; if (!om) return E.textContent = 'Informe o nº da OM encerrada no Sankhya.';
+    if (!sv) return E.textContent = 'Descreva o serviço executado.'; if (!ca) return E.textContent = 'Escolha a causa da falha.'; if (!te) return E.textContent = 'Informe o teste funcional feito antes de liberar.';
+    const w = window.open('', '_blank'), arq = fxArq('bxF').slice(0, 6), V = { ac: $('#bxA').value.trim(), pm: $('#bxP').value.trim(), ex: $('#bxX').value, q: $('#bxQ').value.trim() }, fotos = (r.fotos || []).slice();
+    for (const f of arq) fotos.push({ tipo: 'DEPOIS', src: await comprimir(f), at: Date.now() });
+    const o = Object.assign({}, r, { om, servicos: sv, causaCat: ca, causa: V.ac, materiais: V.pm, teste: te, exec: V.ex, execn: V.q, fotos, fim: { at: t, by: S.session.name } });
+    await saveRec(o); closeModal(); toast('Falha resolvida.'); render(); if (typeof balIIA === 'function') balIIA(o.id, w); else if (w) w.close(); };
 }
 function balCsnModal(vid) {
   if (!balPode()) return; const b = balsaDe(vid), c = balCsn(vid);
@@ -500,7 +511,7 @@ BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.
 // menu da frota de balsas (renderNav chama quando FROTA_TIPO = 'bal')
 function balNav() {
   const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${k === 'bal' ? (n2 => n2 ? `<span class="n">${n2}</span>` : '')(BALSAS.filter(b => balEstado(b).st === 'bloq').length) : ''}</a>`;
-  return (VX.balmapa ? it('balmapa', 'Comece aqui', 'mapa') : '') + '<div class="grp-t grp-trab">Operação</div>' + it('bal', 'Situação das balsas', 'hoje') + (VX.balprog ? it('balprog', 'Programar preventiva', 'prev2') : '') + '<div class="grp-t">Controle</div>' + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr') + it('balkpi', 'Indicadores', 'graf') + it('balft', 'Ficha técnica', 'barcos')
+  return (VX.balmapa ? it('balmapa', 'Comece aqui', 'mapa') : '') + '<div class="grp-t grp-trab">Operação</div>' + it('bal', 'Situação das balsas', 'hoje') + (VX.balprog ? it('balprog', 'Programar preventiva', 'prev2') : '') + (VX.balcor ? it('balcor', 'Manutenção corretiva', 'exec') + it('balhor', 'Horímetros', 'hor') : '') + '<div class="grp-t">Controle</div>' + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr') + it('balkpi', 'Indicadores', 'graf') + it('balft', 'Ficha técnica', 'barcos')
     + '<div class="grp-t grp-apoio">Apoio</div>' + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores (o antigo #bib virava #apoio e caía na Situação das balsas)
 // ---------- dados de exemplo das balsas (seed: some em “Limpar dados de exemplo”) ----------
 async function balExemplo() {
