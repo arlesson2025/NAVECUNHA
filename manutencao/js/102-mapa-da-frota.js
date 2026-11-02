@@ -77,12 +77,17 @@ function vgComboioIc(cor, B) {
   return vgIc(g, x + 4, H, 2.2);
 }
 // parados na boia ou no estaleiro: as balsas lado a lado em fileiras (até 8 por fileira) e os empurradores encostados embaixo
-function vgFundeioIc(cor, nB, nE) {
-  const bw = 7, bh = 24, p = 8, pw = 6, ph = 11, por = Math.min(Math.max(nB, 1), p), lin = Math.ceil(nB / p), W = Math.max(por * (bw + .6), nE * (pw + 1.5)) + 2; let g = '';
-  for (let k = 0; k < nB; k++) g += vgBalsaSvg(1 + (k % p) * (bw + .6), 1 + Math.floor(k / p) * (bh + .8), bw, bh);
+function vgFundeioIc(cor, B, E) {
+  B = Array.isArray(B) ? B : Array.from({ length: B || 0 }, () => ''); E = Array.isArray(E) ? E : Array.from({ length: E || 0 }, () => '');
+  const nB = B.length, nE = E.length, bw = 9, bh = 26, p = 8, pw = 9, ph = 15, por = Math.min(Math.max(nB, 1), p), lin = Math.ceil(nB / p), W = Math.max(por * (bw + .6), nE * (pw + 1.5)) + 2; let g = '';
+  // cada balsa e cada empurrador com o nome (sem “VDA”/“CJA”) e clicável: abre o cartão daquela embarcação (Supervisor, 02/11/2026)
+  const nm = (id, re) => id ? esc(vName(id).replace(re, '')) : '';
+  for (let k = 0; k < nB; k++) { const x = 1 + (k % p) * (bw + .6), y = 1 + Math.floor(k / p) * (bh + .8), t = nm(B[k], /^VDA\s*/i);
+    g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, y, bw, bh)}${t ? `<text transform="translate(${x + bw / 2 + 1.6},${y + bh / 2}) rotate(-90)" text-anchor="middle" font-size="4.6" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.3" paint-order="stroke" font-family="system-ui,sans-serif">${t}</text>` : ''}</g>`; }
   const y = 1.5 + lin * (bh + .8);
-  for (let k = 0; k < nE; k++) { const x = 1 + k * (pw + 1.5); g += `<rect x="${x}" y="${y}" width="${pw}" height="${ph}" rx="2" fill="${cor}" stroke="#fff" stroke-width="1"/><rect x="${x + 1.5}" y="${y + 5.5}" width="${pw - 3}" height="3.5" rx=".8" fill="#fff" opacity=".9"/>`; }
-  return vgIc(g, W, y + ph + 1, 2);
+  for (let k = 0; k < nE; k++) { const x = 1 + k * (pw + 1.5), t = nm(E[k], /^CJA\s*/i);
+    g += `<g${E[k] ? ` data-vgemp="${esc(E[k])}" style="cursor:pointer"` : ''}><rect x="${x}" y="${y}" width="${pw}" height="${ph}" rx="2" fill="${cor}" stroke="#fff" stroke-width="1"/>${t ? `<text transform="translate(${x + pw / 2 + 1.5},${y + ph / 2}) rotate(-90)" text-anchor="middle" font-size="4.4" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">${t}</text>` : `<rect x="${x + 1.5}" y="${y + 5.5}" width="${pw - 3}" height="3.5" rx=".8" fill="#fff" opacity=".9"/>`}</g>`; }
+  return vgIc(g, W, y + ph + 1, 2.2);
 }
 const VG_ZOOM_DESENHO = 11;   // mapa mais longe que isso: no porto volta o ícone pequeno com o número (as fileiras de balsas cobririam o mapa)
 const vgGoogle = ll => `<br><a href="https://www.google.com/maps?q=${ll[0]},${ll[1]}" target="_blank" rel="noopener">Abrir no Google Maps ↗</a>`;
@@ -104,21 +109,24 @@ async function vgMapaIniciar() {
   const D = vgMapaDados(), pts = [], bal = o => (o.balsas || []).map(vName).join(', ');
   const tip = cls => ({ permanent: true, direction: 'right', offset: [4, 0], className: 'vg-mt' + (cls ? ' ' + cls : '') });
   const Z = [], troca = (mk, perto, longe) => Z.push([mk, perto, longe]);   // desenho completo de perto, ícone pequeno de longe
-  const nBal = Lp => Lp.filter(o => o.bal).length + Lp.reduce((a, o) => a + (o.balsas || []).filter(b => D.dono[b] === o.id).length, 0);
+  const nBal = Lp => Lp.filter(o => o.bal).map(o => o.id).concat(...Lp.map(o => (o.balsas || []).filter(b => D.dono[b] === o.id)));
+  const nEmp = Lp => Lp.filter(o => !o.bal).map(o => o.id);
+  // clique numa embarcação do desenho: o cartão grande dela; no resto do ponto: o painel do lugar embaixo do mapa
+  const cliq = (k, Lp) => e => { const t = e.originalEvent && e.originalEvent.target, q = t && t.closest ? t.closest('[data-vgbal],[data-vgemp]') : null;
+    if (q && typeof vgCartaoGrande === 'function') return vgCartaoGrande(q.getAttribute('data-vgbal') || q.getAttribute('data-vgemp'), '');
+    if (typeof vgPainelAbrir === 'function') vgPainelAbrir('fix', k, Lp.map(o => o.id)); };
   Object.entries(D.P).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const mk = L.marker(ll, { icon: vgIcone('#188038', 0, Lp.length), riseOnHover: true });
-    troca(mk, vgFundeioIc('#188038', nBal(Lp), Lp.length), vgIcone('#188038', 0, Lp.length)); mk.on('click', () => typeof vgPainelAbrir === 'function' && vgPainelAbrir('fix', k, Lp.map(o => o.id))); mk.addTo(m)
-      .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')}`, tip('por'))
-      .bindPopup(`<b>${esc(k)} · no porto · ${Lp.length}</b><br>${Lp.map(o => `<a href="#" data-vgficha="${o.id}"><b>${esc(o.nome)}</b></a>${o.dias != null ? ' · há ' + o.dias + ' d' : ''}${o.est ? ' (chegada estimada)' : ''}${bal(o) ? '<br><small>' + esc(bal(o)) + '</small>' : ''}`).join('<br>')}<br><small>clique no nome para ver a ficha</small>${vgGoogle(ll)}`); });
+    troca(mk, vgFundeioIc('#188038', nBal(Lp), nEmp(Lp)), vgIcone('#188038', 0, Lp.length)); mk.on('click', cliq(k, Lp)); mk.addTo(m)
+      .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')}`, tip('por')); });
   Object.entries(D.F).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const nE = Lp.filter(o => !o.bal).length, mk = L.marker(ll, { icon: vgIcone('#5F6368', 0, Lp.length), riseOnHover: true });
-    troca(mk, vgFundeioIc('#5F6368', nBal(Lp), nE), vgIcone('#5F6368', 0, Lp.length)); mk.on('click', () => typeof vgPainelAbrir === 'function' && vgPainelAbrir('fix', k, Lp.map(o => o.id))); mk.addTo(m)
-      .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref'))
-      .bindPopup(`<b>${esc(k)} · em reforma · ${Lp.length}</b><br>${Lp.map(o => { const r = vgEmReforma(o.id) || {}; return `${o.bal ? `<b>${esc(o.nome)}</b> · balsa` : `<a href="#" data-vgficha="${o.id}"><b>${esc(o.nome)}</b></a>`}${r.ini ? ' · desde ' + brD(r.ini) : ''}${r.obs ? '<br><small>' + esc(r.obs) + '</small>' : ''}`; }).join('<br>')}${vgGoogle(ll)}`); });
+    troca(mk, vgFundeioIc('#5F6368', nBal(Lp), nEmp(Lp)), vgIcone('#5F6368', 0, Lp.length)); mk.on('click', cliq(k, Lp)); mk.addTo(m)
+      .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref')); });
   // clique no comboio: o cartão do comboio em cima do mapa (dias em viagem, previsão, ocorrências, linha do tempo e fotos); clique numa balsa do desenho: o da balsa
   const pop = (ll, html) => { L.popup({ maxWidth: 470, minWidth: 380, className: 'vg-pop', autoPanPadding: [20, 20] }).setLatLng(ll).setContent(html).openOn(m); if (typeof heCarregaFotos === 'function') heCarregaFotos(); };
   D.R.forEach(({ o, ll, aprox }) => { pts.push(ll); const par = o.parD > VG_PARADO_D;
     L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || []), riseOnHover: true }).on('click', e => {
       const t = e.originalEvent && e.originalEvent.target, bt = t && t.closest ? t.closest('[data-vgbal]') : null;
-      if (typeof vgPopupVia === 'function') return pop(ll, vgPopupVia(o.id, bt ? bt.getAttribute('data-vgbal') : '') + `<div style="font-size:12px;margin-top:4px">${aprox ? 'Posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}</div>`);
+      if (typeof vgCartaoGrande === 'function') return vgCartaoGrande(o.id, bt ? bt.getAttribute('data-vgbal') : '', `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`);
       pop(ll, `<b>${esc(o.nome)} · em rota</b>`); }).addTo(m)
       .bindTooltip(`${esc(o.nome)}${aprox ? ' · aprox.' : ''}`, tip(par ? 'par' : '')); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
