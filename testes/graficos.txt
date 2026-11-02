@@ -1,8 +1,14 @@
 # Gráficos que precisam continuar no SMF (tela | título do quadro). Gerado por: python testes/graficos.py --gravar
 # Tirar uma linha daqui = retirar o gráfico de propósito; só com aprovação do Supervisor e registro em VERSOES.
 anoleo | Tendência da frota
+balcal | Dias até a próxima calibração
+balcmp | Pior cilindro de cada motor
+balcor | Falhas registradas por mês
+baldoca | Docagem
 balfal | A · Pareto de falhas por equipamento
 balfal | D · Causa da falha
+balhor | Horas de operação das balsas por mês
+balhor | Horas de operação do motor-bomba por balsa
 balkpi | Aderência ao cronograma
 balkpi | Disponibilidade por balsa
 balkpi | Falhas por equipamento

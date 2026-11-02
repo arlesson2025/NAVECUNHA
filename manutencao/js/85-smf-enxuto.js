@@ -263,7 +263,7 @@ function vEnxHor() {
 const ENXHP = { mes: 0 };   // 0 = este mês · 1 = mês passado
 // G = [[empurrador, [[motor, horas], …], horas do empurrador]] na ordem do nome (CJA I, CJA II…); cada motor é uma barra fina, lado a lado
 // (Supervisor, 30/10/2026: “alguns têm 2 MCP, tem que ter as barras deles ao lado”); linha laranja fina = % acumulado das horas do empurrador
-function hpGrupos(G, cores) {
+function hpGrupos(G, cores, o = {}) {   // o.p80: linha tracejada em 80% do total (Pareto das balsas, 1.1)
   const bw = 9, gap = 1, E = 16, D = 56, T = 30, B = 40, H = 240, gl = G.map(g => g[1].length * bw + (g[1].length - 1) * gap), sl = gl.map(x => Math.max(x + 8, 30)), W = E + D + sl.reduce((a, x) => a + x, 0);   // espaço por empurrador: as barras + 8, no mínimo o nome
   const mx = Math.max(1, ...G.flatMap(g => g[1].map(m => m[1]))), Y = v => T + (H - T - B) * (1 - v / mx);
   // linha laranja = horas do mês somadas empurrador a empurrador (Supervisor, 30/10/2026: “no final somando todas as horas”), escala própria até o total
@@ -283,6 +283,7 @@ function hpGrupos(G, cores) {
     let d = `M${P[0][0]},${P[0][1]}`; for (let k = 0; k < n - 1; k++) d += ` C${P[k][0] + dx[k] / 3},${P[k][1] + t[k] * dx[k] / 3} ${P[k + 1][0] - dx[k] / 3},${P[k + 1][1] - t[k + 1] * dx[k] / 3} ${P[k + 1][0]},${P[k + 1][1]}`;
     g += `<path d="${d}" fill="none" stroke="#E07B24" stroke-width="1"/>` + P.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2" fill="#fff" stroke="#E07B24" stroke-width="1"><title>somado até aqui: ${nf(p[2])} h</title></circle>`).join('');
     vt += `<text x="${u[0] + 7}" y="${u[1] + 3}" font-size="9.5" fill="#B06000" stroke="#fff" stroke-width="2.5" paint-order="stroke">${nf(u[2])} h</text>`; }
+  if (o.p80 && G.length > 1) g += `<line x1="${E}" x2="${W - D}" y1="${Ya(tot * .8)}" y2="${Ya(tot * .8)}" stroke="#B06000" stroke-dasharray="4 3" stroke-width=".8"/><text x="${W - D + 4}" y="${Ya(tot * .8) + 3}" font-size="9" fill="#B06000">80%</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${Math.round(W * 1.45)}px;max-width:100%" data-nodrag>${g}${vt}</svg>`;
 }
 // início do mês sem nenhuma leitura ainda (dia 1º, por exemplo): “Este mês” mostra o mês passado com o aviso, para o gráfico não sumir
