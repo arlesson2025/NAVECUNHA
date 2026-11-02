@@ -27,5 +27,5 @@ function docaReg(vid, rid) {
 }
 
 document.addEventListener('click', e => { if (VIEW !== 'enxdoca' && VIEW !== 'enxeq') return; const s = e.target.closest('[data-dsel],[data-dnova],[data-dlim],[data-ded]'); if (!s) return; e.stopPropagation();
-  if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) docaReg(s.dataset.dnova); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else docaReg(DSEL, s.dataset.ded); }, true);
+  if (s.dataset.dsel) { DSEL = s.dataset.dsel; render(); } else if (s.dataset.dnova) heModal('', { vessel: s.dataset.dnova, eq: 'UN', tp: 'doca' }); else if (s.dataset.dlim) docaModal(s.dataset.dlim); else heModal(s.dataset.ded); }, true);   // uma entrada só: o formulário do Histórico dos equipamentos
 

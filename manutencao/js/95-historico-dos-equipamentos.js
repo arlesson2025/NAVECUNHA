@@ -46,7 +46,7 @@ function heEventos(vid, bal) {
   const F = vid ? [heV(vid)].filter(Boolean) : heFrota(bal), ids = new Set(F.map(v => v.id)), L = [];
   recs('snap').forEach(r => { if (r.tipo === 'evento' && !r.excluido && ids.has(r.vessel)) L.push({ id: r.id, vessel: r.vessel, eq: r.eq || 'UN', date: r.date, tp: r.tp || 'outro', txt: r.txt || '', h: r.h, doc: r.doc || '', quem: r.quem || '', obs: r.obs || '', fotos: r.fotos || [], fim: r.fim || '', emRef: !!r.emRef, local: r.local || '', man: true }); });
   F.forEach(v => {
-    if (heBal(v.id)) { try { balDocas(v.id).forEach(d => L.push({ vessel: v.id, eq: 'UN', date: d.date, tp: 'doca', txt: `Docagem${d.saida ? ' até ' + brD(d.saida) : ''}${d.estaleiro ? ' · ' + d.estaleiro : ''}`, h: '', doc: d.om ? 'OM ' + d.om : '', quem: '', src: 'Docagem das balsas' })); } catch (e) { } return; }
+    if (heBal(v.id)) { try { balDocas(v.id).forEach(d => L.push({ id: d.id, vessel: v.id, eq: 'UN', date: d.date, tp: 'doca', txt: `Docagem${d.saida ? ' até ' + brD(d.saida) : ''}${d.estaleiro ? ' · ' + d.estaleiro : ''}${d.servicos ? ' · ' + d.servicos : ''}`, h: '', doc: d.doc || (d.om ? 'OM ' + d.om : ''), quem: '', obs: d.obs || '', fotos: d.fotos || [], dref: d.id, src: 'Docagem das balsas' })); } catch (e) { } return; }
     const vis = {}; recs('base').forEach(b => { if (b.vessel !== v.id || !b.revTroca || b.excluido) return; const k = b.pos + b.date; if (vis[k]) return; vis[k] = 1; const t = b.revTroca;
       L.push({ vessel: v.id, eq: 'R' + b.pos, date: b.date, tp: 'subst', txt: `Troca do reversor (${(t.unidade || '').toLowerCase() || 'unidade'})${t.anterior && t.modelo && t.anterior !== t.modelo ? ': ' + (EQN[t.anterior] || t.anterior) + ' → ' + (EQN[t.modelo] || t.modelo) : ''}${t.serie ? ' · série ' + t.serie : ''}`, h: b.h, doc: t.om ? 'OM ' + t.om : '', quem: b.by || '', src: '1.1 Horímetros · troca do reversor' }); });
     Object.entries(v.horOff || {}).forEach(([p, A]) => (A || []).forEach(x => L.push({ vessel: v.id, eq: p, date: x.date, tp: 'hor', txt: `Horímetro trocado ou consertado: total na troca ${nf(+x.base || 0)} h, o novo começou em ${nf(+x.ini || 0)} h`, h: x.base, doc: '', quem: x.by || '', src: '1.1 Horímetros' })));
@@ -132,14 +132,15 @@ function vEnxEq() {
 }
 // ---------- lançar / editar ----------
 function heModal(id, pre) {
-  pre = pre || {}; const r = id ? S.recs.get(id) : null, vid = r ? r.vessel : pre.vessel || HE.v || (heFrota(HE.bal)[0] || {}).id, eq = r ? r.eq : pre.eq || HE.eq, tp0 = r ? r.tp : pre.tp || 'ref';
+  pre = pre || {}; const r0 = id ? S.recs.get(id) : null, rb = r0 && r0.kind === 'base' ? r0 : null;
+  const r = rb ? { id: rb.id, vessel: rb.vessel, eq: 'UN', tp: 'doca', date: rb.date, fim: rb.saida || '', local: rb.estaleiro || '', txt: rb.servicos || '', doc: rb.doc || (rb.om ? 'OM ' + rb.om : ''), quem: rb.quem && rb.quem !== rb.estaleiro ? rb.quem : '', obs: rb.obs || '', h: '', custo: rb.custo, fotos: rb.fotos || [] } : r0, vid = r ? r.vessel : pre.vessel || HE.v || (heFrota(HE.bal)[0] || {}).id, eq = r ? r.eq : pre.eq || HE.eq, tp0 = r ? r.tp : pre.tp || 'ref';
   const opE = vid => heEqs(heV(vid)).map(e => `<option value="${e.k}"${e.k === eq ? ' selected' : ''}>${esc(e.nome)} · ${esc(e.desc)}</option>`).join('');
-  modal(`<h2>${r ? 'Editar acontecimento' : 'Lançar acontecimento'}</h2><div class="g">
+  modal(`<h2>${rb ? 'Editar docagem' : r ? 'Editar acontecimento' : 'Lançar acontecimento'}</h2><div class="g">
     <label class="f s2">Empurrador ou balsa<select id="heV"><optgroup label="Empurradores">${S.cfg.frota.map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</optgroup><optgroup label="Balsas">${heFrota(true).map(x => `<option value="${x.id}"${x.id === vid ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</optgroup></select></label>
     <label class="f s4">Equipamento<select id="heE">${opE(vid)}</select></label>
     <label class="f s2"><span id="heDl">Data</span><input type="date" id="heD" value="${esc(r ? r.date : '')}"></label>
     <label class="f s4">Tipo<select id="heT">${HE_MAN.map(k => `<option value="${k}"${tp0 === k ? ' selected' : ''}>${HE_TP[k][0]}</option>`).join('')}</select></label>
-    <div class="s6 g" id="heRf" style="display:none;margin:0"><label class="f s2">Fim da reforma (saída)<input type="date" id="heFim" value="${esc(r ? r.fim || '' : '')}"></label><label class="f s2" style="flex-direction:row;align-items:center;gap:8px;padding-top:18px"><input type="checkbox" id="heEm"${r && r.emRef && !r.fim ? ' checked' : ''} style="width:auto"> Ainda em reforma</label><label class="f s2">Estaleiro / local<input id="heLoc" value="${esc(r ? r.local || '' : '')}"></label></div>
+    <div class="s6 g" id="heRf" style="display:none;margin:0"><label class="f s2"><span id="heFl">Fim da reforma (saída)</span><input type="date" id="heFim" value="${esc(r ? r.fim || '' : '')}"></label><label class="f s2" id="heEmL" style="flex-direction:row;align-items:center;gap:8px;padding-top:18px"><input type="checkbox" id="heEm"${r && r.emRef && !r.fim ? ' checked' : ''} style="width:auto"> Ainda em reforma</label><label class="f s2">Estaleiro / local<input id="heLoc" value="${esc(r ? r.local || '' : '')}"></label><label class="f s2" id="heCuL">Custo (R$ mil)<input id="heCu" inputmode="decimal" value="${r && r.custo != null ? r.custo : ''}" placeholder="opcional"></label></div>
     <label class="f s6">O que foi feito<textarea id="heX" rows="3" placeholder="Ex.: reforma geral do MCP na oficina X: camisas, pistões, anéis, bronzinas, retífica do cabeçote, bicos e bomba injetora">${esc(r ? r.txt : '')}</textarea></label>
     <label class="f s2">Horímetro do motor (h)<input id="heH" inputmode="decimal" value="${esc(r && r.h != null ? String(r.h) : '')}" placeholder="opcional"></label>
     <label class="f s4">Documento onde está registrado<input id="heDoc" value="${esc(r ? r.doc || '' : '')}" placeholder="Ex.: OM 12345 do Sankhya · relatório da oficina · NF 9876"></label>
@@ -148,16 +149,17 @@ function heModal(id, pre) {
     ${r && (r.fotos || []).length ? `<div class="f s6"><span>Fotos já salvas · clique no ✕ para tirar</span><div class="he-ms" id="heFx">${r.fotos.map((f, k) => `<span class="fx-t"><img src="${f.src || HE_FT[f.fid] || ''}" alt=""><button type="button" data-herm="${k}" title="Tirar esta foto">✕</button></span>`).join('')}</div></div>` : ''}
     ${enxFotoCampo('heF', 'Fotos (até 6 por vez) · antes, depois, plaqueta, peça trocada, relatório')}</div>
     <p class="note">Reforma do empurrador ou da balsa: escolha o equipamento “Empurrador” ou “Balsa (casco)”; enquanto marcada “Ainda em reforma”, ela fica fora de operação nas contas da 1.3. Reversor: o horímetro é o do MCP do mesmo bordo. Use para o que muda a vida do equipamento (reforma, substituição, grande reparo); serviço do plano preventivo vai na 2.2.</p>
-    <div class="row end">${r ? '<button class="mbtn" id="heDel" style="margin-right:auto;color:var(--badt)">Excluir</button>' : ''}<button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="heOk">Salvar</button></div>
-    <div class="note" id="heDc" style="display:none;margin-top:8px;padding:8px 10px;background:#EEF4FC;border-radius:8px">Docagem do casco se registra no formulário de docagem: ele dá o vencimento da próxima docagem (Anexo I 9.1.5 / plano da balsa) e aparece aqui e no 3.2 Controles · Docagem. <button class="mbtn pri sm" id="heDcB" style="margin-left:6px">Abrir formulário de docagem</button></div>`);
-  const refUi = () => { const on = $('#heE').value === 'UN' && ['ref', 'parc'].includes($('#heT').value); $('#heRf').style.display = on ? '' : 'none'; $('#heDl').textContent = on ? 'Início da reforma' : 'Data'; if ($('#heEm').checked) $('#heFim').value = ''; $('#heFim').disabled = $('#heEm').checked; };
+    <div class="row end">${r ? '<button class="mbtn" id="heDel" style="margin-right:auto;color:var(--badt)">Excluir</button>' : ''}<button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="heOk">Salvar</button></div>`);
+  const refUi = () => { const un = $('#heE').value === 'UN', dc = un && $('#heT').value === 'doca', on = un && ['ref', 'parc'].includes($('#heT').value) || dc; $('#heRf').style.display = on ? '' : 'none'; $('#heDl').textContent = dc ? 'Entrada no estaleiro' : on ? 'Início da reforma' : 'Data';
+    $('#heFl').textContent = dc ? 'Saída do estaleiro' : 'Fim da reforma (saída)'; $('#heEmL').style.display = dc ? 'none' : ''; $('#heCuL').style.display = dc ? '' : 'none'; if (dc) $('#heEm').checked = false;
+    const bal = heBal($('#heV').value); $('#heDoc').placeholder = dc && bal ? 'Nº da OM do Sankhya (obrigatório na balsa)' : 'Ex.: OM 12345 do Sankhya · relatório da oficina · NF 9876'; if ($('#heEm').checked) $('#heFim').value = ''; $('#heFim').disabled = $('#heEm').checked; };
   $('#heV').onchange = e => { $('#heE').innerHTML = opE(e.target.value); refUi(); }; $('#heE').onchange = refUi; $('#heT').onchange = refUi; $('#heEm').onchange = refUi; refUi();
   const tirar = new Set(); const fx = $('#heFx'); if (fx) fx.onclick = e => { const b = e.target.closest('[data-herm]'); if (!b) return; const k = +b.dataset.herm, sp = b.parentNode; if (tirar.has(k)) { tirar.delete(k); sp.style.opacity = ''; } else { tirar.add(k); sp.style.opacity = '.25'; } };
-  const docaUi = () => { const on = $('#heE').value === 'UN' && $('#heT').value === 'doca' && !r; $('#heDc').style.display = on ? '' : 'none'; $('#heOk').style.display = on ? 'none' : ''; };
-  $('#heE').addEventListener('change', docaUi); $('#heT').addEventListener('change', docaUi); $('#heV').addEventListener('change', docaUi);
-  $('#heDcB').onclick = () => { const vid = $('#heV').value; closeModal(); if (heBal(vid)) balDocaModal(vid); else docaReg(vid); }; docaUi();
+  if (rb) { $('#heE').disabled = true; $('#heT').disabled = true; }
   $('#heOk').onclick = async () => {
     const d = $('#heD').value, tx = $('#heX').value.trim(), hs = $('#heH').value.trim().replace(/\./g, '').replace(',', '.'), h = hs === '' ? '' : +hs;
+    const dc = $('#heE').value === 'UN' && $('#heT').value === 'doca';
+    if (dc) return heDocaSalvar(rb, r0, tirar);
     const ehRef = $('#heE').value === 'UN' && ['ref', 'parc'].includes($('#heT').value), em = ehRef && $('#heEm').checked, fim = ehRef && !em ? $('#heFim').value : '';
     if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.');
     if (fim && fim < d) return toast('O fim da reforma não pode ser antes do início.'); if (fim && fim > isoD(hoje())) return toast('O fim da reforma não pode ser futuro: marque “Ainda em reforma”.');
@@ -167,7 +169,7 @@ function heModal(id, pre) {
     o.fotos = (o.fotos || []).filter((_, k) => !tirar.has(k)).concat(novas);
     Object.assign(o, { vessel: $('#heV').value, eq: $('#heE').value, date: d, tp: $('#heT').value, txt: tx, h, doc: $('#heDoc').value.trim(), quem: $('#heQ').value.trim(), obs: $('#heO').value.trim(), fim, emRef: em, local: ehRef ? $('#heLoc').value.trim() : '' });
     await saveRec(o); HE.v = o.vessel; HE.bal = !!heBal(o.vessel); closeModal(); toast('Acontecimento salvo' + (novas.length ? ' · ' + novas.length + ' foto(s) sobem ao Google Drive em seguida' : '') + '.'); render(); };
-  const del = $('#heDel'); if (del) del.onclick = async () => { if (!confirm('Excluir este acontecimento?')) return; r.excluido = true; await saveRec(r); closeModal(); render(); };
+  const del = $('#heDel'); if (del) del.onclick = async () => { if (!confirm(rb ? 'Excluir esta docagem?' : 'Excluir este acontecimento?')) return; const x = rb || r; x.excluido = true; await saveRec(x); closeModal(); render(); };
 }
 // ---------- colar do Excel ----------
 const heTpTexto = t => { t = (t || '').toLowerCase(); return /overhaul|reforma geral|geral/.test(t) ? 'ref' : /parcial|ret[ií]fica|meia/.test(t) ? 'parc' : /substitu|motor novo|troca do (motor|reversor|equip)/.test(t) ? 'subst' : /instala|entrada/.test(t) ? 'inst' : /docag/.test(t) ? 'doca' : /reparo/.test(t) ? 'rep' : /troca|componente|substitu/.test(t) ? 'comp' : /reforma/.test(t) ? 'ref' : 'outro'; };
@@ -209,6 +211,29 @@ function heCsv() {
 // ---------- reformas antigas da 1.3 (snap tipo 'reforma') viram acontecimento do Histórico (SMF 3.132) ----------
 // id fixo 'snap-ev-<id antigo>': dois aparelhos que migram ao mesmo tempo gravam o mesmo registro
 let HE_MIG = 0;
+// docagem do casco: uma entrada só. Grava o serviço do plano (empurrador: Anexo I 9.1.5; balsa: B10.1 com OM), que dá o vencimento
+// da próxima docagem e alimenta o 3.2 Controles · Docagem; o Histórico mostra o mesmo registro.
+async function heDocaSalvar(rb, r0, tirar) {
+  const vid = $('#heV').value, bal = heBal(vid), d = $('#heD').value, sa = $('#heFim').value, doc = $('#heDoc').value.trim(), cu = $('#heCu').value.trim().replace(',', '.');
+  if (!d) return toast('Informe a entrada no estaleiro.'); if (d > isoD(hoje())) return toast('A entrada não pode ser futura.'); if (sa && sa < d) return toast('A saída não pode ser antes da entrada.');
+  if (bal && !doc) return toast('Na balsa, informe o nº da OM do Sankhya (NP 024).'); if (cu !== '' && isNaN(+cu)) return toast('Custo inválido.');
+  const novas = []; for (const f of fxArq('heF').slice(0, 6)) novas.push({ tipo: 'FOTO', src: await comprimir(f), at: Date.now() });
+  const fotos = ((r0 && r0.fotos) || []).filter((_, k) => !tirar.has(k)).concat(novas), est = $('#heLoc').value.trim();
+  const o = Object.assign(rb ? Object.assign({}, rb) : { id: uid('base'), kind: 'base', pos: 'UN', h: null }, { vessel: vid, item: bal ? 'B10.1' : DOCA.item, date: d, saida: sa, estaleiro: est, servicos: $('#heX').value.trim(), custo: cu === '' ? null : +cu, doc, obs: $('#heO').value.trim(), quem: $('#heQ').value.trim() || est, fotos, by: S.session.name });
+  if (bal) { o.bal = true; o.om = (doc.match(/\d{3,}/) || [doc])[0]; } else delete o.bal;
+  await saveRec(o); if (r0 && !rb) { r0.excluido = true; await saveRec(r0); }
+  HE.v = vid; HE.bal = !!bal; closeModal(); toast('Docagem salva · aparece aqui e no 3.2 Controles · Docagem' + (novas.length ? ' · ' + novas.length + ' foto(s) sobem ao Google Drive' : '') + '.'); render();
+}
+// docagens lançadas como acontecimento antes da 3.135 viram o registro da docagem (uma vez; id fixo, não duplica)
+let HE_MIGD = 0;
+async function heMigraDocas() {
+  if (HE_MIGD || !S.session || !can.edit()) return; const L = recs('snap').filter(r => r.tipo === 'evento' && r.tp === 'doca' && (r.eq || 'UN') === 'UN' && !r.excluido && !r.seed && r.date); if (!L.length) return; HE_MIGD = 1;
+  try { for (const r of L) { const bal = heBal(r.vessel);
+      await saveRec(Object.assign({ id: 'base-ev-' + r.id, kind: 'base', vessel: r.vessel, pos: 'UN', item: bal ? 'B10.1' : DOCA.item, h: null, date: r.date, saida: r.fim || '', estaleiro: r.local || '', servicos: r.txt && r.txt !== 'Docagem' ? r.txt : '', custo: null, doc: r.doc || '', obs: r.obs || '', quem: r.quem || r.local || '', fotos: r.fotos || [], by: r.por || S.session.name, migradoDe: r.id }, bal ? { bal: true, om: ((r.doc || '').match(/\d{3,}/) || [r.doc || 's/ OM'])[0] } : {}));
+      r.excluido = true; await saveRec(r); }
+    render(); } finally { HE_MIGD = 0; }
+}
+setTimeout(() => { try { heMigraDocas(); } catch (e) { } }, 16000);
 async function heMigraReformas() {
   if (HE_MIG || !S.session || !can.edit()) return; const L = recs('snap').filter(r => r.tipo === 'reforma' && !r.excluido && !r.seed); if (!L.length) return; HE_MIG = 1;
   try { for (const r of L) { const d = r.ini || r.fim; if (!d) continue;
@@ -221,7 +246,7 @@ setTimeout(() => { try { heMigraReformas(); } catch (e) { } }, 15000);
 VX.enxeq = vEnxEq;
 AFTER.enxeq = () => { const m = $('#main');
   m.onclick = e => { const t = e.target.closest('[data-dged],[data-hebal],[data-hefoto],[data-hev],[data-heeq],[data-heed],[data-henovo],[data-hecola],[data-hecsv]'); if (!t) return; const d = t.dataset;
-    if (d.dged) { const [vid, id] = d.dged.split('|'); return docaReg(vid, id); }
+    if (d.dged) return heModal(d.dged.split('|')[1]);
     if (d.hebal !== undefined) { HE.bal = d.hebal === '1'; HE.v = ''; HE.eq = ''; return render(); }
     if (d.hefoto) { const [id, k] = d.hefoto.split('|'); return heGaleria(id, k); }
     if (d.hev !== undefined) { HE.v = d.hev; HE.eq = ''; return render(); }
@@ -230,7 +255,7 @@ AFTER.enxeq = () => { const m = $('#main');
     if (d.henovo !== undefined) return heModal('');
     if (d.hecola !== undefined) return heColar();
     if (d.hecsv !== undefined) return heCsv(); };
-  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxeq_lay', '[data-enxreset]'); heCarregaFotos(); heMigraReformas(); };
+  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxeq_lay', '[data-enxreset]'); heCarregaFotos(); heMigraReformas(); heMigraDocas(); };
 ENX_OK.push('enxeq');
 { const ap = PCM_MENU.find(g => g[0] === 'Apoio'); if (ap) ap[1].unshift(['enxeq', 'Histórico dos equipamentos', 'hist']); }
 ICO.hist = '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/>';
