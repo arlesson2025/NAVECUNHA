@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 8.12', balcal: 'NP 024 · 8.7 e 6.5', balcmp: 'NP 024 · 8.13', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.156', data: '02/11/2026', itens: ['Comece aqui das balsas: as janelas guardadas da versão antiga (4 blocos) eram aplicadas aos 6 blocos novos e a tela ficava estreita e sobreposta; o arranjo passou a ser guardado com outra chave e a tela abre organizada.'] },
   { v: '3.155', data: '02/11/2026', itens: ['Biblioteca técnica separada por frota, com botões Empurradores · Balsas · Comuns às duas frotas; abre na frota escolhida no topo do menu; documento enviado ganha o campo Frota'] },
   { v: '3.154', data: '02/11/2026', itens: ['Balsas: compressão do MWM 6.10 TCA confirmada pela MWM (mínimo 20 bar, novo 23 bar, diferença máxima 2 bar entre cilindros, motor frio; Apostila de Treinamento MWM Série 10 e manual de serviço MWM 6.10/T/TCA cap. 15-40 — o manual de oficina Série 10 não traz o valor); sai o “documento de terceiros” da tela Compressão dos motores e o amarelo da NP 024 Rev. 02 (8.13)'] },
   { v: '3.153', data: '02/11/2026', itens: ['NP 024 Rev. 02: FR 024_D confirmado pelo Supervisor (lote e validade do lubrificante, junto com o FR 049_B, anexado à OM); sai o amarelo da tabela de documentos (item 9)'] },
@@ -203,14 +204,14 @@ function vBalMapa() {
       + mpPasso(3, 'Manutenção corretiva', 'Falhas abertas, formulário de campo e “Resolvida” com o II-A', '#balcor', fal, 'r'))
     + mpBloco('2 · Planejamento', 'O que vence e o que foi feito',
       mpPasso(1, 'Programar preventiva', 'Serviços do mês, texto da OM, formulário de campo e registro da execução', '#balprog', venc)
-      + mpPasso(2, 'Cronograma', 'Previsto × realizado, aderência e aprovação do ano', '#balcr') + mpPasso('·', 'Plano preventivo', 'Itens B1 a B12 com intervalo e criticidade', '#balpl'))
+      + mpPasso(2, 'Cronograma', 'Previsto × realizado, aderência e aprovação do ano', '#balcr') + mpPasso(3, 'Plano preventivo', 'Itens B1 a B12 com intervalo e criticidade', '#balpl'))
     + mpBloco('3 · Condição', 'Ensaios, calibrações e docagem', mpPasso(1, 'Docagem', 'CSN, estaleiro e projeção de 5 anos', '#baldoca')
       + mpPasso(2, 'Plano de calibração', 'PSV, válvula de alívio, manômetro e injeção', '#balcal') + mpPasso(3, 'Compressão dos motores', 'Ensaio na revisão de 1.000 h', '#balcmp'))
     + mpBloco('4 · Fechamento', 'Todo mês', mpPasso(1, 'Indicadores', 'NP 024 item 10', '#balkpi') + mpPasso(2, 'Relatório mensal', 'Números, aderência, falhas e comentário do Supervisor', '#balrel'))
     + mpBloco('Apoio', 'Cadastro e documentos', mpPasso('·', 'Ficha técnica', 'Motor, bomba, baterias e segurança de cada balsa', '#balft') + mpPasso('·', 'Biblioteca', 'NP 024, anexos e formulários', '#enxbib')));
 }
  
-VX.balmapa = vBalMapa; AFTER.balmapa = () => { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_balmapa_lay', '[data-bmpreset]'); };
+VX.balmapa = vBalMapa; AFTER.balmapa = () => { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_balmapa_lay2', '[data-bmpreset]'); };
 BAL_VIEWS.unshift(['balmapa', 'Comece aqui']);
 SECOES.unshift({ id: 'mapa', nome: 'Comece aqui', sub: 'a sequência do trabalho', views: [['mapa', 'Comece aqui']] });
 { const h = SECOES.find(s => s.id === 'hoje'); if (h) h.sub = 'chegada, saída e o dia'; }
