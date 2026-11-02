@@ -110,3 +110,4 @@ async function f27aSalvar(win, ov) {
   } catch (e) { busy.hidden = true; console.error(e); alert('Não foi possível salvar o FR 027_A: ' + (e.message || e)); }
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-bal27a]'); if (!t) return; e.preventDefault(); f27aAbrir(t.dataset.bal27a); });
+document.addEventListener('click', e => { const t = e.target.closest('[data-bal49]'); if (!t) return; e.preventDefault(); lubAbrirForm(t.dataset.bal49); });   // FR 049_B da balsa (o mesmo dos empurradores; baixa no plano em lubBaixaBalsa, js/03)

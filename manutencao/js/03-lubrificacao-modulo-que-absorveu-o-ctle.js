@@ -317,6 +317,7 @@ function lubPrepClone(doc) {
  .cbx-pv.on{background:#1E2B45 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.3l2 2 4.2-4.6' fill='none' stroke='%23fff' stroke-width='1.7'/%3E%3C/svg%3E") center/100% 100% no-repeat}
  .cbx-pv.on.ok{background-color:#2E7D4F;border-color:#2E7D4F}.cbx-pv.on.atn{background-color:#A86F00;border-color:#A86F00}.cbx-pv.on.nok{background-color:#C5221F;border-color:#C5221F}
  .sign .sig::before{content:none!important}.sign .sig img{height:100%;width:auto;max-width:100%;display:block;margin:0 auto}
+ .ph-band{background:none!important;border-bottom:.5pt solid var(--navy-2)}
  .sel-pv{display:block;height:4.1mm;margin-top:.3mm;padding:0 .5mm;font-size:7.8pt;font-weight:600;line-height:4.1mm;white-space:nowrap;overflow:hidden}`;
   doc.head.appendChild(st);
   doc.querySelectorAll('input').forEach(i => i.removeAttribute('placeholder'));
@@ -353,7 +354,7 @@ async function lubMakePdf(win) {
 }
 function lubShrink(url, max, q) { return new Promise(ok => { const im = new Image(); im.onerror = () => ok(null); im.onload = () => { const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', q)); }; im.src = url; }); }
 async function lubSalvarForm(data, win) {
-  const v = vesselPorNome(data.vessel);
+  const v = vesselPorNome(data.vessel), bal = !v && typeof BALSAS !== 'undefined' ? BALSAS.find(b => b.nome === data.vessel) || null : null;   // balsa tanque (NP 024): o FR 049_B é o mesmo dos empurradores
   const dup = fr049s().find(r => (r.vNome === data.vessel || (v && r.vessel === v.id)) && String(r.om) === String(data.om));
   if (dup && !confirm('Já existe FR 049_B salvo para ' + data.vessel + ' com a O.M. ' + data.om + ' (' + brD(dup.date) + ').\nSalvar novamente mesmo assim?')) throw { cancelled: true };
   if (v) for (const q of data.eq || []) { if (q.status !== 'T' || q.hr == null || q.hr === '' || ['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) continue;   // horímetro possível na data (SMF 3.110)
@@ -370,22 +371,39 @@ async function lubSalvarForm(data, win) {
     const hMcp = (() => { const m = (data.eq || []).find(q => q.key === 'mcp1' && q.hr != null); if (m) return m.hr; const r = v && horEm(v.id, mpos(v.id), data.date); return r ? r.h : null; })();
     const eq = (data.eq || []).map(q => { const o = Object.assign({}, q); if (['popa', 'bomba'].includes(q.key) && q.status === 'T' && q.hr == null) { o.hr = hMcp; o.hrMcp = true; } if (v && q.status === 'T') { const e = lubEq(v, q.key); if (e) { o.pos = e.pos; o.hp = lubHp(v, e); o.itens = e.itens.filter((id, i) => i === 0 || (id === '1.6.2' && (q.filters || []).length));
       if (o.hr != null && +o.hr < VOLTA && !['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) { const tot = horPainelTotal(v.id, o.hp, +o.hr, data.date); if (tot != null) { o.hrPainel = +o.hr; o.hr = tot; } } /* número do painel (volta a zero em 10.000 h) → horímetro total */ } } return o; });
-    const rec = { id: uid('lub'), kind: 'lub', tipo: 'fr049', vessel: v ? v.id : '', vNome: data.vessel, tipoEmb: data.tipo || (v ? 'emp' : 'bal'), om: data.om, num: data.om, date: data.date, local: data.local, localTx: data.localTx, eq, me: data.me, nc: data.nc, atn: data.atn, obs: data.obs, residuos: data.residuos, nomes: data.nomes, fotos: data.fotos, fotosLocais: (fl.a.length || fl.d.length) ? fl : null, pages: out.pages, pdfName: data.pdfName, by: S.session.name };
+    const rec = { id: uid('lub'), kind: 'lub', tipo: 'fr049', vessel: v ? v.id : bal ? bal.id : '', bal: bal ? true : undefined, vNome: data.vessel, tipoEmb: data.tipo || (v ? 'emp' : 'bal'), om: data.om, num: data.om, date: data.date, local: data.local, localTx: data.localTx, eq, me: data.me, nc: data.nc, atn: data.atn, obs: data.obs, residuos: data.residuos, nomes: data.nomes, fotos: data.fotos, fotosLocais: (fl.a.length || fl.d.length) ? fl : null, pages: out.pages, pdfName: data.pdfName, by: S.session.name };
     const b64 = out.pdf.output('datauristring').split(',')[1];
     await saveRec(rec, { pdfB64: b64 });
     const omII = v ? await lubLigarOM(rec) : null;
     let nh = 0;
     if (v) for (const q of eq) { if (q.status !== 'T' || q.hr == null || !q.hp) continue; if (['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)) continue; if (await lubHor(v.id, q.hp, q.hr, data.date, 'FR 049_B OM ' + data.om)) nh++; }
+    const BX = bal ? await lubBaixaBalsa(bal, rec, eq, data) : null;
     lubFecharOverlay('lubFO');
     if (v) { const avis = eq.filter(q => q.status === 'T' && q.hp && q.hr != null && !['crp1', 'crp2', 'hid', 'popa', 'bomba'].includes(q.key)).filter(q => { const a = horAtual(v.id, q.hp); return a && !a.est && a.h > +q.hr + 1; }); if (avis.length) setTimeout(() => toast('Atenção: horímetro menor que a última leitura em ' + avis.map(q => (lubEq(v, q.key) || {}).nome + ' (' + nf(q.hr) + ' h; última ' + nf(horAtual(v.id, q.hp).h) + ' h)').join(', ') + '. Confira o número: a troca pode continuar aparecendo como vencida.', 12000), 1500); }
     const nT = eq.filter(q => q.status === 'T').length;
-    toast(`FR 049_B salvo · ${data.vessel} · O.M. ${data.om}. ${v ? nT + ' troca(s) atualizada(s) no painel' + (nh ? ', ' + nh + ' horímetro(s) lançado(s)' : '') + '. ' + (omII ? (omII.status === 'encerrada' ? 'OM ' + omII.num + ' (II-B) já encerrada.' : 'Ligado à OM ' + omII.num + ' (II-B): nº do FR 049_B, FR 016_E e lotes preenchidos.') : 'Atenção: a OM ' + data.om + ' não está no SMF. Pela NP (7.4) a troca também é registrada no Anexo II-B.') : 'Balsa (NP 024): fica só no histórico.'}`, 9000);
+    toast(`FR 049_B salvo · ${data.vessel} · O.M. ${data.om}. ${v ? nT + ' troca(s) atualizada(s) no painel' + (nh ? ', ' + nh + ' horímetro(s) lançado(s)' : '') + '. ' + (omII ? (omII.status === 'encerrada' ? 'OM ' + omII.num + ' (II-B) já encerrada.' : 'Ligado à OM ' + omII.num + ' (II-B): nº do FR 049_B, FR 016_E e lotes preenchidos.') : 'Atenção: a OM ' + data.om + ' não está no SMF. Pela NP (7.4) a troca também é registrada no Anexo II-B.') : bal ? 'Balsa: ' + (BX.itens.length ? 'baixa no plano em ' + BX.itens.join(', ') : 'nenhum item do plano com baixa') + (BX.hor ? ', horímetro do motor-bomba lançado' : '') + '.' + (BX.avisos.length ? ' Atenção: ' + BX.avisos.join(' · ') : '') : 'Embarcação fora do cadastro: fica só no histórico.'}`, BX && BX.avisos.length ? 14000 : 9000);
     render();
   } catch (e) {
     if (out && !(e && e.cancelled)) { try { out.pdf.save(data.pdfName || 'FR049B.pdf'); } catch (x) { } }
     lubBusy(false);
     throw new Error((e && e.message || e) + (out ? ' O PDF foi baixado para não se perder.' : ''));
   }
+}
+// balsa: a troca do FR 049_B reinicia o prazo no plano (NP 024 8.2) · óleo do motor-bomba pelo motor da balsa, mancais da bomba = B1.2
+// só dá baixa quando o que o item pede foi feito: 6.10 TCA óleo + filtros de óleo e combustível (B2.1) e filtro de ar (B2.2); Cummins óleo + filtro de óleo (B3.1); D229-6 óleo + filtros de óleo, ar e combustível (B4.1)
+const LUB_BAL = { m610: [['B2.1', ['oleo', 'comb']], ['B2.2', ['ar'], true]], cum: [['B3.1', ['oleo']]], m229: [['B4.1', ['oleo', 'ar', 'comb']]] };
+const LUB_FLT = { oleo: 'filtro de óleo', comb: 'filtro de combustível', ar: 'filtro de ar' };
+async function lubBaixaBalsa(b, rec, eq, data) {
+  const out = { itens: [], avisos: [], hor: false }, by = S.session.name, quem = (data.nomes || {}).exe || by;
+  const grava = async (item, h) => { if (recs('base').some(r => r.vessel === b.id && r.item === item && r.date === data.date && String(r.om || '') === String(data.om || '') && !r.excluido)) return;
+    await saveRec({ id: uid('base'), kind: 'base', vessel: b.id, pos: 'UN', item, h, date: data.date, om: data.om, quem, obs: 'FR 049_B', by, bal: true, fr049: rec.id }); out.itens.push(item); };
+  const m = eq.find(q => q.key === 'cargaMotor' && q.status === 'T'), h = m && m.hr != null && m.hr !== '' ? +m.hr : null;
+  if (m) for (const [item, req, soFiltro] of LUB_BAL[b.mot] || []) { const f = m.filters || [], falta = req.filter(k => !f.includes(k));
+    if (!falta.length) await grava(item, h); else if (!soFiltro) out.avisos.push(item + ' sem baixa: falta marcar ' + falta.map(k => LUB_FLT[k]).join(' e ')); }
+  if (eq.some(q => q.key === 'bombaCentrifuga' && q.status === 'T')) await grava('B1.2', h);
+  if (h != null) { const hr = balHor(b.id); if (hr && h < hr.h && data.date >= hr.date) out.avisos.push('horímetro ' + nf(h) + ' h menor que a última leitura (' + nf(hr.h) + ' h): não lançado');
+    else if (!(hr && hr.h === h && hr.date === data.date)) { await saveRec({ id: uid('hor'), kind: 'hor', vessel: b.id, pos: 'MB', h, date: data.date, by, bal: true, fr049: rec.id }); out.hor = true; } }
+  return out;
 }
 // ponte usada pelo formulário (o FR 049_B chama window.parent.OilApp)
 window.OilApp = {
