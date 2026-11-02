@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 8.12', balcal: 'NP 024 · 8.7 e 6.5', balcmp: 'NP 024 · 8.13', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.155', data: '02/11/2026', itens: ['Biblioteca técnica separada por frota, com botões Empurradores · Balsas · Comuns às duas frotas; abre na frota escolhida no topo do menu; documento enviado ganha o campo Frota'] },
   { v: '3.154', data: '02/11/2026', itens: ['Balsas: compressão do MWM 6.10 TCA confirmada pela MWM (mínimo 20 bar, novo 23 bar, diferença máxima 2 bar entre cilindros, motor frio; Apostila de Treinamento MWM Série 10 e manual de serviço MWM 6.10/T/TCA cap. 15-40 — o manual de oficina Série 10 não traz o valor); sai o “documento de terceiros” da tela Compressão dos motores e o amarelo da NP 024 Rev. 02 (8.13)'] },
   { v: '3.153', data: '02/11/2026', itens: ['NP 024 Rev. 02: FR 024_D confirmado pelo Supervisor (lote e validade do lubrificante, junto com o FR 049_B, anexado à OM); sai o amarelo da tabela de documentos (item 9)'] },
   { v: '3.152', data: '02/11/2026', itens: ['Balsas: óleo dos mancais da bomba KSB ETA = 4,0 L (suporte D, rolamentos 6411 C3), informado pelo Supervisor; B1.1, B1.2, NP 024 Rev. 02 (8.5) e Anexo II'] },

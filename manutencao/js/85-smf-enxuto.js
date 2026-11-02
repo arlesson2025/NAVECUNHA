@@ -463,21 +463,22 @@ function enxIIACampo(o) {
 const enxOMsDe = vid => { const G = {}; recs('base').forEach(r => { if (r.vessel === vid && r.om && !r.excluido && A1M[r.item]) { const g = G[r.om] = G[r.om] || { om: r.om, date: r.date, n: 0 }; g.n++; if (r.date > g.date) g.date = r.date; } }); return Object.values(G).sort((a, b) => a.date < b.date ? 1 : -1); };
 // ---------- Biblioteca do enxuto: formulários padrão, NP, Anexo I e Matriz técnica (Supervisor, 27/10/2026) ----------
 // Formulários em branco para imprimir; os preenchidos saem das próprias telas (Executar, Corretivas, Óleo).
+// 5º campo = frota (Supervisor, 02/11/2026: “separar o que é de balsa e o que é de empurrador”, com botão): emp · bal · com (vale para as duas)
 const ENXB_DOCS = [
-  ['form', 'Anexo II-B · Relatório de serviço realizado · preventiva', 'Em branco, uma folha. Com os serviços já listados para levar a bordo: 2.2 OM preventiva → Formulário de campo', 'iib'],
-  ['form', 'Anexo II-A · Relatório de serviço realizado · corretiva', 'Em branco, uma folha. Com a falha já preenchida: 1.2 Manutenção corretiva → Formulário de campo', 'iia'],
-  ['form', 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', 'Preencher pelo SMF (Óleo) ou imprimir em branco', 'forms/FR_049_B.html'],
-  ['form', 'FR 027_L Rev.05 · Check-list de chegada e saída', 'Operador de Medição / Líder, CTF e Coordenador de Operações', 'forms/FR_027_L.html'],
-  ['form', 'FR 027_A Rev.04 · Check-list da balsa tanque', 'Balsas: preencher pelo SMF (Situação das balsas → FR 027_A) ou imprimir em branco', 'forms/FR_027_A.html'],
-  ['form', 'FR 016_E · Controle de materiais Classe I e II', 'Entrega de resíduos ao SGI (NP 5.7)', 'forms/FR_016_E.html'],
-  ['ref', 'Matriz técnica de equipamentos e lubrificação', 'Modelos, óleos, volumes e intervalos da frota', '../docs/empurradores/Matriz_tecnica.atual17.10.26.html'],
-  ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html'],
-  ['ref', 'Como a frota trabalha · resumo para reuniões', 'O ciclo da manutenção em uma folha: chegada, planejamento, execução, saída, fechamento do mês e o papel do Sankhya', '../docs/empurradores/Como_a_frota_trabalha.html'],
-  ['ref', 'NP Navecunha 055 · Plano de Gestão de Manutenção', 'Procedimento vigente (revisão em aprovação)', '../docs/empurradores/NP_Navecunha_055_corrigida.html'],
-  ['ref', 'NP Navecunha 024 · Plano de Gestão de Manutenção · Balsas Tanque', 'Minuta da Rev. 02 (em amarelo, o que falta confirmar); Word em docs/balsas', '../docs/balsas/NP_Navecunha_024_Rev02.html'],
-  ['ref', 'NP 024 · Anexo I · Instrução de operação do conjunto motor-bomba', 'Fixar na praça de máquinas da balsa', '../docs/balsas/NP024_Anexo_I_Instrucao_Operacao_Motor_Bomba_Rev02.html'],
-  ['ref', 'NP 024 · Anexo II · Troca de óleo e controle', 'Óleos, filtros e intervalos dos três motores das balsas', '../docs/balsas/NP024_Anexo_II_Troca_de_Oleo_e_Controle_Rev02.html'],
-  ['ref', 'NP 024 · Anexo III · Ficha técnica dos equipamentos críticos', 'Uma por balsa, fixada na praça de máquinas', '../docs/balsas/NP024_Anexo_III_Ficha_Tecnica_Equipamentos_Rev02.html'],
+  ['form', 'Anexo II-B · Relatório de serviço realizado · preventiva', 'Em branco, uma folha. Com os serviços já listados para levar a bordo: 2.2 OM preventiva → Formulário de campo', 'iib', 'emp'],
+  ['form', 'Anexo II-A · Relatório de serviço realizado · corretiva', 'Em branco, uma folha. Com a falha já preenchida: 1.2 Manutenção corretiva → Formulário de campo', 'iia', 'emp'],
+  ['form', 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', 'Preencher pelo SMF (Óleo) ou imprimir em branco', 'forms/FR_049_B.html', 'com'],
+  ['form', 'FR 027_L Rev.05 · Check-list de chegada e saída', 'Operador de Medição / Líder, CTF e Coordenador de Operações', 'forms/FR_027_L.html', 'emp'],
+  ['form', 'FR 027_A Rev.04 · Check-list da balsa tanque', 'Balsas: preencher pelo SMF (Situação das balsas → FR 027_A) ou imprimir em branco', 'forms/FR_027_A.html', 'bal'],
+  ['form', 'FR 016_E · Controle de materiais Classe I e II', 'Entrega de resíduos ao SGI (NP 5.7)', 'forms/FR_016_E.html', 'com'],
+  ['ref', 'Matriz técnica de equipamentos e lubrificação', 'Modelos, óleos, volumes e intervalos da frota', '../docs/empurradores/Matriz_tecnica.atual17.10.26.html', 'emp'],
+  ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html', 'emp'],
+  ['ref', 'Como a frota trabalha · resumo para reuniões', 'O ciclo da manutenção em uma folha: chegada, planejamento, execução, saída, fechamento do mês e o papel do Sankhya', '../docs/empurradores/Como_a_frota_trabalha.html', 'emp'],
+  ['ref', 'NP Navecunha 055 · Plano de Gestão de Manutenção', 'Procedimento vigente (revisão em aprovação)', '../docs/empurradores/NP_Navecunha_055_corrigida.html', 'emp'],
+  ['ref', 'NP Navecunha 024 · Plano de Gestão de Manutenção · Balsas Tanque', 'Minuta da Rev. 02 (em amarelo, o que falta confirmar); Word em docs/balsas', '../docs/balsas/NP_Navecunha_024_Rev02.html', 'bal'],
+  ['ref', 'NP 024 · Anexo I · Instrução de operação do conjunto motor-bomba', 'Fixar na praça de máquinas da balsa', '../docs/balsas/NP024_Anexo_I_Instrucao_Operacao_Motor_Bomba_Rev02.html', 'bal'],
+  ['ref', 'NP 024 · Anexo II · Troca de óleo e controle', 'Óleos, filtros e intervalos dos três motores das balsas', '../docs/balsas/NP024_Anexo_II_Troca_de_Oleo_e_Controle_Rev02.html', 'bal'],
+  ['ref', 'NP 024 · Anexo III · Ficha técnica dos equipamentos críticos', 'Uma por balsa, fixada na praça de máquinas', '../docs/balsas/NP024_Anexo_III_Ficha_Tecnica_Equipamentos_Rev02.html', 'bal'],
 ];
 function enxIIBBranco() {
   const L = n => Array.from({ length: n }, () => '<tr><td style="height:22px"></td><td></td><td style="width:8%"></td><td style="width:8%"></td><td style="width:8%"></td></tr>').join('');
@@ -509,13 +510,18 @@ function enxIIABranco() {
     + '<h3>O que aconteceu</h3><table><tr><td style="height:80px"></td></tr></table><h3>O que foi feito</h3><table><tr><td style="height:120px"></td></tr></table><h3>Observações</h3><table><tr><td style="height:50px"></td></tr></table>'
     + enxAss('Executante', 'Recebido a bordo (Comandante ou Coord. de Operações)', 'Supervisor de Manutenção'));
 }
+const BIB_FR = { f: null };
+const BIB_FRN = { emp: 'Empurradores', bal: 'Balsas', com: 'Comuns às duas frotas' };
 function vEnxBib() {
+  const fr = BIB_FR.f || (FROTA_TIPO === 'bal' ? 'bal' : 'emp'), daFrota = r => (['emp', 'bal'].includes(r.frota) ? r.frota : 'com') === fr;
   const item = (d, i) => `<tr><td><b>${esc(d[1])}</b><div class="note">${esc(d[2])}</div></td><td style="width:1%;white-space:nowrap"><button class="mbtn sm pri" data-ebib="${i}">${d[3].length < 4 ? '🖨 Imprimir' : 'Abrir'}</button></td></tr>`;
-  const sec = (k, t) => `<div class="card"><h2>${t}</h2><table class="t"><tbody>${ENXB_DOCS.map((d, i) => d[0] === k ? item(d, i) : '').join('')}</tbody></table></div>`;
-  const D = recs('doc').sort((a, b) => a.titulo.localeCompare(b.titulo));
-  return enxCab('Biblioteca técnica', 'Formulários padrão para imprimir, a Matriz técnica, o Anexo I e a NP 055 · manuais e catálogos enviados ficam no Google Drive', `<button class="mbtn" data-ebibnovo>＋ Adicionar documento</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
-   + sec('form', 'Formulários padrão') + sec('ref', 'Normas e matrizes')
-   + `<div class="card"><h2>Manuais e documentos enviados · ${D.length}</h2>${D.length ? `<table class="t"><tbody>${D.map(r => `<tr><td><b>${esc(r.titulo)}</b><div class="note">${esc([r.desc, r.equip ? EQN[r.equip] || r.equip : '', r.rev ? 'Rev. ' + r.rev : ''].filter(Boolean).join(' · '))}</div></td><td style="width:1%;white-space:nowrap"><button class="mbtn sm pri" data-ebibdoc="${r.id}">Abrir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum ainda. Use “Adicionar documento” para manuais de fabricante, catálogos e procedimentos (arquivo até 10 MB ou link).</p>'}</div></div></div>`;
+  const sec = (k, t) => { const L = ENXB_DOCS.map((d, i) => d[0] === k && d[4] === fr ? item(d, i) : '').join(''); return L ? `<div class="card"><h2>${t}</h2><table class="t"><tbody>${L}</tbody></table></div>` : ''; };
+  const Dt = recs('doc'), D = Dt.filter(daFrota).sort((a, b) => a.titulo.localeCompare(b.titulo));
+  const n = k => ENXB_DOCS.filter(d => d[4] === k).length + Dt.filter(r => (['emp', 'bal'].includes(r.frota) ? r.frota : 'com') === k).length;
+  const bts = `<div class="cm-chips bib-fr">${['emp', 'bal', 'com'].map(k => `<button class="cm-chip${k === fr ? ' on' : ''}" data-bibf="${k}">${BIB_FRN[k]} · ${n(k)}</button>`).join('')}</div>`;
+  return enxCab('Biblioteca técnica', 'Formulários padrão, normas e matrizes de cada frota: escolha Empurradores, Balsas ou Comuns às duas frotas · manuais e catálogos enviados ficam no Google Drive', `<button class="mbtn" data-ebibnovo>＋ Adicionar documento</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
+   + `<div class="card"><h2>Frota</h2>${bts}</div>` + sec('form', 'Formulários padrão · ' + BIB_FRN[fr].toLowerCase()) + sec('ref', 'Normas e matrizes · ' + BIB_FRN[fr].toLowerCase())
+   + `<div class="card"><h2>Manuais e documentos enviados · ${BIB_FRN[fr].toLowerCase()} · ${D.length}</h2>${D.length ? `<table class="t"><tbody>${D.map(r => `<tr><td><b>${esc(r.titulo)}</b><div class="note">${esc([r.desc, r.equip ? EQN[r.equip] || r.equip : '', r.rev ? 'Rev. ' + r.rev : ''].filter(Boolean).join(' · '))}</div></td><td style="width:1%;white-space:nowrap"><button class="mbtn sm pri" data-ebibdoc="${r.id}">Abrir</button></td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum ainda. Use “Adicionar documento” para manuais de fabricante, catálogos e procedimentos (arquivo até 10 MB ou link).</p>'}</div></div></div>`;
 }
 // ---------- 1.2 Manutenção corretiva: abre na falha (OM aberta), libera depois; MTTR e disponibilidade saem de início × liberação; Anexo II-A na liberação ----------
 // Status: aberta (em reparo) → conferencia (liberada pela equipe, aguarda o Supervisor) → encerrada. Liberada pelo Supervisor vai direto a encerrada (o servidor só aceita “encerrada” do Supervisor).
@@ -641,7 +647,8 @@ async function enxCrAprovar(id) {
 .ecr-lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:#3C4043;margin:0 0 8px}.ecr-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #DADCE0}.ecr-lg i.ok{background:#E6F4EA}.ecr-lg i.lt{background:#FEF3E0}.ecr-lg i.ms{background:#FCE8E6}.ecr-lg i.hj{background:#E8F0FE;border-color:#1967D2}.ecr-lg i.fut{background:#F5F8FE}`; document.head.appendChild(st); }
 // ---------- telas e cliques ----------
 const enxAfter = k => () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxcampo],[data-enxfeito],[data-enxnf],[data-enxinsp],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehpm],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ec2acp],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-ecrv],[data-ecrano],[data-ecrimp],[data-ecraprov],[data-enxir],[data-enxv],[data-enxcopiar],[data-enxcampo],[data-enxfeito],[data-enxnf],[data-enxinsp],[data-enxtodos],[data-enxabre],[data-ehv],[data-ehpm],[data-ehno],[data-ehsalvar],[data-erimp],[data-enx2b],[data-ecsalvar],[data-ec2a],[data-ec2acp],[data-eclib],[data-ecenc],[data-ebib],[data-ebibdoc],[data-ebibnovo],[data-bibf]'); if (!t) return; const d = t.dataset;
+    if (d.bibf !== undefined) { BIB_FR.f = d.bibf; return render(); }
     if (d.ebib !== undefined) { const x = ENXB_DOCS[+d.ebib][3]; return x === 'iib' ? enxIIBBranco() : x === 'iia' ? enxIIABranco() : window.open(x, '_blank', 'noopener'); }
     if (d.ebibdoc !== undefined) return abrirDoc(S.recs.get(d.ebibdoc));
     if (d.ebibnovo !== undefined) return docModal(null, 'manual');

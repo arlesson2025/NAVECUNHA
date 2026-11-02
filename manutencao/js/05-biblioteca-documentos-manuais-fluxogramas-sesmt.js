@@ -58,6 +58,7 @@ function docModal(r, cat, tit) {
   modal(`<h2>${r ? 'Editar documento' : 'Adicionar à biblioteca'}</h2>
    <div class="g"><label class="f s6">Título<input id="dT" value="${esc(o.titulo)}" placeholder="ex.: Manual de serviço Mitsubishi S6R2"></label>
     <label class="f s3">Categoria<select id="dC">${BIB_CAT.map(([c, n]) => `<option value="${c}"${o.cat === c ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label class="f s3">Frota<select id="dFr">${[['com', 'Comum às duas frotas'], ['emp', 'Empurradores'], ['bal', 'Balsas']].map(([k, n]) => `<option value="${k}"${(o.frota || (typeof BIB_FR !== 'undefined' && !r ? BIB_FR.f || (FROTA_TIPO === 'bal' ? 'bal' : 'emp') : 'com')) === k ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="f s3">Equipamento<select id="dE"><option value="">Geral (frota)</option>${Object.entries(EQN).map(([k, n]) => `<option value="${k}"${o.equip === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
     <label class="f s6">Descrição<input id="dD" value="${esc(o.desc || '')}" placeholder="o que tem nele, para que serve"></label>
     <label class="f s2">Revisão / edição<input id="dR" value="${esc(o.rev || '')}"></label><label class="f s2">Validade (se tiver)<input id="dV" type="date" value="${esc(o.validade || '')}"></label><label class="f s2">Palavras-chave<input id="dK" value="${esc(o.tags || '')}" placeholder="bicos, torque…"></label>
@@ -73,7 +74,7 @@ function docModal(r, cat, tit) {
     if (!f && !u && !o.fileName && !o.pdfFileId) { $('#dErr').textContent = 'Escolha um arquivo ou cole um link.'; return; }
     if (f && f.size > 10 * 1024 * 1024) { $('#dErr').textContent = 'Arquivo maior que 10 MB. Coloque no Google Drive e cole o link.'; return; }
     if (u && !/^https?:\/\//i.test(u)) { $('#dErr').textContent = 'O link precisa começar com http:// ou https://'; return; }
-    const rec = Object.assign(r || { id: uid('doc'), kind: 'doc' }, { titulo: t, cat: $('#dC').value, equip: $('#dE').value, desc: $('#dD').value.trim(), rev: $('#dR').value.trim(), validade: $('#dV').value, tags: $('#dK').value.trim(), url: u, by: S.session.name });
+    const rec = Object.assign(r || { id: uid('doc'), kind: 'doc' }, { titulo: t, cat: $('#dC').value, frota: $('#dFr').value, equip: $('#dE').value, desc: $('#dD').value.trim(), rev: $('#dR').value.trim(), validade: $('#dV').value, tags: $('#dK').value.trim(), url: u, by: S.session.name });
     let b64 = null; if (f) { b64 = await lerArquivo(f); rec.fileName = f.name; rec.mime = f.type || 'application/octet-stream'; rec.size = f.size; }
     await saveRec(rec, b64 ? { pdfB64: b64 } : {});
     closeModal(); toast(b64 ? (S.url ? 'Salvo. O arquivo vai para o Google Drive na próxima sincronização.' : 'Salvo neste aparelho (sem nuvem configurada).') : 'Salvo.'); render();

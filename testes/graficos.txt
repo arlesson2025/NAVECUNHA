@@ -8,7 +8,6 @@ balkpi | Falhas por equipamento
 compr | Detalhe por cilindro
 compr | Histórico de compressão
 enxapres | Slides
-enxbib | Formulários padrão
 enxcal | Bicos injetores
 enxcal | Folga de válvulas
 enxdoca | Docagem
