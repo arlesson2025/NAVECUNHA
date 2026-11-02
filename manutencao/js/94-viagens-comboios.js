@@ -153,7 +153,7 @@ function vgPosModal(id) {
     <label class="f s3">Empurrador<select id="vpV">${S.cfg.frota.map(v => `<option value="${v.id}"${v.id === id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label>
     <label class="f s3">Situação<select id="vpS"><option value="via"${!o || o.st !== 'por' ? ' selected' : ''}>Fora do porto (em viagem)</option><option value="por"${o && o.st === 'por' ? ' selected' : ''}>No porto</option></select></label>
     <label class="f s2">Data<input type="date" id="vpD" value="${isoD(hoje())}"></label><label class="f s1">Hora<input type="time" id="vpH"></label>
-    <label class="f s3" id="vpPl">Porto<input id="vpP" list="vpPL" placeholder="Manaus, Porto Velho…"><datalist id="vpPL">${VG_PORTOS.map(x => `<option value="${x}">`).join('')}</datalist></label>
+    <label class="f s3" id="vpPl">Porto<input id="vpP" list="vpPL" placeholder="Manaus, Porto Velho…"><datalist id="vpPL">${[...(typeof VG_FIXO === 'object' ? Object.keys(VG_FIXO) : []), ...VG_PORTOS].map(x => `<option value="${x}">`).join('')}</datalist></label>
     <label class="f s6">Local / última posição<input id="vpL" placeholder="Paraná do Miriti, a 145 km de Humaitá"></label>
     <label class="f s3" id="vpQl">Sem movimento desde (se parado)<input type="date" id="vpQ"></label>
     <label class="f s3">Observação<input id="vpO" placeholder="opcional"></label></div>
@@ -183,8 +183,8 @@ function vgLerBoletim(txt) {
   return it.map(x => { const c = vgCoord(x.t), t = c.t.replace(/COMBOIO\s*:?/gi, ' ').replace(/\bVDA\s*-?\s*[IVXL]+\b\s*(?:,|\be\b)?/gi, ' ').replace(/HOR[IÍ]METRO\s*\/?\s*:?\s*[\d.,]+\s*h?/gi, ' ').replace(/[ÚU]LTIMA\s+ATUALIZA[CÇ][AÃ]O\s*:?/gi, ' ').replace(/^[\s\-–:]+/, ''); const md = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); let date = isoD(H), hora = '';
     if (md) { let y = md[3] ? +md[3] : H.getFullYear(); if (y < 100) y += 2000; if (!md[3] && +md[2] > H.getMonth() + 2) y--; date = `${y}-${String(+md[2]).padStart(2, '0')}-${String(+md[1]).padStart(2, '0')}`; }
     const mh = t.match(/(\d{1,2})\s*(?:h|:)\s*(\d{2})/i); if (mh) hora = `${String(+mh[1]).padStart(2, '0')}:${mh[2]}`;
-    const n = vgNorm(t), parado = /parad|sem moviment|fundead/.test(n), porto = /atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado;
-    const pt = VG_PORTOS.find(p => n.includes(vgNorm(p)));
+    const n = vgNorm(t), fx = /boia|cimento|filial/.test(n) && typeof vgFixo === 'function' ? vgFixo(t) : null, parado = !fx && /parad|sem moviment|fundead/.test(n), porto = !!fx || (/atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado);   // boia 1, boia 2 e filial = no porto, no ponto fixo (js/102)
+    const pt = fx || VG_PORTOS.find(p => n.includes(vgNorm(p)));
     let local = t.replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/\s{2,}/g, ' ');
     for (let k = 0; k < 4; k++) local = local.replace(/^[\s,.;:\-–|·]+|[\s,.;:\-–|·]+$/g, '').replace(/\s+(?:às|as|desde|em|de)$/i, '');
     if (local.length > 140) local = local.slice(0, 137) + '…';
