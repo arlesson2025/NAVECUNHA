@@ -87,21 +87,117 @@ function vgMeses(V, ano) {   // barras empilhadas por rota: 16 px como as do SMF
 }
 const vgLeg = (ref) => `<div class="vg-lg">${VG_GR.map(g => `<span><i style="background:${g[1]}"></i>${g[0]}</span>`).join('')}${ref ? '<span><i style="background:#9AA5B4"></i>Em reforma</span>' : ''}</div>`;
 // ---------- comboios em viagem agora (SMF 3.131, pedido do Supervisor: “enxergar os comboios que estão em viagem”) ----------
-function vgAgora(LE) {
-  const H = isoD(hoje()), d = (a, b) => Math.round((pD(b) - pD(a)) / 864e5);
-  const L = LE.filter(x => x.st === 'via' && x.u).map(x => x.u).sort((a, b) => a.fim < b.fim ? -1 : 1);
-  const lin = L.map(u => { const dv = Math.max(0, d(u.date, H)), resta = d(H, u.fim);
-    const prev = resta >= 0 ? `${brD(u.fim)} <span class="note">· em ${resta} d</span>` : `${brD(u.fim)} <span class="pill p-warn">passou ${-resta} d</span>`;
-    return `<tr><td class="nowrap"><b>${esc(vName(u.vessel))}</b></td><td>${u.balsas.map(b => `<span class="vg-b">${esc(vName(b))}</span>`).join('') || '<span class="note">sem balsa</span>'}</td><td class="nowrap"><i class="vg-dot" style="background:${VG_COR[u.rota] || '#9AA5B4'}"></i>${esc(vgRotaCurta(u.rota))}</td><td class="nowrap">${brD(u.date)}</td><td class="num nowrap"><b>${dv}</b> d</td><td class="nowrap">${prev}</td><td class="nowrap"><button class="mbtn sm" data-vged="${esc(u.id)}">Editar</button></td></tr>`; }).join('');
-  const nb = L.reduce((a, u) => a + u.balsas.length, 0);
-  return `<div class="card"><h2>Comboios em viagem agora · ${L.length} empurrador${L.length === 1 ? '' : 'es'} · ${nb} balsa${nb === 1 ? '' : 's'}</h2>${L.length ? `<div class="tw"><table class="t vg-ag"><thead><tr><th>Empurrador</th><th>Balsas do comboio</th><th>Rota</th><th>Saída</th><th class="num">Em viagem há</th><th>Chegada prevista</th><th></th></tr></thead><tbody>${lin}</tbody></table></div>` : '<p class="note">Nenhum comboio em viagem agora.</p>'}
-    <p class="note">Da saída registrada (“Saiu de viagem”) até o FR 027_L de chegada. Chegada prevista = saída + ciclo da rota; “passou” = já devia ter chegado e ainda não há FR 027_L de chegada (confira ou informe a chegada em Editar).</p></div>`;
+// ---------- onde está a frota (SMF 3.136; Supervisor, 01/11/2026: “visão do que está no porto e do que não está, de balsas e empurradores”) ----------
+// posição = snap tipo 'pos' (boletim do Autotrac colado ou lançado à mão): vessel, date, at (data e hora), situ 'via'|'por', local, porto, parDesde, obs, fonte
+const VG_PORTOS = ['Manaus', 'Porto Velho', 'Itacoatiara', 'Vila do Conde', 'Barcarena', 'Santarém', 'Munguba', 'Belém', 'Humaitá'];
+const VG_PARADO_D = 3;   // fora do porto sem mudar de posição há mais de 3 dias = alerta (critério interno)
+const vgPosicoes = id => recs('snap').filter(r => r.tipo === 'pos' && !r.excluido && r.vessel === id && r.date).sort((a, b) => (a.at || a.date) < (b.at || b.date) ? -1 : 1);
+const vgDH = at => !at ? '' : brD(at.slice(0, 10)) + (at.length > 10 && at.slice(11, 16) !== '00:00' ? ' ' + at.slice(11, 16).replace(':', 'h') : '');
+const vgNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+function vgOndeDe(id, eb, V) {
+  V = V || vgViagens(); const H = isoD(hoje()), dd = (a, b) => Math.max(0, Math.round((pD(b) - pD(a)) / 864e5));
+  const lin = vgLinha(id, eb, V, hoje().getFullYear()), u = lin.u, P = eb ? [] : vgPosicoes(id), p = P[P.length - 1];
+  const o = { id, nome: lin.nome, st: lin.st, u, balsas: u ? u.balsas : [], rota: u ? u.rota : '', emp: eb && u ? u.vessel : '' };
+  const ref = u ? (lin.st === 'via' ? u.date : u.fim) : '';
+  const usa = p && o.st !== 'ref' && p.date >= (ref || '');
+  if (usa) o.st = p.situ === 'por' ? 'por' : 'via';
+  if (o.st === 'por') {
+    if (usa) { o.porto = p.porto || p.local || 'Porto não informado'; o.desde = p.at || p.date; o.local = p.local; }
+    else if (u) { const c = !eb && recs('fr027').some(f => f.vessel === id && f.mov === 'chegada' && f.date === u.fim); o.porto = 'Manaus'; o.desde = u.fim; o.est = u.est && !c; }
+    else o.porto = 'Manaus';
+    o.dias = o.desde ? dd(o.desde.slice(0, 10), H) : null;
+  } else if (o.st === 'via') {
+    o.saida = u && u.via ? u.date : (usa ? '' : u ? u.date : '');
+    const Pv = P.filter(x => x.situ !== 'por' && (!o.saida || x.date >= o.saida));
+    const q = Pv[Pv.length - 1];
+    if (q) { o.local = q.local; o.at = q.at || q.date; o.obs = q.obs;
+      let des = q.parDesde || ''; if (!des) { let k = Pv.length - 1; while (k > 0 && vgNorm(Pv[k - 1].local) === vgNorm(q.local)) k--; if (k < Pv.length - 1) des = Pv[k].at || Pv[k].date; }
+      if (des) { o.parDesde = des; o.parD = dd(des.slice(0, 10), H); } o.semPos = dd(o.at.slice(0, 10), H); }
+    o.dias = o.saida ? dd(o.saida, H) : null;
+    if (u && u.via) o.prev = u.fim;
+  }
+  return o;
+}
+// texto curto para a Situação da frota
+let VG_VC = null;   // viagens em memória até a próxima gravação (a Situação da frota pede um texto por empurrador)
+function vgOndeTx(id) { try { if (!VG_VC || VG_VC.v !== S.recs.__v) VG_VC = { v: S.recs.__v, V: vgViagens() }; const o = vgOndeDe(id, false, VG_VC.V);
+  if (o.st === 'ref') return 'em reforma';
+  if (o.st === 'por') return `${o.porto}${o.desde ? ' desde ' + vgDH(o.desde) : ''}${o.est ? ' (est.)' : ''}`;
+  return `em viagem${o.local ? ' · ' + o.local : o.rota ? ' · ' + vgRotaCurta(o.rota) : ''}${o.at ? ' · ' + vgDH(o.at) : ''}${o.parD > VG_PARADO_D ? ' · parado há ' + o.parD + ' d' : ''}`; } catch (e) { return ''; } }
+function vgOnde(V, nAno, ano) {
+  const E = S.cfg.frota.filter(v => !foraOp(v) || vgEmReforma(v.id)).map(v => vgOndeDe(v.id, false, V)), B = vgBalsas().map(b => vgOndeDe(b.id, true, V));
+  const via = E.filter(o => o.st === 'via').sort((a, b) => (b.parD || 0) - (a.parD || 0) || (a.saida < b.saida ? -1 : 1)), por = E.filter(o => o.st === 'por'), ref = E.filter(o => o.st === 'ref');
+  const bVia = new Set(via.flatMap(o => o.balsas)), bRef = B.filter(o => o.st === 'ref'), bPor = B.filter(o => o.st !== 'ref' && !bVia.has(o.id));
+  const par = via.filter(o => o.parD > VG_PARADO_D).length, ed = can.edit();
+  const bt = id => ed ? `<button class="mbtn sm" data-vgpos="${id}" title="Informar posição">Posição</button>` : '';
+  const lv = via.map(o => `<tr${o.parD > VG_PARADO_D ? ' class="vg-par"' : ''}><td class="nowrap"><b>${esc(o.nome)}</b></td><td>${o.rota ? `<i class="vg-dot" style="background:${VG_COR[o.rota] || '#9AA5B4'}"></i>${esc(vgRotaCurta(o.rota))}` : '<span class="note">rota não informada</span>'}${o.saida ? `<div class="note">saída ${brD(o.saida)}${o.prev ? ' · chegada prevista ' + brD(o.prev) : ''}</div>` : ''}</td>
+    <td>${o.local ? esc(o.local) + `<div class="note">${vgDH(o.at)}${o.semPos > 2 ? ` · <span style="color:var(--warnt)">sem posição nova há ${o.semPos} d</span>` : ''}</div>` : '<span class="note">sem posição informada</span>'}${o.obs ? `<div class="note">${esc(o.obs)}</div>` : ''}</td>
+    <td>${o.balsas.map(b => `<span class="vg-b">${esc(vName(b))}</span>`).join('') || '<span class="note">sem balsa</span>'}</td>
+    <td class="nowrap">${o.parD > VG_PARADO_D ? `<span class="pill p-bad">parado há ${o.parD} d</span>` : o.dias != null ? `<span class="pill p-inf">${o.dias} d em viagem</span>` : ''}${o.prev && o.prev < isoD(hoje()) ? ' <span class="pill p-warn">passou da chegada</span>' : ''}</td><td>${bt(o.id)}</td></tr>`).join('');
+  const portos = [...new Set(por.map(o => o.porto))].sort((a, b) => a === 'Manaus' ? -1 : b === 'Manaus' ? 1 : a < b ? -1 : 1);
+  const lp = portos.map(pt => `<tr class="vg-m"><td colspan="3">${esc(pt)} · ${por.filter(o => o.porto === pt).length}</td></tr>` + por.filter(o => o.porto === pt).sort((a, b) => (b.dias ?? -1) - (a.dias ?? -1)).map(o => `<tr><td class="nowrap"><b>${esc(o.nome)}</b></td><td>${o.desde ? 'desde ' + vgDH(o.desde) + (o.est ? ' <span class="note">(chegada estimada)</span>' : '') : '<span class="note">desde quando não informado</span>'}</td><td class="nowrap">${o.dias != null ? `<span class="pill ${o.dias > 15 ? 'p-warn' : 'p-ok'}">${o.dias} d</span>` : ''} ${bt(o.id)}</td></tr>`).join('')).join('');
+  const chips = A => A.map(o => `<span class="vg-b">${esc(o.nome)}</span>`).join('') || '<span class="note">nenhuma</span>';
+  const nk = (l, v, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
+  return `<div class="card"><div class="row"><h2>Onde está a frota · hoje</h2><span class="sp"></span>${ed ? '<button class="mbtn" data-vgbol>Colar boletim do Autotrac</button><button class="mbtn pri" data-vgpos="">Informar posição</button>' : ''}</div>
+    <div class="sf-k">${nk('Empurradores fora do porto', via.length)}${nk('Empurradores no porto', por.length)}${nk('Balsas em comboio', bVia.size)}${nk('Balsas no porto', bPor.length)}${nk(`Parados fora há mais de ${VG_PARADO_D} d`, par, par ? 'var(--badt)' : '')}${nk('Em reforma', ref.length + bRef.length, ref.length + bRef.length ? 'var(--warnt)' : '')}${nAno != null ? nk('Comboios em ' + ano, nAno) : ''}</div></div>
+   <div class="card"><h2>Fora do porto · ${via.length} empurrador${via.length === 1 ? '' : 'es'} · ${bVia.size} balsa${bVia.size === 1 ? '' : 's'}</h2>${via.length ? `<div class="tw"><table class="t vg-ag"><thead><tr><th>Empurrador</th><th>Rota</th><th>Última posição</th><th>Balsas</th><th></th><th></th></tr></thead><tbody>${lv}</tbody></table></div>` : '<p class="note">Nenhum empurrador fora do porto.</p>'}
+    <p class="note">Em viagem desde o “Saiu de viagem”; a posição vem do boletim colado ou informado. Mesma posição em boletins seguidos (ou “sem movimento desde”) por mais de ${VG_PARADO_D} dias = parado.</p></div>
+   <div class="card"><h2>No porto · ${por.length} empurrador${por.length === 1 ? '' : 'es'} · ${bPor.length} balsa${bPor.length === 1 ? '' : 's'}</h2>${por.length ? `<div class="tw"><table class="t"><tbody>${lp}</tbody></table></div>` : '<p class="note">Nenhum empurrador no porto.</p>'}
+    <h3 class="vg-h3">Balsas no porto</h3><div>${chips(bPor)}</div>
+    <h3 class="vg-h3">Em reforma</h3><div>${chips(ref.concat(bRef))}</div>
+    <p class="note">Porto = o informado na posição; sem ela, Manaus pela chegada (FR 027_L ou estimada pela rota). Mais de 15 dias no porto em âmbar.</p></div>`;
+}
+function vgPosModal(id) {
+  if (!can.edit()) return; const o = id ? vgOndeDe(id, false) : null;
+  modal(`<h2>Informar posição</h2><div class="g">
+    <label class="f s3">Empurrador<select id="vpV">${S.cfg.frota.map(v => `<option value="${v.id}"${v.id === id ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label>
+    <label class="f s3">Situação<select id="vpS"><option value="via"${!o || o.st !== 'por' ? ' selected' : ''}>Fora do porto (em viagem)</option><option value="por"${o && o.st === 'por' ? ' selected' : ''}>No porto</option></select></label>
+    <label class="f s2">Data<input type="date" id="vpD" value="${isoD(hoje())}"></label><label class="f s1">Hora<input type="time" id="vpH"></label>
+    <label class="f s3" id="vpPl">Porto<input id="vpP" list="vpPL" placeholder="Manaus, Porto Velho…"><datalist id="vpPL">${VG_PORTOS.map(x => `<option value="${x}">`).join('')}</datalist></label>
+    <label class="f s6">Local / última posição<input id="vpL" placeholder="Paraná do Miriti, a 145 km de Humaitá"></label>
+    <label class="f s3" id="vpQl">Sem movimento desde (se parado)<input type="date" id="vpQ"></label>
+    <label class="f s3">Observação<input id="vpO" placeholder="opcional"></label></div>
+    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="vpOk">Salvar</button></div>`);
+  const ui = () => { const pr = $('#vpS').value === 'por'; $('#vpPl').style.display = pr ? '' : 'none'; $('#vpQl').style.display = pr ? 'none' : ''; }; $('#vpS').onchange = ui; ui();
+  $('#vpOk').onclick = async () => { const d = $('#vpD').value, pr = $('#vpS').value === 'por', l = $('#vpL').value.trim(), pt = $('#vpP').value.trim();
+    if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.'); if (pr ? !pt && !l : !l) return toast(pr ? 'Informe o porto.' : 'Informe a posição.');
+    await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: $('#vpV').value, date: d, at: d + 'T' + ($('#vpH').value || '00:00'), situ: pr ? 'por' : 'via', local: l, porto: pr ? pt || l : '', parDesde: !pr ? $('#vpQ').value : '', obs: $('#vpO').value.trim(), fonte: 'manual', por: S.session.name });
+    closeModal(); toast('Posição salva.'); render(); };
+}
+// boletim do Autotrac colado: cada trecho que cita um empurrador vira uma posição (conferida antes de gravar)
+function vgLerBoletim(txt) {
+  const F = S.cfg.frota.map(v => ({ v, re: new RegExp('\\b' + v.nome.replace(/\s+/g, '\\s*-?\\s*') + '(?![IVXL])', 'i') })).sort((a, b) => b.v.nome.length - a.v.nome.length);
+  const it = []; let cur = null;
+  String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => { const f = F.find(x => x.re.test(l)); if (f) { cur = { v: f.v, t: l.replace(f.re, ' ') }; it.push(cur); } else if (cur) cur.t += ' ' + l; });
+  const H = hoje();
+  return it.map(x => { const t = x.t; const md = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); let date = isoD(H), hora = '';
+    if (md) { let y = md[3] ? +md[3] : H.getFullYear(); if (y < 100) y += 2000; if (!md[3] && +md[2] > H.getMonth() + 2) y--; date = `${y}-${String(+md[2]).padStart(2, '0')}-${String(+md[1]).padStart(2, '0')}`; }
+    const mh = t.match(/(\d{1,2})\s*(?:h|:)\s*(\d{2})/i); if (mh) hora = `${String(+mh[1]).padStart(2, '0')}:${mh[2]}`;
+    const n = vgNorm(t), parado = /parad|sem moviment|fundead/.test(n), porto = /atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado;
+    const pt = VG_PORTOS.find(p => n.includes(vgNorm(p)));
+    let local = t.replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/\s{2,}/g, ' ');
+    for (let k = 0; k < 4; k++) local = local.replace(/^[\s,.;:\-–|·]+|[\s,.;:\-–|·]+$/g, '').replace(/\s+(?:às|as|desde|em|de)$/i, '');
+    if (local.length > 140) local = local.slice(0, 137) + '…';
+    return { vessel: x.v.id, nome: x.v.nome, date: date > isoD(H) ? isoD(H) : date, hora, situ: porto ? 'por' : 'via', porto: porto ? pt || '' : '', local, parDesde: parado ? date : '' }; });
+}
+function vgBoletimModal() {
+  if (!can.edit()) return;
+  modal(`<h2>Colar boletim do Autotrac</h2><p class="note">Cole o texto do e-mail do boletim. Cada linha (ou trecho) que cita um empurrador vira uma posição; a data e a hora são lidas do texto. Confira antes de gravar.</p>
+    <textarea id="vbT" rows="7" style="width:100%" placeholder="CJA I – Paraná do Miriti, a 145 km de Humaitá – 31/10 às 18h00"></textarea>
+    <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="vbL">Ler</button></div><div id="vbR"></div>`, true);
+  let R = [];
+  $('#vbL').onclick = () => { R = vgLerBoletim($('#vbT').value);
+    $('#vbR').innerHTML = !R.length ? '<p class="note" style="color:var(--badt)">Nenhum empurrador encontrado no texto.</p>' : `<div class="tw"><table class="t"><thead><tr><th></th><th>Empurrador</th><th>Situação</th><th>Data</th><th>Hora</th><th>Posição / porto</th><th>Parado</th></tr></thead><tbody>${R.map((r, k) => `<tr data-k="${k}"><td><input type="checkbox" class="vbI" checked></td><td><b>${esc(r.nome)}</b></td><td><select class="vbS"><option value="via"${r.situ === 'via' ? ' selected' : ''}>fora do porto</option><option value="por"${r.situ === 'por' ? ' selected' : ''}>no porto</option></select></td><td><input type="date" class="vbD" value="${r.date}"></td><td><input type="time" class="vbH" value="${r.hora}"></td><td><input class="vbLc" value="${esc(r.situ === 'por' && r.porto ? r.porto : r.local)}"></td><td><input type="checkbox" class="vbP"${r.parDesde ? ' checked' : ''}></td></tr>`).join('')}</tbody></table></div><div class="row end"><button class="mbtn pri" id="vbOk">Gravar ${R.length} posição(ões)</button></div>`;
+    const ok = $('#vbOk'); if (ok) ok.onclick = async () => { let n = 0;
+      for (const tr of $$('#vbR tr[data-k]')) { if (!tr.querySelector('.vbI').checked) continue; const r = R[+tr.dataset.k], d = tr.querySelector('.vbD').value, st = tr.querySelector('.vbS').value, l = tr.querySelector('.vbLc').value.trim(); if (!d || d > isoD(hoje())) continue;
+        await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: r.vessel, date: d, at: d + 'T' + (tr.querySelector('.vbH').value || '00:00'), situ: st, local: l, porto: st === 'por' ? l : '', parDesde: st === 'via' && tr.querySelector('.vbP').checked ? d : '', obs: '', fonte: 'boletim', por: S.session.name }); n++; }
+      closeModal(); toast(n + ' posição(ões) gravada(s).'); render(); }; };
 }
 // ---------- tela ----------
 function vEnxViag() {
   const V = vgViagens(), anos = [...new Set([hoje().getFullYear(), ...V.map(x => +x.date.slice(0, 4))])].sort((a, b) => b - a); if (!VG.ano) VG.ano = anos[0]; const ano = VG.ano, eb = VG.modo === 'B';
-  const N = eb ? vgBalsas() : S.cfg.frota, L = N.map(v => vgLinha(v.id, eb, V, ano)), LE = S.cfg.frota.map(v => vgLinha(v.id, false, V, ano)), LB = vgBalsas().map(b => vgLinha(b.id, true, V, ano));
-  const TA = V.filter(x => x.date.slice(0, 4) === String(ano)), n = (A, k) => A.filter(x => x.st === k).length;
+  const N = eb ? vgBalsas() : S.cfg.frota, L = N.map(v => { const x = vgLinha(v.id, eb, V, ano); if (!eb) x.st = vgOndeDe(v.id, false, V).st; return x; });
+  const TA = V.filter(x => x.date.slice(0, 4) === String(ano));
   const STP = { via: '<span class="pill p-inf">em viagem</span>', por: '<span class="pill p-mut">no porto</span>', ref: '<span class="pill p-warn">em reforma</span>' };
   const man = id => { if (eb) { try { const e = balEstado(vgBalsas().find(b => b.id === id)); return e.st === 'ref' ? '' : balPil(BAL_ST, e.st); } catch (x) { return ''; } }
     try { const f = frotaMatriz().find(z => z.v.id === id); return f && f.sit >= 0 ? `<span class="pill ${['p-ok', 'p-warn', 'p-bad', 'p-bad'][f.sit]}">${['liberado', 'com restrição', 'bloqueado', 'interditado'][f.sit]}</span>` : ''; } catch (x) { return ''; } };
@@ -119,11 +215,9 @@ function vEnxViag() {
   const opB = `<option value="">Todas as balsas</option>${vgBalsas().map(b => `<option value="${b.id}"${VG.fb === b.id ? ' selected' : ''}>${esc(b.nome)}</option>`).join('')}`;
   const opR = `<option value="">Todas as rotas</option>${rotas().map(r => `<option value="${r.id}"${VG.fr === r.id ? ' selected' : ''}>${esc(vgRotaCurta(r.id))}</option>`).join('')}`;
   const seg = `<div class="seg"><button data-vgm="E" class="${eb ? '' : 'on'}">Empurradores</button><button data-vgm="B" class="${eb ? 'on' : ''}">Balsas</button></div>`;
-  const nk = (l, v, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
   return enxCab('1.3 Viagens e comboios', 'Saídas de Manaus com as balsas do comboio, tempo de viagem, tempo parado no porto e reformas · a chegada vem do FR 027_L; sem ela, é estimada pela rota',
     `<label class="f">Ano<select id="vgA">${anos.map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select></label><button class="mbtn" data-enxreset>Reorganizar</button>`)
-   + `<div class="card"><h2>Resumo · ${ano}</h2><div class="sf-k">${nk('Comboios no ano', TA.length)}${nk('Empurradores em viagem', n(LE, 'via'))}${nk('Balsas em viagem', n(LB, 'via'))}${nk('No porto', n(LE, 'por') + ' emp. · ' + n(LB, 'por') + ' balsas')}${nk('Em reforma', n(LE, 'ref') + n(LB, 'ref'), n(LE, 'ref') + n(LB, 'ref') ? 'var(--warnt)' : '')}</div></div>
-   ${vgAgora(LE)}
+   + `${vgOnde(V, TA.length, ano)}
    <div class="card"><div class="row"><h2>Operação por ${eb ? 'balsa' : 'empurrador'}</h2><span class="sp"></span>${seg}</div>${tab}<p class="note">Dias em viagem e no porto contam de 01/01 até hoje; o período em reforma não entra. “est.” = tem chegada estimada pela rota. Parado há = desde a última chegada (ou do fim da reforma); acima de 60 dias fica em destaque. Reformas: lançar e consultar no <a href="#enxeq">Histórico dos equipamentos</a>.</p></div>
    <div class="card"><div class="row"><h2>Linha do tempo · ${ano}</h2><span class="sp"></span>${seg}</div>${vgLeg(true)}${vgGantt(N, V, ano, eb)}<p class="note">Barra = viagem; espaço vazio = no porto; linha vermelha = hoje. Passe o mouse na barra para ver o comboio.</p></div>
    <div class="card"><h2>Comboios por mês · ${ano}</h2>${vgLeg(false)}${vgMeses(V, ano)}</div>
@@ -178,7 +272,9 @@ document.addEventListener('click', e => { const c = e.target.closest('#saB [data
 // ---------- telas, cliques e menu ----------
 VX.enxviag = vEnxViag;
 AFTER.enxviag = () => { const m = $('#main');
-  m.onclick = e => { const t = e.target.closest('[data-vgm],[data-vgb],[data-vgx],[data-vged],[data-vgcola]'); if (!t) return; const d = t.dataset;
+  m.onclick = e => { const t = e.target.closest('[data-vgm],[data-vgb],[data-vgx],[data-vged],[data-vgcola],[data-vgpos],[data-vgbol]'); if (!t) return; const d = t.dataset;
+    if (d.vgpos !== undefined) return vgPosModal(d.vgpos);
+    if (d.vgbol !== undefined) return vgBoletimModal();
     if (d.vgm) { VG.modo = d.vgm; return render(); }
     if (d.vgb) { VG.fb = d.vgb; return render(); }
     if (d.vgx !== undefined) { VG.fe = VG.fb = VG.fr = ''; return render(); }
@@ -197,6 +293,8 @@ ICO.viag = '<path d="M3 17h18l-2 3H5z"/><path d="M6 17V9h8l3 4v4"/><path d="M9 9
 .vg-lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted,#5B6B80);margin:2px 0 8px}.vg-lg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .vg-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
 .vg-b{display:inline-block;font-size:11.5px;padding:1px 6px;border-radius:6px;background:#E6F0FB;color:#0C447C;margin:0 3px 3px 0;cursor:pointer}
+a.sf-onde{color:inherit;text-decoration:none}a.sf-onde:hover{text-decoration:underline}
+tr.vg-par td{background:#FDECEA}.vg-h3{font-size:13px;font-weight:600;color:#41536A;margin:12px 0 4px}
 tr.vg-m td{background:rgba(22,36,74,.05);font-weight:600;font-size:12px;color:#41536A}
 .vg-t td{vertical-align:middle}
 .vg-pc{display:flex;flex-direction:column;gap:3px;max-width:720px}.vg-pc>div{display:grid;grid-template-columns:86px 1fr 52px;gap:10px;align-items:center;font-size:12.5px}

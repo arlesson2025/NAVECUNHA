@@ -185,7 +185,9 @@ function sfFocoAplicar() {
       return toast(nome + ': sem dados nesta tela.'); }
     T.forEach(tr => tr.classList.add('sf-foco')); if (!F.rolou) { F.rolou = true; T[0].scrollIntoView({ block: 'center' }); } }, 350);
 }
-const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${x.loc ? ` <span class="sf-mut">· ${x.loc}</span>` : ''}` + (x.vel ? `<div><a href="#enxhor" class="sf-lk sf-hv" data-sfh="${x.v.id}">⚠ horímetro ${x.vel === 9999 ? 'sem leitura' : 'há ' + x.vel + ' d'}</a></div>` : '');
+// onde está (1.3 Viagens e comboios: porto e desde quando, ou a última posição em viagem; SMF 3.136)
+const sfOnde = x => (typeof vgOndeTx === 'function' && vgOndeTx(x.v.id)) || x.loc;
+const sfSit = x => `<span class="sf-s ${SF_SIT[x.sit][0]}">● ${SF_SIT[x.sit][1]}</span>${sfOnde(x) ? ` <a href="#enxviag" class="sf-mut sf-onde">· ${esc(sfOnde(x))}</a>` : ''}` + (x.vel ? `<div><a href="#enxhor" class="sf-lk sf-hv" data-sfh="${x.v.id}">⚠ horímetro ${x.vel === 9999 ? 'sem leitura' : 'há ' + x.vel + ' d'}</a></div>` : '');
 // linha de totais da matriz (Supervisor, 29/10/2026): em cada coluna, vencidos e vencem no mês somados na frota, um embaixo do outro
 function sfTotais(L) {
   const vm = f => L.reduce((t, x) => { const P = f(x) || []; t[0] += P.filter(y => y.g === 'venc').length; t[1] += P.filter(y => y.g === 'mes').length; return t; }, [0, 0]);
@@ -243,7 +245,7 @@ function sfCartoes(L) {
   return `<div class="sf-cards">${L.map(x => { const t = x.venc + x.mes + x.ok || 1, id = sfIdent(x);
     return `<div class="sf-cd" data-pcmv="${x.v.id}"><div class="sf-cdh"><b>${esc(x.v.nome)}</b>${id ? `<span class="sf-cfg">${id.cfg}</span>` : ''}<span class="sf-tag ${SF_SIT[x.sit][0]}">${SF_SIT[x.sit][1]}</span></div>
       ${id ? id.html : `<table class="sf-mt">${x.mot.map(m => `<tr><td><span class="sf-dot ${isMcp(m.p) ? 'mcp' : 'mca'}"></span>${m.p}</td><td>${esc(m.m)}</td><td class="r nowrap">${m.h ? nf(m.h.h) + ' h' : '—'}${m.d != null && m.d > 14 ? ` <span class="sf-red">${m.d} d</span>` : ''}</td></tr>`).join('')}</table>`}
-      <div class="sf-mut">${x.loc ? x.loc[0].toUpperCase() + x.loc.slice(1) : 'Local não informado'}${x.cor ? ` · <b class="sf-red">${x.cor} corretiva${x.cor === 1 ? '' : 's'} aberta${x.cor === 1 ? '' : 's'}</b>` : ''}</div>
+      <div class="sf-mut"><a href="#enxviag" class="sf-onde" onclick="event.stopPropagation()">${sfOnde(x) ? esc(sfOnde(x)[0].toUpperCase() + sfOnde(x).slice(1)) : 'Local não informado'}</a>${x.cor ? ` · <b class="sf-red">${x.cor} corretiva${x.cor === 1 ? '' : 's'} aberta${x.cor === 1 ? '' : 's'}</b>` : ''}</div>
       <div class="sf-st"><i style="width:${x.venc / t * 100}%;background:#C5221F"></i><i style="width:${x.mes / t * 100}%;background:#F9AB00"></i><i style="width:${x.ok / t * 100}%;background:#1E8E3E"></i></div>
       <div class="sf-pl">${x.venc ? `<span class="pill p-bad">${x.venc} vencido${x.venc === 1 ? '' : 's'}</span>` : ''}${x.crit ? `<span class="pill p-bad"><b>${x.crit} crítico${x.crit === 1 ? '' : 's'} NP 6.3</b></span>` : ''}${x.mes ? `<span class="pill p-warn">${x.mes} no mês</span>` : ''}<span class="pill p-ok">${x.ok} em dia</span>${x.sem ? `<span class="pill p-mut">${x.sem} sem histórico</span>` : ''}</div></div>`; }).join('')}</div>
     <p class="note">Equipamentos como na Matriz técnica (visão por embarcação); horímetro na frente de cada motor. Clique no cartão para abrir o empurrador na 2.2. Barra: vencidos · vencem no mês · em dia.</p>`;
@@ -267,7 +269,7 @@ function sfPorque(L) {
     <p class="note">Bloqueia: item crítico da NP 6.3 vencido sem OM, falha crítica sem OM, interdição. Restringe: outro serviço vencido, falha alta sem OM, troca do motor de popa. Clique no motivo para ir à tela que resolve.</p></div>`;
 }
 function sfCard() {
-  const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => x.loc === 'em viagem').length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
+  const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => /^em viagem/.test(sfOnde(x) || '')).length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
   return `<div class="card"><h2>Situação da frota · ${md === 'matriz' ? 'empurrador × sistema do Anexo I' : 'cartões por empurrador'}</h2>
     <div class="sf-k">${[['Liberados', n(0), 'var(--okt)'], ['Com restrição', n(1), 'var(--warnt)'], ['Bloqueados', n(2) + n(3), 'var(--badt)'], ['Em viagem', via, ''], ['Críticos NP 6.3 vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)']].map(([l, v, c]) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`).join('')}
       <span class="sp"></span><div class="seg"><button data-sfm="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-sfm="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button></div></div>
