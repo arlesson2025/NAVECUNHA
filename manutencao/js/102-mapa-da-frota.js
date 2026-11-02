@@ -32,12 +32,15 @@ function vgMapaDados() {
   const B = vgBalsas().filter(b => vgEmReforma(b.id)).map(b => ({ id: b.id, nome: b.nome, st: 'ref', bal: true }));
   B.forEach(o => { const r = vgEmReforma(o.id) || {}, tx = [r.local, r.obs].filter(Boolean).join(' ');
     const k = /\beram\b|estaleiro/.test(vgNorm(tx)) ? 'Estaleiro Rio Amazonas (ERAM)' : vgLugar(tx); if (!k || !vgLL(k)) return sem.push(o); (F[k] = F[k] || []).push(o); });
-  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B };
+  // cada balsa fica com o empurrador da viagem mais recente em que ela foi (a mesma balsa passa de um comboio para outro); balsa em reforma fica no estaleiro
+  const dono = {}, dt = {}; E.forEach(o => { const d = o.u ? o.u.fim || o.u.date || '' : ''; (o.balsas || []).forEach(b => { if (!(b in dt) || d > dt[b]) { dt[b] = d; dono[b] = o.id; } }); });
+  B.forEach(o => delete dono[o.id]);
+  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B, dono };
 }
 function vgMapaCard() {
   const D = vgMapaDados(), nP = Object.values(D.P).reduce((a, L) => a + L.length, 0);
   const sem = D.sem.length ? `<p class="note" style="margin:6px 0 0"><b>Sem posição no mapa:</b> ${D.sem.map(o => `${esc(o.nome)}${o.st === 'via' ? ' (em rota' + (o.dias != null ? ', ' + o.dias + ' d' : '') + ')' : o.st === 'ref' ? ' (em reforma, local não informado)' : ''}`).join(' · ')} · use “Informar posição” ou cole o e-mail do Monitoramento</p>` : '';
-  return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''}${D.refB.length ? ' · ' + D.refB.length + (D.refB.length > 1 ? ' balsas' : ' balsa') + ' em reforma' : ''} · azul = em rota, vermelho = parado há mais de ${VG_PARADO_D} dias, verde = no porto (número = empurradores no porto), cinza = em reforma · clique no ponto para ver as balsas e a última posição</p>
+  return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''}${D.refB.length ? ' · ' + D.refB.length + (D.refB.length > 1 ? ' balsas' : ' balsa') + ' em reforma' : ''} · azul = em rota, vermelho = parado há mais de ${VG_PARADO_D} dias, verde = no porto (número = empurradores no porto; aproximando o mapa, aparecem as balsas e os empurradores), cinza = em reforma · comboio em rota: o empurrador e uma balsa para cada balsa · clique no ponto para ver as balsas e a última posição</p>
     <div id="vgMapa" data-nodrag style="height:560px;border-radius:8px;background:#E8EEF5;position:relative"><p class="note" style="padding:12px">Carregando o mapa…</p></div>${sem}
     <p class="note" style="margin:4px 0 0">Posição em rota pela latitude e longitude do e-mail do Monitoramento; sem elas, pelo lugar citado (posição aproximada da cidade, marcada “aprox.”). O mapa precisa de internet.</p></div>`;
 }
@@ -58,6 +61,26 @@ function vgIcone(cor, nB, num) {
   if (num) g += `<circle cx="${W - 6}" cy="7" r="6" fill="#fff" stroke="${cor}" stroke-width="1.5"/><text x="${W - 6}" y="10" text-anchor="middle" font-size="8.5" font-weight="700" fill="${cor}" font-family="system-ui,sans-serif">${num}</text>`;
   return L.divIcon({ html: `<svg width="${W * 3}" height="${H * 3}" viewBox="0 0 ${W} ${H}" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">${g}</svg>`, className: 'vg-ic', iconSize: [W * 3, H * 3], iconAnchor: [W * 1.5, H * 1.5], tooltipAnchor: [W * 1.5, 0], popupAnchor: [0, -H * 1.5] });
 }
+// balsa vista de cima como na foto de satélite (Supervisor, 02/11/2026): casco claro comprido, borda escura e a passarela dos tanques no meio
+const vgBalsaSvg = (x, y, w, h) => w > h ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".8" fill="#ECEDE8" stroke="#2B2F33" stroke-width=".9"/><rect x="${x + 2.5}" y="${y + h / 2 - .8}" width="${w - 5}" height="1.6" fill="#8F969C"/>`
+  : `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".8" fill="#ECEDE8" stroke="#2B2F33" stroke-width=".9"/><rect x="${x + w / 2 - .8}" y="${y + 2.5}" width="1.6" height="${h - 5}" fill="#8F969C"/>`;
+const vgIc = (g, W, H, k) => L.divIcon({ html: `<svg width="${W * k}" height="${H * k}" viewBox="0 0 ${W} ${H}" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">${g}</svg>`, className: 'vg-ic', iconSize: [W * k, H * k], iconAnchor: [W * k / 2, H * k / 2], tooltipAnchor: [W * k / 2, 0], popupAnchor: [0, -H * k / 2] });
+// comboio em rota: o empurrador atrás e uma balsa para cada balsa do comboio, em fila, a proa na última
+function vgComboioIc(cor, nB) {
+  const bw = 20, H = 11, tw = 12; let x = tw + 1.5, g = `<rect x="1" y="1" width="${tw}" height="${H - 2}" rx="2.5" fill="${cor}" stroke="#fff" stroke-width="1.1"/><rect x="3" y="3" width="4.5" height="${H - 6}" rx="1" fill="#fff" opacity=".9"/>`;
+  for (let k = 0; k < nB; k++, x += bw + .6) g += vgBalsaSvg(x, 1, bw, H - 2);
+  if (!nB) g += `<path d="M${tw + 1},1.5 l4,4 l-4,4 z" fill="${cor}" stroke="#fff" stroke-width="1"/>`; else g += `<path d="M${x},2 l3,3.5 l-3,3.5 z" fill="#2B2F33"/>`;
+  return vgIc(g, x + 4, H, 2);
+}
+// parados na boia ou no estaleiro: as balsas lado a lado em fileiras (até 8 por fileira) e os empurradores encostados embaixo
+function vgFundeioIc(cor, nB, nE) {
+  const bw = 7, bh = 24, p = 8, pw = 6, ph = 11, por = Math.min(Math.max(nB, 1), p), lin = Math.ceil(nB / p), W = Math.max(por * (bw + .6), nE * (pw + 1.5)) + 2; let g = '';
+  for (let k = 0; k < nB; k++) g += vgBalsaSvg(1 + (k % p) * (bw + .6), 1 + Math.floor(k / p) * (bh + .8), bw, bh);
+  const y = 1.5 + lin * (bh + .8);
+  for (let k = 0; k < nE; k++) { const x = 1 + k * (pw + 1.5); g += `<rect x="${x}" y="${y}" width="${pw}" height="${ph}" rx="2" fill="${cor}" stroke="#fff" stroke-width="1"/><rect x="${x + 1.5}" y="${y + 5.5}" width="${pw - 3}" height="3.5" rx=".8" fill="#fff" opacity=".9"/>`; }
+  return vgIc(g, W, y + ph + 1, 2);
+}
+const VG_ZOOM_DESENHO = 11;   // mapa mais longe que isso: no porto volta o ícone pequeno com o número (as fileiras de balsas cobririam o mapa)
 const vgGoogle = ll => `<br><a href="https://www.google.com/maps?q=${ll[0]},${ll[1]}" target="_blank" rel="noopener">Abrir no Google Maps ↗</a>`;
 async function vgMapaIniciar() {
   const el = $('#vgMapa'); if (!el) return;
@@ -76,19 +99,22 @@ async function vgMapaIniciar() {
   Object.entries(VG_LUGAR).forEach(([k, ll]) => L.marker(ll, { icon: L.divIcon({ html: `<i></i><span>${esc(k)}</span>`, className: 'vg-cid', iconSize: [0, 0] }), interactive: false, keyboard: false }).addTo(m));
   const D = vgMapaDados(), pts = [], bal = o => (o.balsas || []).map(vName).join(', ');
   const tip = cls => ({ permanent: true, direction: 'right', offset: [4, 0], className: 'vg-mt' + (cls ? ' ' + cls : '') });
-  Object.entries(D.P).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll);
-    L.marker(ll, { icon: vgIcone('#188038', 0, Lp.length), riseOnHover: true }).addTo(m)
+  const Z = [], troca = (mk, perto, longe) => Z.push([mk, perto, longe]);   // desenho completo de perto, ícone pequeno de longe
+  const nBal = Lp => Lp.filter(o => o.bal).length + Lp.reduce((a, o) => a + (o.balsas || []).filter(b => D.dono[b] === o.id).length, 0);
+  Object.entries(D.P).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const mk = L.marker(ll, { icon: vgIcone('#188038', 0, Lp.length), riseOnHover: true });
+    troca(mk, vgFundeioIc('#188038', nBal(Lp), Lp.length), vgIcone('#188038', 0, Lp.length)); mk.addTo(m)
       .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')}`, tip('por'))
       .bindPopup(`<b>${esc(k)} · no porto · ${Lp.length}</b><br>${Lp.map(o => `<a href="#" data-vgficha="${o.id}"><b>${esc(o.nome)}</b></a>${o.dias != null ? ' · há ' + o.dias + ' d' : ''}${o.est ? ' (chegada estimada)' : ''}${bal(o) ? '<br><small>' + esc(bal(o)) + '</small>' : ''}`).join('<br>')}<br><small>clique no nome para ver a ficha</small>${vgGoogle(ll)}`); });
-  Object.entries(D.F).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll);
-    L.marker(ll, { icon: vgIcone('#5F6368', 0, Lp.length), riseOnHover: true }).addTo(m)
+  Object.entries(D.F).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const nE = Lp.filter(o => !o.bal).length, mk = L.marker(ll, { icon: vgIcone('#5F6368', 0, Lp.length), riseOnHover: true });
+    troca(mk, vgFundeioIc('#5F6368', nBal(Lp), nE), vgIcone('#5F6368', 0, Lp.length)); mk.addTo(m)
       .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref'))
       .bindPopup(`<b>${esc(k)} · em reforma · ${Lp.length}</b><br>${Lp.map(o => { const r = vgEmReforma(o.id) || {}; return `${o.bal ? `<b>${esc(o.nome)}</b> · balsa` : `<a href="#" data-vgficha="${o.id}"><b>${esc(o.nome)}</b></a>`}${r.ini ? ' · desde ' + brD(r.ini) : ''}${r.obs ? '<br><small>' + esc(r.obs) + '</small>' : ''}`; }).join('<br>')}${vgGoogle(ll)}`); });
   D.R.forEach(({ o, ll, aprox }) => { pts.push(ll); const par = o.parD > VG_PARADO_D;
-    L.marker(ll, { icon: vgIcone(par ? '#D93025' : '#1A73E8', (o.balsas || []).length), riseOnHover: true }).addTo(m)
+    L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', (o.balsas || []).length), riseOnHover: true }).addTo(m)
       .bindTooltip(`${esc(o.nome)}${aprox ? ' · aprox.' : ''}`, tip(par ? 'par' : ''))
       .bindPopup(`<b>${esc(o.nome)} · em rota</b>${o.rota ? '<br>' + esc(vgRotaCurta(o.rota)) : ''}${o.saida ? '<br>saída ' + brD(o.saida) + (o.dias != null ? ' · ' + o.dias + ' d' : '') : ''}${bal(o) ? '<br>' + esc(bal(o)) : ''}<br>${esc(o.local || '')}${o.at ? ' · ' + vgDH(o.at) : ''}${par ? `<br><b style="color:#C5221F">parado há ${o.parD} d</b>` : ''}${aprox ? '<br><small>posição aproximada pelo lugar citado</small>' : ''}<br><button class="mbtn sm" data-vgficha="${o.id}" style="margin-top:4px">Ver ficha</button>${vgGoogle(ll)}`); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
+  const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => mk.setIcon(perto ? a : b)); }; m.on('zoomend', desenho); desenho();
   // tela cheia da janela (botão ⛶ do quadro): o mapa ocupa a altura toda
   const card = el.closest('.card'), alt = () => { const cheia = document.fullscreenElement === card || (card && card.classList.contains('cm-full'));
     const h = cheia ? Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 24) : 560; if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px'; try { m.invalidateSize(); } catch (e) { } };
