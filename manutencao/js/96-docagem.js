@@ -31,7 +31,7 @@ function docaCrono(D) {
    ${h.map((d, i) => `<tr ${d.rec ? `class="click" data-ded="${d.id}"` : ''}><td>${i + 1}ª</td><td>${brD(d.ent)}</td><td>${d.sai ? brD(d.sai) : '—'}</td><td>${d.parada != null ? d.parada + ' d' : '—'}</td><td>${esc(d.est) || '—'}</td><td>${esc(d.serv) || '—'}</td><td>${d.custo != null && d.custo !== '' ? nf(+d.custo) : '—'}</td><td>${d.atraso == null ? '—' : d.atraso > 0 ? `<span style="color:#E37400">+${d.atraso} d</span>` : '<span style="color:#188038">No prazo</span>'}</td><td><span class="pill p-ok">concluída</span></td></tr>`).join('')}
    <tr><td>Próx.</td><td>${x.due ? brD(isoD(x.due)) : '—'}</td><td>—</td><td>—</td><td>—</td><td class="note">${x.due ? 'limite · ' + esc(x.fonte) : 'registre a última docagem'}</td><td>—</td><td>—</td><td>${stNx}</td></tr></tbody></table></div>
    <p class="note">Clique numa docagem da tabela para corrigir. O prazo de cada docagem é a anterior + ${intervalo(A1M[DOCA.item]).m} meses (Anexo I, 9.1.5); a data-limite do CSN prevalece quando for antes.</p>`;
-  const s = docaStats(), box = `<div class="ds-row"><div class="ds"><b>${s.parada == null ? '—' : nf(s.parada, 0) + ' d'}</b><span>parada média em estaleiro</span><small>${s.nPar ? s.nPar + ' docagem(ns) com entrada e saída' : 'registre entrada e saída'}</small></div><div class="ds"><b style="color:${s.pont == null ? '#202124' : s.pont >= 80 ? '#188038' : s.pont >= 60 ? '#E37400' : '#D93025'}">${s.pont == null ? '—' : nf(s.pont, 0) + '%'}</b><span>pontualidade de entrada</span><small>${s.nPont ? s.okPont + ' de ' + s.nPont + ' entraram no prazo' : 'precisa de 2 docagens do mesmo empurrador'}</small></div></div>`;
+  const s = docaStats(), box = `<div class="ds-row"><div class="ds"><b>${s.parada == null ? '—' : nf(s.parada, 0) + ' d'}</b><span>parada média em estaleiro</span><small>${s.nPar ? s.nPar + ' docagem(ns) com entrada e saída' : 'registre entrada e saída'}</small></div></div>`;
   return `<div class="card"><div class="row"><h2>Docagem · histórico e projeção (${y0}–${y1})</h2><span class="sp"></span><span class="note">Clique num empurrador para ver o detalhe de cada docagem</span></div>
    ${box}<div class="clegend note"><span><i style="background:#1A73E8;border-radius:3px"></i>Docagem no prazo</span><span><i style="background:#E37400;border-radius:3px"></i>Entrou com atraso</span><span><i style="background:#fff;border:2px solid #188038;border-radius:3px;width:8px;height:10px"></i>Próxima (cor = situação)</span><span><i style="background:#F6AEA9"></i>Atraso acumulado até hoje</span></div>
    <div class="dh">${eixo}${linhas}${rodape}</div>${tab}</div>`;
@@ -42,7 +42,7 @@ function vEnxDoca() {
   return enxCab('3.2 Controles · docagem', `Anexo I 9.1.5: docagem a cada ${intervalo(A1M[DOCA.item]).m / 12} anos (jateamento, medição de espessura por ultrassom e repintura); a data-limite do CSN prevalece quando vier antes. A mesma docagem aparece no <a href="#enxeq">Histórico dos equipamentos</a>.`, '<button class="mbtn" data-enxreset>Reorganizar</button>')
     + docaCrono(D) + '</div></div>';
 }
-VX.enxdoca = vEnxDoca; AFTER.enxdoca = pcmAfter('enxdoca');
+VX.enxdoca = vEnxDoca; { const a = pcmAfter('enxdoca'); AFTER.enxdoca = () => { a(); if (typeof heMigraDocas === 'function') heMigraDocas(); }; }
 ENX_OK.push('enxdoca'); MC_VIEWS.push(['enxdoca', '6 · Docagem']);
 { const e = PCM_ETAPAS.find(x => x[0] === '3'); if (e) e[2].push('enxdoca'); }
 Object.assign(NP_TAG, { enxdoca: '7.3 · Anexo I 9.1.5' });
