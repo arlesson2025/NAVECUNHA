@@ -16,13 +16,13 @@ const BIB_CAT = [
 // documentos que já fazem parte do sistema (não precisam de cadastro)
 const BIB_FIXOS = [
   { cat: 'sgi', titulo: 'Apresentação do SMF · gerência e Coordenação de Operações', desc: '25 slides com as telas do sistema, o ciclo completo e as decisões (rascunho, em revisão)', url: 'https://claude.ai/artifact/VAANPwnQv27KL73mzEGwnZ' },
-  { cat: 'sgi', titulo: 'Roteiro da apresentação do SMF', desc: 'Uma folha: o que dizer em cada slide e respostas para as perguntas difíceis', url: '../docs/Roteiro_Apresentacao_SMF.html' },
+  { cat: 'sgi', titulo: 'Roteiro da apresentação do SMF', desc: 'Uma folha: o que dizer em cada slide e respostas para as perguntas difíceis', url: '../docs/empurradores/Roteiro_Apresentacao_SMF.html' },
   { cat: 'sgi', titulo: 'Manual de Operação do SMF', desc: 'Caderno de instruções: papéis, ciclos em fluxograma (chegada e saída, preventiva, corretiva, óleo, viagem), telas, regras, documentos, rotina e glossário', url: '../docs/Manual_Operacao_SMF.html' },
   { cat: 'fluxo', titulo: 'Fluxo do processo de manutenção (PDCA)', desc: 'Plano (Anexo I) → cronograma → programação → execução → controle → análise → melhoria (PDCA)', abre: 'fluxo' },
   { cat: 'fluxo', titulo: 'Procedimento de troca de óleo (FR 049_B)', desc: 'Preparar, drenar, filtros, abastecer, conferir, registrar, resíduos', abre: '#plano' },
-  { cat: 'sgi', titulo: 'NP Navecunha 055 · Plano de Gestão de Manutenção', desc: 'Procedimento vigente (revisão em aprovação)', url: '../docs/NP_Navecunha_055_corrigida.html' },
-  { cat: 'sgi', titulo: 'Anexo I · Matriz de manutenção preventiva', desc: 'Itens, frequências, métodos e registros', url: '../docs/Anexo_I_NP_055_visual_matriz.html' },
-  { cat: 'sgi', titulo: 'Matriz técnica de equipamentos e lubrificação', desc: 'Modelos, óleos, volumes e intervalos da frota', url: '../docs/Matriz_tecnica.atual17.10.26.html' },
+  { cat: 'sgi', titulo: 'NP Navecunha 055 · Plano de Gestão de Manutenção', desc: 'Procedimento vigente (revisão em aprovação)', url: '../docs/empurradores/NP_Navecunha_055_corrigida.html' },
+  { cat: 'sgi', titulo: 'Anexo I · Matriz de manutenção preventiva', desc: 'Itens, frequências, métodos e registros', url: '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html' },
+  { cat: 'sgi', titulo: 'Matriz técnica de equipamentos e lubrificação', desc: 'Modelos, óleos, volumes e intervalos da frota', url: '../docs/empurradores/Matriz_tecnica.atual17.10.26.html' },
   { cat: 'sgi', titulo: 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', desc: 'Preencher pelo sistema (Lubrificação) ou imprimir', url: '../docs/FR_049_B_Rev03_Troca_de_Oleo.html' },
   { cat: 'sgi', titulo: 'FR 016_E · Controle de materiais Classe I e II', desc: 'Entrega de resíduos ao SGI (NP 5.7)', abre: 'fr016' },
   { cat: 'norma', titulo: 'NR-06 · Equipamento de proteção individual', desc: 'Sugestão: anexe o link oficial', sug: true },
