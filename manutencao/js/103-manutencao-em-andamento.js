@@ -304,26 +304,64 @@ function vgDirEst(ids) {
     <details class="vgd-det"><summary>Detalhes técnicos (tabela de trabalho)</summary>${det}</details>`;
 }
 // ---------- em viagem ----------
+// um comboio em viagem: dias, previsão, ocorrências (vid = balsa do comboio: as ocorrências da balsa)
+function vgViaX(id, vid) {
+  const H = isoD(hoje()), o = vgOndeDe(id, false), r = vgRota(o.rota), d0 = o.saida || H, Oc = vgOcorr(vid || id, d0);
+  return { id, vid, o, r, d0, Oc, ab: Oc.filter(x => !x.ok), dest: r ? r.nome.split('×').pop().trim() : '', par: o.parD > VG_PARADO_D };
+}
+function vgViaCard(x, key, sel) {
+  const H = isoD(hoje()), o = x.o, dv = vgDD(x.d0, H), c = x.ab.length || x.par ? VGD_C.bad : VGD_C.nv; VG_PAINEL.oc[key] = x.Oc;
+  const b = x.vid && typeof balsaDe === 'function' ? balsaDe(x.vid) : null, st = b && typeof balEstado === 'function' && typeof BAL_ST !== 'undefined' ? BAL_ST[balEstado(b).st] : null;
+  const tit = b ? `<b>Balsa ${esc(b.nome)}</b><span>comboio ${esc(o.nome)}</span>` : `<b>Comboio ${esc(o.nome)}</b><span>${o.rota ? esc(vgRotaCurta(o.rota)) : 'rota não informada'}</span>`;
+  const sub = b ? (st ? `<span class="pill ${st[0]}">${esc(st[1])}</span>` : '') + (o.rota ? ` <span class="vgd-m">${esc(vgRotaCurta(o.rota))}</span>` : '') : o.balsas && o.balsas.length ? esc(o.balsas.map(vName).join(' · ')) : '';
+  return `<div class="vgd-cd${x.id === sel ? ' vgd-sel' : ''}" style="border-left-color:${c}"><div class="vgd-ct">${tit}</div>
+      ${sub ? `<div class="vgd-cl">${sub}</div>` : ''}
+      <div class="vgd-cl">${o.saida ? `Em viagem há <b>${dv} dias</b> (saída ${brD(o.saida)})` : '<span class="vgd-m">Saída não registrada</span>'}${x.par ? ` · <b style="color:${VGD_C.bad}">parado há ${o.parD} dias</b>` : ''}</div>
+      <div class="vgd-cp">Chegada prevista${x.dest ? ' em ' + esc(x.dest) : ''}: ${o.prev ? `<b>${brD(o.prev)}</b> ${vgDD(H, o.prev) >= 0 ? `<span class="vgd-m">faltam ${vgDD(H, o.prev)} d · estimada pela rota</span>` : `<b style="color:${VGD_C.bad}">passou ${-vgDD(H, o.prev)} d</b>`}` : '<span class="vgd-m">rota não informada</span>'}</div>
+      <div class="vgd-cl">${x.Oc.length ? `${vgdPl(x.Oc.length, 'ocorrência', 'ocorrências')} · ${x.Oc.length - x.ab.length} resolvida(s) · ${x.ab.length ? `<b style="color:${VGD_C.bad}">${x.ab.length} em andamento</b> (${esc(x.ab.map(a => a.eq || 'falha').join('; '))})` : '0 em andamento'}` : `Nenhuma ocorrência ${b ? 'da balsa ' : ''}na viagem`}</div>
+      ${o.local && !b ? `<div class="vgd-m">Última posição: ${esc(o.local)}${o.at ? ' · ' + vgDH(o.at) : ''}</div>` : ''}
+      ${o.saida ? vgLinhaTempo(key, x.d0, 'Saída', o.prev, 'Chegada prevista', x.Oc) : ''}</div>`;
+}
+// cartão em cima do mapa ao clicar no comboio (ou numa balsa do desenho): o mesmo do painel, com a linha do tempo e as fotos
+function vgPopupVia(id, vid) {
+  return `<div class="vgd-pop">${vgViaCard(vgViaX(id, vid), 'p' + (vid || id))}<p class="vgd-m" style="margin:6px 0 0">Clique no ponto da linha do tempo para ver a ocorrência e as fotos${vid ? '' : ' · clique numa balsa do desenho para ver a balsa'}.</p></div>`;
+}
 function vgDirVia(ids, sel) {
   const H = isoD(hoje());
-  const L = ids.map(id => { const o = vgOndeDe(id, false), r = vgRota(o.rota), d0 = o.saida || H, Oc = vgOcorr(id, d0);
-    return { id, o, r, d0, Oc, ab: Oc.filter(x => !x.ok), dest: r ? r.nome.split('×').pop().trim() : '', par: o.parD > VG_PARADO_D }; })
-    .sort((a, b) => (b.id === sel) - (a.id === sel) || b.ab.length - a.ab.length || (a.o.prev || '9') < (b.o.prev || '9') ? -1 : 1);
+  const L = ids.map(id => vgViaX(id))
+    .sort((a, b) => (b.id === sel) - (a.id === sel) || b.ab.length - a.ab.length || ((a.o.prev || '9') < (b.o.prev || '9') ? -1 : 1));
   if (!L.length) return '<p class="vgd-c">Nenhum comboio em viagem.</p>';
   const nAb = L.reduce((s, x) => s + x.ab.length, 0), par = L.filter(x => x.par), pv = L.filter(x => x.o.prev).sort((a, b) => a.o.prev < b.o.prev ? -1 : 1)[0];
   const ks = vgdK(L.length, 'Comboios em viagem', L.reduce((s, x) => s + (x.o.balsas || []).length, 0) + ' balsas em comboio') + vgdK(nAb, 'Ocorrências em andamento', nAb ? L.filter(x => x.ab.length).map(x => esc(x.o.nome)).join(' · ') : 'nenhuma', nAb ? VGD_C.bad : VGD_C.ok)
     + vgdK(par.length, `Parados há mais de ${VG_PARADO_D} dias`, par.length ? par.map(x => esc(x.o.nome)).join(' · ') : 'nenhum', par.length ? VGD_C.bad : VGD_C.ok) + vgdK(pv ? brD(pv.o.prev) : '—', 'Próxima chegada prevista', pv ? esc(pv.o.nome) + (pv.dest ? ' em ' + esc(pv.dest) : '') + ' · estimada pela rota' : 'rotas não informadas');
   const conc = `${vgdPl(L.length, 'comboio', 'comboios')} em viagem. ${nAb ? `${vgdPl(nAb, 'ocorrência', 'ocorrências')} em andamento: ${L.filter(x => x.ab.length).map(x => `<b>${esc(x.o.nome)}</b> (${esc(x.ab.map(a => a.eq || 'falha').join('; '))})`).join(', ')}.` : 'Nenhuma ocorrência em andamento.'}${par.length ? ` Parado há mais de ${VG_PARADO_D} dias: <b>${par.map(x => esc(x.o.nome)).join(', ')}</b>.` : ''}`;
-  const card = x => { const o = x.o, dv = vgDD(x.d0, H), c = x.ab.length || x.par ? VGD_C.bad : VGD_C.nv, key = 'w' + x.id; VG_PAINEL.oc[key] = x.Oc;
-    return `<div class="vgd-cd${x.id === sel ? ' vgd-sel' : ''}" style="border-left-color:${c}"><div class="vgd-ct"><b>Comboio ${esc(o.nome)}</b><span>${o.rota ? esc(vgRotaCurta(o.rota)) : 'rota não informada'}</span></div>
-      ${o.balsas && o.balsas.length ? `<div class="vgd-cl">${esc(o.balsas.map(vName).join(' · '))}</div>` : ''}
-      <div class="vgd-cl">${o.saida ? `Em viagem há <b>${dv} dias</b> (saída ${brD(o.saida)})` : '<span class="vgd-m">Saída não registrada</span>'}${x.par ? ` · <b style="color:${VGD_C.bad}">parado há ${o.parD} dias</b>` : ''}</div>
-      <div class="vgd-cp">Chegada prevista${x.dest ? ' em ' + esc(x.dest) : ''}: ${o.prev ? `<b>${brD(o.prev)}</b> ${vgDD(H, o.prev) >= 0 ? `<span class="vgd-m">faltam ${vgDD(H, o.prev)} d · estimada pela rota</span>` : `<b style="color:${VGD_C.bad}">passou ${-vgDD(H, o.prev)} d</b>`}` : '<span class="vgd-m">rota não informada</span>'}</div>
-      <div class="vgd-cl">${x.Oc.length ? `${vgdPl(x.Oc.length, 'ocorrência', 'ocorrências')} · ${x.Oc.length - x.ab.length} resolvida(s) · ${x.ab.length ? `<b style="color:${VGD_C.bad}">${x.ab.length} em andamento</b> (${esc(x.ab.map(a => a.eq || 'falha').join('; '))})` : '0 em andamento'}` : 'Nenhuma ocorrência na viagem'}</div>
-      ${o.local ? `<div class="vgd-m">Última posição: ${esc(o.local)}${o.at ? ' · ' + vgDH(o.at) : ''}</div>` : ''}
-      ${o.saida ? vgLinhaTempo(key, x.d0, 'Saída', o.prev, 'Chegada prevista', x.Oc) : ''}</div>`; };
-  return `<div class="vgd-ks">${ks}</div><p class="vgd-c">${conc}</p><div class="vgd-cs">${L.map(card).join('')}</div>
+  return `<div class="vgd-ks">${ks}</div><p class="vgd-c">${conc}</p><div class="vgd-cs">${L.map(x => vgViaCard(x, 'w' + x.id, sel)).join('')}</div>
     <p class="vgd-m">Chegada prevista = saída + duração da rota (estimada). Clique no ponto da linha do tempo para ver a ocorrência e as fotos.</p>`;
+}
+// ---------- resumo (Supervisor, 02/11/2026): antes de escolher uma visão, embaixo dos botões, onde está cada um, com as datas que importam ----------
+function vgResumo() {
+  let G; try { G = vgGrupos().G; } catch (e) { return ''; }
+  const H = isoD(hoje()), ehBal = id => typeof balsaDe === 'function' && !!balsaDe(id), SD = typeof sfDados === 'function' ? sfDados() : [], dono = vgMapaDados().dono || {};
+  const sit = id => { const x = SD.find(y => y.v.id === id); if (!x || typeof SF_SIT === 'undefined') return ''; const c = { ok: 'p-ok', at: 'p-warn', bad: 'p-bad' }[SF_SIT[x.sit][0]] || 'p-mut'; return ` <span class="pill ${c}">${esc(SF_SIT[x.sit][1])}</span>`; };
+  const prevTx = (p, t) => p ? `${t} <b>${brD(p)}</b>${p < H ? ` <b style="color:${VGD_C.bad}">(${-vgDD(H, p)} d de atraso)</b>` : ` <span class="vgd-m">(faltam ${vgDD(H, p)} d)</span>`}` : `<span class="vgd-m">${t} não informada</span>`;
+  const it = h => `<div class="vgr-i">${h}</div>`, sub = (t, L) => L.length ? `<div class="vgr-s">${t} · ${L.length}</div>${L.join('')}` : '';
+  // em viagem: comboio, balsas, saída, dias, chegada prevista
+  const via = G.via.map(id => { const o = vgOndeDe(id, false), r = vgRota(o.rota), dest = r ? r.nome.split('×').pop().trim() : '';
+    return it(`<b>Comboio ${esc(o.nome)}</b>${o.balsas && o.balsas.length ? ` · ${esc(o.balsas.map(vName).join(', '))}` : ''}${o.rota ? `<br><span class="vgd-m">${esc(vgRotaCurta(o.rota))}</span>` : ''}
+      <br>${o.saida ? `Saída <b>${brD(o.saida)}</b> · há ${vgDD(o.saida, H)} d` : '<span class="vgd-m">saída não registrada</span>'}${o.parD > VG_PARADO_D ? ` · <b style="color:${VGD_C.bad}">parado há ${o.parD} d</b>` : ''}<br>${prevTx(o.prev, 'Chegada prevista' + (dest ? ' em ' + esc(dest) : ''))}`); });
+  // no porto: empurradores (chegada, situação) e as balsas que chegaram com eles
+  const porto = (ids, t) => { const E = ids.filter(id => !ehBal(id) && vgOndeDe(id, false).st !== 'ref'), emp = new Set(E);
+    const LE = E.map(id => { const o = vgOndeDe(id, false), d = (o.desde || '').slice(0, 10); return it(`<b>${esc(o.nome)}</b>${sit(id)}<br>${d ? `Chegada <b>${brD(d)}</b>${o.est ? ' <span class="vgd-m">(estimada)</span>' : ''} · há ${vgDD(d, H)} d` : '<span class="vgd-m">chegada não registrada</span>'}`); });
+    const LB = (typeof vgBalsas === 'function' ? vgBalsas() : []).filter(b => emp.has(dono[b.id]) && !vgEmReforma(b.id)).map(b => { const st = typeof balEstado === 'function' && typeof BAL_ST !== 'undefined' ? BAL_ST[balEstado(b).st] : null;
+      return it(`<b>${esc(b.nome)}</b>${st ? ` <span class="pill ${st[0]}">${esc(st[1])}</span>` : ''}<br><span class="vgd-m">chegou com o ${esc(vName(dono[b.id]))}</span>`); });
+    return LE.length || LB.length ? `<div class="vgr-b"><h4 data-vgg="${t[0]}" data-nodrag>${esc(t[1])}</h4>${sub('Empurradores', LE)}${sub('Balsas', LB)}</div>` : ''; };
+  // estaleiro: entrada, tempo de estaleiro, entrega prevista
+  const est = id => { const z = vgRefDados(id); return it(`<b>${esc(z.nome)}</b>${z.r && z.r.local ? ` <span class="vgd-m">· ${esc(z.r.local)}</span>` : ''}<br>${z.ini ? `Entrada <b>${brD(z.ini)}</b> · há ${vgDD(z.ini, H)} d` : '<span class="vgd-m">entrada não registrada</span>'}<br>${prevTx(z.prev, 'Entrega prevista')}`); };
+  const EE = G.est.filter(id => !ehBal(id)).map(est), EB = G.est.filter(ehBal).map(est);
+  const blocos = [via.length ? `<div class="vgr-b"><h4 data-vgg="via" data-nodrag>Em viagem · ${via.length}</h4>${via.join('')}</div>` : '',
+    porto(G.man, ['man', 'No porto · Manaus e Boia 2']), porto(G.pvh, ['pvh', 'Porto Velho · filial']),
+    EE.length || EB.length ? `<div class="vgr-b"><h4 data-vgg="est" data-nodrag>Em reforma no estaleiro</h4>${sub('Empurradores', EE)}${sub('Balsas', EB)}</div>` : ''].filter(Boolean);
+  return `<div class="vgd-h"><div><h3>Onde está a frota</h3><span>${brD(H)} · clique no título de um quadro para ver os detalhes</span></div></div><div class="vgr">${blocos.join('') || '<p class="vgd-c">Nenhuma posição lançada.</p>'}</div>`;
 }
 // ---------- abrir ----------
 function vgDirTabs(g) {
@@ -332,7 +370,7 @@ function vgDirTabs(g) {
   return L.map(([k, t]) => `<button class="vgd-tb${k === g ? ' on' : ''}" data-vgg="${esc(k)}" data-nodrag>${esc(t)} <b>${((n.G || {})[k] || []).length}</b></button>`).join('');
 }
 function vgDirAbrir(g, sel) {
-  const el = $('#vgPainel'); if (!el) return; VG_PAINEL.oc = {}; VG_PAINEL.g = g;
+  const el = $('#vgPainel'); if (!el) return; VG_PAINEL.g = g;
   const { G, nomes } = vgGrupos(), ids = G[g] || [], tit = (VG_GRP.find(x => x[0] === g) || [g, nomes[g] || ''])[1];
   const corpo = g === 'est' ? vgDirEst(ids) : g === 'via' ? vgDirVia(ids, sel) : vgDirPorto(tit, ids);
   const tb = $('#vgTabs'); if (tb) tb.innerHTML = vgDirTabs(g);
@@ -360,7 +398,7 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc
   e.preventDefault(); e.stopPropagation(); const d = t.dataset;
   if (d.vgdet) { const r = $('#vgdet-' + d.vgdet), ab = r && r.style.display === 'none'; if (r) { r.style.display = ab ? '' : 'none'; t.classList.toggle('on', ab); if (ab && typeof heCarregaFotos === 'function') heCarregaFotos(); } return; }
   if (d.vgg) return vgDirAbrir(d.vgg);
-  if (d.vgpx !== undefined) { const el = $('#vgPainel'), tb = $('#vgTabs'); if (el) { el.innerHTML = ''; el.style.display = 'none'; } if (tb) tb.innerHTML = vgDirTabs(''); return; }
+  if (d.vgpx !== undefined) { const el = $('#vgPainel'), tb = $('#vgTabs'); if (el) { el.innerHTML = vgResumo(); el.style.display = ''; if (typeof heCarregaFotos === 'function') heCarregaFotos(); } if (tb) tb.innerHTML = vgDirTabs(''); return; }
   if (d.vgoc) return vgOcDetalhe(...d.vgoc.split('|'));
   if (d.vgfg) return vgFotoGrande(...d.vgfg.split('|')); }, true);
 { const st = document.createElement('style'); st.textContent = '#vgPainel{margin-top:10px;border-top:1px solid #DCE3EC;padding-top:8px}.vgp-b{border:1px solid #DCE3EC;border-radius:8px;padding:10px 12px;margin:8px 0;background:#fff;line-height:1.55}.vgp-t{font-weight:700;color:#16244A;font-size:14px;margin-bottom:2px}'
@@ -368,7 +406,7 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc
   + '.vgt-o{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:pointer;padding:0}.vgt-b .vgt-o.ok{background:#188038!important}.vgt-b .vgt-o.ab{background:#D93025!important}.vgp-tab .vgp-l{cursor:pointer}.vgp-tab .vgp-l:hover td{background:#F3F6FA}.vgp-tab .vgp-l.on .vgp-sx{display:inline-block;transform:rotate(90deg)}.vgp-sx{color:#8A94A6;font-size:11px}.vgp-det>td{padding:0 6px 8px!important;background:#FAFBFD}.vgp-tab .sf-pm{margin:1px 0}.vgt-m{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}.vgt-m.sv{background:#188038;border-radius:2px}.vgt-m.pv{background:#E37400;transform:rotate(45deg)}.vgp-an{height:8px;background:#E3E8EF;border-radius:4px;overflow:hidden;margin:3px 0 2px}.vgp-an i{display:block;height:100%;background:#188038}'
   + '#vgPainel{margin-top:8px}#vgTabs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px}.vgd-tb{font:600 14px/1.2 system-ui,sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #C9D3DF;background:#fff;color:#16244A;cursor:pointer}.vgd-tb b{display:inline-block;min-width:22px;margin-left:6px;padding:1px 7px;border-radius:10px;background:#E8EEF5;font-size:13px}.vgd-tb.on{background:#16244A;color:#fff;border-color:#16244A}.vgd-tb.on b{background:rgba(255,255,255,.2)}'
   + '.vgd-h{display:flex;justify-content:space-between;align-items:flex-start;margin:6px 0 10px}.vgd-h h3{font-size:26px;margin:0;color:#16244A}.vgd-h span{font-size:14px;color:#5B6B80}.vgd-ks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.vgd-k{background:#fff;border:1px solid #DCE3EC;border-radius:12px;padding:14px 18px}.vgd-k b{display:block;font-size:48px;line-height:1.05;font-weight:800;color:#16244A}.vgd-k span{display:block;font-size:16px;font-weight:700;color:#16244A;margin-top:6px}.vgd-k small{display:block;font-size:12.5px;color:#5B6B80;margin-top:3px;line-height:1.35}'
-  + '.vgd-c{font-size:19px;line-height:1.45;color:#16244A;background:#EEF3F9;border-left:5px solid #16244A;border-radius:8px;padding:12px 16px;margin:14px 0}.vgd-cs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}.vgd-cs1{grid-template-columns:1fr}.vgd-cd{background:#fff;border:1px solid #DCE3EC;border-left:6px solid #16244A;border-radius:10px;padding:14px 18px;font-size:15.5px;line-height:1.5}.vgd-sel{box-shadow:0 0 0 3px #9DB4D3}'
+  + '.vgd-pop .vgd-cd{border-top:0;border-right:0;border-bottom:0;border-radius:6px;padding:4px 4px 4px 12px;font-size:14px}.vgd-pop .vgd-ct b{font-size:19px}.vgd-pop .vgd-ct span{font-size:13px}.vgd-pop .vgd-cp{font-size:15px}.vg-pop .leaflet-popup-content{margin:12px 14px}.vgr{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;margin-top:8px}.vgr-b{background:#fff;border:1px solid #DCE3EC;border-radius:10px;padding:12px 16px}.vgr-b h4{margin:0 0 4px;font-size:16px;letter-spacing:.04em;text-transform:uppercase;color:#16244A;cursor:pointer}.vgr-b h4:hover{text-decoration:underline}.vgr-s{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#5B6B80;margin:10px 0 2px}.vgr-i{padding:7px 0;border-top:1px solid #EEF2F6;font-size:14.5px;line-height:1.5}.vgr-i b{color:#16244A}.vgd-c{font-size:19px;line-height:1.45;color:#16244A;background:#EEF3F9;border-left:5px solid #16244A;border-radius:8px;padding:12px 16px;margin:14px 0}.vgd-cs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}.vgd-cs1{grid-template-columns:1fr}.vgd-cd{background:#fff;border:1px solid #DCE3EC;border-left:6px solid #16244A;border-radius:10px;padding:14px 18px;font-size:15.5px;line-height:1.5}.vgd-sel{box-shadow:0 0 0 3px #9DB4D3}'
   + '.vgd-ct{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}.vgd-ct b{font-size:22px;color:#16244A}.vgd-ct span{font-weight:700;font-size:15px;color:#5B6B80}.vgd-cl{margin:2px 0}.vgd-cp{margin:6px 0;font-size:16.5px}.vgd-cr small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5B6B80;margin:6px 0 2px}.vgd-cr div{border-left:3px solid;padding:1px 0 1px 8px;margin:3px 0}.vgd-m{color:#6B7785}.vgd-lb{font-size:16px;margin:10px 0}'
   + '.vgd-est{display:grid;grid-template-columns:300px 1fr;gap:18px}.vgd-ft{width:100%;height:210px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:#E8EEF5}.vgd-ef small{display:block;font-size:12.5px;color:#5B6B80;margin-top:4px}.vgd-sf{height:210px;border:2px dashed #E3B4AF;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#C5221F;font-weight:700}.vgd-av{margin:8px 0}.vgd-av div{height:14px;background:#E3E8EF;border-radius:7px;overflow:hidden}.vgd-av i{display:block;height:100%;background:#137333}.vgd-av span{font-size:15px}'
   + '.vgd-det{margin-top:16px;border-top:1px solid #DCE3EC;padding-top:8px}.vgd-det summary{cursor:pointer;font-weight:600;color:#5B6B80;font-size:13px}@media(max-width:760px){.vgd-est{grid-template-columns:1fr}.vgd-cs{grid-template-columns:1fr}.vgd-k b{font-size:36px}}.vgt-o:hover{transform:scale(1.25)}'
