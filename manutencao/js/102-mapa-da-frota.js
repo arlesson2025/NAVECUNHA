@@ -28,12 +28,16 @@ function vgMapaDados() {
     const ll = q && q.lat != null && q.lon != null ? [+q.lat, +q.lon] : (k => k ? vgLL(k) : null)(vgLugar(o.local));
     if (!ll) return sem.push(o); R.push({ o, ll, aprox: !(q && q.lat != null) });
   });
-  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref') };
+  // balsas em reforma (Supervisor, 02/11/2026: VDA IX e VDA XXII no ERAM): no estaleiro lançado na reforma (Histórico dos equipamentos → Balsa (casco))
+  const B = vgBalsas().filter(b => vgEmReforma(b.id)).map(b => ({ id: b.id, nome: b.nome, st: 'ref', bal: true }));
+  B.forEach(o => { const r = vgEmReforma(o.id) || {}, tx = [r.local, r.obs].filter(Boolean).join(' ');
+    const k = /\beram\b|estaleiro/.test(vgNorm(tx)) ? 'Estaleiro Rio Amazonas (ERAM)' : vgLugar(tx); if (!k || !vgLL(k)) return sem.push(o); (F[k] = F[k] || []).push(o); });
+  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B };
 }
 function vgMapaCard() {
   const D = vgMapaDados(), nP = Object.values(D.P).reduce((a, L) => a + L.length, 0);
   const sem = D.sem.length ? `<p class="note" style="margin:6px 0 0"><b>Sem posição no mapa:</b> ${D.sem.map(o => `${esc(o.nome)}${o.st === 'via' ? ' (em rota' + (o.dias != null ? ', ' + o.dias + ' d' : '') + ')' : o.st === 'ref' ? ' (em reforma, local não informado)' : ''}`).join(' · ')} · use “Informar posição” ou cole o e-mail do Monitoramento</p>` : '';
-  return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''} · azul = em rota, vermelho = parado há mais de ${VG_PARADO_D} dias, verde = no porto (número = empurradores no porto), cinza = em reforma · clique no ponto para ver as balsas e a última posição</p>
+  return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''}${D.refB.length ? ' · ' + D.refB.length + (D.refB.length > 1 ? ' balsas' : ' balsa') + ' em reforma' : ''} · azul = em rota, vermelho = parado há mais de ${VG_PARADO_D} dias, verde = no porto (número = empurradores no porto), cinza = em reforma · clique no ponto para ver as balsas e a última posição</p>
     <div id="vgMapa" data-nodrag style="height:560px;border-radius:8px;background:#E8EEF5;position:relative"><p class="note" style="padding:12px">Carregando o mapa…</p></div>${sem}
     <p class="note" style="margin:4px 0 0">Posição em rota pela latitude e longitude do e-mail do Monitoramento; sem elas, pelo lugar citado (posição aproximada da cidade, marcada “aprox.”). O mapa precisa de internet.</p></div>`;
 }
@@ -79,7 +83,7 @@ async function vgMapaIniciar() {
   Object.entries(D.F).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll);
     L.marker(ll, { icon: vgIcone('#5F6368', 0, Lp.length), riseOnHover: true }).addTo(m)
       .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref'))
-      .bindPopup(`<b>${esc(k)} · em reforma · ${Lp.length}</b><br>${Lp.map(o => { const r = vgEmReforma(o.id) || {}; return `<a href="#" data-vgficha="${o.id}"><b>${esc(o.nome)}</b></a>${r.ini ? ' · desde ' + brD(r.ini) : ''}${r.obs ? '<br><small>' + esc(r.obs) + '</small>' : ''}`; }).join('<br>')}${vgGoogle(ll)}`); });
+      .bindPopup(`<b>${esc(k)} · em reforma · ${Lp.length}</b><br>${Lp.map(o => { const r = vgEmReforma(o.id) || {}; return `${o.bal ? `<b>${esc(o.nome)}</b> · balsa` : `<a href="#" data-vgficha="${o.id}"><b>${esc(o.nome)}</b></a>`}${r.ini ? ' · desde ' + brD(r.ini) : ''}${r.obs ? '<br><small>' + esc(r.obs) + '</small>' : ''}`; }).join('<br>')}${vgGoogle(ll)}`); });
   D.R.forEach(({ o, ll, aprox }) => { pts.push(ll); const par = o.parD > VG_PARADO_D;
     L.marker(ll, { icon: vgIcone(par ? '#D93025' : '#1A73E8', (o.balsas || []).length), riseOnHover: true }).addTo(m)
       .bindTooltip(`${esc(o.nome)}${aprox ? ' · aprox.' : ''}`, tip(par ? 'par' : ''))
