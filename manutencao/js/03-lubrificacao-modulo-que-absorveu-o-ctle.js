@@ -389,9 +389,9 @@ async function lubSalvarForm(data, win) {
     throw new Error((e && e.message || e) + (out ? ' O PDF foi baixado para não se perder.' : ''));
   }
 }
-// balsa: a troca do FR 049_B reinicia o prazo no plano (NP 024 8.2) · óleo do motor-bomba pelo motor da balsa, mancais da bomba = B1.2
-// só dá baixa quando o que o item pede foi feito: 6.10 TCA óleo + filtros de óleo e combustível (B2.1) e filtro de ar (B2.2); Cummins óleo + filtro de óleo (B3.1); D229-6 óleo + filtros de óleo, ar e combustível (B4.1)
-const LUB_BAL = { m610: [['B2.1', ['oleo', 'comb']], ['B2.2', ['ar'], true]], cum: [['B3.1', ['oleo']]], m229: [['B4.1', ['oleo', 'ar', 'comb']]] };
+// balsa: a troca do FR 049_B reinicia o prazo no plano (NP 024 8.2 a 8.5) · óleo do motor-bomba pelo motor da balsa, mancais da bomba = B1.2
+// só dá baixa quando o que o item pede foi feito: 6.10 TCA óleo + filtros de óleo e combustível (B2.1) e filtro de ar (B2.2); Cummins óleo + filtro de óleo (B3.1); D229 óleo + filtros de óleo e combustível (B4.1) e filtro de ar (B4.3), pelo manual MWM Série 229
+const LUB_BAL = { m610: [['B2.1', ['oleo', 'comb']], ['B2.2', ['ar'], true]], cum: [['B3.1', ['oleo']]], m229: [['B4.1', ['oleo', 'comb']], ['B4.3', ['ar'], true]] };
 const LUB_FLT = { oleo: 'filtro de óleo', comb: 'filtro de combustível', ar: 'filtro de ar' };
 async function lubBaixaBalsa(b, rec, eq, data) {
   const out = { itens: [], avisos: [], hor: false }, by = S.session.name, quem = (data.nomes || {}).exe || by;

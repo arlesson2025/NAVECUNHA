@@ -474,6 +474,10 @@ const ENXB_DOCS = [
   ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html'],
   ['ref', 'Como a frota trabalha · resumo para reuniões', 'O ciclo da manutenção em uma folha: chegada, planejamento, execução, saída, fechamento do mês e o papel do Sankhya', '../docs/empurradores/Como_a_frota_trabalha.html'],
   ['ref', 'NP Navecunha 055 · Plano de Gestão de Manutenção', 'Procedimento vigente (revisão em aprovação)', '../docs/empurradores/NP_Navecunha_055_corrigida.html'],
+  ['ref', 'NP Navecunha 024 · Plano de Gestão de Manutenção · Balsas Tanque', 'Minuta da Rev. 02 (em amarelo, o que falta confirmar); Word em docs/balsas', '../docs/balsas/NP_Navecunha_024_Rev02.html'],
+  ['ref', 'NP 024 · Anexo I · Instrução de operação do conjunto motor-bomba', 'Fixar na praça de máquinas da balsa', '../docs/balsas/NP024_Anexo_I_Instrucao_Operacao_Motor_Bomba_Rev02.html'],
+  ['ref', 'NP 024 · Anexo II · Troca de óleo e controle', 'Óleos, filtros e intervalos dos três motores das balsas', '../docs/balsas/NP024_Anexo_II_Troca_de_Oleo_e_Controle_Rev02.html'],
+  ['ref', 'NP 024 · Anexo III · Ficha técnica dos equipamentos críticos', 'Uma por balsa, fixada na praça de máquinas', '../docs/balsas/NP024_Anexo_III_Ficha_Tecnica_Equipamentos_Rev02.html'],
 ];
 function enxIIBBranco() {
   const L = n => Array.from({ length: n }, () => '<tr><td style="height:22px"></td><td></td><td style="width:8%"></td><td style="width:8%"></td><td style="width:8%"></td></tr>').join('');
