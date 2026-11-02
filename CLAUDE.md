@@ -19,6 +19,11 @@ O SMF fala com o deployment Apps Script em `NUVEM_PADRAO` (`js/01-nuvem-e-pdf.js
 
 ## Comandos
 
+**Várias sessões trabalham neste projeto ao mesmo tempo** (Supervisor, 02/11/2026: “por que tá puxando coisas do passado?”). Para não trazer de volta o que já saiu nem apagar o trabalho de outra sessão:
+- **Ao começar**: `git fetch` e partir da `main` atual (`git switch main && git pull`, ou uma branch nova a partir de `origin/main`). A pasta principal fica na `main`.
+- **Ao publicar**: `git pull --rebase origin main`, pegar o número da versão **na hora** (`VERSAO_APP` da `origin/main` + 1, o mesmo para o `CACHE` do `sw.js` e a entrada em `VERSOES`), rodar `python testes/todos.py` e publicar logo em seguida. O `todos.py` **falha com a cópia atrasada** (“cópia atrasada · faltam N alteração(ões)”).
+- Branch já publicada pode ser apagada; trabalho não publicado que não vai seguir vira etiqueta `arquivo/<nome>` antes de apagar (ex.: `arquivo/busca-com-ia`, `arquivo/smf-3-95-limpeza`, 02/11/2026). O histórico da `main` nunca se apaga: é o registro de mudanças (ISO 9001 8.5.6) e é por ele que se recupera gráfico ou tela que sumiu.
+
 Não há build, lint, testes nem gerenciador de pacotes. Publicação: GitHub Pages da `main` (https://arlesson2025.github.io/NAVECUNHA/manutencao/).
 
 - Rodar: servir a raiz do repositório por HTTP (ex.: `python -m http.server 8765 --bind 127.0.0.1`) e abrir `/manutencao/`. O app só registra o service worker em `https:`; o comportamento offline real se testa no celular, pelo GitHub Pages. Ao mudar arquivos pré-cacheados, confira que todos baixam (`caches.open(...).addAll(ARQ)` no console).

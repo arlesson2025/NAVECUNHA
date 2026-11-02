@@ -8,6 +8,20 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
 ok = True
 
+# cópia atrasada (Supervisor, 02/11/2026: “por que tá puxando coisas do passado?”): várias sessões publicam ao mesmo tempo, e quem
+# trabalha numa cópia que não tem a versão publicada mais nova traz de volta o que já saiu ou apaga o trabalho das outras
+def git(*a):
+    return subprocess.run(['git', *a], cwd=RAIZ, capture_output=True, text=True, encoding='utf-8')
+if git('fetch', '-q', 'origin', 'main').returncode == 0:
+    atras = git('rev-list', '--count', 'HEAD..origin/main').stdout.strip()
+    if atras.isdigit() and int(atras) > 0:
+        print(f'FALHOU cópia atrasada · faltam {atras} alteração(ões) da versão publicada: atualize antes de publicar (git pull --rebase origin main)')
+        ok = False
+    else:
+        print('OK     cópia em dia com a versão publicada')
+else:
+    print('AVISO  não deu para conferir a versão publicada (sem internet?)')
+
 node = shutil.which('node')
 if node:
     js = ("const fs=require('fs');let a;try{a=require('acorn')}catch(e){console.log('SEM_ACORN');process.exit(0)}"
