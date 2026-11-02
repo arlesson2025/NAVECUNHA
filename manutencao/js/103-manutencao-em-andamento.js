@@ -160,14 +160,13 @@ function vgRefBloco(z) {
 }
 function vgRefTabela(ids) {
   const H = isoD(hoje()), Z = ids.map(vgRefDados).sort((a, b) => (b.A.length - a.A.length) || ((a.prev || '9') < (b.prev || '9') ? -1 : 1));
-  return `<h3 class="vgm-h">Em reforma · ${Z.length}</h3><div class="tw"><table class="t vgp-tab"><thead><tr><th>Embarcação</th><th>No estaleiro há</th><th>Previsão de entrega</th><th>Andamento</th><th>Travado por</th><th>Última foto</th></tr></thead><tbody>${Z.map(z => {
+  return `<h3 class="vgm-h">Em reforma · ${Z.length}</h3><div class="tw"><table class="t vgp-tab"><thead><tr><th>Embarcação</th><th>No estaleiro há</th><th>Previsão de entrega</th><th>Andamento</th><th>Última foto</th></tr></thead><tbody>${Z.map(z => {
     const pc = z.serv.length ? Math.round(z.nF / z.serv.length * 100) : null;
     const pv = z.prev ? `${brD(z.prev)}${z.prev < H ? ` <span class="pill p-bad">${-vgDD(H, z.prev)} d atrasada</span>` : ` <span class="pill p-ok">faltam ${vgDD(H, z.prev)} d</span>`}${z.prevH.length ? `<div class="note">mudou ${z.prevH.length} vez${z.prevH.length > 1 ? 'es' : ''}</div>` : ''}` : '<span class="pill p-bad">sem previsão</span>';
     const an = pc == null ? '<span class="note">serviços não lançados</span>' : `<div class="vgp-an"><i style="width:${pc}%"></i></div><span class="note">${z.nF} de ${z.serv.length} serviços</span>`;
-    const tr = z.deps.length ? z.deps.map(r => { const d = gsDias(r); return `<div>${esc(r.tp)} ${esc(r.num)} <span class="pill ${d > 30 ? 'p-bad' : d > 15 ? 'p-warn' : 'p-mut'}">${d} d</span></div>`; }).join('') : (s => s.some(x => x.dep) ? s.filter(x => x.dep).map(x => `<div>${esc(x.dep)} <span class="note">· ${esc(x.t)} · não está na 5.1</span></div>`).join('') : s.length ? `<span class="note">${s.length} serviço${s.length > 1 ? 's' : ''} pendente${s.length > 1 ? 's' : ''}, sem SC/RM ligada</span>` : '<span class="note">—</span>')(z.serv.filter(s => !s.ok));
     const fo = !z.F.length ? '<span class="pill p-bad">nunca</span>' : z.ult == null ? '<span class="note">sem data</span>' : `<span class="pill ${z.ult > 14 ? 'p-bad' : z.ult > 7 ? 'p-warn' : 'p-ok'}">há ${z.ult} d</span>`;
-    return `<tr class="vgp-l" data-vgdet="${z.id}"><td class="nowrap"><b>${esc(z.nome)}</b>${z.bal ? ' <span class="note">balsa</span>' : ''} <span class="vgp-sx">▸</span></td><td class="nowrap">${z.dd != null ? z.dd + ' d' : '<span class="note">início não lançado</span>'}</td><td>${pv}</td><td style="min-width:130px">${an}</td><td>${tr}</td><td class="nowrap">${fo}</td></tr>
-      <tr class="vgp-det" id="vgdet-${z.id}" style="display:none"><td colspan="6">${vgRefBloco(z)}</td></tr>`; }).join('')}</tbody></table></div>`;
+    return `<tr class="vgp-l" data-vgdet="${z.id}"><td class="nowrap"><b>${esc(z.nome)}</b>${z.bal ? ' <span class="note">balsa</span>' : ''} <span class="vgp-sx">▸</span></td><td class="nowrap">${z.dd != null ? z.dd + ' d' : '<span class="note">início não lançado</span>'}</td><td>${pv}</td><td style="min-width:130px">${an}</td><td class="nowrap">${fo}</td></tr>
+      <tr class="vgp-det" id="vgdet-${z.id}" style="display:none"><td colspan="5">${vgRefBloco(z)}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function vgPainelVia(id) {
   const o = vgOndeDe(id, false), H = isoD(hoje()), r = vgRota(o.rota), dest = r ? r.nome.split('×').pop().trim() : '', d0 = o.saida || H, dv = vgDD(d0, H), prev = o.prev || '';
@@ -298,7 +297,7 @@ function vgDirEst(ids) {
       <div class="vgd-cl">Tempo de estaleiro: <b>${z.dd != null ? z.dd + ' dias' : 'início não lançado'}</b>${z.ini ? ` (entrada ${brD(z.ini)})` : ''}</div>
       <div class="vgd-cp">Previsão de entrega: ${z.prev ? `<b>${brD(z.prev)}</b> ${z.prev < H ? `<b style="color:${VGD_C.bad}">${-vgDD(H, z.prev)} d de atraso</b>` : `<span class="vgd-m">faltam ${vgDD(H, z.prev)} d</span>`}` : `<b style="color:${VGD_C.bad}">sem previsão</b>`}${z.prevH.length ? ` <span class="vgd-m">· ${vgdPl(z.prevH.length, 'reprogramação', 'reprogramações')}</span>` : ''}</div>
       <div class="vgd-av"><div><i style="width:${pc || 0}%"></i></div><span>${pc == null ? 'Avanço físico: serviços não lançados' : `Avanço físico <b>${pc}%</b> · ${z.nF} de ${z.serv.length} serviços`}</span></div>
-      ${z.deps.length || z.serv.some(s => !s.ok && s.dep) ? `<div class="vgd-cl">Restrição de suprimento: <b>${esc([...z.deps.map(r => `${r.tp} ${r.num} (${gsDias(r)} d)`), ...z.serv.filter(s => !s.ok && s.dep && !z.deps.some(r => s.dep.includes(r.num))).map(s => s.dep)].join(' · '))}</b></div>` : ''}
+      
       ${vgLinhaTempo(key, z.ini || isoD(new Date(Date.now() - 30 * 864e5)), 'Entrada', z.prev, 'Entrega prevista', VG_PAINEL.oc[key], mk)}</div></div>`; };
   return `<div class="vgd-ks">${ks}</div><p class="vgd-c">${conc}</p><div class="vgd-cs vgd-cs1">${Z.map(card).join('')}</div>
     <p class="vgd-m">Linha do tempo: quadrado verde = serviço concluído · losango laranja = reprogramação da entrega · ponto = ocorrência (clique para ver). Clique na foto para ampliar.</p>
