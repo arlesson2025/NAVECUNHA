@@ -2,7 +2,7 @@
    kind 'saida' · liberada: o Supervisor só confirma · com restrição: justificativa + foto do FR 027_L de saída · bloqueada ou interditada: justificativa + Coordenador de Operações que autorizou + foto.
    A lista de pendências fica gravada como estava na hora da saída (não se reescreve depois). Mesma regra de situação da Situação da frota (frotaMatriz). */
 'use strict';
-const SAI_SIT = [['o', 'Liberada'], ['a', 'Com restrição'], ['v', 'Saída bloqueada'], ['v', 'Interditada']];
+const SAI_SIT = [['o', 'Liberada'], ['a', 'Liberada com restrição'], ['v', 'Impedida de operar'], ['v', 'Interditada']];
 function saidaFoto(v) {   // situação técnica agora: mesma conta da Situação da frota
   const p = painelVessel(v).filter(x => x.s.st === 'venc');   // só o vencido: o "vence na viagem" saiu da saída (decisão do Supervisor, 21/10/2026)
   const it = interditada(v.id), bq = p.filter(x => x.s.st === 'venc' && x.t.prio === 'Crítica' && !x.om);
@@ -18,7 +18,7 @@ function saidaFoto(v) {   // situação técnica agora: mesma conta da Situaçã
 }
 
 function saidaLista(F) {
-  const pr = x => `<li><span class="pill ${x.st === 'venc' ? (x.bloq ? 'p-bad' : 'p-warn') : 'p-inf'}">${x.st === 'venc' ? (x.bloq ? 'bloqueia' : 'vencido') : 'vence na viagem'}</span> <b>${esc(x.item)}</b> ${esc(x.nome)}${x.pos && x.pos !== 'UN' ? ' · ' + esc(x.pos) : ''}${x.om ? ' · <span class="note">OM ' + esc(x.om) + '</span>' : ''}</li>`;
+  const pr = x => `<li><span class="pill ${x.st === 'venc' ? (x.bloq ? 'p-bad' : 'p-warn') : 'p-inf'}">${x.st === 'venc' ? (x.bloq ? 'impede a saída' : 'vencido') : 'vence na viagem'}</span> <b>${esc(x.item)}</b> ${esc(x.nome)}${x.pos && x.pos !== 'UN' ? ' · ' + esc(x.pos) : ''}${x.om ? ' · <span class="note">OM ' + esc(x.om) + '</span>' : ''}</li>`;
   const cr = c => `<li><span class="pill ${c.interd ? 'p-bad' : 'p-warn'}">corretiva${c.classe ? ' ' + esc(c.classe) : ''}</span> OM ${esc(c.num || '—')}${c.desc ? ' · ' + esc(c.desc) : ''}${c.interd ? ' · <b>interdita</b>' : ''}</li>`;
   const nc = x => `<li><span class="pill ${x.c === 'Crítica' ? 'p-bad' : x.c === 'Alta' ? 'p-warn' : 'p-inf'}">NO ${esc(x.c || '')}</span> ${esc(x.lab)}${x.d ? ' · ' + esc(x.d) : ''}${x.o ? ' · <span class="note">OM ' + esc(x.o) + '</span>' : ' · <b>sem OM</b>'}</li>`, N = F.nc || [];
   return F.pend.length || F.corr.length || N.length ? `<ul class="sai-l">${F.corr.map(cr).join('')}${N.map(nc).join('')}${F.pend.map(pr).join('')}</ul>` : '<p class="note">Nenhuma pendência técnica.</p>';

@@ -143,7 +143,7 @@ function vEnxPend() {
 // ---------- Situação da frota: matriz empurrador × sistema ou cartões (SMF 3.44; Supervisor, 29/10/2026: “uma visão geral da frota de como ela está hoje”) ----------
 // mesma conta do Backlog (enxDados: vencido · vence no mês · sem histórico) e da saída (frotaMatriz: bloqueado = Crítica vencida sem OM ou falha Crítica sem OM)
 const SF_SIS = ['Propulsão', 'Governo', 'Geração', 'Emergência', 'Salvag.', 'Combust.', 'Comunic.', 'Amarra', 'Casco', 'Habitab.', 'Naveg.'];
-const SF_SIT = [['ok', 'Liberado'], ['at', 'Com restrição'], ['bad', 'Bloqueado'], ['bad', 'Interditado']];
+const SF_SIT = [['ok', 'Liberado à operação'], ['at', 'Liberado com restrição'], ['bad', 'Impedido de operar'], ['bad', 'Interditado']];   // termos da NP 055 (Supervisor, 02/11/2026): “bloqueio” na NP é o da partida (5.11)
 const sfModo = () => { try { return localStorage.getItem('smf_sf_modo') === 'cartoes' ? 'cartoes' : 'matriz'; } catch (e) { return 'matriz'; } };
 function sfDados() {
   const D = enxDados(), FM = frotaMatriz().filter(f => f.sit >= 0); let C = []; try { C = cmpDados(); } catch (e) { }
@@ -211,7 +211,7 @@ function sfMatriz(L) {
       <td class="sf-cc">${lk(x, '#anoleo', x.amo.some(y => y.g === 'venc') ? sfCel(x.amo, ' title="Amostra de óleo vencida"') : x.lab && x.lab !== 'ok' ? sfIco(x.lab) : x.amo.some(y => y.g === 'mes') ? sfCel(x.amo, '') : sfIco(x.lab))}</td>
       <td class="sf-cc">${lk(x, '#enxarr', sfCel(x.arr, '', x.vel))}</td><td class="sf-cc">${lk(x, '#enxsen', sfCel(x.sen, '', x.vel))}</td>
       </tr>`).join('')}</tbody>${sfTotais(L)}</table></div>
-    <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; Liberação = o que bloqueia ou restringe a saída (item crítico da NP 6.3 vencido, corretiva aberta); as colunas de condição (3.1 e as cinco abas da 3.2) e as corretivas abrem a tela de origem com o empurrador destacado. Análise de óleo: número = amostra vencida ou do mês, <b>!</b> = último laudo com alerta. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
+    <p class="note">Clique no nome ou numa célula de sistema para abrir o empurrador na 2.2 naquele sistema; Liberação = o que impede ou restringe a saída (item crítico da NP 6.3 vencido, corretiva aberta); as colunas de condição (3.1 e as cinco abas da 3.2) e as corretivas abrem a tela de origem com o empurrador destacado. Análise de óleo: número = amostra vencida ou do mês, <b>!</b> = último laudo com alerta. Itens em dia = itens do Anexo I não vencidos ÷ itens com histórico. Compressão: <b>!</b> vermelho abaixo de 1,27 MPa (manual), âmbar abaixo de 1,45 MPa (programar overhaul). Horímetro em vermelho: mais de 14 dias sem leitura.</p>`;
 }
 // identificação dos equipamentos nos cartões = Visão por embarcação da Matriz técnica (docs/Matriz_tecnica…html, seção 6; Supervisor, 01/11/2026)
 // ao mudar a Matriz, atualize aqui (gerado da seção 6 do documento)
@@ -268,13 +268,13 @@ function sfMotivos(x) {
 function sfPorque(L) {
   const R = L.filter(x => x.sit > 0 || x.vel).map(x => ({ x, M: sfMotivos(x) }));
   return `<div class="card"><h2>Por que não está liberado · ${R.filter(r => r.x.sit > 0).length} empurrador${R.filter(r => r.x.sit > 0).length === 1 ? '' : 'es'}${R.some(r => !r.x.sit) ? ' · horímetro desatualizado em ' + R.filter(r => !r.x.sit).length : ''}</h2>
-    ${R.length ? `<div class="tw"><table class="t sf-pq"><tbody>${R.map(({ x, M }) => `<tr><td class="nowrap"><b>${esc(x.v.nome)}</b><div class="sf-s ${SF_SIT[x.sit][0]}">${x.sit ? SF_SIT[x.sit][1] : 'Liberado'}</div></td><td>${M.length ? M.map(([c, t]) => `<div class="sf-pm ${c}">${t}</div>`).join('') : '<span class="note">Ver Pendências</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note">Todos os empurradores liberados e com horímetro em dia.</p>'}
-    <p class="note">Bloqueia: item crítico da NP 6.3 vencido sem OM, falha crítica sem OM, interdição. Restringe: outro serviço vencido, falha alta sem OM, troca do motor de popa. Clique no motivo para ir à tela que resolve.</p></div>`;
+    ${R.length ? `<div class="tw"><table class="t sf-pq"><tbody>${R.map(({ x, M }) => `<tr><td class="nowrap"><b>${esc(x.v.nome)}</b><div class="sf-s ${SF_SIT[x.sit][0]}">${x.sit ? SF_SIT[x.sit][1] : 'Liberado à operação'}</div></td><td>${M.length ? M.map(([c, t]) => `<div class="sf-pm ${c}">${t}</div>`).join('') : '<span class="note">Ver Pendências</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note">Todos os empurradores liberados e com horímetro em dia.</p>'}
+    <p class="note">Impede de operar: item crítico da NP 6.3 vencido sem OM, falha crítica sem OM, interdição. Restringe: outro serviço vencido, falha alta sem OM, troca do motor de popa. Clique no motivo para ir à tela que resolve.</p></div>`;
 }
 function sfCard() {
   const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => /^em viagem/.test(sfOnde(x) || '')).length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
   return `<div class="card"><h2>Situação da frota · ${md === 'matriz' ? 'empurrador × sistema do Anexo I' : 'cartões por empurrador'}</h2>
-    <div class="sf-k">${[['Liberados', n(0), 'var(--okt)'], ['Com restrição', n(1), 'var(--warnt)'], ['Bloqueados', n(2) + n(3), 'var(--badt)'], ['Em viagem', via, ''], ['Críticos NP 6.3 vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)']].map(([l, v, c]) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`).join('')}
+    <div class="sf-k">${[['Liberados à operação', n(0), 'var(--okt)'], ['Liberados com restrição', n(1), 'var(--warnt)'], ['Impedidos de operar', n(2) + n(3), 'var(--badt)'], ['Em viagem', via, ''], ['Críticos NP 6.3 vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)']].map(([l, v, c]) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`).join('')}
       <span class="sp"></span><div class="seg"><button data-sfm="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-sfm="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button></div></div>
     ${md === 'matriz' ? `<div class="sf-leg"><span><span class="sf-c sf-r">3</span> vencidos</span><span><span class="sf-c sf-a">2</span> vencem no mês</span><span><span class="sf-g"></span> em dia</span><span><span class="sf-o"></span> sem histórico</span><span><span class="sf-na">—</span> não se aplica</span></div>` + sfMatriz(L) : sfCartoes(L)}</div>`;
 }

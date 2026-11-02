@@ -14,7 +14,7 @@ function gate() {
    <ul><li><b>Feito sobre o nosso processo:</b> Anexo I (Matriz de Manutenção Preventiva), NP 6.3 (Relação de Equipamentos Críticos), Anexos II (Relatórios de Manutenção Preventiva e Corretiva), FR 049_B (Troca de Óleo, Filtros e Fluidos) e FR 027_L (Check-list de Chegada e Saída). Um CMMS de mercado não chega tão perto da rotina da frota.</li>
    <li><b>Do planejamento ao relatório:</b> horímetro, plano anual, OM, execução com foto, indicadores (aderência, MTTR, disponibilidade) e relatório mensal gerencial, sem planilha paralela.</li>
    <li><b>Pronto para a auditoria:</b> cada serviço ligado à OM do Sankhya; os relatórios saem prontos e são anexados à OM no Sankhya, com fotos de antes e depois.</li>
-   <li><b>Segurança na saída:</b> serviço crítico vencido bloqueia a saída do empurrador.</li>
+   <li><b>Segurança na saída:</b> serviço crítico vencido impede a saída do empurrador.</li>
    <li><b>Funciona a bordo:</b> no celular, sem internet, e sincroniza quando o sinal volta.</li></ul>
    <p class="gf">Apoia o SGI · ISO 9001, 14001 e 45001</p></aside>`;
   g.innerHTML = `<div class="gwrap"><form class="gbox" autocomplete="on"><div class="glogos"><img src="${LOGOS.nav}" alt="Navecunha"><i></i><img src="${LOGOS.vda}" alt="Grupo VDA"></div>

@@ -60,7 +60,7 @@ function vEnx() {
   const x = D.find(y => y.v === v), ord = { venc: 0, mes: 1, sem: 2 }, L = x.P.filter(y => ENX.emDia || ['venc', 'mes', 'sem'].includes(y.g)).sort((a, b) => (ord[a.g] ?? 3) - (ord[b.g] ?? 3) || a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true }));
   const lin = y => { const nfr = enxNF(v.id, y.pos, y.t.id), k = y.pos + '|' + y.t.id, L0 = y.s.L;
     const cr = enxCrit(y.t);
-    return `<tr${cr ? ' style="background:rgba(179,38,30,.07);box-shadow:inset 4px 0 0 #B3261E"' : ''}><td><input type="checkbox" class="enx-ck" value="${k}"></td><td><b${cr ? ' style="color:#B3261E"' : ''}>${esc(enxServ(y.t))}</b>${cr ? enxCritSelo() : enxCritAnx(y.t) ? ' <span class="note" title="Prioridade Crítica no Anexo I, fora da tabela da NP 6.3: vencido bloqueia a saída (NP 5.5)">prioridade crítica · Anexo I</span>' : ''}</td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
+    return `<tr${cr ? ' style="background:rgba(179,38,30,.07);box-shadow:inset 4px 0 0 #B3261E"' : ''}><td><input type="checkbox" class="enx-ck" value="${k}"></td><td><b${cr ? ' style="color:#B3261E"' : ''}>${esc(enxServ(y.t))}</b>${cr ? enxCritSelo() : enxCritAnx(y.t) ? ' <span class="note" title="Prioridade Crítica no Anexo I, fora da tabela da NP 6.3: vencido impede a saída (NP 5.5)">prioridade crítica · Anexo I</span>' : ''}</td><td class="nowrap">${enxIv(y.t, v, y.pos)}</td>
       <td class="nowrap">${L0 ? brD(L0.date) + (L0.h != null ? '<div class="note">' + nf(L0.h) + ' h</div>' : '') + (L0.insp ? '<div class="note" style="color:#1A73E8" title="' + esc(L0.obs || '') + '">inspecionado · sem intervenção</div>' : '') : '—'}</td><td><span class="pill ${ENX_GR[y.g][0]}">${ENX_GR[y.g][1]}</span><div class="note">${esc(y.s.txt || '')}</div>${nfr && (!L0 || nfr.date > L0.date) ? `<div class="note rl-ruim">não executado em ${brD(nfr.date)}: ${esc(nfr.motivo || '')}</div>` : ''}</td></tr>`; };
   return enxCab(`2.2 OM preventiva · ${esc(v.nome)}`, 'Selecione os itens · “Gerar descritivo da OM” para abrir a OM no Sankhya com a lista · depois “Apontar execução” com o nº dessa OM, “Inspecionado · sem intervenção” quando avaliou e não precisa fazer agora, ou “Apontar não execução” com o motivo',
       `<button class="mbtn" data-enxv="">← Frota</button><button class="mbtn" data-enxreset>Reorganizar</button>`)
@@ -113,7 +113,7 @@ const enxCrit = t => !!t && t.prio === 'Crítica' && NP63_EQ.has(t.eq);
 const enxCritAnx = t => !!t && t.prio === 'Crítica' && !NP63_EQ.has(t.eq);
 const enxCritSelo = () => ' <span class="pill p-bad" style="font-weight:700">⚠ CRÍTICO · NP 6.3</span>';
 const enxCritDoc = '<b style="color:#B3261E;white-space:nowrap">⚠ CRÍTICO · NP 6.3</b>';
-const enxCritLeg = '<p style="font-size:10.5px;margin:4px 0;padding:4px 8px;background:#FDECEA;border-left:4px solid #B3261E">⚠ <b>CRÍTICO · NP 6.3</b> = serviço de equipamento crítico (NP Navecunha 055 item 6.3). Vencido sem OM bloqueia a saída do empurrador (NP 5.5).</p>';
+const enxCritLeg = '<p style="font-size:10.5px;margin:4px 0;padding:4px 8px;background:#FDECEA;border-left:4px solid #B3261E">⚠ <b>CRÍTICO · NP 6.3</b> = serviço de equipamento crítico (NP Navecunha 055 item 6.3). Vencido sem OM impede a saída do empurrador (NP 5.5).</p>';
 const enxSel = () => $$('#main .enx-ck:checked').map(i => { const [pos, item] = i.value.split('|'); return { pos, t: A1M[item] }; }).filter(y => y.t);
 function enxCopiar() {
   const v = vessel(ENX.v), S0 = enxSel(); if (!S0.length) return toast('Marque os serviços primeiro.');
