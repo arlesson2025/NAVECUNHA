@@ -511,8 +511,13 @@ BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.
 // menu da frota de balsas (renderNav chama quando FROTA_TIPO = 'bal')
 function balNav() {
   const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${k === 'bal' ? (n2 => n2 ? `<span class="n">${n2}</span>` : '')(BALSAS.filter(b => balEstado(b).st === 'bloq').length) : ''}</a>`;
-  return (VX.balmapa ? it('balmapa', 'Comece aqui', 'mapa') : '') + '<div class="grp-t grp-trab">Operação</div>' + it('bal', 'Situação das balsas', 'hoje') + (VX.balprog ? it('balprog', 'Programar preventiva', 'prev2') : '') + (VX.balcor ? it('balcor', 'Manutenção corretiva', 'exec') + it('balhor', 'Horímetros', 'hor') : '') + '<div class="grp-t">Controle</div>' + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr') + it('balkpi', 'Indicadores', 'graf') + it('balft', 'Ficha técnica', 'barcos')
-    + '<div class="grp-t grp-apoio">Apoio</div>' + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores (o antigo #bib virava #apoio e caía na Situação das balsas)
+  const g = (t, c) => `<div class="grp-t${c ? ' ' + c : ''}">${t}</div>`;   // menu em etapas, como o dos empurradores (SMF 3.140)
+  return (VX.balmapa ? it('balmapa', 'Comece aqui', 'mapa') : '') + it('bal', 'Situação das balsas', 'hoje')
+    + g('1 · Recebimento da balsa', 'grp-trab') + (VX.balhor ? it('balhor', 'Horímetros', 'hor') : '') + (VX.balcor ? it('balcor', 'Manutenção corretiva', 'exec') : '')
+    + g('2 · Planejamento') + (VX.balprog ? it('balprog', 'Programar preventiva', 'prev2') : '') + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan')
+    + g('3 · Condição') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr')
+    + g('4 · Fechamento') + it('balkpi', 'Indicadores', 'graf') + (VX.balrel ? it('balrel', 'Relatório mensal', 'relg') : '')
+    + g('Apoio', 'grp-apoio') + it('balft', 'Ficha técnica', 'barcos') + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores
 // ---------- dados de exemplo das balsas (seed: some em “Limpar dados de exemplo”) ----------
 async function balExemplo() {
   if (!temExemplo() || S.recs.has('ex-bal-v5')) return;
