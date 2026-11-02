@@ -167,25 +167,31 @@ function vgPosModal(id) {
 // boletim do Autotrac colado: cada trecho que cita um empurrador vira uma posição (conferida antes de gravar)
 // latitude e longitude no texto (decimal “-7,1234 -63,4567” ou “7°30'12\" S 63°02' W”); fora da região da frota (lat −15 a 6, lon −76 a −44) não conta
 function vgCoord(t) {
+  t = String(t || '').replace(/[−–](?=\s?\d)/g, '-');   // sinal de menos tipográfico (texto copiado de tabela ou e-mail) vira hífen
   const ok = (a, o) => a >= -15 && a <= 6 && o >= -76 && o <= -44, n = v => +String(v).replace(',', '.');
+  // o texto que sobra para o local sai sem as coordenadas (as duas formas, quando vêm juntas) e sem as palavras latitude/longitude
+  const limpa = s => s.replace(/-?\d{1,2}[.,]\d{3,}\s*[,;/]?\s+(?:lon\w*\s*:?\s*)?-?\d{1,3}[.,]\d{3,}/gi, ' ').replace(/\d{1,3}\s*°\s*(?:\d{1,2})?\s*['’′]?\s*(?:\d{1,2}(?:[.,]\d+)?)?\s*(?:''|["”″])?\s*[NSWOL][a-z]*\b/gi, ' ').replace(/\b(?:latitude|longitude|lat|lon|long)\b\s*:?/gi, ' ');
   let m = t.match(/(-?\d{1,2}[.,]\d{3,})\s*[,;/]?\s+(?:lon\w*\s*:?\s*)?(-?\d{1,3}[.,]\d{3,})/i);
-  if (m && ok(n(m[1]), n(m[2]))) return { lat: n(m[1]), lon: n(m[2]), t: t.replace(m[0], ' ').replace(/\blat\w*\s*:?/gi, ' ') };
-  const g = /(\d{1,3})\s*°\s*(\d{1,2})?\s*['’′]?\s*(\d{1,2}(?:[.,]\d+)?)?\s*["”″]?\s*([NSWOL])/gi, D = []; let x; while ((x = g.exec(t))) D.push(x);
+  if (m && ok(n(m[1]), n(m[2]))) return { lat: n(m[1]), lon: n(m[2]), t: limpa(t) };
+  // graus: 06° 39' 01'' Sul (e-mail do Monitoramento) ou 06°39'01" S
+  const g = /(\d{1,3})\s*°\s*(\d{1,2})?\s*['’′]?\s*(\d{1,2}(?:[.,]\d+)?)?\s*(?:''|["”″])?\s*([NSWOL])[a-z]*\b/gi, D = []; let x; while ((x = g.exec(t))) D.push(x);
   if (D.length >= 2) { const v = q => (+q[1] + (q[2] ? +q[2] / 60 : 0) + (q[3] ? n(q[3]) / 3600 : 0)) * (/[SWO]/i.test(q[4]) ? -1 : 1), a = v(D[0]), o = v(D[1]);
-    if (ok(a, o)) return { lat: Math.round(a * 1e5) / 1e5, lon: Math.round(o * 1e5) / 1e5, t: t.replace(D[0][0], ' ').replace(D[1][0], ' ') }; }
+    if (ok(a, o)) return { lat: Math.round(a * 1e5) / 1e5, lon: Math.round(o * 1e5) / 1e5, t: limpa(t) }; }
   return { lat: null, lon: null, t };
 }
 function vgLerBoletim(txt) {
   const F = S.cfg.frota.map(v => ({ v, re: new RegExp('\\b' + v.nome.replace(/\s+/g, '\\s*-?\\s*') + '(?![IVXL])', 'i') })).sort((a, b) => b.v.nome.length - a.v.nome.length);
   const it = []; let cur = null;
   String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => { const f = F.find(x => x.re.test(l)); if (f) { cur = { v: f.v, t: l.replace(f.re, ' ') }; it.push(cur); } else if (cur) cur.t += ' ' + l; });
-  const H = hoje();
-  return it.map(x => { const c = vgCoord(x.t), t = c.t.replace(/COMBOIO\s*:?/gi, ' ').replace(/\bVDA\s*-?\s*[IVXL]+\b\s*(?:,|\be\b)?/gi, ' ').replace(/HOR[IÍ]METRO\s*\/?\s*:?\s*[\d.,]+\s*h?/gi, ' ').replace(/[ÚU]LTIMA\s+ATUALIZA[CÇ][AÃ]O\s*:?/gi, ' ').replace(/^[\s\-–:]+/, ''); const md = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); let date = isoD(H), hora = '';
+  const H = hoje(), J = []; it.forEach(x => { const y = J.find(z => z.v === x.v); if (y) y.t += ' ' + x.t; else J.push(x); });   // e-mail que cita o empurrador mais de uma vez = uma posição só
+  return J.map(x => { const c = vgCoord(x.t), tt = c.t.replace(/\s*\|\s*/g, ' · ').replace(/COMBOIO\s*:?/gi, ' ').replace(/\bVDA\s*-?\s*[IVXL]+\b(?:\s*(?:,|\be\b)\s*(?:VDA\s*-?\s*)?[IVXL]+\b)*\s*(?:,|\be\b)?/gi, ' ').replace(/HOR[IÍ]METRO\s*\/?\s*:?\s*[\d.,]+\s*h?/gi, ' ').replace(/[ÚU]LTIMA\s+ATUALIZA[CÇ][AÃ]O\s*:?/gi, ' ').replace(/^[\s\-–:]+/, '');
+    const la = tt.match(/LOCALIZA[CÇ][AÃ]O\s+ATUAL\s*:?\s*(.+?)(?=\s*POSI[CÇ][AÃ]O|\s*OBSERVA[CÇ]|$)/i), t = la ? la[1] : tt;   // e-mail do Monitoramento: o local é o que vem depois de “Localização atual”
+    const md = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); let date = isoD(H), hora = '';
     if (md) { let y = md[3] ? +md[3] : H.getFullYear(); if (y < 100) y += 2000; if (!md[3] && +md[2] > H.getMonth() + 2) y--; date = `${y}-${String(+md[2]).padStart(2, '0')}-${String(+md[1]).padStart(2, '0')}`; }
     const mh = t.match(/(\d{1,2})\s*(?:h|:)\s*(\d{2})/i); if (mh) hora = `${String(+mh[1]).padStart(2, '0')}:${mh[2]}`;
-    const n = vgNorm(t), fx = /boia|cimento|filial|estaleiro|\beram\b/.test(n) && typeof vgFixo === 'function' ? vgFixo(t) : null, parado = !fx && /parad|sem moviment|fundead/.test(n), porto = !!fx || (/atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado);   // boia 1, boia 2 e filial = no porto, no ponto fixo (js/102)
-    const pt = fx || VG_PORTOS.find(p => n.includes(vgNorm(p)));
-    let local = t.replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/\s{2,}/g, ' ');
+    const n = vgNorm(tt), fx = /boia|cimento|filial|estaleiro|\beram\b|navecunha/.test(vgNorm(t)) && typeof vgFixo === 'function' ? vgFixo(t) : null, parado = !fx && /parad|sem moviment|fundead/.test(n), porto = !!fx || (/atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado);   // boia 1, boia 2 e filial = no porto, no ponto fixo (js/102)
+    const pt = fx || VG_PORTOS.find(p => vgNorm(t).includes(vgNorm(p))) || VG_PORTOS.find(p => n.includes(vgNorm(p)));
+    let local = t.replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/(?:\s*·\s*){2,}/g, ' · ').replace(/\s{2,}/g, ' ');
     for (let k = 0; k < 4; k++) local = local.replace(/^[\s,.;:\-–|·]+|[\s,.;:\-–|·]+$/g, '').replace(/\s+(?:às|as|desde|em|de)$/i, '');
     if (local.length > 140) local = local.slice(0, 137) + '…';
     return { vessel: x.v.id, nome: x.v.nome, lat: c.lat, lon: c.lon, date: date > isoD(H) ? isoD(H) : date, hora, situ: porto ? 'por' : 'via', porto: porto ? pt || '' : '', local, parDesde: parado ? date : '' }; });
