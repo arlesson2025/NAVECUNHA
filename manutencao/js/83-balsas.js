@@ -50,8 +50,8 @@ const BALSAS = BAL_CAD.map((c, i) => { const n = c[0], mot = ['VDA VII', 'VDA VI
 const balsaDe = id => BALSAS.find(b => b.id === id) || null;
 // plano preventivo das balsas (NP 024 itens 7 e 8, com as correções aprovadas): h = horas do motor-bomba · m = meses · doca = vence com a docagem (CSN)
 const BA1 = [
-  { id: 'B1.1', eq: 'Bomba centrífuga', m: 1, prio: 'Crítica', exec: 'Equipe de manutenção', serv: 'Lubrificação dos mancais (SAE 20 ou 30, sem aditivo HD), inspeção dos acoplamentos (alinhamento ≤ 0,05 mm) e teste da bomba reserva', ref: 'NP 024 8.5' },
-  { id: 'B1.2', eq: 'Bomba centrífuga', m: 6, prio: 'Crítica', exec: 'Equipe de manutenção', serv: 'Troca do óleo dos mancais, inspeção dos retentores, folga dos mancais e reaperto geral', ref: 'NP 024 8.5' },
+  { id: 'B1.1', eq: 'Bomba centrífuga', m: 1, prio: 'Crítica', exec: 'Equipe de manutenção', serv: 'Nível do óleo dos mancais em banho de óleo (SAE 20 ou 30, sem aditivo HD; 0,4 a 4,0 L conforme o suporte da KSB ETA), inspeção dos acoplamentos (alinhamento ≤ 0,05 mm) e teste da bomba reserva', ref: 'NP 024 8.5' },
+  { id: 'B1.2', eq: 'Bomba centrífuga', m: 6, prio: 'Crítica', exec: 'Equipe de manutenção', serv: 'Troca do óleo dos mancais (volume pelo suporte da plaqueta: 0 e A 0,4 L · B 0,55 L · C 1,2 L · D 4,0 L, manual técnico KSB ETA A1150.0P/4), inspeção dos retentores, folga dos mancais e reaperto geral', ref: 'NP 024 8.5' },
   { id: 'B1.3', eq: 'Bomba centrífuga', m: 12, prio: 'Crítica', exec: 'Equipe de manutenção ou terceiro', serv: 'Limpeza dos mancais e rolamentos, carcaça, troca da gaxeta, rotor e difusores, câmara de resfriamento e realinhamento bomba e motor', ref: 'NP 024 8.5' },
   { id: 'B2.1', eq: 'Motor MWM 6.10 TCA', mot: 'm610', h: 250, m: 6, prio: 'Crítica', exec: 'CTF / MFM', serv: 'Troca do óleo (SAE 15W-40 API CI-4), do filtro de óleo e do filtro de combustível', ref: 'NP 024 8.2 · Manual MWM Série 10 p. 3-9 · FR 049_B' },
   { id: 'B2.2', eq: 'Motor MWM 6.10 TCA', mot: 'm610', h: 500, prio: 'Alta', exec: 'CTF / MFM', serv: 'Troca do filtro de ar', ref: 'NP 024 8.2 · Manual MWM Série 10 p. 3-9' },
