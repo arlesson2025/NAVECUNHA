@@ -8,9 +8,10 @@
 // título da tela = nome da aba (só nas telas de aba, sem argumento: ficha, OM e cronograma de um empurrador mantêm o título próprio)
 const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e falhas', horfrota: 'Horímetros', anoleo: 'Análise de óleo', compr: 'Compressão do MCP', lubcons: 'Óleo e resíduos' };   // a Biblioteca é uma página só (apoio): título “Biblioteca”
 // etiqueta da norma nas telas das balsas (NP Navecunha 024)
-Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 7.0', balcal: 'NP 024 · 8.2.5 e 6.5', balcmp: 'NP 024 · 8.2.2 e 8.2.3', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7.0' });
+Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 8.12', balcal: 'NP 024 · 8.7 e 6.5', balcmp: 'NP 024 · 8.13', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.147', data: '02/11/2026', itens: ['Balsas · plano conferido nos manuais enviados pelo Supervisor: MWM D229 pelo manual MWM Série 229 (óleo, filtro de óleo e de combustível a 250 h ou 6 meses, era 500 h; filtro de ar a 500 h em item próprio, B4.3, com baixa pelo FR 049_B; revisão de 1.000 h com válvulas 0,20 mm a frio; líquido de arrefecimento a 1.000 h ou 6 meses, B4.4; compressão mínima 19 bar usado e 21 bar novo); Cummins pelo manual de serviço Série C (filtro LF3349, era LF3000; líquido de arrefecimento a cada 2 anos ou 6.000 h, a revisão de 2.000 h virou inspeção)', 'NP 024 Rev. 02 (minuta) em Word e HTML com os Anexos I, II e III em docs/balsas, já com as decisões da 3.144 (FR 049_B, MTBF só Crítica e Alta, cobertura preditiva, destino Manutenção ou Operação no FR 027_A); originais em docs/balsas/originais; na Biblioteca', 'Plano das balsas com as referências na numeração da Rev. 02 e Comece aqui das balsas na ordem do menu'] },
   { v: '3.146', data: '02/11/2026', itens: ['Servidor: o SMF passa a usar o endereço novo da implantação do Apps Script (versão 16, que aceita o FR 027_A das balsas); os aparelhos que estavam no endereço antigo passam sozinhos para o novo'] },
   { v: '3.145', data: '02/11/2026', itens: ['FR 049_B: o PDF voltou a ser gerado (falhava em todo salvamento: a linha fina do título das fotos derrubava a biblioteca do PDF)', 'Balsas: FR 049_B pelo botão na ficha da balsa; salvo, fica ligado à balsa, reinicia o prazo da troca de óleo do motor-bomba (6.10 TCA B2.1 e filtro de ar B2.2, Cummins B3.1, D229-6 B4.1, só com os filtros que o item pede) e dos mancais da bomba (B1.2) e lança o horímetro do motor-bomba', 'Testes: testes/formularios.py (PDF do FR 049_B, FR 049_B e FR 027_A das balsas)'] },
   { v: '3.144', data: '02/11/2026', itens: ['Balsas (decisões da revisão da NP 024): no FR 027_A cada não conformidade tem destino Manutenção (OM e falha) ou Operação (sem OM, NP 024 4.4.1); MTBF conta só falhas Crítica e Alta; “% manutenção preditiva” (dava ~2% contra 30%) virou Cobertura preditiva = balsas com ensaio de compressão em dia, meta ≥ 90%', 'Balsas: troca de óleo do motor-bomba pelo FR 049_B, o mesmo formulário dos empurradores (o plano citava FR 049_A)'] },
@@ -185,14 +186,20 @@ const mpTela = (sub, reset, blocos) => `<div class="cm-v"><div class="vh"><div><
 
 function vBalMapa() {
   const E = BALSAS.map(balEstado), bl = E.filter(e => e.st === 'bloq').length, venc = E.reduce((a, e) => a + e.venc.length, 0), fal = E.reduce((a, e) => a + e.A.length, 0);
-  return mpTela('A sequência do trabalho nas balsas petroleiras (NP 024). Cada passo leva à tela certa; o número é o que está pendente agora.', 'bmpreset',
+  const d30 = isoD(new Date(hoje() - 30 * 864e5)), semCk = typeof f27aS === 'function' ? BALSAS.filter(b => !f27aS(b.id).some(r => r.date >= d30)).length : 0;
+  return mpTela('A sequência do trabalho nas balsas petroleiras (NP 024), na ordem do menu. Cada passo leva à tela certa; o número é o que está pendente agora.', 'bmpreset',
     mpBloco('Todo dia', 'Comece sempre por aqui', mpPasso(1, 'Situação das balsas', '“O que precisa de você agora”: bloqueadas, vencidos e falhas abertas', '#bal', bl, 'r'))
-    + mpBloco('A cada intervenção', 'Na Situação das balsas ou na ficha da balsa',
-      mpPasso(1, 'Registrar a falha', 'Com classe e nº da OM do Sankhya; Crítica bloqueia a balsa', '#bal', fal, 'r') + mpPasso(2, 'Registrar a execução', 'Serviços feitos, horímetro do motor-bomba e nº da OM', '#bal', venc)
-      + mpPasso(3, 'Lançar o horímetro', 'Motor-bomba, a cada chegada', '#bal'))
-    + mpBloco('Todo mês', 'Acompanhar e prestar contas', mpPasso(1, 'Cronograma', 'Previsto × realizado e aderência', '#balcr') + mpPasso(2, 'Docagem', 'CSN, estaleiro e projeção de 5 anos', '#baldoca')
-      + mpPasso(3, 'Plano de calibração', 'PSV, válvula de alívio, manômetro e injeção', '#balcal') + mpPasso(4, 'Compressão dos motores', 'Ensaio na revisão de 1.000 h', '#balcmp') + mpPasso(5, 'Indicadores', 'NP 024 item 10', '#balkpi'))
-    + mpBloco('Consulta', 'Plano e cadastro', mpPasso('·', 'Plano preventivo', 'Itens B1 a B12 com intervalo e criticidade', '#balpl') + mpPasso('·', 'Ficha técnica', 'Motor, bomba, baterias e segurança de cada balsa', '#balft')));
+    + mpBloco('1 · Recebimento da balsa', 'Na chegada e na saída do terminal',
+      mpPasso(1, 'Check-list FR 027_A', 'Chegada e saída, pelo botão na Situação das balsas: horímetro do motor-bomba e não conformidade de manutenção vira falha (número = balsas sem FR 027_A há 30 dias)', '#bal', semCk)
+      + mpPasso(2, 'Horímetros', 'Motor-bomba de todas as balsas numa tabela', '#balhor')
+      + mpPasso(3, 'Manutenção corretiva', 'Falhas abertas, formulário de campo e “Resolvida” com o II-A', '#balcor', fal, 'r'))
+    + mpBloco('2 · Planejamento', 'O que vence e o que foi feito',
+      mpPasso(1, 'Programar preventiva', 'Serviços do mês, texto da OM, formulário de campo e registro da execução', '#balprog', venc)
+      + mpPasso(2, 'Cronograma', 'Previsto × realizado, aderência e aprovação do ano', '#balcr') + mpPasso('·', 'Plano preventivo', 'Itens B1 a B12 com intervalo e criticidade', '#balpl'))
+    + mpBloco('3 · Condição', 'Ensaios, calibrações e docagem', mpPasso(1, 'Docagem', 'CSN, estaleiro e projeção de 5 anos', '#baldoca')
+      + mpPasso(2, 'Plano de calibração', 'PSV, válvula de alívio, manômetro e injeção', '#balcal') + mpPasso(3, 'Compressão dos motores', 'Ensaio na revisão de 1.000 h', '#balcmp'))
+    + mpBloco('4 · Fechamento', 'Todo mês', mpPasso(1, 'Indicadores', 'NP 024 item 10', '#balkpi') + mpPasso(2, 'Relatório mensal', 'Números, aderência, falhas e comentário do Supervisor', '#balrel'))
+    + mpBloco('Apoio', 'Cadastro e documentos', mpPasso('·', 'Ficha técnica', 'Motor, bomba, baterias e segurança de cada balsa', '#balft') + mpPasso('·', 'Biblioteca', 'NP 024, anexos e formulários', '#enxbib')));
 }
  
 VX.balmapa = vBalMapa; AFTER.balmapa = () => { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_balmapa_lay', '[data-bmpreset]'); };

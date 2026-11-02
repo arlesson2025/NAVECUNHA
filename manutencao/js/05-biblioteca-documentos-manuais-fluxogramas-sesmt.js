@@ -21,6 +21,7 @@ const BIB_FIXOS = [
   { cat: 'fluxo', titulo: 'Fluxo do processo de manutenção (PDCA)', desc: 'Plano (Anexo I) → cronograma → programação → execução → controle → análise → melhoria (PDCA)', abre: 'fluxo' },
   { cat: 'fluxo', titulo: 'Procedimento de troca de óleo (FR 049_B)', desc: 'Preparar, drenar, filtros, abastecer, conferir, registrar, resíduos', abre: '#plano' },
   { cat: 'sgi', titulo: 'NP Navecunha 055 · Plano de Gestão de Manutenção', desc: 'Procedimento vigente (revisão em aprovação)', url: '../docs/empurradores/NP_Navecunha_055_corrigida.html' },
+  { cat: 'sgi', titulo: 'NP Navecunha 024 · Plano de Gestão de Manutenção · Balsas Tanque', desc: 'Minuta da Rev. 02 conferida nos manuais dos motores, com os Anexos I, II e III em docs/balsas', url: '../docs/balsas/NP_Navecunha_024_Rev02.html' },
   { cat: 'sgi', titulo: 'Anexo I · Matriz de manutenção preventiva', desc: 'Itens, frequências, métodos e registros', url: '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html' },
   { cat: 'sgi', titulo: 'Matriz técnica de equipamentos e lubrificação', desc: 'Modelos, óleos, volumes e intervalos da frota', url: '../docs/empurradores/Matriz_tecnica.atual17.10.26.html' },
   { cat: 'sgi', titulo: 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', desc: 'Preencher pelo sistema (Lubrificação) ou imprimir', url: '../docs/FR_049_B_Rev03_Troca_de_Oleo.html' },
