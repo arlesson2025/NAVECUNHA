@@ -32,8 +32,13 @@ async def main():
         telas = [(v, 'emp') for v in emp] + [(v + '/' + vid, 'emp') for v in ['enx', 'enxcr', 'enxhor', 'enxeq']]
         telas += [(v, 'bal') for v in bal] + [('balft/' + bid, 'bal')]
         achados = set()
+        espera_bal = True
         for h, tipo in telas:
             await pg.evaluate("async ([h, t]) => { FROTA_TIPO = t; location.hash = '#' + h; await new Promise(r => setTimeout(r, 700)); }", [h, tipo])
+            if tipo == 'bal' and espera_bal:   # o exemplo das balsas é gerado na primeira visita à frota de balsas
+                espera_bal = False
+                await pg.wait_for_function('S.recs.has("ex-bal-v5")', timeout=90000)
+                await pg.evaluate("async () => { render(); await new Promise(r => setTimeout(r, 700)); }")
             v = h.split('/')[0] + ('/…' if '/' in h else '')
             for t in await pg.evaluate(COLETA):
                 achados.add(f'{v} | {t}')
