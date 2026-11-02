@@ -1,7 +1,7 @@
 # Gráficos que precisam continuar no SMF (tela | título do quadro). Gerado por: python testes/graficos.py --gravar
 # Tirar uma linha daqui = retirar o gráfico de propósito; só com aprovação do Supervisor e registro em VERSOES.
 anoleo | Tendência da frota
-balcor | Análise de falhas
+balfal | A · Pareto de falhas por equipamento
 balkpi | Aderência ao cronograma
 balkpi | Disponibilidade por balsa
 balkpi | Falhas por equipamento

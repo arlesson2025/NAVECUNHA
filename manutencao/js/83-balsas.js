@@ -117,7 +117,15 @@ const balIvTx = t => t.doca ? 'na docagem (CSN)' : [t.h ? nf(t.h) + ' h' : '', t
 const balMotTx = b => `${BAL_MOTOR[b.mot]}`;
 // ---------- telas ----------
 const BAL_VIEWS = [['bal', 'Situação das balsas'], ['balcr', 'Cronograma'], ['balpl', 'Plano preventivo'], ['baldoca', 'Docagem'], ['balcal', 'Plano de calibração'], ['balcmp', 'Compressão dos motores'], ['balkpi', 'Indicadores'], ['balft', 'Ficha técnica']];
-const balCab = (tit, sub, bt) => `<div class="vh"><div><h1>${esc(tit)}</h1><p>${sub}</p></div><span class="sp"></span>${bt || ''}</div>`;
+// numeração e etapas como as dos empurradores (SMF 3.157, Supervisor 02/11/2026): menu, título da tela e faixa no topo
+const BAL_NUM = { balhor: '1.1', balcor: '1.2', balfal: '1.2', balcr: '2.1', balprog: '2.2', balpl: '2.3', baldoca: '3.1', balcal: '3.2', balcmp: '3.3', balkpi: '4.1', balrel: '4.2' };
+const BAL_ETAPAS = [['1', 'Recebimento', ['balhor', 'balcor', 'balfal']], ['2', 'Planejamento', ['balcr', 'balprog', 'balpl']], ['3', 'Condição', ['baldoca', 'balcal', 'balcmp']], ['4', 'Fechamento', ['balkpi', 'balrel']]];
+function balFaixa() {
+  if (VIEW !== 'bal' && !BAL_ETAPAS.some(e => e[2].includes(VIEW))) return '';
+  return `<nav class="op-ps" aria-label="Etapas da manutenção das balsas"><a href="#bal" class="${VIEW === 'bal' ? 'on' : ''}">Situação das balsas</a>${BAL_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
+}
+const balTit = tit => (!ARG && BAL_NUM[VIEW] && !/^\d/.test(tit) ? BAL_NUM[VIEW] + ' ' : '') + tit;
+const balCab = (tit, sub, bt) => `<div class="vh"><div><h1>${esc(balTit(tit))}</h1><p>${sub}</p></div><span class="sp"></span>${bt || ''}</div>`;
 const BALF = { f: 'todas', q: '' };
 function vBal() {
   const E = BALSAS.map(balEstado), cnt = k => E.filter(e => e.st === k).length;
@@ -518,17 +526,26 @@ Object.entries({ bal: vBal, balcr: vBalCr, balpl: vBalPl, baldoca: vBalDoca, bal
 BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'balft' && ARG ? '1' : '') + '_lay', '[data-balreset="' + k + '"]'); }; });
 // menu da frota de balsas (renderNav chama quando FROTA_TIPO = 'bal')
 function balNav() {
-  const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${ico(ic)}<span>${n}</span>${k === 'bal' ? (n2 => n2 ? `<span class="n">${n2}</span>` : '')(BALSAS.filter(b => balEstado(b).st === 'bloq').length) : ''}</a>`;
+  const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k || (k === 'balcor' && VIEW === 'balfal') ? 'on' : ''}">${ico(ic)}<span>${n}</span>${(n2 => n2 ? `<span class="n">${n2}</span>` : '')(k === 'bal' ? BALSAS.filter(b => balEstado(b).st === 'bloq').length : k === 'balcor' ? recs('avaria').filter(r => r.bal && !r.excluido && !r.fim && balsaDe(r.vessel)).length : 0)}</a>`;
   const g = (t, c) => `<div class="grp-t${c ? ' ' + c : ''}">${t}</div>`;   // menu em etapas, como o dos empurradores (SMF 3.140)
-  return (VX.balmapa ? it('balmapa', 'Comece aqui', 'mapa') : '') + it('bal', 'Situação das balsas', 'hoje')
-    + g('1 · Recebimento da balsa', 'grp-trab') + (VX.balhor ? it('balhor', 'Horímetros', 'hor') : '') + (VX.balcor ? it('balcor', 'Manutenção corretiva', 'exec') : '')
-    + g('2 · Planejamento') + (VX.balprog ? it('balprog', 'Programar preventiva', 'prev2') : '') + it('balcr', 'Cronograma', 'crono') + it('balpl', 'Plano preventivo', 'plan')
-    + g('3 · Condição') + it('baldoca', 'Docagem', 'cons') + it('balcal', 'Plano de calibração', 'cond2') + it('balcmp', 'Compressão dos motores', 'compr')
-    + g('4 · Fechamento') + it('balkpi', 'Indicadores', 'graf') + (VX.balrel ? it('balrel', 'Relatório mensal', 'relg') : '')
-    + g('Apoio', 'grp-apoio') + it('balft', 'Ficha técnica', 'barcos') + it('enxbib', 'Biblioteca', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores
+  return it('bal', 'Situação das balsas', 'hoje')
+    + g('1 · Recebimento da balsa', 'grp-trab') + (VX.balhor ? it('balhor', '1.1 Horímetros', 'hor') : '') + (VX.balcor ? it('balcor', '1.2 Manutenção corretiva', 'exec') : '')
+    + g('2 · Planejamento') + it('balcr', '2.1 Cronograma', 'crono') + (VX.balprog ? it('balprog', '2.2 Programar preventiva', 'prev2') : '') + it('balpl', '2.3 Plano preventivo', 'plan')
+    + g('3 · Condição') + it('baldoca', '3.1 Docagem', 'cons') + it('balcal', '3.2 Plano de calibração', 'cond2') + it('balcmp', '3.3 Compressão dos motores', 'compr')
+    + g('4 · Fechamento') + it('balkpi', '4.1 Indicadores', 'graf') + (VX.balrel ? it('balrel', '4.2 Relatório mensal', 'relg') : '')
+    + g('Apoio', 'grp-apoio') + it('balft', 'Ficha técnica', 'barcos') + it('enxbib', 'Biblioteca técnica', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores
 // ---------- dados de exemplo das balsas (seed: some em “Limpar dados de exemplo”) ----------
+// modo, causa e serviço das falhas de exemplo (SMF 3.157, para a Análise de falhas das balsas); acrescentados também em quem já tem o exemplo
+const BAL_EX_FAL = { 'ex-balav-0': ['Vazamento'], 'ex-balav-1': ['Falha elétrica ou sem partida'], 'ex-balav-2': ['Vazamento'],
+  'ex-balavr-0': ['Superaquecimento', 'Lubrificação inadequada', 'Troca dos rolamentos do mancal e do óleo'], 'ex-balavr-1': ['Vazamento', 'Desgaste natural (fim de vida)', 'Troca da gaxeta da válvula de sucção'],
+  'ex-balavr-2': ['Falha elétrica ou sem partida', 'Desgaste natural (fim de vida)', 'Motor de arranque recondicionado'], 'ex-balavr-3': ['Falha elétrica ou sem partida', 'Manutenção não feita ou fora do prazo', 'Bateria carregada e terminais limpos'],
+  'ex-balavr-4': ['Falha elétrica ou sem partida', 'Desgaste natural (fim de vida)', 'Lâmpada e soquete trocados'], 'ex-balavr-5': ['Falha elétrica ou sem partida', 'Peça ou material com defeito', 'Sirene do alarme trocada e testada'],
+  'ex-balavr-6': ['Vazamento', 'Montagem ou instalação incorreta', 'Junta do cárter trocada e parafusos reapertados'] };
+const balExFal = r => { const x = BAL_EX_FAL[r.id]; if (!x || r.modo) return false; r.modo = x[0]; if (r.fim) { r.causaCat = x[1]; r.servicos = x[2]; r.teste = 'Teste em operação, sem anormalidade'; } return true; };
 async function balExemplo() {
-  if (!temExemplo() || S.recs.has('ex-bal-v5')) return;
+  if (temExemplo() && S.recs.has('ex-bal-v5')) { const U = [...S.recs.values()].filter(r => r.seed && r.kind === 'avaria' && balExFal(r));
+    if (U.length) { U.forEach(r => S.recs.set(r.id, r)); if (MEM) U.forEach(r => MEM.set(r.id, r)); else await DB.putMany(U); } return; }
+  if (!temExemplo()) return;
   let sd = 2421; const R = () => (sd = (sd * 9301 + 49297) % 233280) / 233280, agora = Date.now(), put = [], base = { seed: true, createdAt: agora, updatedAt: agora, by: 'Supervisor (exemplo)', bal: true };
   const dia = n => isoD(new Date(hoje().getTime() - n * 864e5));
   BALSAS.forEach((b, i) => { const tx = 1.5 + R() * 3.5, h1 = Math.round(3000 + R() * 9000), h0 = Math.round(h1 - tx * 60);
@@ -549,7 +566,7 @@ async function balExemplo() {
   [['bal3', 'Crítica', 'Bomba centrífuga', 'Rolamento do mancal da bomba aquecendo', 12, 6], ['bal9', 'Alta', 'Válvulas de gaveta', 'Vazamento pela gaxeta da válvula de sucção', 20, 3], ['bal18', 'Crítica', 'Motor MWM 6.10 TCA', 'Motor-bomba não parte: motor de arranque', 35, 11],
    ['bal25', 'Média', 'Baterias', 'Bateria do alarme de nível descarregada', 41, 2], ['bal5', 'Alta', 'Luzes de navegação', 'Luz de fundeio apagada', 58, 5], ['bal12', 'Crítica', 'Alarme de nível alto', 'Alarme de nível sem sinal sonoro', 70, 9], ['bal21', 'Alta', 'Motor Cummins Série C', 'Vazamento de óleo no cárter do motor-bomba', 95, 14]]
     .forEach(([v, c, q, x, d, dur], k) => { const at = +pD(dia(d)) - 3.5 * 36e5; put.push(Object.assign({ id: 'ex-balavr-' + k, kind: 'avaria', vessel: v, date: dia(d), hora: '08:30', c, sis: q, pos: 'UN', desc: x + ' (exemplo)', om: String(48200 + k), quem: 'Operador de Medição (exemplo)', meio: 'FR 027_A', at, fim: { at: at + dur * 36e5, by: 'Supervisor (exemplo)' } }, base)); });
-  put.push(Object.assign({ id: 'ex-bal-v5', kind: 'marca' }, base));
+  put.forEach(balExFal); put.push(Object.assign({ id: 'ex-bal-v5', kind: 'marca' }, base));
   put.forEach(r => S.recs.set(r.id, r)); if (MEM) put.forEach(r => MEM.set(r.id, r)); else await DB.putMany(put);
   if (typeof render === 'function' && S.session) render();
 }

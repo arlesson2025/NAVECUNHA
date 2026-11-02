@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 8.12', balcal: 'NP 024 · 8.7 e 6.5', balcmp: 'NP 024 · 8.13', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.157', data: '02/11/2026', itens: ['Balsas no mesmo desenho dos empurradores (Supervisor): sai o Comece aqui (a frota abre na Situação das balsas), menu numerado 1.1 a 4.2 com o nº de falhas abertas na 1.2, título numerado e faixa das etapas (Situação · 1 Recebimento · 2 Planejamento · 3 Condição · 4 Fechamento) no topo', 'Balsas · 1.2 Manutenção corretiva com as abas Corretivas e Análise de falhas: resumo do período, Pareto por equipamento empilhado pela classe com % acumulado, balsas com mais falhas e reincidência, modo de falha, causa e equipamento × modo, como a análise dos empurradores'] },
   { v: '3.156', data: '02/11/2026', itens: ['Comece aqui das balsas: as janelas guardadas da versão antiga (4 blocos) eram aplicadas aos 6 blocos novos e a tela ficava estreita e sobreposta; o arranjo passou a ser guardado com outra chave e a tela abre organizada.'] },
   { v: '3.155', data: '02/11/2026', itens: ['Biblioteca técnica separada por frota, com botões Empurradores · Balsas · Comuns às duas frotas; abre na frota escolhida no topo do menu; documento enviado ganha o campo Frota'] },
   { v: '3.154', data: '02/11/2026', itens: ['Balsas: compressão do MWM 6.10 TCA confirmada pela MWM (mínimo 20 bar, novo 23 bar, diferença máxima 2 bar entre cilindros, motor frio; Apostila de Treinamento MWM Série 10 e manual de serviço MWM 6.10/T/TCA cap. 15-40 — o manual de oficina Série 10 não traz o valor); sai o “documento de terceiros” da tela Compressão dos motores e o amarelo da NP 024 Rev. 02 (8.13)'] },
@@ -188,37 +189,14 @@ function versoesHTML() {
   return `<div class="card"><h2>Versão do SMF · ${VERSAO_APP}</h2><p class="note">Cada versão publicada com o que mudou. A publicação é autorizada pelo Supervisor de Manutenção (controle de mudanças · ISO 9001 8.5.6).</p>
    ${VERSOES.map(x => `<div class="vs-v"><b>SMF ${esc(x.v)}</b> <span class="note">${esc(x.data)}</span><ul>${x.itens.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>`; }
 { const st = document.createElement('style'); st.textContent = `.vs-v{padding:6px 0;border-bottom:1px solid #EEF2F6}.vs-v:last-child{border:0}.vs-v ul{margin:4px 0 0 18px;padding:0}.vs-v li{font-size:13px;line-height:1.45}`; document.head.appendChild(st); }
-// ---------- Comece aqui: a sequência do trabalho em ciclos, com o que está pendente em cada passo (Supervisor, 25/10/2026: “até eu me perco”) ----------
-const mpPasso = (n, nome, tx, href, cnt, cor) => `<a class="mp-p" href="${href}"><span class="mp-n">${n}</span><span class="mp-t"><b>${nome}</b><small>${tx}</small></span>${cnt ? `<span class="mp-c${cor ? ' ' + cor : ''}">${cnt}</span>` : ''}</a>`;
-const mpBloco = (tit, sub, ps) => `<div class="card"><h2>${tit}</h2><p class="note">${sub}</p><div class="mp-l">${ps}</div></div>`;
-const mpTela = (sub, reset, blocos) => `<div class="cm-v"><div class="vh"><div><h1>Comece aqui</h1><p>${sub}</p></div><span class="sp"></span><button class="mbtn" data-${reset} title="Volta os blocos à posição e ao tamanho original">Reorganizar</button></div><div class="cm-ws">${blocos}</div></div>`;
-
-function vBalMapa() {
-  const E = BALSAS.map(balEstado), bl = E.filter(e => e.st === 'bloq').length, venc = E.reduce((a, e) => a + e.venc.length, 0), fal = E.reduce((a, e) => a + e.A.length, 0);
-  const d30 = isoD(new Date(hoje() - 30 * 864e5)), semCk = typeof f27aS === 'function' ? BALSAS.filter(b => !f27aS(b.id).some(r => r.date >= d30)).length : 0;
-  return mpTela('A sequência do trabalho nas balsas petroleiras (NP 024), na ordem do menu. Cada passo leva à tela certa; o número é o que está pendente agora.', 'bmpreset',
-    mpBloco('Todo dia', 'Comece sempre por aqui', mpPasso(1, 'Situação das balsas', '“O que precisa de você agora”: bloqueadas, vencidos e falhas abertas', '#bal', bl, 'r'))
-    + mpBloco('1 · Recebimento da balsa', 'Na chegada e na saída do terminal',
-      mpPasso(1, 'Check-list FR 027_A', 'Chegada e saída, pelo botão na Situação das balsas: horímetro do motor-bomba e não conformidade de manutenção vira falha (número = balsas sem FR 027_A há 30 dias)', '#bal', semCk)
-      + mpPasso(2, 'Horímetros', 'Motor-bomba de todas as balsas numa tabela', '#balhor')
-      + mpPasso(3, 'Manutenção corretiva', 'Falhas abertas, formulário de campo e “Resolvida” com o II-A', '#balcor', fal, 'r'))
-    + mpBloco('2 · Planejamento', 'O que vence e o que foi feito',
-      mpPasso(1, 'Programar preventiva', 'Serviços do mês, texto da OM, formulário de campo e registro da execução', '#balprog', venc)
-      + mpPasso(2, 'Cronograma', 'Previsto × realizado, aderência e aprovação do ano', '#balcr') + mpPasso(3, 'Plano preventivo', 'Itens B1 a B12 com intervalo e criticidade', '#balpl'))
-    + mpBloco('3 · Condição', 'Ensaios, calibrações e docagem', mpPasso(1, 'Docagem', 'CSN, estaleiro e projeção de 5 anos', '#baldoca')
-      + mpPasso(2, 'Plano de calibração', 'PSV, válvula de alívio, manômetro e injeção', '#balcal') + mpPasso(3, 'Compressão dos motores', 'Ensaio na revisão de 1.000 h', '#balcmp'))
-    + mpBloco('4 · Fechamento', 'Todo mês', mpPasso(1, 'Indicadores', 'NP 024 item 10', '#balkpi') + mpPasso(2, 'Relatório mensal', 'Números, aderência, falhas e comentário do Supervisor', '#balrel'))
-    + mpBloco('Apoio', 'Cadastro e documentos', mpPasso('·', 'Ficha técnica', 'Motor, bomba, baterias e segurança de cada balsa', '#balft') + mpPasso('·', 'Biblioteca', 'NP 024, anexos e formulários', '#enxbib')));
-}
- 
-VX.balmapa = vBalMapa; AFTER.balmapa = () => { const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_balmapa_lay2', '[data-bmpreset]'); };
-BAL_VIEWS.unshift(['balmapa', 'Comece aqui']);
+// Comece aqui das balsas saiu na 3.157 (Supervisor, 02/11/2026: a frota de balsas no mesmo desenho da de empurradores, que abre na Situação; a faixa das etapas fica no topo)
 SECOES.unshift({ id: 'mapa', nome: 'Comece aqui', sub: 'a sequência do trabalho', views: [['mapa', 'Comece aqui']] });
 { const h = SECOES.find(s => s.id === 'hoje'); if (h) h.sub = 'chegada, saída e o dia'; }
 ICO.mapa = '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>';
 // faixa de passos no topo das telas da operação: chegada → falhas → programar → executar → conferir → saída, com o passo atual e o pendente
 const OP_PASSOS = [['rotina', 'Chegada'], ['falhas2', 'Falhas'], ['emitir', 'Programar'], ['oms', 'Executar'], ['omconf', 'Conferir'], ['rotina', 'Saída']];
 function opPassos() {
+  if (FROTA_TIPO === 'bal') return typeof balFaixa === 'function' ? balFaixa() : '';   // balsas: faixa das etapas como a dos empurradores (js/83)
   if (typeof enxuto === 'function' && enxuto() && typeof pcmFaixa === 'function') return pcmFaixa();   // modo enxuto: faixa das 4 etapas do PCM (js/87)
   if (FROTA_TIPO === 'bal' || (typeof ehOperador === 'function' && ehOperador()) || !OP_PASSOS.some(p => p[0] === VIEW)) return '';
   let C = {}; try { C = navCont(); } catch (e) { } const n = { falhas2: C.falhasSem, emitir: C.emitir, oms: C.oms, omconf: C.omconf };
