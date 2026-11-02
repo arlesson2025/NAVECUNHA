@@ -5,7 +5,9 @@
    muda, serv = [{ t, ok, dep }], fotos, fim). Corretiva aberta entra sozinha (sem previsão até alguém abrir o acompanhamento com o mesmo nº de OM);
    empurrador em reforma sem acompanhamento entra no estaleiro pela reforma. SC/RM da 5.1 (snap screq): pendente = gsAberta; depende da manutenção
    quando tem o mesmo nº de OM ou é citada num serviço. Ficha (vgFicha): fotos da semana, manutenções, corretivas abertas, ocorrências da viagem e SC/RM. */
-const vgMans = () => recs('snap').filter(r => r.tipo === 'manut' && !r.excluido && !r.fim);
+// lista padrão dos serviços de uma reforma no estaleiro (ponto de partida; o Supervisor edita em cada reforma)
+const VG_REF_SERV = ['Casco · chapas, solda e medição de espessura', 'Convés e acessórios', 'Tubulação', 'Motores', 'Elétrica', 'Pintura', 'Docagem'];
+const vgMans = () =>recs('snap').filter(r => r.tipo === 'manut' && !r.excluido && !r.fim);
 const vgCorAb = vid => oms().filter(o => o.tipo === 'C' && o.status === 'aberta' && !o.excluido && (!vid || o.vessel === vid));
 const vgDD = (a, b) => Math.round((pD(b) - pD(a)) / 864e5);
 const vgSemIni = () => { const h = hoje(), d = (h.getDay() + 6) % 7; return isoD(new Date(h.getFullYear(), h.getMonth(), h.getDate() - d)); };   // segunda-feira desta semana
@@ -20,9 +22,10 @@ function vgManLinhas() {
   M.forEach(m => L.push({ m, vid: m.vessel, onde: m.onde, local: m.local, txt: m.txt, om: m.om, ini: m.ini, prev: m.prev, serv: m.serv || [], nPrev: (m.prevH || []).length }));
   vgCorAb().forEach(o => { if (com.has(o.vessel + '|' + o.num)) return; const st = vgOndeDe(o.vessel, false).st; if (st === 'via') return;
     L.push({ cor: o, vid: o.vessel, onde: st === 'ref' ? 'estaleiro' : 'porto', txt: `Corretiva ${o.classe || ''} · ${o.equip || o.sistema || ''}${o.descricao ? ' · ' + o.descricao : ''}`, om: o.num, ini: (o.abertura || '').slice(0, 10), prev: '', serv: [] }); });
-  S.cfg.frota.forEach(v => { const r = vgEmReforma(v.id); if (!r || M.some(m => m.vessel === v.id && m.onde === 'estaleiro')) return;
+  // empurradores e balsas em reforma (as balsas entram desde a 3.168, para terem previsão e serviços da reforma)
+  S.cfg.frota.concat(vgBalsas()).forEach(v => { const r = vgEmReforma(v.id); if (!r || M.some(m => m.vessel === v.id && m.onde === 'estaleiro')) return;
     L.push({ ref: r, vid: v.id, onde: 'estaleiro', local: r.local, txt: 'Reforma' + (r.obs ? ' · ' + r.obs : ''), ini: r.ini, prev: '', serv: [] }); });
-  return L.map(x => Object.assign(x, { deps: vgDeps(x.vid, x.om, x.serv), nome: vName(x.vid) })).sort((a, b) => (a.prev || '9') < (b.prev || '9') ? -1 : 1);
+  return L.map(x => Object.assign(x, { deps: vgDeps(x.vid, x.om, x.serv), nome: vName(x.vid), bal: typeof balsaDe === 'function' && !!balsaDe(x.vid) })).sort((a, b) => (a.prev || '9') < (b.prev || '9') ? -1 : 1);
 }
 function vgManCard() {
   const L = vgManLinhas(), H = isoD(hoje()), ed = can.edit();
@@ -31,8 +34,8 @@ function vgManCard() {
   const depTx = x => x.deps.length ? x.deps.map(r => { const d = gsDias(r); return `${esc(r.tp)} ${esc(r.num)} <span class="pill ${d > 30 ? 'p-bad' : d > 15 ? 'p-warn' : 'p-mut'}">${d} d</span>${vgItens(r) ? ` <span class="note">${vgItens(r)} itens</span>` : ''}`; }).join('<br>') : '<span class="note">—</span>';
   const lug = x => { const o = vgOndeDe(x.vid, false); return x.local || (o.st === 'por' && typeof vgLugar === 'function' ? vgLugar(o.porto) || o.porto : '') || ''; };
   const tab = (onde, tit, cIni, cPrev) => { const R = L.filter(x => x.onde === onde);
-    return `<h3 class="vgm-h">${tit} · ${R.length}</h3>${R.length ? `<div class="tw"><table class="t vgm-t"><thead><tr><th>Empurrador</th><th>O que é</th><th>${cIni}</th><th>${cPrev}</th><th>SC/RM pendentes</th><th></th></tr></thead><tbody>
-      ${R.map(x => { const nF = x.serv.filter(s => s.ok).length; return `<tr><td><a href="#" data-vgficha="${x.vid}"><b>${esc(x.nome)}</b></a><div class="note">${esc(lug(x))}</div></td>
+    return `<h3 class="vgm-h">${tit} · ${R.length}</h3>${R.length ? `<div class="tw"><table class="t vgm-t"><thead><tr><th>${R.some(x => x.bal) ? 'Embarcação' : 'Empurrador'}</th><th>O que é</th><th>${cIni}</th><th>${cPrev}</th><th>SC/RM pendentes</th><th></th></tr></thead><tbody>
+      ${R.map(x => { const nF = x.serv.filter(s => s.ok).length; return `<tr><td>${x.bal ? `<b>${esc(x.nome)}</b> <span class="note">balsa</span>` : `<a href="#" data-vgficha="${x.vid}"><b>${esc(x.nome)}</b></a>`}<div class="note">${esc(lug(x))}</div></td>
         <td>${esc(x.txt || '')}<div class="note">${x.om ? 'OM ' + esc(x.om) : 'sem OM'}${x.serv.length ? ` · ${nF} de ${x.serv.length} serviços feitos` : ''}</div></td><td class="nowrap">${x.ini ? brD(x.ini) : '—'}</td><td>${prevTx(x)}</td><td>${depTx(x)}</td>
         <td class="nowrap">${ed ? (x.m ? `<button class="mbtn sm" data-vgman="${x.m.id}">Atualizar</button>` : `<button class="mbtn sm" data-vgman="" data-vgv="${x.vid}" data-vgo="${esc(x.om || '')}" data-vgw="${onde}" data-vgt="${esc(x.txt || '')}" data-vgi="${x.ini || ''}">Pôr previsão</button>`) : ''}</td></tr>`; }).join('')}</tbody></table></div>` : `<p class="note">Nenhum empurrador em manutenção ${onde === 'porto' ? 'no porto' : 'no estaleiro'}.</p>`}`; };
   // SC/RM por empurrador: pendentes (todas, com a mais antiga) e atendidas nesta semana (segunda a hoje)
@@ -48,10 +51,13 @@ function vgManCard() {
 // ---------- abrir ou atualizar o acompanhamento ----------
 function vgManModal(id, pre) {
   if (!can.edit()) return; const m = id ? S.recs.get(id) : null, p = pre || {}, v0 = m ? m.vessel : p.vid || '', onde = m ? m.onde : p.onde || 'porto';
-  const linha = (s, k) => `<div class="g vgm-s"><label class="f s1" style="align-self:end"><input type="checkbox" class="vgmK"${s.ok ? ' checked' : ''}> feito</label><label class="f s7">Serviço<input class="vgmT" value="${esc(s.t || '')}"></label><label class="f s4">Depende de (SC/RM)<input class="vgmD" value="${esc(s.dep || '')}" placeholder="RM 278557"></label></div>`;
-  const S0 = m && m.serv && m.serv.length ? m.serv : [{}, {}, {}];
+  const linha = (s, k) => `<div class="g vgm-s" data-em="${esc(s.em || '')}"><label class="f s1" style="align-self:end"><input type="checkbox" class="vgmK"${s.ok ? ' checked' : ''}> feito</label><label class="f s7">Serviço<input class="vgmT" value="${esc(s.t || '')}"></label><label class="f s4">Depende de (SC/RM)<input class="vgmD" value="${esc(s.dep || '')}" placeholder="RM 278557"></label></div>`;
+  // reforma no estaleiro começa com a lista padrão de serviços (Supervisor, 02/11/2026), que se edita em cada reforma
+  const ehRef = !m && onde === 'estaleiro' && /reforma/i.test(p.txt || '');
+  const S0 = m && m.serv && m.serv.length ? m.serv : ehRef ? VG_REF_SERV.map(t => ({ t })) : [{}, {}, {}];
+  const op = L0 => L0.map(v => `<option value="${v.id}"${v.id === v0 ? ' selected' : ''}>${esc(v.nome)}</option>`).join('');
   modal(`<h2>${m ? 'Atualizar acompanhamento · ' + esc(vName(m.vessel)) : 'Abrir acompanhamento da manutenção'}</h2>
-    <div class="g"><label class="f s3">Empurrador<select id="vgmV"${m ? ' disabled' : ''}>${S.cfg.frota.map(v => `<option value="${v.id}"${v.id === v0 ? ' selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></label>
+    <div class="g"><label class="f s3">Empurrador ou balsa<select id="vgmV"${m ? ' disabled' : ''}><optgroup label="Empurradores">${op(S.cfg.frota)}</optgroup>${vgBalsas().length ? `<optgroup label="Balsas">${op(vgBalsas())}</optgroup>` : ''}</select></label>
       <label class="f s3">Onde<select id="vgmW"><option value="porto"${onde === 'porto' ? ' selected' : ''}>No porto</option><option value="estaleiro"${onde === 'estaleiro' ? ' selected' : ''}>No estaleiro</option></select></label>
       <label class="f s3">Local<input id="vgmL" list="vgmLL" value="${esc(m ? m.local || '' : onde === 'estaleiro' ? 'Estaleiro Rio Amazonas (ERAM)' : '')}" placeholder="Boia 1, ERAM…"><datalist id="vgmLL">${Object.keys(typeof VG_FIXO === 'object' ? VG_FIXO : {}).map(k => `<option value="${esc(k)}">`).join('')}</datalist></label>
       <label class="f s3">Nº da OM (Sankhya)<input id="vgmO" inputmode="numeric" value="${esc(m ? m.om || '' : p.om || '')}"></label>
@@ -67,7 +73,8 @@ function vgManModal(id, pre) {
   const ler = async () => { const prev = $('#vgmP').value, ini = $('#vgmI').value, txt = $('#vgmX').value.trim(), E = $('#vgmE');
     if (!txt) { E.textContent = 'Diga o que é a manutenção.'; return null; } if (!ini) { E.textContent = 'Informe o início.'; return null; } if (prev && prev < ini) { E.textContent = 'A previsão não pode ser antes do início.'; return null; }
     const mudou = m && m.prev && prev !== m.prev, mot = $('#vgmM').value.trim(); if (mudou && !mot) { E.textContent = 'Diga por que a previsão mudou.'; return null; }
-    const serv = $$('#vgmSL .vgm-s').map(d => ({ t: d.querySelector('.vgmT').value.trim(), ok: d.querySelector('.vgmK').checked, dep: d.querySelector('.vgmD').value.trim() })).filter(s => s.t);
+    // em = dia em que o serviço foi marcado feito (marca na linha do tempo da reforma); desmarcado perde a data
+    const serv = $$('#vgmSL .vgm-s').map(d => { const ok = d.querySelector('.vgmK').checked; return { t: d.querySelector('.vgmT').value.trim(), ok, dep: d.querySelector('.vgmD').value.trim(), em: ok ? d.dataset.em || isoD(hoje()) : '' }; }).filter(s => s.t);
     const novas = []; for (const f of fxArq('vgmF').slice(0, 6)) novas.push({ tipo: 'FOTO', src: await comprimir(f), at: Date.now() });
     const r = Object.assign({}, m || { id: uid('snap'), kind: 'snap', tipo: 'manut', vessel: $('#vgmV').value, por: S.session.name, prevH: [], fotos: [] },
       { onde: $('#vgmW').value, local: $('#vgmL').value.trim(), om: $('#vgmO').value.trim(), txt, ini, prev, serv, fotos: [...((m && m.fotos) || []), ...novas], at: Date.now() });
@@ -112,17 +119,55 @@ const VG_PAINEL = { oc: {} };
 const vgFotoSrc = f => f.src || (typeof HE_FT !== 'undefined' && HE_FT[f.fid]) || '';
 const vgFotoImg = (f, cls, at) => { const s = vgFotoSrc(f); return `<img class="${cls}" ${s ? `src="${s}"` : f.fid ? `data-hefid="${esc(f.fid)}" alt="carregando"` : 'alt=""'}${at || ''}>`; };
 // linha do tempo de d0 (rótulo a0) até d1 (rótulo a1), com hoje e um ponto por ocorrência
-function vgLinhaTempo(key, d0, a0, d1, a1, Oc) {
+// mk = marcas a mais (reforma): [{ d, cls: 'sv' serviço concluído | 'pv' previsão mudou, tip }]
+function vgLinhaTempo(key, d0, a0, d1, a1, Oc, mk) {
   const H = isoD(hoje()), fim = d1 && d1 > H ? d1 : H, t0 = +pD(d0), t1 = Math.max(+pD(fim), t0 + 864e5), X = d => Math.max(0, Math.min(100, (+pD(d) - t0) / (t1 - t0) * 100));
-  const hj = X(H), dots = Oc.map((x, i) => `<button class="vgt-o ${x.ok ? 'ok' : 'ab'}" style="left:${X(x.d)}%" data-vgoc="${key}|${i}" data-nodrag title="${esc(brD(x.d) + ' · ' + (x.eq || '') + (x.ok ? ' · resolvida' : ' · em andamento'))}"></button>`).join('');
-  return `<div class="vgt"><div class="vgt-b"><i class="vgt-f" style="width:${hj}%"></i>${d1 && d1 > H ? `<i class="vgt-p" style="left:${hj}%;width:${100 - hj}%"></i>` : ''}<i class="vgt-h" style="left:${hj}%"></i>${dots}</div>
-    <div class="vgt-l"><span><b>${esc(a0)}</b><br>${brD(d0)}</span><span class="vgt-lh" style="left:${hj}%">hoje</span>${d1 ? `<span style="text-align:right"><b>${esc(a1)}</b><br>${brD(d1)}</span>` : ''}</div></div><div class="vgt-d" id="vgtd-${key}"></div>`;
+  const hj = X(H), dots = (mk || []).map(x => `<i class="vgt-m ${x.cls}" style="left:${X(x.d)}%" title="${esc(x.tip || '')}"></i>`).join('') + Oc.map((x, i) => `<button class="vgt-o ${x.ok ? 'ok' : 'ab'}" style="left:${X(x.d)}%" data-vgoc="${key}|${i}" data-nodrag title="${esc(brD(x.d) + ' · ' + (x.eq || '') + (x.ok ? ' · resolvida' : ' · em andamento'))}"></button>`).join('');
+  return `<div class="vgt"><div class="vgt-b"><i class="vgt-f" style="width:${hj}%"></i>${d1 && d1 > H ? `<i class="vgt-p" style="left:${hj}%;width:${100 - hj}%"></i>` : ''}<i class="vgt-h" style="left:${hj}%"></i><span class="vgt-lh" style="left:${hj}%">hoje</span>${dots}</div>
+    <div class="vgt-l"><span><b>${esc(a0)}</b><br>${brD(d0)}</span>${d1 ? `<span style="text-align:right"><b>${esc(a1)}</b><br>${brD(d1)}</span>` : ''}</div></div><div class="vgt-d" id="vgtd-${key}"></div>`;
 }
 // um bloco: título, resumo, ocorrências e linha do tempo
-function vgPainelBloco(key, tit, linhas, d0, a0, d1, a1, Oc) {
+function vgPainelBloco(key, tit, linhas, d0, a0, d1, a1, Oc, mk, mais) {
   VG_PAINEL.oc[key] = Oc; const ab = Oc.filter(x => !x.ok);
   const res = Oc.length ? `<b>${Oc.length} ocorrência${Oc.length > 1 ? 's' : ''}</b> · ${Oc.length - ab.length} resolvida${Oc.length - ab.length === 1 ? '' : 's'} · ${ab.length ? `<b style="color:var(--badt)">${ab.length} em andamento</b> (${esc(ab.map(x => x.eq || 'falha').join('; '))})` : '0 em andamento'}` : 'Nenhuma ocorrência';
-  return `<div class="vgp-b"><div class="vgp-t">${tit}</div>${linhas.filter(Boolean).map(l => `<div>${l}</div>`).join('')}<div>${res}</div>${vgLinhaTempo(key, d0, a0, d1, a1, Oc)}</div>`;
+  return `<div class="vgp-b"><div class="vgp-t">${tit}</div>${linhas.filter(Boolean).map(l => `<div>${l}</div>`).join('')}<div>${res}</div>${vgLinhaTempo(key, d0, a0, d1, a1, Oc, mk)}${mais || ''}</div>`;
+}
+/* ===== reforma no estaleiro (SMF 3.168, Supervisor 02/11/2026; prévia aprovada): quando fica pronta, quanto falta e o que trava. Dados do
+   acompanhamento (snap 'manut', onde estaleiro: serviços com feito, data em que foi feito e SC/RM de que depende; previsão e cada mudança dela com o
+   motivo; fotos da semana) e da reforma lançada no Histórico dos equipamentos (início, local, fotos). Sem custo (o SMF não registra custo). */
+const vgFotoAt = f => typeof f.at === 'number' ? f.at : f.at ? +new Date(f.at) : 0;
+function vgRefDados(id) {
+  const H = isoD(hoje()), r = vgEmReforma(id) || {}, m = vgMans().find(x => x.vessel === id && x.onde === 'estaleiro') || null, rr = r.id ? S.recs.get(r.id) : null;
+  const ini = (m && m.ini) || r.ini || '', prev = (m && m.prev) || '', serv = (m && m.serv) || [], nF = serv.filter(s => s.ok).length;
+  const F = [...((m && m.fotos) || []), ...((rr && rr.fotos) || [])].map(f => ({ f, at: vgFotoAt(f) })).sort((a, b) => b.at - a.at);
+  const ult = F.length && F[0].at ? Math.max(0, Math.round((Date.now() - F[0].at) / 864e5)) : null, deps = vgDeps(id, m && m.om, serv);
+  const A = []; if (!prev) A.push('sem previsão de entrega'); else if (prev < H) A.push(`previsão vencida há ${-vgDD(H, prev)} d`);
+  if (!F.length) A.push('nenhuma foto'); else if (ult == null || ult > 14) A.push(ult == null ? 'foto sem data' : `sem foto há ${ult} d`);
+  return { id, nome: vName(id), bal: typeof balsaDe === 'function' && !!balsaDe(id), r, m, ini, prev, prevH: (m && m.prevH) || [], serv, nF, F, ult, deps, A, dd: ini ? vgDD(ini, H) : null };
+}
+function vgRefBloco(z) {
+  const H = isoD(hoje()), d0 = z.ini || isoD(new Date(Date.now() - 30 * 864e5)), key = 'r' + z.id;
+  const mk = [...z.serv.filter(s => s.ok && s.em).map(s => ({ d: s.em, cls: 'sv', tip: 'Concluído em ' + brD(s.em) + ': ' + s.t })), ...z.prevH.map(p => ({ d: p[0], cls: 'pv', tip: `Previsão mudou em ${brD(p[0])} (era ${brD(p[1])})${p[2] ? ': ' + p[2] : ''}` }))];
+  const sv = z.serv.length ? `<h3 class="vgm-h">Serviços · ${z.nF} de ${z.serv.length} feitos</h3><table class="t"><tbody>${z.serv.map(s => `<tr><td>${esc(s.t)}</td><td class="nowrap"><span class="pill ${s.ok ? 'p-ok' : 'p-warn'}">${s.ok ? 'feito' + (s.em ? ' ' + brD(s.em) : '') : 'pendente'}</span></td><td class="note">${esc(s.dep || '')}</td></tr>`).join('')}</tbody></table>` : '<p class="note">Nenhum serviço lançado: use “Pôr previsão” para lançar a lista.</p>';
+  const ph = z.prevH.length ? `<h3 class="vgm-h">A previsão mudou ${z.prevH.length} vez${z.prevH.length > 1 ? 'es' : ''}</h3>${z.prevH.map(p => `<div class="note">${brD(p[0])}: era ${brD(p[1])}${p[2] ? ' · ' + esc(p[2]) : ''}${p[3] ? ' · ' + esc(p[3]) : ''}</div>`).join('')}` : '';
+  // fotos da evolução por semana (segunda-feira), a mais nova primeiro; clique = tela cheia
+  VG_PAINEL.oc['g' + z.id] = [{ fotos: z.F.map(x => x.f) }]; const W = {};
+  z.F.forEach((x, k) => { const d = x.at ? new Date(x.at) : null, s = d ? isoD(new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 6) % 7)) : ''; (W[s] = W[s] || []).push(k); });
+  const ft = z.F.length ? `<h3 class="vgm-h">Fotos da evolução · ${z.F.length}</h3>${Object.keys(W).map(s => `<div class="note" style="margin-top:4px">${s ? 'Semana de ' + brD(s) : 'Sem data'}</div><div class="vgt-fs">${W[s].map(k => vgFotoImg(z.F[k].f, 'vgt-ft', ` data-vgfg="g${z.id}|0|${k}" data-nodrag`)).join('')}</div>`).join('')}` : '<p class="note">Nenhuma foto da reforma: cada semana, uma foto pelo “Pôr previsão” / “Atualizar”.</p>';
+  const bt = can.edit() ? (z.m ? `<button class="mbtn sm" data-vgman="${z.m.id}" data-nodrag>Atualizar serviços, previsão e fotos</button>` : `<button class="mbtn sm" data-vgman="" data-vgv="${z.id}" data-vgw="estaleiro" data-vgt="${esc('Reforma' + (z.r.obs ? ' · ' + z.r.obs : ''))}" data-vgi="${z.ini || ''}" data-nodrag>Pôr previsão e serviços</button>`) : '';
+  return vgPainelBloco(key, `${esc(z.nome)} · reforma${z.r.local ? ' · ' + esc(z.r.local) : ''}`, [z.r.obs ? `<span class="note">${esc(z.r.obs)}</span>` : '', bt],
+    d0, z.ini ? 'Entrada' : 'Há 30 dias', z.prev, 'Entrega prevista', vgOcorr(z.id, d0), mk, sv + ph + ft);
+}
+function vgRefTabela(ids) {
+  const H = isoD(hoje()), Z = ids.map(vgRefDados).sort((a, b) => (b.A.length - a.A.length) || ((a.prev || '9') < (b.prev || '9') ? -1 : 1));
+  return `<h3 class="vgm-h">Em reforma · ${Z.length}</h3><div class="tw"><table class="t vgp-tab"><thead><tr><th>Embarcação</th><th>No estaleiro há</th><th>Previsão de entrega</th><th>Andamento</th><th>Travado por</th><th>Última foto</th></tr></thead><tbody>${Z.map(z => {
+    const pc = z.serv.length ? Math.round(z.nF / z.serv.length * 100) : null;
+    const pv = z.prev ? `${brD(z.prev)}${z.prev < H ? ` <span class="pill p-bad">${-vgDD(H, z.prev)} d atrasada</span>` : ` <span class="pill p-ok">faltam ${vgDD(H, z.prev)} d</span>`}${z.prevH.length ? `<div class="note">mudou ${z.prevH.length} vez${z.prevH.length > 1 ? 'es' : ''}</div>` : ''}` : '<span class="pill p-bad">sem previsão</span>';
+    const an = pc == null ? '<span class="note">serviços não lançados</span>' : `<div class="vgp-an"><i style="width:${pc}%"></i></div><span class="note">${z.nF} de ${z.serv.length} serviços</span>`;
+    const tr = z.deps.length ? z.deps.map(r => { const d = gsDias(r); return `<div>${esc(r.tp)} ${esc(r.num)} <span class="pill ${d > 30 ? 'p-bad' : d > 15 ? 'p-warn' : 'p-mut'}">${d} d</span></div>`; }).join('') : (s => s.some(x => x.dep) ? s.filter(x => x.dep).map(x => `<div>${esc(x.dep)} <span class="note">· ${esc(x.t)} · não está na 5.1</span></div>`).join('') : s.length ? `<span class="note">${s.length} serviço${s.length > 1 ? 's' : ''} pendente${s.length > 1 ? 's' : ''}, sem SC/RM ligada</span>` : '<span class="note">—</span>')(z.serv.filter(s => !s.ok));
+    const fo = !z.F.length ? '<span class="pill p-bad">nunca</span>' : z.ult == null ? '<span class="note">sem data</span>' : `<span class="pill ${z.ult > 14 ? 'p-bad' : z.ult > 7 ? 'p-warn' : 'p-ok'}">há ${z.ult} d</span>`;
+    return `<tr class="vgp-l" data-vgdet="${z.id}"><td class="nowrap"><b>${esc(z.nome)}</b>${z.bal ? ' <span class="note">balsa</span>' : ''} <span class="vgp-sx">▸</span></td><td class="nowrap">${z.dd != null ? z.dd + ' d' : '<span class="note">início não lançado</span>'}</td><td>${pv}</td><td style="min-width:130px">${an}</td><td>${tr}</td><td class="nowrap">${fo}</td></tr>
+      <tr class="vgp-det" id="vgdet-${z.id}" style="display:none"><td colspan="6">${vgRefBloco(z)}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 function vgPainelVia(id) {
   const o = vgOndeDe(id, false), H = isoD(hoje()), r = vgRota(o.rota), dest = r ? r.nome.split('×').pop().trim() : '', d0 = o.saida || H, dv = vgDD(d0, H), prev = o.prev || '';
@@ -149,9 +194,9 @@ function vgFixBloco(id, z) {
 }
 function vgPainelFix(k, ids) {
   const H = isoD(hoje()), SD = typeof sfDados === 'function' ? sfDados() : [], cls = { ok: 'p-ok', at: 'p-warn', bad: 'p-bad' };
-  const ehBal = id => typeof balsaDe === 'function' && !!balsaDe(id);
-  // empurradores
-  const E = ids.filter(id => !ehBal(id)).map(id => { const z = vgFixDados(id), x = SD.find(y => y.v.id === id), P = [];
+  const ehBal = id => typeof balsaDe === 'function' && !!balsaDe(id), emRef = id => ehBal(id) ? !!vgEmReforma(id) : vgOndeDe(id, false).st === 'ref', IR = ids.filter(emRef);
+  // empurradores (os em reforma vão para a tabela da reforma)
+  const E = ids.filter(id => !ehBal(id) && !emRef(id)).map(id => { const z = vgFixDados(id), x = SD.find(y => y.v.id === id), P = [];
     if (!z.ref && x && typeof sfMotivos === 'function') sfMotivos(x).forEach(m => P.push(m));
     if (z.ref) z.Oc.filter(y => y.ab).forEach(y => P.push(['bad', 'Corretiva aberta: ' + esc(y.eq || '') + (y.om ? ' · OM ' + esc(y.om) : '')]));
     // avaria em aberto (a Crítica ou Alta sem OM já entra pela Situação da frota como “Falha sem OM”)
@@ -167,7 +212,7 @@ function vgPainelFix(k, ids) {
     <tr class="vgp-det" id="vgdet-${e.id}" style="display:none"><td colspan="5">${vgFixBloco(e.id, e.z)}</td></tr>`).join('')}</tbody></table></div>` : '';
   // balsas: em reforma ali + as que chegaram com esses empurradores
   const dono = typeof vgMapaDados === 'function' ? vgMapaDados().dono : {}, emp = new Set(ids);
-  const Bs = vgBalsas().filter(b => ids.includes(b.id) || (emp.has(dono[b.id]) && !vgEmReforma(b.id))).map(b => { const e = typeof balEstado === 'function' ? balEstado(b) : { st: 'sem', A: [], venc: [], crit: [] }, P = [];
+  const Bs = vgBalsas().filter(b => emp.has(dono[b.id]) && !vgEmReforma(b.id)).map(b => { const e = typeof balEstado === 'function' ? balEstado(b) : { st: 'sem', A: [], venc: [], crit: [] }, P = [];
     if (e.st === 'ref') { const r = vgEmReforma(b.id) || {}; return { b, e, P, ref: r, peso: -1 }; }
     if (e.crit.length) P.push(['bad', `${e.crit.length} ${e.crit.length > 1 ? 'itens' : 'item'} crítico${e.crit.length > 1 ? 's' : ''} vencido${e.crit.length > 1 ? 's' : ''}`]);
     if (e.venc.length > e.crit.length) P.push(['at', `${e.venc.length - e.crit.length} serviço${e.venc.length - e.crit.length > 1 ? 's' : ''} vencido${e.venc.length - e.crit.length > 1 ? 's' : ''}`]);
@@ -178,9 +223,10 @@ function vgPainelFix(k, ids) {
     const st = (typeof BAL_ST !== 'undefined' && BAL_ST[x.e.st]) || ['p-mut', x.e.st];
     return `<tr><td class="nowrap"><b>${esc(x.b.nome)}</b></td><td class="nowrap">${x.ref ? `<span class="note">no estaleiro${x.ref.ini ? ' há ' + vgDD(x.ref.ini, H) + ' d' : ''}</span>` : esc(vName(dono[x.b.id]) || '—')}</td><td><span class="pill ${st[0]}">${esc(st[1])}</span></td><td>${x.ref ? `<span class="note">${esc(x.ref.local || '')}${x.ref.obs ? ' · ' + esc(x.ref.obs) : ''}</span>` : x.P.length ? x.P.map(([c, t]) => `<div class="sf-pm ${c}">${t}</div>`).join('') : '<span class="note">nenhuma</span>'}</td></tr>`; }).join('')}</tbody></table></div>
     <p class="note">O SMF não registra onde cada balsa fica: aqui estão as que chegaram com esses empurradores na última viagem de cada uma, e as que estão em reforma neste lugar.</p>` : '';
-  const nE = E.length, nB = E.filter(e => !e.z.ref && e.sit[2] >= 2).length, nR = E.filter(e => !e.z.ref && e.sit[2] === 1).length;
-  return `<div class="vgp-t" style="font-size:15px">${esc(k)} · ${nE} empurrador${nE === 1 ? '' : 'es'}${nB ? ` · <span style="color:var(--badt)">${nB} bloqueado${nB > 1 ? 's' : ''}</span>` : ''}${nR ? ` · <span style="color:var(--warnt)">${nR} com restrição</span>` : ''}</div>
-    <p class="note" style="margin:0 0 4px">Pendências primeiro. Clique na linha para ver as ocorrências e a linha do tempo. Clique na pendência para ir à tela que resolve.</p>${tE}${tB}`;
+  const nE = E.length, nB = E.filter(e => e.sit[2] >= 2).length, nR = E.filter(e => e.sit[2] === 1).length;
+  const tR = IR.length ? vgRefTabela(IR) + '<p class="note">Clique na linha para ver os serviços, a linha do tempo (quadrado verde = serviço concluído, losango laranja = previsão mudou), o histórico da previsão e as fotos da evolução por semana.</p>' : '';
+  return `<div class="vgp-t" style="font-size:15px">${esc(k)}${nE ? ` · ${nE} empurrador${nE === 1 ? '' : 'es'}` : ''}${nB ? ` · <span style="color:var(--badt)">${nB} bloqueado${nB > 1 ? 's' : ''}</span>` : ''}${nR ? ` · <span style="color:var(--warnt)">${nR} com restrição</span>` : ''}${IR.length ? ` · ${IR.length} em reforma` : ''}</div>
+    ${nE ? '<p class="note" style="margin:0 0 4px">Pendências primeiro. Clique na linha para ver as ocorrências e a linha do tempo. Clique na pendência para ir à tela que resolve.</p>' : ''}${tR}${tE}${tB}`;
 }
 function vgPainelAbrir(tp, a, b) {
   const el = $('#vgPainel'); if (!el) return; VG_PAINEL.oc = {};
@@ -210,9 +256,9 @@ document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc
   if (d.vgoc) return vgOcDetalhe(...d.vgoc.split('|'));
   if (d.vgfg) return vgFotoGrande(...d.vgfg.split('|')); }, true);
 { const st = document.createElement('style'); st.textContent = '#vgPainel{margin-top:10px;border-top:1px solid #DCE3EC;padding-top:8px}.vgp-b{border:1px solid #DCE3EC;border-radius:8px;padding:10px 12px;margin:8px 0;background:#fff;line-height:1.55}.vgp-t{font-weight:700;color:#16244A;font-size:14px;margin-bottom:2px}'
-  + '.vgt{margin:10px 4px 2px}.vgt-b{position:relative;height:8px;border-radius:4px;background:#E3E8EF;margin:10px 0}.vgt-f{position:absolute;left:0;top:0;bottom:0;background:#9DB4D3;border-radius:4px}.vgt-p{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(90deg,#C9D3E0 0 6px,transparent 6px 10px)}.vgt-h{position:absolute;top:-6px;bottom:-6px;width:2px;background:#C5221F;margin-left:-1px}'
-  + '.vgt-o{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:pointer;padding:0}.vgt-b .vgt-o.ok{background:#188038!important}.vgt-b .vgt-o.ab{background:#D93025!important}.vgp-tab .vgp-l{cursor:pointer}.vgp-tab .vgp-l:hover td{background:#F3F6FA}.vgp-tab .vgp-l.on .vgp-sx{display:inline-block;transform:rotate(90deg)}.vgp-sx{color:#8A94A6;font-size:11px}.vgp-det>td{padding:0 6px 8px!important;background:#FAFBFD}.vgp-tab .sf-pm{margin:1px 0}.vgt-o:hover{transform:scale(1.25)}'
-  + '.vgt-l{position:relative;display:flex;justify-content:space-between;font-size:11.5px;color:#5F6368;min-height:30px}.vgt-lh{position:absolute;top:0;transform:translateX(-50%);color:#C5221F;font-weight:600}.vgt-x{margin-top:6px;padding:8px 10px;background:#F6F8FB;border-radius:6px}.vgt-fs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}'
+  + '.vgt{margin:22px 4px 2px}.vgt-b{position:relative;height:8px;border-radius:4px;background:#E3E8EF;margin:10px 0}.vgt-f{position:absolute;left:0;top:0;bottom:0;background:#9DB4D3;border-radius:4px}.vgt-p{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(90deg,#C9D3E0 0 6px,transparent 6px 10px)}.vgt-h{position:absolute;top:-6px;bottom:-6px;width:2px;background:#C5221F;margin-left:-1px}'
+  + '.vgt-o{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:pointer;padding:0}.vgt-b .vgt-o.ok{background:#188038!important}.vgt-b .vgt-o.ab{background:#D93025!important}.vgp-tab .vgp-l{cursor:pointer}.vgp-tab .vgp-l:hover td{background:#F3F6FA}.vgp-tab .vgp-l.on .vgp-sx{display:inline-block;transform:rotate(90deg)}.vgp-sx{color:#8A94A6;font-size:11px}.vgp-det>td{padding:0 6px 8px!important;background:#FAFBFD}.vgp-tab .sf-pm{margin:1px 0}.vgt-m{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}.vgt-m.sv{background:#188038;border-radius:2px}.vgt-m.pv{background:#E37400;transform:rotate(45deg)}.vgp-an{height:8px;background:#E3E8EF;border-radius:4px;overflow:hidden;margin:3px 0 2px}.vgp-an i{display:block;height:100%;background:#188038}.vgt-o:hover{transform:scale(1.25)}'
+  + '.vgt-l{position:relative;display:flex;justify-content:space-between;font-size:11.5px;color:#5F6368;min-height:30px}.vgt-lh{position:absolute;top:-19px;transform:translateX(-50%);color:#C5221F;font-weight:600;font-size:11px;white-space:nowrap}.vgt-x{margin-top:6px;padding:8px 10px;background:#F6F8FB;border-radius:6px}.vgt-fs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}'
   + '.vgt-ft{width:120px;height:90px;object-fit:cover;border-radius:6px;cursor:zoom-in;background:#E8EEF5}.vgt-g{position:fixed;inset:0;z-index:100000;background:rgba(10,15,25,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out}.vgt-g img{max-width:94vw;max-height:86vh;object-fit:contain;border-radius:4px;cursor:default}'
   + '.vgt-gb{display:flex;gap:16px;align-items:center;color:#fff;font:13px system-ui;margin-top:10px}.vgt-gb button{font-size:26px;line-height:1;background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:6px;padding:4px 14px;cursor:pointer}'; document.head.appendChild(st); }
 // cliques: no quadro e também dentro do balão do mapa (o Leaflet não deixa o clique chegar ao #main)
