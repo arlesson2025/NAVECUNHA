@@ -11,27 +11,29 @@ const VG_LUGAR = { 'Manaus': [-3.119, -60.022], 'Porto Velho': [-8.761, -63.900]
   'Óbidos': [-1.902, -55.518], 'Almeirim': [-1.523, -52.582], 'Gurupá': [-1.405, -51.640], 'Breves': [-1.682, -50.480] };
 // pontos fixos da Navecunha (Supervisor, 02/11/2026: “coordenadas fixas… não muda”): boia 1 = porto da Navecunha em Manaus · boia 2 = porto do Cimento
 // em Manaus (onde às vezes as balsas ficam ancoradas quando chegam do Peru) · filial em Porto Velho. “Manaus” sem boia = boia 1; “Porto Velho” = filial
-const VG_FIXO = { 'Boia 1 · porto da Navecunha': [-3.098460, -60.083036], 'Boia 2 · porto do Cimento': [-3.183579, -59.989933], 'Porto Velho · filial': [-8.694150, -63.917464] };
-const VG_FIXO_RE = [[/\bboia\s*(?:n\s*)?(?:2|02|ii|dois)\b|cimento/, 'Boia 2 · porto do Cimento'], [/\bboia\s*(?:n\s*)?(?:1|01|i|um)\b|navecunha/, 'Boia 1 · porto da Navecunha'], [/filial|porto velho|\bpvh\b/, 'Porto Velho · filial'], [/manaus|\bmao\b|\bboia\b/, 'Boia 1 · porto da Navecunha']];
+const VG_FIXO = { 'Boia 1 · porto da Navecunha': [-3.098460, -60.083036], 'Boia 2 · porto do Cimento': [-3.183579, -59.989933], 'Porto Velho · filial': [-8.694150, -63.917464],
+  'Estaleiro Rio Amazonas (ERAM)': [-3.121329, -60.048051] };   // estaleiro em Manaus onde ficam empurradores em reforma (Supervisor, 02/11/2026)
+const VG_FIXO_RE = [[/\bboia\s*(?:n\s*)?(?:2|02|ii|dois)\b|cimento/, 'Boia 2 · porto do Cimento'], [/\bboia\s*(?:n\s*)?(?:1|01|i|um)\b|navecunha/, 'Boia 1 · porto da Navecunha'], [/filial|porto velho|\bpvh\b/, 'Porto Velho · filial'], [/\beram\b|estaleiro/, 'Estaleiro Rio Amazonas (ERAM)'], [/manaus|\bmao\b|\bboia\b/, 'Boia 1 · porto da Navecunha']];
 function vgFixo(t) { const n = vgNorm(t); if (!n) return null; const r = VG_FIXO_RE.find(x => x[0].test(n)); return r ? r[1] : null; }
 const vgLL = k => VG_FIXO[k] || VG_LUGAR[k];
 const VG_MAPA = { m: null, lib: null };
 function vgLugar(t) { const f = vgFixo(t); if (f) return f; const n = vgNorm(t); if (!n) return null; let b = null; Object.keys(VG_LUGAR).forEach(k => { if (n.includes(vgNorm(k)) && (!b || k.length > b.length)) b = k; }); return b; }
 function vgMapaDados() {
-  const V = vgViagens(), E = S.cfg.frota.filter(v => !foraOp(v) || vgEmReforma(v.id)).map(v => vgOndeDe(v.id, false, V)), P = {}, R = [], sem = [];
+  const V = vgViagens(), E = S.cfg.frota.filter(v => !foraOp(v) || vgEmReforma(v.id)).map(v => vgOndeDe(v.id, false, V)), P = {}, F = {}, R = [], sem = [];
   E.forEach(o => {
-    if (o.st === 'ref') return;
+    if (o.st === 'ref') { const r = vgEmReforma(o.id) || {}, P0 = vgPosicoes(o.id), q0 = P0[P0.length - 1], tx = [r.local, r.obs, q0 && (!r.ini || q0.date >= r.ini) ? q0.local + ' ' + (q0.porto || '') : ''].filter(Boolean).join(' ');
+      const k = /\beram\b|estaleiro/.test(vgNorm(tx)) ? 'Estaleiro Rio Amazonas (ERAM)' : vgLugar(tx); if (!k || !vgLL(k)) return sem.push(o); (F[k] = F[k] || []).push(o); return; }
     if (o.st === 'por') { const k = vgLugar(o.porto) || (o.porto === 'Porto não informado' ? null : o.porto); if (!k || !vgLL(k)) return sem.push(o); (P[k] = P[k] || []).push(o); return; }
     const L = vgPosicoes(o.id).filter(x => x.situ !== 'por' && (!o.saida || x.date >= o.saida)), q = L[L.length - 1];
     const ll = q && q.lat != null && q.lon != null ? [+q.lat, +q.lon] : (k => k ? vgLL(k) : null)(vgLugar(o.local));
     if (!ll) return sem.push(o); R.push({ o, ll, aprox: !(q && q.lat != null) });
   });
-  return { P, R, sem, ref: E.filter(o => o.st === 'ref') };
+  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref') };
 }
 function vgMapaCard() {
   const D = vgMapaDados(), nP = Object.values(D.P).reduce((a, L) => a + L.length, 0);
-  const sem = D.sem.length ? `<p class="note" style="margin:6px 0 0"><b>Sem posição no mapa:</b> ${D.sem.map(o => `${esc(o.nome)}${o.st === 'via' ? ' (em rota' + (o.dias != null ? ', ' + o.dias + ' d' : '') + ')' : ''}`).join(' · ')} · use “Informar posição” ou cole o e-mail do Monitoramento</p>` : '';
-  return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''} · azul = em rota, vermelho = parado há mais de ${VG_PARADO_D} dias, verde = no porto (número = empurradores no porto) · clique no ponto para ver as balsas e a última posição</p>
+  const sem = D.sem.length ? `<p class="note" style="margin:6px 0 0"><b>Sem posição no mapa:</b> ${D.sem.map(o => `${esc(o.nome)}${o.st === 'via' ? ' (em rota' + (o.dias != null ? ', ' + o.dias + ' d' : '') + ')' : o.st === 'ref' ? ' (em reforma, local não informado)' : ''}`).join(' · ')} · use “Informar posição” ou cole o e-mail do Monitoramento</p>` : '';
+  return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''} · azul = em rota, vermelho = parado há mais de ${VG_PARADO_D} dias, verde = no porto (número = empurradores no porto), cinza = em reforma · clique no ponto para ver as balsas e a última posição</p>
     <div id="vgMapa" data-nodrag style="height:560px;border-radius:8px;background:#E8EEF5;position:relative"><p class="note" style="padding:12px">Carregando o mapa…</p></div>${sem}
     <p class="note" style="margin:4px 0 0">Posição em rota pela latitude e longitude do e-mail do Monitoramento; sem elas, pelo lugar citado (posição aproximada da cidade, marcada “aprox.”). O mapa precisa de internet.</p></div>`;
 }
@@ -74,6 +76,10 @@ async function vgMapaIniciar() {
     L.marker(ll, { icon: vgIcone('#188038', 0, Lp.length), riseOnHover: true }).addTo(m)
       .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')}`, tip('por'))
       .bindPopup(`<b>${esc(k)} · no porto · ${Lp.length}</b><br>${Lp.map(o => `<b>${esc(o.nome)}</b>${o.dias != null ? ' · há ' + o.dias + ' d' : ''}${o.est ? ' (chegada estimada)' : ''}${bal(o) ? '<br><small>' + esc(bal(o)) + '</small>' : ''}`).join('<br>')}${vgGoogle(ll)}`); });
+  Object.entries(D.F).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll);
+    L.marker(ll, { icon: vgIcone('#5F6368', 0, Lp.length), riseOnHover: true }).addTo(m)
+      .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref'))
+      .bindPopup(`<b>${esc(k)} · em reforma · ${Lp.length}</b><br>${Lp.map(o => { const r = vgEmReforma(o.id) || {}; return `<b>${esc(o.nome)}</b>${r.ini ? ' · desde ' + brD(r.ini) : ''}${r.obs ? '<br><small>' + esc(r.obs) + '</small>' : ''}`; }).join('<br>')}${vgGoogle(ll)}`); });
   D.R.forEach(({ o, ll, aprox }) => { pts.push(ll); const par = o.parD > VG_PARADO_D;
     L.marker(ll, { icon: vgIcone(par ? '#D93025' : '#1A73E8', (o.balsas || []).length), riseOnHover: true }).addTo(m)
       .bindTooltip(`${esc(o.nome)}${aprox ? ' · aprox.' : ''}`, tip(par ? 'par' : ''))
@@ -84,4 +90,4 @@ async function vgMapaIniciar() {
     const h = cheia ? Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 24) : 560; if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px'; try { m.invalidateSize(); } catch (e) { } };
   document.addEventListener('fullscreenchange', alt); if (window.ResizeObserver && card) new ResizeObserver(alt).observe(card); alt();
 }
-{ const st = document.createElement('style'); st.textContent = '.vg-mt{background:rgba(255,255,255,.94);border:0;box-shadow:0 1px 3px rgba(0,0,0,.35);font:600 11.5px/1.2 system-ui,sans-serif;color:#16244A;padding:2px 6px}.vg-mt.por{color:#137333}.vg-mt.par{color:#C5221F}.vg-mt:before{display:none}.vg-ic{background:none;border:0}.vg-cid{pointer-events:none}.vg-cid i{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 2px #000}.vg-cid span{position:absolute;left:6px;top:-8px;white-space:nowrap;font:600 11px/1 system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000}'; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = '.vg-mt{background:rgba(255,255,255,.94);border:0;box-shadow:0 1px 3px rgba(0,0,0,.35);font:600 11.5px/1.2 system-ui,sans-serif;color:#16244A;padding:2px 6px}.vg-mt.por{color:#137333}.vg-mt.par{color:#C5221F}.vg-mt.ref{color:#3C4043}.vg-mt:before{display:none}.vg-ic{background:none;border:0}.vg-cid{pointer-events:none}.vg-cid i{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 2px #000}.vg-cid span{position:absolute;left:6px;top:-8px;white-space:nowrap;font:600 11px/1 system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000}'; document.head.appendChild(st); }
