@@ -11,6 +11,7 @@ const TITULO = { matriz: 'Anexo I', oms: 'Preventivas', falhas2: 'Corretivas e f
 Object.assign(NP_TAG, { bal: 'NP 024 · 5.4 e 6.1', balcr: 'NP 024 · 8', balpl: 'NP 024 · 7 e 8', baldoca: 'NP 024 · 8.12', balcal: 'NP 024 · 8.7 e 6.5', balcmp: 'NP 024 · 8.13', balkpi: 'NP 024 · 10', balft: 'NP 024 · 7' });
 // versões do SMF e o que mudou em cada uma (controle de mudanças, ISO 9001 8.5.6 e 7.5.3); a publicação é autorizada pelo Supervisor
 const VERSOES = [
+  { v: '3.153', data: '02/11/2026', itens: ['NP 024 Rev. 02: FR 024_D confirmado pelo Supervisor (lote e validade do lubrificante, junto com o FR 049_B, anexado à OM); sai o amarelo da tabela de documentos (item 9)'] },
   { v: '3.152', data: '02/11/2026', itens: ['Balsas: óleo dos mancais da bomba KSB ETA = 4,0 L (suporte D, rolamentos 6411 C3), informado pelo Supervisor; B1.1, B1.2, NP 024 Rev. 02 (8.5) e Anexo II'] },
   { v: '3.151', data: '02/11/2026', itens: ['Balsas: troca do óleo dos mancais da bomba (B1.2) passa de 6 para 12 meses, critério interno decidido pelo Supervisor, com a observação de que o Manual de Serviço KSB ETA pede 2.000 h na primeira troca e depois a cada 8.000 h; NP 024 Rev. 02 (8.5) e Anexo II atualizados'] },
   { v: '3.150', data: '02/11/2026', itens: ['Balsas: motor MWM D229-6 da VDA VII, VIII e X confirmado pelo Supervisor na plaqueta; sai o aviso “conferir a placa” dessas três balsas, o plano passa a dizer Motor MWM D229-6 e a NP 024 Rev. 02 (8.3) e os Anexos I e II ficam com o cárter de 7 a 13 L com filtro'] },
