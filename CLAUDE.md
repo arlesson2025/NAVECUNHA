@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Orientação para o Claude Code neste repositório. Aqui ficam só as **regras e o mapa de hoje**. O histórico de cada decisão (o que mudou, em que versão e por quê) está em `docs/historico/CLAUDE_historico_ate_3.158.md` (o CLAUDE.md antigo, inteiro) e nas notas de versão `manutencao/dados/versoes.js`. Consulte o histórico só para entender um bloco antigo; **nunca traga de volta o que ele diga que saiu**.
+Orientação para o Claude Code neste repositório. Aqui ficam só as **regras e o mapa de hoje**. O histórico de cada decisão (o que mudou, em que versão e por quê) está nas notas de versão `manutencao/dados/versoes.js` e no histórico do git (o CLAUDE.md completo até a 3.158 está no commit `1c4e600^`: `git show 1c4e600^:CLAUDE.md`). Consulte só para entender um bloco antigo; **nunca traga de volta o que ele diga que saiu**.
 
 ## O que é
 
@@ -10,7 +10,7 @@ Orientação para o Claude Code neste repositório. Aqui ficam só as **regras e
 |---|---|
 | `manutencao/` | o SMF: `index.html` (só a estrutura), `js/NN-assunto.js` (o código, carregado na ordem do número), `css/smf.css` e `css/tema-vidro.css`, `dados/anexo1.js` (plano do Anexo I, um item por linha, JSON válido) e `dados/versoes.js` (notas de versão), `forms/` (FR 049_B, FR 027_L, FR 027_A, FR 016_E), `lib/` (html2canvas, jsPDF, pdf.js: carregados só no uso; não edite os `.min.js`), `img/`, `sw.js` |
 | `manutencao/servidor/` | cópia versionada do servidor Google Apps Script (`Code.gs`, hoje **v16**) |
-| `docs/` | documentos de origem por frota (`docs/LEIAME.md`): `empurradores/` (NP 055, Anexo I visual, Matriz técnica, Como a frota trabalha, fluxogramas), `balsas/` (NP 024 e anexos), na raiz o comum (Manual de operação, FR 049_B); `historico/` = histórico do desenvolvimento. Linkados pela Biblioteca do SMF (`ENXB_DOCS` no js/85): ao mover ou renomear, atualize os links |
+| `docs/` | documentos de origem por frota (`docs/LEIAME.md`): `empurradores/` (NP 055, Anexo I visual, Matriz técnica, Como a frota trabalha, fluxogramas), `balsas/` (NP 024 e anexos), na raiz o comum (Manual de operação, FR 049_B). Linkados pela Biblioteca do SMF (`ENXB_DOCS` no js/85): ao mover ou renomear, atualize os links |
 | `testes/` | testes de funcionamento (ver abaixo); saída em `testes/saida/` (fora do git) |
 | `index.html` (raiz) | só redireciona para `manutencao/` |
 
