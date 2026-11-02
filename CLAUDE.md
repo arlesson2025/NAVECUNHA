@@ -15,7 +15,7 @@ Um PWA de arquivo único, sem build, para a frota de empurradores da Navecunha (
 
 O antigo CTLE_LUB (Controle de Lubrificação, que ficava na raiz) foi um teste, está descontinuado e foi removido; seu módulo foi absorvido pelo SMF. Menções a “CTLE_LUB” no código do SMF são só históricas.
 
-O SMF fala com o deployment Apps Script em `NUVEM_PADRAO` (topo de `manutencao/index.html`). A fonte da verdade do servidor é o editor do Apps Script; mudanças de contrato (ações, campos) exigem atualizar os dois lados e a cópia em `manutencao/servidor/`.
+O SMF fala com o deployment Apps Script em `NUVEM_PADRAO` (`js/01-nuvem-e-pdf.js`; desde a 3.146 o endereço `…NIakZtAkyWagP8Lal/exec`, servidor v16 — a v16 foi implantada como implantação nova; o endereço anterior `…lNZZlbT29hJ8enKA/exec` ficou na v15 e os aparelhos que o tinham guardado passam sozinhos para o novo na carga, no `02-nucleo.js`). Ao atualizar o servidor, prefira **editar a implantação existente com “Nova versão”**: implantação nova muda o endereço. A fonte da verdade do servidor é o editor do Apps Script; mudanças de contrato (ações, campos) exigem atualizar os dois lados e a cópia em `manutencao/servidor/`.
 
 ## Comandos
 

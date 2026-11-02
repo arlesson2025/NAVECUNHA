@@ -1,4 +1,4 @@
-const NUVEM_PADRAO = 'https://script.google.com/macros/s/AKfycbwXXNSYq-wClpZQrOR0LasSxyr_56gdFIK8wEAyeD-Vbh8rfJ0lhNZZlbT29hJ8enKA/exec';   // planilha CTLE_MAN: todo aparelho novo já abre ligado à nuvem
+const NUVEM_PADRAO = 'https://script.google.com/macros/s/AKfycbxSOlBGtY0PvnjM7nH8ad5nQR1DcqZ8xGV3qWS8dE7YfJU0G68NIakZtAkyWagP8Lal/exec';   // planilha CTLE_MAN: todo aparelho novo já abre ligado à nuvem
 /* bibliotecas de PDF (html2canvas 1.4.1, jsPDF 2.5.1) ficam em lib/ e só carregam ao gerar um PDF; o sw.js guarda as duas para funcionar sem internet */
 /* tema deste aparelho (Administração → Visual): aplicado antes de desenhar a página */
 try { if (localStorage.getItem('smf_tema') !== 'claro') document.documentElement.classList.add('tv'); } catch (e) { document.documentElement.classList.add('tv'); }   // Vidro azul é o padrão desde a 3.68; Claro só se escolhido

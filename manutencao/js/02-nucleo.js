@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.145';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
+const VERSAO_APP = '3.146';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (js/84)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -1267,7 +1267,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
   try {
     const all = MEM ? [] : await DB.all(); all.forEach(r => S.recs.set(r.id, r));
     S.cfg = normFrota(Object.assign(cfgPadrao(), (await kvGet('cfg')) || {}));
-    { let u0 = await kvGet('url'); if (u0 === 'https://script.google.com/macros/s/AKfycbw9GV1TYtyXXCHfeMX2cAaJqkSwoP76lthNvYPpnFbvBuwb3d0lGNNd0nVgIYf9QBNj/exec') { u0 = NUVEM_PADRAO; await kvSet('url', u0); } /* endereço antigo (servidor parado na versão 7, troca em 21/10/2026): passa sozinho para o atual */ S.url = u0 == null ? NUVEM_PADRAO : u0; if (u0 == null && NUVEM_PADRAO) await kvSet('url', NUVEM_PADRAO); } S.session = (await kvGet('session')) || null;
+    { let u0 = await kvGet('url'); if (['https://script.google.com/macros/s/AKfycbw9GV1TYtyXXCHfeMX2cAaJqkSwoP76lthNvYPpnFbvBuwb3d0lGNNd0nVgIYf9QBNj/exec', 'https://script.google.com/macros/s/AKfycbwXXNSYq-wClpZQrOR0LasSxyr_56gdFIK8wEAyeD-Vbh8rfJ0lhNZZlbT29hJ8enKA/exec'].includes(u0)) { u0 = NUVEM_PADRAO; await kvSet('url', u0); }   /* endereços antigos passam sozinhos para o atual: o de 21/10/2026 (servidor parado na versão 7) e o de 02/11/2026 (parado na versão 15; a versão 16 foi implantada em endereço novo) */ /* endereço antigo (servidor parado na versão 7, troca em 21/10/2026): passa sozinho para o atual */ S.url = u0 == null ? NUVEM_PADRAO : u0; if (u0 == null && NUVEM_PADRAO) await kvSet('url', NUVEM_PADRAO); } S.session = (await kvGet('session')) || null;
     S.pending = new Set((await kvGet('pending')) || []); S.pdfPend = (await kvGet('pdfPend')) || {}; S.lastSync = (await kvGet('lastSync')) || 0;
     if (!(await kvGet('seeded')) && !S.recs.size) { await carregarExemplo(); await kvSet('frotaV', 2); }
     else if ((await kvGet('frotaV')) !== 2) {
