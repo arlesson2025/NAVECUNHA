@@ -131,17 +131,56 @@ function vgPainelVia(id) {
     [o.saida ? `<b>Em viagem há ${dv} dia${dv === 1 ? '' : 's'}</b> (saída ${brD(o.saida)})` : '<b>Em viagem</b> <span class="note">(saída não lançada)</span>', pr, o.local ? `<span class="note">Última posição: ${esc(o.local)}${o.at ? ' · ' + vgDH(o.at) : ''}</span>` : ''],
     d0, 'Saída', prev, 'Chegada prevista', vgOcorr(id, d0));
 }
+/* no porto e no estaleiro (Supervisor, 02/11/2026: “o que está no porto não precisa tratar como comboio… uma lista de empurradores e balsas com
+   destaque de pendências”): uma linha por empurrador, as pendências primeiro (mesma conta da Situação da frota, sfMotivos no js/87); clicando na
+   linha abre o detalhe com a linha do tempo. Balsas numa segunda lista: as que chegaram com esses empurradores (o SMF não registra onde a balsa
+   fica; vem da última viagem de cada uma) e as que estão em reforma ali. */
+function vgFixDados(id) {
+  const H = isoD(hoje()), o = vgOndeDe(id, false), ref = o.st === 'ref', r = ref ? vgEmReforma(id) || {} : null, dt = ((ref ? r.ini : o.desde) || '').slice(0, 10);
+  const d0 = dt || isoD(new Date(Date.now() - 30 * 864e5)), M = vgManLinhas().filter(x => x.vid === id), P = M.filter(x => x.prev).map(x => x.prev).sort();
+  return { o, ref, r, dt, d0, M, prev: P[P.length - 1] || '', Oc: vgOcorr(id, d0), dd: dt ? vgDD(dt, H) : null };
+}
+function vgFixBloco(id, z) {
+  const H = isoD(hoje()), { o, ref, dt, d0, M, prev, Oc } = z;
+  return vgPainelBloco('f' + id, `${esc(o.nome)} · ${ref ? 'em reforma' : 'no porto'}`,
+    [dt ? '' : '<span class="note">Data de chegada não lançada: ocorrências dos últimos 30 dias.</span>',
+      M.length ? `Manutenção em andamento: ${M.map(x => esc(x.txt || '') + (x.prev ? ` · <b>término previsto ${brD(x.prev)}</b>` + (x.prev < H ? ` <b style="color:var(--badt)">(${-vgDD(H, x.prev)} d atrasada)</b>` : '') : ' · <span class="note">sem previsão</span>')).join('; ')}` : ''],
+    d0, dt ? (ref ? 'Entrada' : 'Chegada') : 'Há 30 dias', prev, 'Término previsto', Oc);
+}
 function vgPainelFix(k, ids) {
-  const H = isoD(hoje()), B = ids.map(id => { const bal = typeof balsaDe === 'function' && balsaDe(id);
-    if (bal) { const r = vgEmReforma(id) || {}, d0 = r.ini || H; return vgPainelBloco('f' + id, `${esc(bal.nome)} · balsa em reforma`, [r.ini ? `<b>No estaleiro há ${vgDD(d0, H)} dias</b> (desde ${brD(r.ini)})` : '', r.obs ? `<span class="note">${esc(r.obs)}</span>` : ''], d0, 'Entrada', '', '', vgOcorr(id, d0)); }
-    const o = vgOndeDe(id, false), ref = o.st === 'ref', r = ref ? vgEmReforma(id) || {} : null, d0 = ((ref ? r.ini : o.desde) || '').slice(0, 10) || isoD(new Date(Date.now() - 30 * 864e5));
-    const M = vgManLinhas().filter(x => x.vid === id), P = M.filter(x => x.prev).map(x => x.prev).sort(), prev = P[P.length - 1] || '', dd = vgDD(d0, H);
-    return vgPainelBloco('f' + id, `${esc(o.nome)}${o.balsas && o.balsas.length && !ref ? ' · ' + esc(o.balsas.map(vName).join(', ')) : ''}`,
-      [`<b>${ref ? 'Em reforma' : 'No porto'}${(ref ? r.ini : o.desde) ? ` há ${dd} dia${dd === 1 ? '' : 's'}` : ''}</b>${(ref ? r.ini : o.desde) ? ` (${ref ? 'desde' : 'chegada'} ${brD(d0)})` : ' <span class="note">(data de chegada não lançada · ocorrências dos últimos 30 dias)</span>'}`,
-        M.length ? `Manutenção em andamento: ${M.map(x => esc(x.txt || '') + (x.prev ? ` · <b>término previsto ${brD(x.prev)}</b>` + (x.prev < H ? ` <b style="color:var(--badt)">(${-vgDD(H, x.prev)} d atrasada)</b>` : '') : ' · <span class="note">sem previsão</span>')).join('; ')}` : ''],
-      d0, (ref ? r.ini : o.desde) ? (ref ? 'Entrada' : 'Chegada') : 'Há 30 dias', prev, 'Término previsto', vgOcorr(id, d0));
-  });
-  return `<div class="vgp-t" style="font-size:15px">${esc(k)} · ${ids.length} ${ids.length === 1 ? 'embarcação' : 'embarcações'}</div>${B.join('')}`;
+  const H = isoD(hoje()), SD = typeof sfDados === 'function' ? sfDados() : [], cls = { ok: 'p-ok', at: 'p-warn', bad: 'p-bad' };
+  const ehBal = id => typeof balsaDe === 'function' && !!balsaDe(id);
+  // empurradores
+  const E = ids.filter(id => !ehBal(id)).map(id => { const z = vgFixDados(id), x = SD.find(y => y.v.id === id), P = [];
+    if (!z.ref && x && typeof sfMotivos === 'function') sfMotivos(x).forEach(m => P.push(m));
+    if (z.ref) z.Oc.filter(y => y.ab).forEach(y => P.push(['bad', 'Corretiva aberta: ' + esc(y.eq || '') + (y.om ? ' · OM ' + esc(y.om) : '')]));
+    // avaria em aberto (a Crítica ou Alta sem OM já entra pela Situação da frota como “Falha sem OM”)
+    z.Oc.filter(y => !y.ok && !y.ab && (z.ref || y.om || !/Crítica|Alta/.test(y.c || ''))).forEach(y => P.push([/Crítica/.test(y.c || '') ? 'bad' : 'at', 'Avaria em aberto: ' + esc(y.eq || '') + (y.om ? ' · OM ' + esc(y.om) : ' · sem OM')]));
+    const R = vgReqs(id).filter(gsAberta); if (R.length) { const mx = Math.max(...R.map(gsDias)); P.push([mx > 30 ? 'bad' : mx > 15 ? 'at' : 'mut', `${R.length} SC/RM pendente${R.length > 1 ? 's' : ''} (mais antiga há ${mx} d)`]); }
+    z.M.filter(m => !m.prev).forEach(m => P.push(['at', 'Sem previsão de término: ' + esc(m.txt || '')]));
+    const sit = z.ref ? ['p-mut', 'Em reforma', 4] : x ? [cls[SF_SIT[x.sit][0]] || 'p-mut', SF_SIT[x.sit][1], x.sit] : ['p-mut', '—', 0];
+    return { id, z, P, sit, peso: (z.ref ? 0 : sit[2] * 100) + P.filter(p => p[0] === 'bad').length * 10 + P.length }; }).sort((a, b) => b.peso - a.peso);
+  const prevTx = p => p ? `${brD(p)}${p < H ? ` <b style="color:var(--badt)">(${-vgDD(H, p)} d atrasada)</b>` : ''}` : '<span class="note">—</span>';
+  const tE = E.length ? `<div class="tw"><table class="t vgp-tab"><thead><tr><th>Empurrador</th><th>${E.some(e => e.z.ref) ? 'No porto / estaleiro há' : 'No porto há'}</th><th>Situação</th><th>Pendências</th><th>Previsão de término</th></tr></thead><tbody>${E.map(e =>
+    `<tr class="vgp-l" data-vgdet="${e.id}"><td class="nowrap"><b>${esc(e.z.o.nome)}</b> <span class="vgp-sx">▸</span></td><td class="nowrap">${e.z.dd != null ? e.z.dd + ' d' : '<span class="note">chegada não lançada</span>'}</td><td><span class="pill ${e.sit[0]}">${esc(e.sit[1])}</span></td>
+      <td>${e.P.length ? e.P.map(([c, t]) => `<div class="sf-pm ${c === 'mut' ? '' : c}">${t}</div>`).join('') : '<span class="note">nenhuma</span>'}</td><td class="nowrap">${prevTx(e.z.prev)}</td></tr>
+    <tr class="vgp-det" id="vgdet-${e.id}" style="display:none"><td colspan="5">${vgFixBloco(e.id, e.z)}</td></tr>`).join('')}</tbody></table></div>` : '';
+  // balsas: em reforma ali + as que chegaram com esses empurradores
+  const dono = typeof vgMapaDados === 'function' ? vgMapaDados().dono : {}, emp = new Set(ids);
+  const Bs = vgBalsas().filter(b => ids.includes(b.id) || (emp.has(dono[b.id]) && !vgEmReforma(b.id))).map(b => { const e = typeof balEstado === 'function' ? balEstado(b) : { st: 'sem', A: [], venc: [], crit: [] }, P = [];
+    if (e.st === 'ref') { const r = vgEmReforma(b.id) || {}; return { b, e, P, ref: r, peso: -1 }; }
+    if (e.crit.length) P.push(['bad', `${e.crit.length} ${e.crit.length > 1 ? 'itens' : 'item'} crítico${e.crit.length > 1 ? 's' : ''} vencido${e.crit.length > 1 ? 's' : ''}`]);
+    if (e.venc.length > e.crit.length) P.push(['at', `${e.venc.length - e.crit.length} serviço${e.venc.length - e.crit.length > 1 ? 's' : ''} vencido${e.venc.length - e.crit.length > 1 ? 's' : ''}`]);
+    e.A.forEach(a => P.push([a.c === 'Crítica' ? 'bad' : a.c === 'Alta' ? 'at' : '', `Falha ${esc((a.c || '').toLowerCase())} em aberto: ${esc(a.sis || a.desc || '')}${a.om ? ' · OM ' + esc(a.om) : ''}`]));
+    try { if (balDocaSit(b).st === 'venc') P.push(['bad', 'Docagem vencida']); } catch (er) { }
+    return { b, e, P, peso: ({ bloq: 3, rest: 2, sem: 1, lib: 0 }[e.st] || 0) * 100 + P.length }; }).sort((a, b) => b.peso - a.peso);
+  const tB = Bs.length ? `<h3 class="vgm-h">Balsas · ${Bs.length}</h3><div class="tw"><table class="t vgp-tab"><thead><tr><th>Balsa</th><th>Chegou com</th><th>Situação</th><th>Pendências</th></tr></thead><tbody>${Bs.map(x => {
+    const st = (typeof BAL_ST !== 'undefined' && BAL_ST[x.e.st]) || ['p-mut', x.e.st];
+    return `<tr><td class="nowrap"><b>${esc(x.b.nome)}</b></td><td class="nowrap">${x.ref ? `<span class="note">no estaleiro${x.ref.ini ? ' há ' + vgDD(x.ref.ini, H) + ' d' : ''}</span>` : esc(vName(dono[x.b.id]) || '—')}</td><td><span class="pill ${st[0]}">${esc(st[1])}</span></td><td>${x.ref ? `<span class="note">${esc(x.ref.local || '')}${x.ref.obs ? ' · ' + esc(x.ref.obs) : ''}</span>` : x.P.length ? x.P.map(([c, t]) => `<div class="sf-pm ${c}">${t}</div>`).join('') : '<span class="note">nenhuma</span>'}</td></tr>`; }).join('')}</tbody></table></div>
+    <p class="note">O SMF não registra onde cada balsa fica: aqui estão as que chegaram com esses empurradores na última viagem de cada uma, e as que estão em reforma neste lugar.</p>` : '';
+  const nE = E.length, nB = E.filter(e => !e.z.ref && e.sit[2] >= 2).length, nR = E.filter(e => !e.z.ref && e.sit[2] === 1).length;
+  return `<div class="vgp-t" style="font-size:15px">${esc(k)} · ${nE} empurrador${nE === 1 ? '' : 'es'}${nB ? ` · <span style="color:var(--badt)">${nB} bloqueado${nB > 1 ? 's' : ''}</span>` : ''}${nR ? ` · <span style="color:var(--warnt)">${nR} com restrição</span>` : ''}</div>
+    <p class="note" style="margin:0 0 4px">Pendências primeiro. Clique na linha para ver as ocorrências e a linha do tempo. Clique na pendência para ir à tela que resolve.</p>${tE}${tB}`;
 }
 function vgPainelAbrir(tp, a, b) {
   const el = $('#vgPainel'); if (!el) return; VG_PAINEL.oc = {};
@@ -163,13 +202,16 @@ function vgFotoGrande(key, i, k) {
   d.onclick = e => { const g = e.target.closest('[data-g]'); if (g) { n = (n + +g.dataset.g + L.length) % L.length; des(); } else if (e.target === d) sai(); };
   document.addEventListener('keydown', kb); des();
 }
-document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc],[data-vgfg],[data-vgpx]'); if (!t || VIEW !== 'enxviag') return; e.preventDefault(); e.stopPropagation(); const d = t.dataset;
+document.addEventListener('click', e => { const t = e.target.closest('[data-vgoc],[data-vgfg],[data-vgpx],[data-vgdet]'); if (!t || VIEW !== 'enxviag') return;
+  if (t.dataset.vgdet && e.target.closest('a')) return;   // clique na pendência: vai para a tela que resolve
+  e.preventDefault(); e.stopPropagation(); const d = t.dataset;
+  if (d.vgdet) { const r = $('#vgdet-' + d.vgdet), ab = r && r.style.display === 'none'; if (r) { r.style.display = ab ? '' : 'none'; t.classList.toggle('on', ab); if (ab && typeof heCarregaFotos === 'function') heCarregaFotos(); } return; }
   if (d.vgpx !== undefined) { const el = $('#vgPainel'); if (el) { el.innerHTML = ''; el.style.display = 'none'; } return; }
   if (d.vgoc) return vgOcDetalhe(...d.vgoc.split('|'));
   if (d.vgfg) return vgFotoGrande(...d.vgfg.split('|')); }, true);
 { const st = document.createElement('style'); st.textContent = '#vgPainel{margin-top:10px;border-top:1px solid #DCE3EC;padding-top:8px}.vgp-b{border:1px solid #DCE3EC;border-radius:8px;padding:10px 12px;margin:8px 0;background:#fff;line-height:1.55}.vgp-t{font-weight:700;color:#16244A;font-size:14px;margin-bottom:2px}'
   + '.vgt{margin:10px 4px 2px}.vgt-b{position:relative;height:8px;border-radius:4px;background:#E3E8EF;margin:10px 0}.vgt-f{position:absolute;left:0;top:0;bottom:0;background:#9DB4D3;border-radius:4px}.vgt-p{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(90deg,#C9D3E0 0 6px,transparent 6px 10px)}.vgt-h{position:absolute;top:-6px;bottom:-6px;width:2px;background:#C5221F;margin-left:-1px}'
-  + '.vgt-o{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:pointer;padding:0}.vgt-o.ok{background:#188038}.vgt-o.ab{background:#D93025}.vgt-o:hover{transform:scale(1.25)}'
+  + '.vgt-o{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);cursor:pointer;padding:0}.vgt-b .vgt-o.ok{background:#188038!important}.vgt-b .vgt-o.ab{background:#D93025!important}.vgp-tab .vgp-l{cursor:pointer}.vgp-tab .vgp-l:hover td{background:#F3F6FA}.vgp-tab .vgp-l.on .vgp-sx{display:inline-block;transform:rotate(90deg)}.vgp-sx{color:#8A94A6;font-size:11px}.vgp-det>td{padding:0 6px 8px!important;background:#FAFBFD}.vgp-tab .sf-pm{margin:1px 0}.vgt-o:hover{transform:scale(1.25)}'
   + '.vgt-l{position:relative;display:flex;justify-content:space-between;font-size:11.5px;color:#5F6368;min-height:30px}.vgt-lh{position:absolute;top:0;transform:translateX(-50%);color:#C5221F;font-weight:600}.vgt-x{margin-top:6px;padding:8px 10px;background:#F6F8FB;border-radius:6px}.vgt-fs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}'
   + '.vgt-ft{width:120px;height:90px;object-fit:cover;border-radius:6px;cursor:zoom-in;background:#E8EEF5}.vgt-g{position:fixed;inset:0;z-index:100000;background:rgba(10,15,25,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out}.vgt-g img{max-width:94vw;max-height:86vh;object-fit:contain;border-radius:4px;cursor:default}'
   + '.vgt-gb{display:flex;gap:16px;align-items:center;color:#fff;font:13px system-ui;margin-top:10px}.vgt-gb button{font-size:26px;line-height:1;background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:6px;padding:4px 14px;cursor:pointer}'; document.head.appendChild(st); }

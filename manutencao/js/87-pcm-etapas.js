@@ -251,9 +251,9 @@ function sfCartoes(L) {
     <p class="note">Equipamentos como na Matriz técnica (visão por embarcação); horímetro na frente de cada motor. Clique no cartão para abrir o empurrador na 2.2. Barra: vencidos · vencem no mês · em dia.</p>`;
 }
 // por que cada empurrador não está liberado, em palavras, cada motivo levando à tela que resolve (Supervisor, 29/10/2026)
-function sfPorque(L) {
-  const lk = (h, t, at) => `<a href="${h}" class="sf-lk"${at || ''}>${t}</a>`;
-  const R = L.filter(x => x.sit > 0 || x.vel).map(x => { const M = [], f = x.f, sf = ` data-sff="${esc(x.v.nome)}"`;
+// motivos de um empurrador (também na lista do porto do mapa da 1.3, js/103): [classe, texto com link para a tela que resolve]
+function sfMotivos(x) {
+  const lk = (h, t, at) => `<a href="${h}" class="sf-lk"${at || ''}>${t}</a>`, M = [], f = x.f, sf = ` data-sff="${esc(x.v.nome)}"`;
     if (f.it) M.push(['bad', 'Interditado: ' + esc(f.it.motivo || f.it.obs || 'ver Administração')]);
     f.bq.forEach(b => M.push(['bad', lk('#enx', 'Item crítico vencido sem OM: ' + esc(enxServ(b.t)) + ' · ' + esc(posCurtoE(x.v, b.pos)), ` data-pcmv="${x.v.id}"`)]));
     (f.noPend || []).filter(p => p.c === 'Crítica' || p.c === 'Alta').forEach(p => M.push([p.c === 'Crítica' ? 'bad' : 'at', lk('#enxcor', 'Falha ' + p.c.toLowerCase() + ' sem OM: ' + esc(p.d || p.lab || ''), sf)]));
@@ -263,7 +263,10 @@ function sfPorque(L) {
     const ov = x.oleo.filter(y => y.g === 'venc').length; if (ov) M.push(['at', lk('#oleo', 'Troca de óleo vencida em ' + ov + ' equipamento' + (ov > 1 ? 's' : ''), sf)]);
     if (typeof popaPend === 'function' && popaPend(x.v).length) M.push(['at', lk('#oleo', 'Troca de óleo do motor de popa pendente desde a chegada', sf)]);
     if (x.vel) M.push(['at', lk('#enxhor', `Horímetro do MCP ${x.vel === 9999 ? 'sem leitura' : 'sem leitura há ' + x.vel + ' dias'}: os serviços por horas não podem ser dados como em dia`, ` data-sfh="${x.v.id}"`)]);
-    return { x, M }; });
+  return M;
+}
+function sfPorque(L) {
+  const R = L.filter(x => x.sit > 0 || x.vel).map(x => ({ x, M: sfMotivos(x) }));
   return `<div class="card"><h2>Por que não está liberado · ${R.filter(r => r.x.sit > 0).length} empurrador${R.filter(r => r.x.sit > 0).length === 1 ? '' : 'es'}${R.some(r => !r.x.sit) ? ' · horímetro desatualizado em ' + R.filter(r => !r.x.sit).length : ''}</h2>
     ${R.length ? `<div class="tw"><table class="t sf-pq"><tbody>${R.map(({ x, M }) => `<tr><td class="nowrap"><b>${esc(x.v.nome)}</b><div class="sf-s ${SF_SIT[x.sit][0]}">${x.sit ? SF_SIT[x.sit][1] : 'Liberado'}</div></td><td>${M.length ? M.map(([c, t]) => `<div class="sf-pm ${c}">${t}</div>`).join('') : '<span class="note">Ver Pendências</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="note">Todos os empurradores liberados e com horímetro em dia.</p>'}
     <p class="note">Bloqueia: item crítico da NP 6.3 vencido sem OM, falha crítica sem OM, interdição. Restringe: outro serviço vencido, falha alta sem OM, troca do motor de popa. Clique no motivo para ir à tela que resolve.</p></div>`;
