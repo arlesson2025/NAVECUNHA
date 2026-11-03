@@ -380,7 +380,7 @@ function vgResumo() {
   const H = isoD(hoje()), ehBal = id => typeof balsaDe === 'function' && !!balsaDe(id), SD = typeof sfDados === 'function' ? sfDados() : [], dono = vgMapaDados().dono || {};
   const sit = id => { const x = SD.find(y => y.v.id === id); if (!x || typeof SF_SIT === 'undefined') return ''; const c = { ok: 'p-ok', at: 'p-warn', bad: 'p-bad' }[SF_SIT[x.sit][0]] || 'p-mut'; return ` <span class="pill ${c}">${esc(SF_SIT[x.sit][1])}</span>`; };
   const prevTx = (p, t) => p ? `${t} <b>${brD(p)}</b>${p < H ? ` <b style="color:${VGD_C.bad}">(${-vgDD(H, p)} d de atraso)</b>` : ` <span class="vgd-m">(faltam ${vgDD(H, p)} d)</span>`}` : `<span class="vgd-m">${t} não informada</span>`;
-  const it = h => `<div class="vgr-i">${h}</div>`, sub = (t, L) => L.length ? `<div class="vgr-s">${t} · ${L.length}</div>${L.join('')}` : '';
+  const it = h => `<div class="vgr-i">${h}</div>`, sub = (t, L) => L.length ? `<div class="vgr-s">${t}</div>${L.join('')}` : '';
   // em viagem: comboio, balsas, saída, dias, chegada prevista
   const via = G.via.map(id => { const o = vgOndeDe(id, false), r = vgRota(o.rota), dest = r ? r.nome.split('×').pop().trim() : '';
     return it(`<b>Comboio ${esc(o.nome)}</b>${o.balsas && o.balsas.length ? ` · ${esc(o.balsas.map(vName).join(', '))}` : ''}${o.rota ? `<br><span class="vgd-m">${esc(vgRotaCurta(o.rota))}</span>` : ''}
