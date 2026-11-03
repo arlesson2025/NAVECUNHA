@@ -256,10 +256,11 @@ function vgDirPorto(tit, ids) {
     return { e, reg, P, cor, hor: e.P.some(p => /Horímetro/.test(p[1])), n: e.sit[2] }; });
   if (!L.length) return `<p class="vgd-c">Nenhum empurrador em porto${A.Bs.length ? '' : ''}.</p><details class="vgd-det"><summary>Detalhes técnicos</summary>${det}</details>`;
   const im = L.filter(x => x.n >= 2), rs = L.filter(x => x.n === 1), lb = L.filter(x => x.n === 0), R = L.filter(x => x.reg);
-  const med = R.length ? Math.round(R.reduce((s, x) => s + x.e.z.dd, 0) / R.length) : null;
-  const ks = vgdK(L.length, 'Empurradores em porto') + vgdK(lb.length + rs.length, 'Liberados à operação', rs.length ? `${vgdPl(rs.length, 'liberado', 'liberados')} com restrição` : 'sem restrição', VGD_C.ok)
-    + vgdK(im.length, 'Impedidos de operar', 'item crítico NP 6.3 vencido sem OM, falha crítica sem OM ou interdição', im.length ? VGD_C.bad : VGD_C.ok)
-    + vgdK(med == null ? '—' : med + ' d', 'Permanência média em porto', R.length ? `${R.length} de ${L.length} com chegada registrada (FR 027_L)` : 'chegadas não registradas');
+  // faixa de números (Supervisor, 02/11/2026: “X empurradores · X liberados · X em manutenção…”): manutenção = corretiva aberta ou serviço lançado em andamento
+  const mn = L.filter(x => x.e.z.M.length);
+  const ks = vgdK(L.length, 'Empurradores') + vgdK(lb.length + rs.length, 'Liberados', rs.length ? `${rs.length} com restrição` : 'sem restrição', VGD_C.ok)
+    + vgdK(mn.length, 'Em manutenção', mn.length ? mn.map(x => esc(x.e.z.o.nome)).join(' · ') : 'nenhum', mn.length ? VGD_C.at : VGD_C.ok)
+    + vgdK(im.length, 'Impedidos de operar', im.length ? im.map(x => esc(x.e.z.o.nome)).join(' · ') : 'nenhum', im.length ? VGD_C.bad : VGD_C.ok);
   const pri = x => vgdTec((x.P.find(p => p[0] === 'bad') || x.P[0] || [])[1]);
   const conc = im.length ? `${lb.length + rs.length} de ${L.length} empurradores liberados à operação. ${vgdPl(im.length, 'impedido', 'impedidos')} de operar: ${im.map(x => `<b>${esc(x.e.z.o.nome)}</b> (${esc(pri(x))})`).join('; ')}.`
     : `Todos os ${L.length} empurradores em porto estão liberados à operação${rs.length ? `, ${rs.length} com restrição` : ''}.`;
