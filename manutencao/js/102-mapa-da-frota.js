@@ -92,6 +92,8 @@ function vgFundeioIc(cor, B, E) {
 const VG_ZOOM_DESENHO = 11;   // mapa mais longe que isso: no porto volta o ícone pequeno com o número (as fileiras de balsas cobririam o mapa)
 const vgGoogle = ll => `<br><a href="https://www.google.com/maps?q=${ll[0]},${ll[1]}" target="_blank" rel="noopener">Abrir no Google Maps ↗</a>`;
 const vgAltura = () => { try { const h = +localStorage.getItem('smf_vg_alt'); return h >= 260 ? h : 560; } catch (e) { return 560; } };
+// quadro mudou de tamanho: o mapa fica parado (canto de cima à esquerda fixo) e só mostra mais ou menos área; uma vez por quadro de tela
+const vgAjusta = m => { if (m._vgAj) return; m._vgAj = requestAnimationFrame(() => { m._vgAj = 0; try { m.invalidateSize({ pan: false }); } catch (e) { } }); };
 async function vgMapaIniciar() {
   const el = $('#vgMapa'); if (!el) return;
   try { await vgMapaLib(); } catch (e) { if (el.isConnected) el.innerHTML = '<p class="note" style="padding:12px;color:var(--warnt)">O mapa não carregou: precisa de internet. Os quadros “Fora do porto” e “No porto” mostram a mesma informação.</p>'; return; }
@@ -135,11 +137,11 @@ async function vgMapaIniciar() {
   const card = el.closest('.card'), alt = () => { const cheia = document.fullscreenElement === card || (card && card.classList.contains('cm-full'));
     // quadro com tamanho próprio (janela livre, canto de redimensionar): o mapa ocupa a altura visível do quadro e acompanha quando ele muda de tamanho
     const top = card ? el.getBoundingClientRect().top - card.getBoundingClientRect().top + card.scrollTop : 0, fixo = card && card.style.height;
-    const h = cheia ? Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 24) : fixo ? Math.max(260, card.clientHeight - top - 30) : vgAltura(); if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px'; try { m.invalidateSize(); } catch (e) { } };
+    const h = cheia ? Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 24) : fixo ? Math.max(260, card.clientHeight - top - 30) : vgAltura(); if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px'; try { vgAjusta(m); } catch (e) { } };
   document.addEventListener('fullscreenchange', alt); if (window.ResizeObserver && card) new ResizeObserver(alt).observe(card); alt();
   // barra embaixo do mapa: arrastar muda a altura (de 260 a 1600 px), guardada neste computador
   const bar = el.nextElementSibling; if (bar && bar.classList.contains('vg-alt')) bar.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const y0 = e.clientY, h0 = el.offsetHeight;
-    const mv = ev => { const h = Math.max(260, Math.min(1600, h0 + ev.clientY - y0)); el.style.height = h + 'px'; try { m.invalidateSize(); } catch (er) { } };
+    const mv = ev => { const h = Math.max(260, Math.min(1600, h0 + ev.clientY - y0)); el.style.height = h + 'px'; try { vgAjusta(m); } catch (er) { } };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); if (!(document.fullscreenElement === card || (card && card.classList.contains('cm-full')))) try { localStorage.setItem('smf_vg_alt', String(el.offsetHeight)); } catch (er) { } };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); };
 }
