@@ -71,20 +71,20 @@ const vgIc = (g, W, H, k, at) => L.divIcon({ html: `<svg${at || ''} width="${W *
 // e clicável (data-vgbal): abre o cartão da balsa (Supervisor, 02/11/2026)
 function vgComboioIc(cor, B, id) {
   B = Array.isArray(B) ? B : Array.from({ length: B || 0 }, () => '');
-  const bw = 22, H = 11, tw = 12, nB = B.length; let x = tw + 1.5, g = `<rect x="1" y="1" width="${tw}" height="${H - 2}" rx="2.5" fill="${cor}" stroke="#fff" stroke-width="1.1"/><rect x="3" y="3" width="4.5" height="${H - 6}" rx="1" fill="#fff" opacity=".9"/>`;
-  for (let k = 0; k < nB; k++, x += bw + .6) { const nm = B[k] ? vName(B[k]).replace(/^VDA\s*/i, '') : '';
-    g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, 1, bw, H - 2)}${nm ? `<text x="${x + bw / 2}" y="${H / 2 + 1.9}" text-anchor="middle" font-size="5.4" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(nm)}</text>` : ''}</g>`; }
+  const bw = 34, H = 11, tw = 12, nB = B.length; let x = tw + 1.5, g = `<rect x="1" y="1" width="${tw}" height="${H - 2}" rx="2.5" fill="${cor}" stroke="#fff" stroke-width="1.1"/><rect x="3" y="3" width="4.5" height="${H - 6}" rx="1" fill="#fff" opacity=".9"/>`;
+  for (let k = 0; k < nB; k++, x += bw + .6) { const nm = B[k] ? vName(B[k]) : '';   // nome inteiro, com “VDA” (Supervisor, 02/11/2026)
+    g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, 1, bw, H - 2)}${nm ? `<text x="${x + bw / 2}" y="${H / 2 + 1.9}" text-anchor="middle" font-size="5.6" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(nm)}</text>` : ''}</g>`; }
   if (!nB) g += `<path d="M${tw + 1},1.5 l4,4 l-4,4 z" fill="${cor}" stroke="#fff" stroke-width="1"/>`; else g += `<path d="M${x},2 l3,3.5 l-3,3.5 z" fill="#2B2F33"/>`;
-  const ic = vgIc(g, x + 4, H, 2.2, id ? ` data-vgcomb="${esc(id)}" style="cursor:pointer"` : ''); ic.options.tooltipAnchor = [-(x + 4) * 1.1, 0]; return ic;   // nome à esquerda, colado no empurrador
+  const ic = vgIc(g, x + 4, H, 2.6, id ? ` data-vgcomb="${esc(id)}" style="cursor:pointer"` : ''); ic.options.tooltipAnchor = [-(x + 4) * 1.3, 0]; return ic;   // nome à esquerda, colado no empurrador
 }
 // parados na boia ou no estaleiro: as balsas lado a lado em fileiras (até 8 por fileira) e os empurradores encostados embaixo
 function vgFundeioIc(cor, B, E) {
   B = Array.isArray(B) ? B : Array.from({ length: B || 0 }, () => ''); E = Array.isArray(E) ? E : Array.from({ length: E || 0 }, () => '');
-  const nB = B.length, nE = E.length, bw = 9, bh = 26, p = 8, pw = 9, ph = 15, por = Math.min(Math.max(nB, 1), p), lin = Math.ceil(nB / p), W = Math.max(por * (bw + .6), nE * (pw + 1.5)) + 2; let g = '';
-  // cada balsa e cada empurrador com o nome (sem “VDA”/“CJA”) e clicável: abre o cartão daquela embarcação (Supervisor, 02/11/2026)
+  const nB = B.length, nE = E.length, bw = 9, bh = 34, p = 8, pw = 9, ph = 15, por = Math.min(Math.max(nB, 1), p), lin = Math.ceil(nB / p), W = Math.max(por * (bw + .6), nE * (pw + 1.5)) + 2; let g = '';
+  // cada balsa (com “VDA”) e cada empurrador (sem “CJA”) com o nome e clicável: abre o cartão daquela embarcação (Supervisor, 02/11/2026)
   const nm = (id, re) => id ? esc(vName(id).replace(re, '')) : '';
-  for (let k = 0; k < nB; k++) { const x = 1 + (k % p) * (bw + .6), y = 1 + Math.floor(k / p) * (bh + .8), t = nm(B[k], /^VDA\s*/i);
-    g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, y, bw, bh)}${t ? `<text transform="translate(${x + bw / 2 + 1.6},${y + bh / 2}) rotate(-90)" text-anchor="middle" font-size="4.6" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.3" paint-order="stroke" font-family="system-ui,sans-serif">${t}</text>` : ''}</g>`; }
+  for (let k = 0; k < nB; k++) { const x = 1 + (k % p) * (bw + .6), y = 1 + Math.floor(k / p) * (bh + .8), t = nm(B[k], /^$/);
+    g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, y, bw, bh)}${t ? `<text transform="translate(${x + bw / 2 + 1.6},${y + bh / 2}) rotate(-90)" text-anchor="middle" font-size="4.4" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.3" paint-order="stroke" font-family="system-ui,sans-serif">${t}</text>` : ''}</g>`; }
   const y = 1.5 + lin * (bh + .8);
   for (let k = 0; k < nE; k++) { const x = 1 + k * (pw + 1.5), t = nm(E[k], /^CJA\s*/i);
     g += `<g${E[k] ? ` data-vgemp="${esc(E[k])}" style="cursor:pointer"` : ''}><rect x="${x}" y="${y}" width="${pw}" height="${ph}" rx="2" fill="${cor}" stroke="#fff" stroke-width="1"/>${t ? `<text transform="translate(${x + pw / 2 + 1.5},${y + ph / 2}) rotate(-90)" text-anchor="middle" font-size="4.4" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">${t}</text>` : `<rect x="${x + 1.5}" y="${y + 5.5}" width="${pw - 3}" height="3.5" rx=".8" fill="#fff" opacity=".9"/>`}</g>`; }
