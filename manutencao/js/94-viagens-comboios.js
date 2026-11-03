@@ -146,10 +146,15 @@ function vgOnde(V, nAno, ano) {
     <h3 class="vg-h3">Em reforma</h3><div>${chips(ref.concat(bRef))}</div>
     <p class="note">Porto = o informado na posição; sem ela, Manaus pela chegada (FR 027_L ou estimada pela rota). Mais de 15 dias no porto em âmbar.</p></div>`;
 }
-// saiu o 3º quadro (b2, Onde está a frota · hoje): os tamanhos guardados dos quadros de baixo sobem uma posição, uma vez só (chave nova)
-function vgLayMigra() { try { if (localStorage.getItem('smf_enxviag_lay2') != null) return; const o = JSON.parse(localStorage.getItem('smf_enxviag_lay') || 'null'); if (!o) return; const n = {};
-  const sobe = o.b2 && o.b3 && o.b3.y > o.b2.y ? o.b3.y - o.b2.y : 0;   // fecha o buraco do quadro que saiu
-  Object.keys(o).forEach(k => { const i = +k.slice(1); if (i < 2) n[k] = o[k]; else if (i > 2) n['b' + (i - 1)] = Object.assign({}, o[k], o[k].y != null && o[k].y >= (o.b2 ? o.b2.y : 0) ? { y: o[k].y - sobe } : {}); }); localStorage.setItem('smf_enxviag_lay2', JSON.stringify(n)); } catch (e) { } }
+// quadros que saíram (Supervisor, 02/11/2026): b2 Onde está a frota · hoje e, depois, b10 Colar e-mail do Monitoramento (o mesmo do botão Colar boletim
+// do Autotrac embaixo do mapa). Os tamanhos guardados dos quadros de baixo sobem uma posição e fecham o buraco, uma vez só (chave nova a cada retirada)
+function vgLayMigra() { try {
+  if (localStorage.getItem('smf_enxviag_lay3') != null) return;
+  const G = k => JSON.parse(localStorage.getItem(k) || 'null'), tira = (o, j) => { const n = {}, a = o['b' + j], b = o['b' + (j + 1)], sobe = a && b && b.y > a.y ? b.y - a.y : 0, y0 = a ? a.y : 0;
+    Object.keys(o).forEach(k => { const i = +k.slice(1); if (i < j) n[k] = o[k]; else if (i > j) n['b' + (i - 1)] = Object.assign({}, o[k], o[k].y != null && o[k].y >= y0 ? { y: o[k].y - sobe } : {}); }); return n; };
+  let o = G('smf_enxviag_lay2'); if (!o) { const v = G('smf_enxviag_lay'); if (v) o = tira(v, 2); }
+  if (o) localStorage.setItem('smf_enxviag_lay3', JSON.stringify(tira(o, 10)));
+} catch (e) { } }
 function vgPosModal(id) {
   if (!can.edit()) return; const o = id ? vgOndeDe(id, false) : null;
   modal(`<h2>Informar posição</h2><div class="g">
@@ -245,7 +250,6 @@ function vEnxViag() {
    <div class="card"><h2>Tempo de viagem por rota · ${ano}</h2><div class="tw"><table class="t"><thead><tr><th>Rota</th><th class="num">Comboios</th><th class="num">Médio real</th><th class="num">Médio com estimadas</th><th class="num">Ciclo previsto</th></tr></thead><tbody>${RR || '<tr><td colspan="5" class="note">Nenhuma viagem no ano.</td></tr>'}</tbody></table></div><p class="note">Real = com chegada pelo FR 027_L ou digitada. Ciclo previsto = o da rota (Administração → Rotas), usado para estimar a chegada.</p></div>
    <div class="card"><h2>Saídas · ${Ls.length}</h2><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><select id="vgFe" style="width:auto;min-width:190px">${opE}</select><select id="vgFb" style="width:auto;min-width:170px">${opB}</select><select id="vgFr" style="width:auto;min-width:200px">${opR}</select>${VG.fe || VG.fb || VG.fr ? '<button class="mbtn sm" data-vgx>Limpar</button>' : ''}</div>
      <div class="tw"><table class="t"><thead><tr><th>Saída</th><th>Empurrador</th><th>Balsas do comboio</th><th>Rota</th><th>Chegada</th><th></th></tr></thead><tbody>${sai || '<tr><td colspan="6" class="note">Nenhuma saída. As novas entram pelo “Saiu de viagem”; as antigas, pelo “Colar histórico de saídas” abaixo.</td></tr>'}</tbody></table></div></div>
-   ${can.edit() ? `<div class="card"><h2>Colar e-mail do Monitoramento</h2><p class="note">Cole o texto do e-mail do Monitoramento (Autotrac) como vem: “COMBOIO: CJA XX - VDA II, VDA III, VDA IV … ULTIMA ATUALIZACAO: 23/5/2026”. O SMF acha o empurrador, a data, a hora, se está parado ou no porto e, se o e-mail trouxer, a latitude e a longitude. Confira antes de gravar.</p><textarea id="vgMo" rows="6" placeholder="COMBOIO: CJA XX - VDA II, VDA III, VDA IV&#10;HORÍMETRO: 22254  ULTIMA ATUALIZACAO: 23/5/2026 18:00"></textarea><div class="row end" style="margin-top:6px"><button class="mbtn" data-vgbolc>Ler e conferir</button></div></div>` : ''}
    ${can.edit() ? `<div class="card"><h2>Colar histórico de saídas</h2><p class="note">Cole a lista como você escreve: “CJA I – VDA I, VDA III e VDA IX” e embaixo “FLUXO: MAO X ITC X PVH (07/01/2026)”. O SMF reconhece o empurrador, as balsas, a rota (MAO, ITC, PVH, VLC/Vila do Conde, BRE, Munguba) e a data. Saída repetida (mesmo empurrador e data) é ignorada.</p><textarea id="vgC" rows="6" placeholder="CJA I – VDA I, VDA III e VDA IX&#10;FLUXO: MAO X ITC X PVH (07/01/2026)"></textarea><div class="row end" style="margin-top:6px"><button class="mbtn" data-vgcola>Ler e conferir</button></div></div>` : ''}</div></div>`;
 }
 // ---------- histórico colado ----------
@@ -307,7 +311,7 @@ AFTER.enxviag = () => { const m = $('#main');
     if (t.id === 'vgFe') { VG.fe = t.value; return render(); }
     if (t.id === 'vgFb') { VG.fb = t.value; return render(); }
     if (t.id === 'vgFr') { VG.fr = t.value; return render(); } };
-  const ws = m.querySelector('.cm-ws'); if (ws) { vgLayMigra(); janelasLivres(ws, 'smf_enxviag_lay2', '[data-enxreset]'); } if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
+  const ws = m.querySelector('.cm-ws'); if (ws) { vgLayMigra(); janelasLivres(ws, 'smf_enxviag_lay3', '[data-enxreset]'); } if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
 ENX_OK.push('enxviag'); PCM_ETAPAS[0][2].push('enxviag');
 PCM_MENU.find(g => /^1 /.test(g[0]))[1].push(['enxviag', '1.3 Layout da frota', 'viag']);
 ICO.viag = '<path d="M3 17h18l-2 3H5z"/><path d="M6 17V9h8l3 4v4"/><path d="M9 9V5h3v4"/>';
