@@ -138,15 +138,18 @@ function vgOnde(V, nAno, ano) {
   const lp = portos.map(pt => `<tr class="vg-m"><td colspan="3">${esc(pt)} · ${por.filter(o => o.porto === pt).length}</td></tr>` + por.filter(o => o.porto === pt).sort((a, b) => (b.dias ?? -1) - (a.dias ?? -1)).map(o => `<tr><td class="nowrap"><b>${esc(o.nome)}</b></td><td>${o.desde ? 'desde ' + vgDH(o.desde) + (o.est ? ' <span class="note">(chegada estimada)</span>' : '') : '<span class="note">desde quando não informado</span>'}</td><td class="nowrap">${o.dias != null ? `<span class="pill ${o.dias > 15 ? 'p-warn' : 'p-ok'}">${o.dias} d</span>` : ''} ${bt(o.id)}</td></tr>`).join('')).join('');
   const chips = A => A.map(o => `<span class="vg-b">${esc(o.nome)}</span>`).join('') || '<span class="note">nenhuma</span>';
   const nk = (l, v, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
-  return `<div class="card"><div class="row"><h2>Onde está a frota · hoje</h2><span class="sp"></span>${ed ? '<button class="mbtn" data-vgbol>Colar boletim do Autotrac</button><button class="mbtn pri" data-vgpos="">Informar posição</button>' : ''}</div>
-    <div class="sf-k">${nk('Empurradores fora do porto', via.length)}${nk('Empurradores no porto', por.length)}${nk('Balsas em comboio', bVia.size)}${nk('Balsas no porto', bPor.length)}${nk(`Parados fora há mais de ${VG_PARADO_D} d`, par, par ? 'var(--badt)' : '')}${nk('Em reforma', ref.length + bRef.length, ref.length + bRef.length ? 'var(--warnt)' : '')}${nAno != null ? nk('Comboios em ' + ano, nAno) : ''}</div></div>
-   <div class="card"><h2>Fora do porto · ${via.length} empurrador${via.length === 1 ? '' : 'es'} · ${bVia.size} balsa${bVia.size === 1 ? '' : 's'}</h2>${via.length ? `<div class="tw"><table class="t vg-ag"><thead><tr><th>Empurrador</th><th>Rota</th><th>Última posição</th><th>Balsas</th><th></th><th></th></tr></thead><tbody>${lv}</tbody></table></div>` : '<p class="note">Nenhum empurrador fora do porto.</p>'}
+  // o quadro de números “Onde está a frota · hoje” saiu (Supervisor, 02/11/2026): está no painel embaixo do mapa; o total de comboios do ano foi para Comboios por mês
+  return `<div class="card"><h2>Fora do porto · ${via.length} empurrador${via.length === 1 ? '' : 'es'} · ${bVia.size} balsa${bVia.size === 1 ? '' : 's'}</h2>${via.length ? `<div class="tw"><table class="t vg-ag"><thead><tr><th>Empurrador</th><th>Rota</th><th>Última posição</th><th>Balsas</th><th></th><th></th></tr></thead><tbody>${lv}</tbody></table></div>` : '<p class="note">Nenhum empurrador fora do porto.</p>'}
     <p class="note">Em viagem desde o “Saiu de viagem”; a posição vem do boletim colado ou informado. Mesma posição em boletins seguidos (ou “sem movimento desde”) por mais de ${VG_PARADO_D} dias = parado.</p></div>
    <div class="card"><h2>No porto · ${por.length} empurrador${por.length === 1 ? '' : 'es'} · ${bPor.length} balsa${bPor.length === 1 ? '' : 's'}</h2>${por.length ? `<div class="tw"><table class="t"><tbody>${lp}</tbody></table></div>` : '<p class="note">Nenhum empurrador no porto.</p>'}
     <h3 class="vg-h3">Balsas no porto</h3><div>${chips(bPor)}</div>
     <h3 class="vg-h3">Em reforma</h3><div>${chips(ref.concat(bRef))}</div>
     <p class="note">Porto = o informado na posição; sem ela, Manaus pela chegada (FR 027_L ou estimada pela rota). Mais de 15 dias no porto em âmbar.</p></div>`;
 }
+// saiu o 3º quadro (b2, Onde está a frota · hoje): os tamanhos guardados dos quadros de baixo sobem uma posição, uma vez só (chave nova)
+function vgLayMigra() { try { if (localStorage.getItem('smf_enxviag_lay2') != null) return; const o = JSON.parse(localStorage.getItem('smf_enxviag_lay') || 'null'); if (!o) return; const n = {};
+  const sobe = o.b2 && o.b3 && o.b3.y > o.b2.y ? o.b3.y - o.b2.y : 0;   // fecha o buraco do quadro que saiu
+  Object.keys(o).forEach(k => { const i = +k.slice(1); if (i < 2) n[k] = o[k]; else if (i > 2) n['b' + (i - 1)] = Object.assign({}, o[k], o[k].y != null && o[k].y >= (o.b2 ? o.b2.y : 0) ? { y: o[k].y - sobe } : {}); }); localStorage.setItem('smf_enxviag_lay2', JSON.stringify(n)); } catch (e) { } }
 function vgPosModal(id) {
   if (!can.edit()) return; const o = id ? vgOndeDe(id, false) : null;
   modal(`<h2>Informar posição</h2><div class="g">
@@ -237,7 +240,7 @@ function vEnxViag() {
    + `${typeof vgMapaCard === 'function' ? vgMapaCard() : ''}${typeof vgManCard === 'function' ? vgManCard() : ''}${vgOnde(V, TA.length, ano)}
    <div class="card"><div class="row"><h2>Operação por ${eb ? 'balsa' : 'empurrador'}</h2><span class="sp"></span>${seg}</div>${tab}<p class="note">Dias em viagem e no porto contam de 01/01 até hoje; o período em reforma não entra. “est.” = tem chegada estimada pela rota. Parado há = desde a última chegada (ou do fim da reforma); acima de 60 dias fica em destaque. Reformas: lançar e consultar no <a href="#enxeq">Histórico dos equipamentos</a>.</p></div>
    <div class="card"><div class="row"><h2>Linha do tempo · ${ano}</h2><span class="sp"></span>${seg}</div>${vgLeg(true)}${vgGantt(N, V, ano, eb)}<p class="note">Barra = viagem; espaço vazio = no porto; linha vermelha = hoje. Passe o mouse na barra para ver o comboio.</p></div>
-   <div class="card"><h2>Comboios por mês · ${ano}</h2>${vgLeg(false)}${vgMeses(V, ano)}</div>
+   <div class="card"><h2>Comboios por mês · ${ano} · ${TA.length} comboio${TA.length === 1 ? '' : 's'}</h2>${vgLeg(false)}${vgMeses(V, ano)}</div>
    <div class="card"><div class="row"><h2>% do ano em viagem</h2><span class="sp"></span>${seg}</div>${pctH}<p class="note">Dias em viagem ÷ dias do ano até hoje, sem o período em reforma.</p></div>
    <div class="card"><h2>Tempo de viagem por rota · ${ano}</h2><div class="tw"><table class="t"><thead><tr><th>Rota</th><th class="num">Comboios</th><th class="num">Médio real</th><th class="num">Médio com estimadas</th><th class="num">Ciclo previsto</th></tr></thead><tbody>${RR || '<tr><td colspan="5" class="note">Nenhuma viagem no ano.</td></tr>'}</tbody></table></div><p class="note">Real = com chegada pelo FR 027_L ou digitada. Ciclo previsto = o da rota (Administração → Rotas), usado para estimar a chegada.</p></div>
    <div class="card"><h2>Saídas · ${Ls.length}</h2><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px"><select id="vgFe" style="width:auto;min-width:190px">${opE}</select><select id="vgFb" style="width:auto;min-width:170px">${opB}</select><select id="vgFr" style="width:auto;min-width:200px">${opR}</select>${VG.fe || VG.fb || VG.fr ? '<button class="mbtn sm" data-vgx>Limpar</button>' : ''}</div>
@@ -304,7 +307,7 @@ AFTER.enxviag = () => { const m = $('#main');
     if (t.id === 'vgFe') { VG.fe = t.value; return render(); }
     if (t.id === 'vgFb') { VG.fb = t.value; return render(); }
     if (t.id === 'vgFr') { VG.fr = t.value; return render(); } };
-  const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_enxviag_lay', '[data-enxreset]'); if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
+  const ws = m.querySelector('.cm-ws'); if (ws) { vgLayMigra(); janelasLivres(ws, 'smf_enxviag_lay2', '[data-enxreset]'); } if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
 ENX_OK.push('enxviag'); PCM_ETAPAS[0][2].push('enxviag');
 PCM_MENU.find(g => /^1 /.test(g[0]))[1].push(['enxviag', '1.3 Layout da frota', 'viag']);
 ICO.viag = '<path d="M3 17h18l-2 3H5z"/><path d="M6 17V9h8l3 4v4"/><path d="M9 9V5h3v4"/>';
