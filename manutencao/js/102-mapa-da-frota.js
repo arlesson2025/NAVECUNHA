@@ -74,7 +74,7 @@ function vgComboioIc(cor, B) {
   for (let k = 0; k < nB; k++, x += bw + .6) { const nm = B[k] ? vName(B[k]).replace(/^VDA\s*/i, '') : '';
     g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, 1, bw, H - 2)}${nm ? `<text x="${x + bw / 2}" y="${H / 2 + 1.9}" text-anchor="middle" font-size="5.4" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(nm)}</text>` : ''}</g>`; }
   if (!nB) g += `<path d="M${tw + 1},1.5 l4,4 l-4,4 z" fill="${cor}" stroke="#fff" stroke-width="1"/>`; else g += `<path d="M${x},2 l3,3.5 l-3,3.5 z" fill="#2B2F33"/>`;
-  return vgIc(g, x + 4, H, 2.2);
+  const ic = vgIc(g, x + 4, H, 2.2); ic.options.tooltipAnchor = [-(x + 4) * 1.1, 0]; return ic;   // nome à esquerda, colado no empurrador
 }
 // parados na boia ou no estaleiro: as balsas lado a lado em fileiras (até 8 por fileira) e os empurradores encostados embaixo
 function vgFundeioIc(cor, B, E) {
@@ -128,7 +128,7 @@ async function vgMapaIniciar() {
       const t = e.originalEvent && e.originalEvent.target, bt = t && t.closest ? t.closest('[data-vgbal]') : null;
       if (typeof vgCartaoGrande === 'function') return vgCartaoGrande(o.id, bt ? bt.getAttribute('data-vgbal') : '', `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`);
       pop(ll, `<b>${esc(o.nome)} · em rota</b>`); }).addTo(m)
-      .bindTooltip(`${esc(o.nome)}${aprox ? ' · aprox.' : ''}`, tip(par ? 'par' : '')); });
+      .bindTooltip(`${esc(o.nome)}${aprox ? ' · aprox.' : ''}`, Object.assign(tip(par ? 'par' : ''), { direction: 'left', offset: [-4, 0] })); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => mk.setIcon(perto ? a : b)); }; m.on('zoomend', desenho); desenho();
   // tela cheia da janela (botão ⛶ do quadro): o mapa ocupa a altura toda

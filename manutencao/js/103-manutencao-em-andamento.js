@@ -345,12 +345,16 @@ function vgFixCard(vid, key) {
       <div class="vgd-cl">${Oc.length ? `${vgdPl(Oc.length, 'ocorrência', 'ocorrências')} · ${Oc.length - ab.length} resolvida(s) · ${ab.length ? `<b style="color:${VGD_C.bad}">${ab.length} em andamento</b> (${esc(ab.map(a => a.eq || 'falha').join('; '))})` : '0 em andamento'}` : 'Nenhuma ocorrência no período'}</div>
       ${vgLinhaTempo(key, d0, dt ? (ref ? 'Entrada' : 'Chegada') : 'Há 30 dias', prev, tp, Oc)}</div>`;
 }
+// em tela cheia (botão ⛶ do quadro do mapa) só aparece o que está dentro do quadro: o cartão e a foto ampliada entram nele
+const vgRaiz = () => document.fullscreenElement || document.body;
 function vgCartaoGrande(id, vid, rod) {
   document.querySelectorAll('.vgd-ov').forEach(x => x.remove());
   const key = 'p' + (vid || id), ov = document.createElement('div'); ov.className = 'vgd-ov';
-  ov.innerHTML = `<div class="vgd-ovc"><button class="mbtn sm vgd-ovx">Fechar ×</button>${!(typeof balsaDe === 'function' && balsaDe(id)) && vgOndeDe(id, false).st === 'via' ? vgViaCard(vgViaX(id, vid), key) : vgFixCard(vid || id, key)}
-    <p class="vgd-m" style="margin:10px 0 0;font-size:14px">Clique no ponto da linha do tempo para ver a ocorrência e as fotos · clique na foto para ampliar${rod ? ' · ' + rod : ''}</p></div>`;
-  document.body.appendChild(ov);
+  try {
+    ov.innerHTML = `<div class="vgd-ovc"><button class="mbtn sm vgd-ovx">Fechar ×</button>${!(typeof balsaDe === 'function' && balsaDe(id)) && vgOndeDe(id, false).st === 'via' ? vgViaCard(vgViaX(id, vid), key) : vgFixCard(vid || id, key)}
+      <p class="vgd-m" style="margin:10px 0 0;font-size:14px">Clique no ponto da linha do tempo para ver a ocorrência e as fotos · clique na foto para ampliar${rod ? ' · ' + rod : ''}</p></div>`;
+  } catch (e) { console.error(e); toast('Não consegui abrir o cartão: ' + e.message); return; }
+  vgRaiz().appendChild(ov);
   const sai = () => { ov.remove(); document.removeEventListener('keydown', kb); }, kb = e => { if (e.key === 'Escape' && !document.querySelector('.vgt-g')) sai(); };
   ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('.vgd-ovx')) sai(); });
   ov.addEventListener('pointerdown', e => { if (e.target.closest('[data-vgficha]')) setTimeout(sai, 0); });
@@ -419,7 +423,7 @@ function vgOcDetalhe(key, i) {
 }
 function vgFotoGrande(key, i, k) {
   const L = ((VG_PAINEL.oc[key] || [])[+i] || {}).fotos || []; let n = +k; if (!L.length) return;
-  const d = document.createElement('div'); d.className = 'vgt-g'; document.body.appendChild(d);
+  const d = document.createElement('div'); d.className = 'vgt-g'; vgRaiz().appendChild(d);
   const des = () => { d.innerHTML = `${vgFotoImg(L[n], '')}<div class="vgt-gb">${L.length > 1 ? '<button data-g="-1">‹</button>' : ''}<span>${n + 1} de ${L.length} · clique na foto para voltar</span>${L.length > 1 ? '<button data-g="1">›</button>' : ''}</div>`; if (typeof heCarregaFotos === 'function') heCarregaFotos(); };
   const sai = () => { d.remove(); document.removeEventListener('keydown', kb); }, kb = e => { if (e.key === 'Escape') sai(); else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { n = (n + (e.key === 'ArrowRight' ? 1 : -1) + L.length) % L.length; des(); } };
   d.onclick = e => { const g = e.target.closest('[data-g]'); if (g) { n = (n + +g.dataset.g + L.length) % L.length; des(); } else sai(); };
