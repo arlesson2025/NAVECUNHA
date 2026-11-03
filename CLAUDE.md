@@ -25,7 +25,7 @@ Várias sessões do Claude trabalham no projeto em paralelo (locais e na nuvem).
 ## Publicar
 
 - **Só quando o Supervisor disser “publica”.** Antes disso, commit local.
-- Passos: (1) `git pull --rebase origin main`; (2) subir `VERSAO_APP` (`js/02-nucleo.js`), `CACHE` (`ctle-man-vN` no `sw.js`) e acrescentar a versão **no topo** de `VERSOES` em `dados/versoes.js` (o que mudou, em palavras do Supervisor); (3) `python testes/todos.py` = TUDO OK e `python testes/telas.py` só com as diferenças esperadas; (4) `git push origin HEAD:main`.
+- Passos (Supervisor, 02/11/2026: **publicar primeiro, testar depois**): (1) `git pull --rebase origin main`; (2) subir `VERSAO_APP` (`js/02-nucleo.js`), `CACHE` (`ctle-man-vN` no `sw.js`) e acrescentar a versão **no topo** de `VERSOES` em `dados/versoes.js` (o que mudou, em palavras do Supervisor); (3) sintaxe dos js pelo node/acorn e `git push origin HEAD:main`; (4) logo depois, em segundo plano, `python testes/todos.py` (e `python testes/telas.py` só em limpeza ou refatoração); falhou, corrigir e publicar de novo na hora.
 - Commit: `Área: o que mudou` (ex.: `Óleo: …`, `Balsas: …`, `Relatório: …`) e, no fim, `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Servidor** (Apps Script): o código é colado no editor e implantado como App da Web. Para atualizar: **Implantar → Gerenciar implantações → lápis → Versão: Nova versão**. “Nova implantação” muda o endereço. O endereço fica em `NUVEM_PADRAO` (`js/01-nuvem-e-pdf.js`, hoje `…NIakZtAkyWagP8Lal/exec`); endereços antigos guardados nos aparelhos passam sozinhos para o novo na carga (`js/02`). Mudança de contrato (ação, tipo de registro, campo) exige mexer nos dois lados e na cópia em `manutencao/servidor/`.
 
