@@ -2,6 +2,7 @@
 // “Versão do SMF” da Administração (antes iam em toda abertura, ~58 KB). A cada publicação: suba VERSAO_APP (js/02) e acrescente a versão no topo da lista.
 'use strict';
 const VERSOES = [
+  { v: '3.176', data: '02/11/2026', itens: ['A tela 1.3 Viagens e comboios passa a se chamar 1.3 Painel de supervisão de manutenção da frota (título e menu)', 'Resumo embaixo do mapa: os quadros passam a se chamar Comboios em viagem e Em Manaus (no porto e nas bóias)'] },
   { v: '3.175', data: '02/11/2026', itens: ['Mapa da frota: o mapa volta na altura que o Supervisor deixou (pela barra embaixo dele ou pelo canto do quadro), guardada no computador; só acompanha o quadro enquanto o canto é puxado'] },
   { v: '3.174', data: '02/11/2026', itens: ['Mapa da frota: clicar no nome do comboio (etiqueta branca) também abre o cartão; o clique no empurrador, nas balsas e nas embarcações do porto e do estaleiro passa a ser tratado pela página, sem depender do clique do mapa', 'Mapa da frota: ao aumentar ou diminuir o quadro pelo canto, o mapa fica parado (não escorrega junto) e só mostra mais ou menos área'] },
   { v: '3.173', data: '02/11/2026', itens: ['Mapa da frota: o mapa ocupa a altura do quadro e acompanha quando o quadro é aumentado ou diminuído pelo canto; o resumo Onde está a frota fica embaixo, rolando dentro do quadro'] },
