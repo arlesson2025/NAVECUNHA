@@ -394,7 +394,7 @@ function vgResumo() {
   // estaleiro: entrada, tempo de estaleiro, entrega prevista
   const est = id => { const z = vgRefDados(id); return it(`<b>${esc(z.nome)}</b>${z.r && z.r.local ? ` <span class="vgd-m">· ${esc(z.r.local)}</span>` : ''}<br>${z.ini ? `Entrada <b>${brD(z.ini)}</b> · há ${vgDD(z.ini, H)} d` : '<span class="vgd-m">entrada não registrada</span>'}<br>${prevTx(z.prev, 'Entrega prevista')}`); };
   const EE = G.est.filter(id => !ehBal(id)).map(est), EB = G.est.filter(ehBal).map(est);
-  const blocos = [via.length ? `<div class="vgr-b"><h4 data-vgg="via" data-nodrag>Comboios em viagem</h4>${via.join('')}</div>` : '',
+  const blocos = [via.length ? `<div class="vgr-b"><h4 data-vgg="via" data-nodrag>Em viagem</h4><div class="vgr-c">${vgdPl(G.via.length, 'empurrador', 'empurradores')} e ${(n => vgdPl(n, 'balsa', 'balsas'))(G.via.reduce((a, id) => a + ((vgOndeDe(id, false).balsas || []).length), 0))}</div>${via.join('')}</div>` : '',
     porto(G.man, ['man', 'Em Manaus']), porto(G.pvh, ['pvh', 'Porto Velho · filial']),
     EE.length || EB.length ? `<div class="vgr-b"><h4 data-vgg="est" data-nodrag>No estaleiro</h4><div class="vgr-c">${vgdPl(EE.length, 'empurrador', 'empurradores')} e ${vgdPl(EB.length, 'balsa', 'balsas')}</div>${sub('Empurradores', EE)}${sub('Balsas', EB)}</div>` : ''].filter(Boolean);
   return `<div class="vgd-h"><div><h3>Onde está a frota</h3><span>${brD(H)} · clique no título de um quadro para ver os detalhes</span></div></div><div class="vgr">${blocos.join('') || '<p class="vgd-c">Nenhuma posição lançada.</p>'}</div>`;
