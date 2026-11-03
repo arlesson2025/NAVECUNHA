@@ -415,9 +415,9 @@ function vgFrotaNum(G, dono, PR) {
   const leg = K.map(k => `<span><i style="background:${COR[k]}"></i>${NOME[k]}</span>`).join('');
   const n = v => Math.round(v).toLocaleString('pt-BR'), pc = v => tot ? Math.round(v / tot * 100) + '%' : '';
   return `<div class="vgf"><div class="vgf-k"><div><b>${E.length}</b><span>empurradores</span><small>${lib} liberados à operação</small></div><div><b>${BL.length}</b><span>balsas</span><small>${cB.via.length} em viagem · ${cB.est.length} no estaleiro</small></div>
-    <div><b>${n(tot)}</b><span>capacidade das balsas</span><small>soma do cadastro (unidade a confirmar)</small></div><div><b>${PR.length}</b><span>comboios programados</span><small>${vgdPl(PR.filter(r => r.st === 'conf').length, 'confirmado', 'confirmados')}</small></div></div>
+    <div><b>${n(tot)}</b><span>m³ de capacidade</span><small>soma das ${BL.length} balsas</small></div><div><b>${PR.length}</b><span>comboios programados</span><small>${vgdPl(PR.filter(r => r.st === 'conf').length, 'confirmado', 'confirmados')}</small></div></div>
     ${barra(cE, E.length, 'Empurradores')}${barra(cB, BL.length, 'Balsas')}<div class="vgf-lg">${leg}</div>
-    <div class="vgf-cap">Capacidade: em viagem <b>${n(cc('via'))}</b> (${pc(cc('via'))}) · programada para sair <b>${n(cc('prog'))}</b> · no porto <b>${n(cc('por'))}</b> · parada no estaleiro <b style="color:${VGD_C.at}">${n(cc('est'))}</b> (${pc(cc('est'))})${cB.sem.length ? ` · sem posição <b>${n(cc('sem'))}</b>` : ''}</div></div>`;
+    <div class="vgf-cap">Capacidade (m³): em viagem <b>${n(cc('via'))}</b> (${pc(cc('via'))}) · programada para sair <b>${n(cc('prog'))}</b> · no porto <b>${n(cc('por'))}</b> · parada no estaleiro <b style="color:${VGD_C.at}">${n(cc('est'))}</b> (${pc(cc('est'))})${cB.sem.length ? ` · sem posição <b>${n(cc('sem'))}</b>` : ''}</div></div>`;
 }
 // ---------- resumo (Supervisor, 02/11/2026): antes de escolher uma visão, embaixo dos botões, onde está cada um, com as datas que importam ----------
 function vgResumo() {
