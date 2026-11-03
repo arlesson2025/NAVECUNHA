@@ -65,16 +65,16 @@ function vgIcone(cor, nB, num) {
 // balsa vista de cima como na foto de satélite (Supervisor, 02/11/2026): casco claro comprido, borda escura e a passarela dos tanques no meio
 const vgBalsaSvg = (x, y, w, h) => w > h ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".8" fill="#ECEDE8" stroke="#2B2F33" stroke-width=".9"/><rect x="${x + 2.5}" y="${y + h / 2 - .8}" width="${w - 5}" height="1.6" fill="#8F969C"/>`
   : `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".8" fill="#ECEDE8" stroke="#2B2F33" stroke-width=".9"/><rect x="${x + w / 2 - .8}" y="${y + 2.5}" width="1.6" height="${h - 5}" fill="#8F969C"/>`;
-const vgIc = (g, W, H, k) => L.divIcon({ html: `<svg width="${W * k}" height="${H * k}" viewBox="0 0 ${W} ${H}" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">${g}</svg>`, className: 'vg-ic', iconSize: [W * k, H * k], iconAnchor: [W * k / 2, H * k / 2], tooltipAnchor: [W * k / 2, 0], popupAnchor: [0, -H * k / 2] });
+const vgIc = (g, W, H, k, at) => L.divIcon({ html: `<svg${at || ''} width="${W * k}" height="${H * k}" viewBox="0 0 ${W} ${H}" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">${g}</svg>`, className: 'vg-ic', iconSize: [W * k, H * k], iconAnchor: [W * k / 2, H * k / 2], tooltipAnchor: [W * k / 2, 0], popupAnchor: [0, -H * k / 2] });
 // comboio em rota: o empurrador atrás e uma balsa para cada balsa do comboio, em fila, a proa na última; cada balsa com o nome (sem “VDA”)
 // e clicável (data-vgbal): abre o cartão da balsa (Supervisor, 02/11/2026)
-function vgComboioIc(cor, B) {
+function vgComboioIc(cor, B, id) {
   B = Array.isArray(B) ? B : Array.from({ length: B || 0 }, () => '');
   const bw = 22, H = 11, tw = 12, nB = B.length; let x = tw + 1.5, g = `<rect x="1" y="1" width="${tw}" height="${H - 2}" rx="2.5" fill="${cor}" stroke="#fff" stroke-width="1.1"/><rect x="3" y="3" width="4.5" height="${H - 6}" rx="1" fill="#fff" opacity=".9"/>`;
   for (let k = 0; k < nB; k++, x += bw + .6) { const nm = B[k] ? vName(B[k]).replace(/^VDA\s*/i, '') : '';
     g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, 1, bw, H - 2)}${nm ? `<text x="${x + bw / 2}" y="${H / 2 + 1.9}" text-anchor="middle" font-size="5.4" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(nm)}</text>` : ''}</g>`; }
   if (!nB) g += `<path d="M${tw + 1},1.5 l4,4 l-4,4 z" fill="${cor}" stroke="#fff" stroke-width="1"/>`; else g += `<path d="M${x},2 l3,3.5 l-3,3.5 z" fill="#2B2F33"/>`;
-  const ic = vgIc(g, x + 4, H, 2.2); ic.options.tooltipAnchor = [-(x + 4) * 1.1, 0]; return ic;   // nome à esquerda, colado no empurrador
+  const ic = vgIc(g, x + 4, H, 2.2, id ? ` data-vgcomb="${esc(id)}" style="cursor:pointer"` : ''); ic.options.tooltipAnchor = [-(x + 4) * 1.1, 0]; return ic;   // nome à esquerda, colado no empurrador
 }
 // parados na boia ou no estaleiro: as balsas lado a lado em fileiras (até 8 por fileira) e os empurradores encostados embaixo
 function vgFundeioIc(cor, B, E) {
@@ -123,13 +123,12 @@ async function vgMapaIniciar() {
     troca(mk, vgFundeioIc('#5F6368', nBal(Lp), nEmp(Lp)), vgIcone('#5F6368', 0, Lp.length)); mk.on('click', cliq(k, Lp)); mk.addTo(m)
       .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref')); });
   // clique no comboio: o cartão do comboio em cima do mapa (dias em viagem, previsão, ocorrências, linha do tempo e fotos); clique numa balsa do desenho: o da balsa
-  const pop = (ll, html) => { L.popup({ maxWidth: 470, minWidth: 380, className: 'vg-pop', autoPanPadding: [20, 20] }).setLatLng(ll).setContent(html).openOn(m); if (typeof heCarregaFotos === 'function') heCarregaFotos(); };
+  // o clique (no desenho ou no nome) é tratado pela página, não pelo mapa: ver o ouvinte de [data-vgcomb] no fim deste arquivo
+  VG_MAPA.rod = {};
   D.R.forEach(({ o, ll, aprox }) => { pts.push(ll); const par = o.parD > VG_PARADO_D;
-    L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || []), riseOnHover: true }).on('click', e => {
-      const t = e.originalEvent && e.originalEvent.target, bt = t && t.closest ? t.closest('[data-vgbal]') : null;
-      if (typeof vgCartaoGrande === 'function') return vgCartaoGrande(o.id, bt ? bt.getAttribute('data-vgbal') : '', `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`);
-      pop(ll, `<b>${esc(o.nome)} · em rota</b>`); }).addTo(m)
-      .bindTooltip(`${esc(o.nome)}${aprox ? ' · aprox.' : ''}`, Object.assign(tip(par ? 'par' : ''), { direction: 'left', offset: [-4, 0] })); });
+    VG_MAPA.rod[o.id] = `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`;
+    L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || [], o.id), riseOnHover: true }).addTo(m)
+      .bindTooltip(`<span data-vgcomb="${esc(o.id)}" style="cursor:pointer">${esc(o.nome)}${aprox ? ' · aprox.' : ''}</span>`, Object.assign(tip(par ? 'par' : ''), { direction: 'left', offset: [-4, 0], interactive: true })); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => mk.setIcon(perto ? a : b)); }; m.on('zoomend', desenho); desenho();
   // tela cheia da janela (botão ⛶ do quadro): o mapa ocupa a altura toda
@@ -145,3 +144,13 @@ async function vgMapaIniciar() {
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); };
 }
 { const st = document.createElement('style'); st.textContent = '.vg-alt{flex:0 0 auto;height:14px;margin:2px 0 6px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;border-radius:6px;touch-action:none}.vg-alt:hover{background:#E3EAF3}.vg-alt i{width:60px;height:4px;border-radius:2px;background:#9AA8BA}.vg-mt{background:rgba(255,255,255,.94);border:0;box-shadow:0 1px 3px rgba(0,0,0,.35);font:600 11.5px/1.2 system-ui,sans-serif;color:#16244A;padding:2px 6px}.vg-mt.por{color:#137333}.vg-mt.par{color:#C5221F}.vg-mt.ref{color:#3C4043}.vg-mt:before{display:none}.vg-ic{background:none;border:0}.vg-cid{pointer-events:none}.vg-cid i{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 2px #000}.vg-cid span{position:absolute;left:6px;top:-8px;white-space:nowrap;font:600 11px/1 system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000}'; document.head.appendChild(st); }
+// clique numa embarcação do mapa (comboio, balsa do comboio, empurrador ou balsa no porto e no estaleiro, ou no nome do comboio): o cartão grande.
+// Ouvinte da página, na captura, para não depender do clique do Leaflet (Supervisor, 02/11/2026: “o click não funciona”)
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target.closest('[data-vgcomb],[data-vgbal],[data-vgemp]') : null;
+  if (!t || !t.closest('.leaflet-container') || typeof vgCartaoGrande !== 'function') return;
+  e.preventDefault(); e.stopPropagation();
+  const sv = t.closest('[data-vgcomb]'), bal = t.closest('[data-vgbal]'), emp = t.closest('[data-vgemp]');
+  if (sv) return vgCartaoGrande(sv.getAttribute('data-vgcomb'), bal ? bal.getAttribute('data-vgbal') : '', (VG_MAPA.rod || {})[sv.getAttribute('data-vgcomb')] || '');
+  vgCartaoGrande(bal ? bal.getAttribute('data-vgbal') : emp.getAttribute('data-vgemp'), '');
+}, true);
