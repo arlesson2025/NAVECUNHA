@@ -147,13 +147,18 @@ function vgOnde(V, nAno, ano) {
     <p class="note">Porto = o informado na posição; sem ela, Manaus pela chegada (FR 027_L ou estimada pela rota). Mais de 15 dias no porto em âmbar.</p></div>`;
 }
 // quadros que saíram (Supervisor, 02/11/2026): b2 Onde está a frota · hoje e, depois, b10 Colar e-mail do Monitoramento (o mesmo do botão Colar boletim
-// do Autotrac embaixo do mapa). Os tamanhos guardados dos quadros de baixo sobem uma posição e fecham o buraco, uma vez só (chave nova a cada retirada)
+// do Autotrac embaixo do mapa); entrou o b1 Painel de supervisão, separado do mapa. Os tamanhos guardados dos quadros de baixo sobem uma posição e fecham o buraco, uma vez só (chave nova a cada retirada)
 function vgLayMigra() { try {
-  if (localStorage.getItem('smf_enxviag_lay3') != null) return;
+  if (localStorage.getItem('smf_enxviag_lay4') != null) return;
   const G = k => JSON.parse(localStorage.getItem(k) || 'null'), tira = (o, j) => { const n = {}, a = o['b' + j], b = o['b' + (j + 1)], sobe = a && b && b.y > a.y ? b.y - a.y : 0, y0 = a ? a.y : 0;
     Object.keys(o).forEach(k => { const i = +k.slice(1); if (i < j) n[k] = o[k]; else if (i > j) n['b' + (i - 1)] = Object.assign({}, o[k], o[k].y != null && o[k].y >= y0 ? { y: o[k].y - sobe } : {}); }); return n; };
   let o = G('smf_enxviag_lay2'); if (!o) { const v = G('smf_enxviag_lay'); if (v) o = tira(v, 2); }
-  if (o) localStorage.setItem('smf_enxviag_lay3', JSON.stringify(tira(o, 10)));
+  let o3 = G('smf_enxviag_lay3'); if (!o3 && o) o3 = tira(o, 10); if (!o3) return;
+  // b1 novo (Painel de supervisão, separado do mapa): logo embaixo do mapa, na largura dele; o que estava embaixo desce
+  const m0 = o3.b0, n = {}, alto = 560, y1 = m0 ? m0.y + (m0.m ? 60 : m0.h) + 12 : 0;
+  Object.keys(o3).forEach(k => { const i = +k.slice(1); if (i < 1) n[k] = o3[k]; else n['b' + (i + 1)] = Object.assign({}, o3[k], m0 && o3[k].y != null && o3[k].y >= y1 - 12 ? { y: o3[k].y + alto + 12 } : {}); });
+  if (m0) n.b1 = { x: m0.x, y: y1, w: m0.w, h: alto };
+  localStorage.setItem('smf_enxviag_lay4', JSON.stringify(n));
 } catch (e) { } }
 function vgPosModal(id) {
   if (!can.edit()) return; const o = id ? vgOndeDe(id, false) : null;
@@ -311,7 +316,7 @@ AFTER.enxviag = () => { const m = $('#main');
     if (t.id === 'vgFe') { VG.fe = t.value; return render(); }
     if (t.id === 'vgFb') { VG.fb = t.value; return render(); }
     if (t.id === 'vgFr') { VG.fr = t.value; return render(); } };
-  const ws = m.querySelector('.cm-ws'); if (ws) { vgLayMigra(); janelasLivres(ws, 'smf_enxviag_lay3', '[data-enxreset]'); } if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
+  const ws = m.querySelector('.cm-ws'); if (ws) { vgLayMigra(); janelasLivres(ws, 'smf_enxviag_lay4', '[data-enxreset]'); } if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
 ENX_OK.push('enxviag'); PCM_ETAPAS[0][2].push('enxviag');
 PCM_MENU.find(g => /^1 /.test(g[0]))[1].push(['enxviag', '1.3 Layout da frota', 'viag']);
 ICO.viag = '<path d="M3 17h18l-2 3H5z"/><path d="M6 17V9h8l3 4v4"/><path d="M9 9V5h3v4"/>';

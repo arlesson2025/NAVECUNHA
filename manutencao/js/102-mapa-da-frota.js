@@ -43,7 +43,8 @@ function vgMapaCard() {
   return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''}${D.refB.length ? ' · ' + D.refB.length + (D.refB.length > 1 ? ' balsas' : ' balsa') + ' em reforma' : ''} · azul = em rota, vermelho = parado há mais de ${VG_PARADO_D} dias, verde = no porto (número = empurradores no porto; aproximando o mapa, aparecem as balsas e os empurradores), cinza = em reforma · comboio em rota: o empurrador e uma balsa para cada balsa · clique no ponto para ver as balsas e a última posição</p>
     <div id="vgMapa" data-nodrag style="height:${vgAltura()}px;flex:0 0 auto;border-radius:8px;background:#E8EEF5;position:relative"><p class="note" style="padding:12px">Carregando o mapa…</p></div><div class="vg-alt" data-nodrag title="Arraste para aumentar ou diminuir o mapa"><i></i></div>${sem}
     <p class="note" style="margin:4px 0 0">Posição em rota pela latitude e longitude do e-mail do Monitoramento; sem elas, pelo lugar citado (posição aproximada da cidade, marcada “aprox.”). O mapa precisa de internet. Clique num comboio ou num ponto de fundeio para ver embaixo os dias, as ocorrências e a linha do tempo.</p>
-    ${can.edit() ? '<div class="row" style="justify-content:flex-end;gap:8px;margin:8px 0 2px"><button class="mbtn" data-vgbol>Colar boletim do Autotrac</button><button class="mbtn pri" data-vgpos="">Informar posição</button></div>' : ''}<div id="vgPainel">${typeof vgResumo === 'function' ? vgResumo() : ''}</div></div>`;
+    ${can.edit() ? '<div class="row" style="justify-content:flex-end;gap:8px;margin:8px 0 2px"><button class="mbtn" data-vgbol>Colar boletim do Autotrac</button><button class="mbtn pri" data-vgpos="">Informar posição</button></div>' : ''}</div>
+    <div class="card"><h2>Painel de supervisão de manutenção da frota</h2><div id="vgPainel">${typeof vgResumo === 'function' ? vgResumo() : ''}</div></div>`;
 }
 function vgMapaLib() {
   if (window.L && L.map) return Promise.resolve();
@@ -133,14 +134,15 @@ async function vgMapaIniciar() {
       .bindTooltip(`<span data-vgcomb="${esc(o.id)}" style="cursor:pointer">${esc(o.nome)}${aprox ? ' · aprox.' : ''}</span>`, Object.assign(tip(par ? 'par' : ''), { direction: 'left', offset: [-4, 0], interactive: true })); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => mk.setIcon(perto ? a : b)); }; m.on('zoomend', desenho); desenho();
-  // tela cheia da janela (botão ⛶ do quadro): o mapa ocupa a altura toda
-  let puxa = false;   // true enquanto o Supervisor puxa o canto do quadro
-  const card = el.closest('.card'), alt = () => { const cheia = document.fullscreenElement === card || (card && card.classList.contains('cm-full'));
-    // o mapa fica na altura que o Supervisor deixou (barra embaixo dele, guardada neste computador); só enquanto ele puxa o canto do quadro o mapa acompanha o quadro
-    const top = card ? el.getBoundingClientRect().top - card.getBoundingClientRect().top + card.scrollTop : 0;
-    const h = cheia ? Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 24) : puxa ? Math.max(260, card.clientHeight - top - 30) : vgAltura(); if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px'; try { vgAjusta(m); } catch (e) { } };
-  const rzq = card && card.querySelector('.cm-rz'); if (rzq) rzq.addEventListener('pointerdown', () => { puxa = true; const up = () => { document.removeEventListener('pointerup', up); setTimeout(() => { puxa = false; try { localStorage.setItem('smf_vg_alt', String(el.offsetHeight)); } catch (e) { } }, 60); }; document.addEventListener('pointerup', up); }, true);
-  document.addEventListener('fullscreenchange', alt); if (window.ResizeObserver && card) new ResizeObserver(alt).observe(card); alt();
+  // o mapa ocupa o cartão (Supervisor, 02/11/2026: mapa e painel de supervisão em cartões separados): altura do cartão menos o título em cima e as notas e
+  // botões embaixo; acompanha o canto do cartão, a tela cheia (⛶) e o minimizar. Fora das janelas livres (tela estreita), vale a barra embaixo do mapa
+  const card = el.closest('.card'), alt = () => { if (!card || card.classList.contains('cm-min')) return; const cheia = document.fullscreenElement === card || card.classList.contains('cm-full'), livre = !!card.style.height;
+    const bar = el.nextElementSibling; if (bar && bar.classList.contains('vg-alt')) bar.style.display = livre && !cheia ? 'none' : '';
+    let em = 0; for (let x = el.nextElementSibling; x; x = x.nextElementSibling) { if (x.classList.contains('cm-rz') || x.offsetParent === null) continue; const cs = getComputedStyle(x); em += x.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0); }
+    const top = el.getBoundingClientRect().top - card.getBoundingClientRect().top + card.scrollTop, pad = parseFloat(getComputedStyle(card).paddingBottom) || 0;
+    const h = cheia || livre ? Math.max(220, card.clientHeight - top - em - pad - 2) : vgAltura(); if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px';
+    const sobra = (cheia || livre) && card.scrollHeight - card.clientHeight; if (sobra > 0 && el.offsetHeight - sobra >= 220) el.style.height = (el.offsetHeight - sobra) + 'px'; vgAjusta(m); };
+  document.addEventListener('fullscreenchange', alt); if (window.ResizeObserver && card) new ResizeObserver(alt).observe(card); alt(); requestAnimationFrame(alt); setTimeout(alt, 400);   // na abertura as janelas livres ainda estão se arrumando
   // barra embaixo do mapa: arrastar muda a altura (de 260 a 1600 px), guardada neste computador
   const bar = el.nextElementSibling; if (bar && bar.classList.contains('vg-alt')) bar.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const y0 = e.clientY, h0 = el.offsetHeight;
     const mv = ev => { const h = Math.max(260, Math.min(1600, h0 + ev.clientY - y0)); el.style.height = h + 'px'; try { vgAjusta(m); } catch (er) { } };
