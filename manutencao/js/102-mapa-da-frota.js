@@ -134,7 +134,9 @@ async function vgMapaIniciar() {
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => mk.setIcon(perto ? a : b)); }; m.on('zoomend', desenho); desenho();
   // tela cheia da janela (botão ⛶ do quadro): o mapa ocupa a altura toda
   const card = el.closest('.card'), alt = () => { const cheia = document.fullscreenElement === card || (card && card.classList.contains('cm-full'));
-    const h = cheia ? Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 24) : vgAltura(); if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px'; try { m.invalidateSize(); } catch (e) { } };
+    // quadro com tamanho próprio (janela livre, canto de redimensionar): o mapa ocupa a altura visível do quadro e acompanha quando ele muda de tamanho
+    const top = card ? el.getBoundingClientRect().top - card.getBoundingClientRect().top + card.scrollTop : 0, fixo = card && card.style.height;
+    const h = cheia ? Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 24) : fixo ? Math.max(260, card.clientHeight - top - 30) : vgAltura(); if (Math.abs(el.offsetHeight - h) > 2) el.style.height = h + 'px'; try { m.invalidateSize(); } catch (e) { } };
   document.addEventListener('fullscreenchange', alt); if (window.ResizeObserver && card) new ResizeObserver(alt).observe(card); alt();
   // barra embaixo do mapa: arrastar muda a altura (de 260 a 1600 px), guardada neste computador
   const bar = el.nextElementSibling; if (bar && bar.classList.contains('vg-alt')) bar.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const y0 = e.clientY, h0 = el.offsetHeight;
