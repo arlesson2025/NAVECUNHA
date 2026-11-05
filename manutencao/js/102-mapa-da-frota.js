@@ -86,10 +86,11 @@ function vgComboioSvg(cor, B, emp) {
 // comboio em rota com a foto (Supervisor, 05/11/2026: “aquela imagem realista… ficou tão bom”): a balsa e o empurrador recortados da imagem de dados técnicos
 // (img/comboio-balsa.png e img/comboio-empurrador.png, a mesma foto para todas), uma balsa para cada balsa do comboio, o nome embaixo de cada uma e do empurrador
 const VG_FOTO = { b: [570, 79], e: [227, 150], s: .17, sob: 18 };   // .17 (Supervisor, 05/11/2026: “tem que diminuir o tamanho dos desenhos”; era .3)
+// nome da balsa em cima do desenho, maior (Supervisor, 05/11/2026: “aumenta os nomes… pode ficar na parte de cima do desenho”)
 function vgComboioIc(cor, B, id, rot) {
   B = Array.isArray(B) ? B : []; const s = VG_FOTO.s, bw = Math.round(VG_FOTO.b[0] * s), bh = Math.round(VG_FOTO.b[1] * s), ew = Math.round(VG_FOTO.e[0] * s), eh = Math.round(VG_FOTO.e[1] * s), sob = Math.round(VG_FOTO.sob * s);
-  const H = Math.max(bh, eh), W = B.length * (bw - sob) + ew, AL = H + 19; let x = 0, h = '';
-  B.forEach(b => { h += `<div data-vgbal="${esc(b)}" style="left:${x}px;width:${bw}px;height:${AL}px"><img src="img/comboio-balsa.png" alt="" style="top:${H - bh}px;width:${bw}px;height:${bh}px"><span style="top:${H + 2}px">${esc(vName(b))}</span></div>`; x += bw - sob; });
+  const H = Math.max(bh, eh), W = B.length * (bw - sob) + ew, AL = H + 23; let x = 0, h = '';
+  B.forEach(b => { h += `<div data-vgbal="${esc(b)}" style="left:${x}px;width:${bw}px;height:${AL}px"><img src="img/comboio-balsa.png" alt="" style="top:${H - bh}px;width:${bw}px;height:${bh}px"><span style="top:${H - bh / 2 - 9}px">${esc(vName(b))}</span></div>`; x += bw - sob; });
   h += `<div style="left:${x}px;width:${ew}px;height:${AL}px"><img src="img/comboio-empurrador.png" alt="" style="top:${H - eh}px;width:${ew}px;height:${eh}px"><span style="top:${H + 2}px;background:${cor};color:#fff">${esc(rot || '')}</span></div>`;
   return L.divIcon({ html: `<div class="vgcf"${id ? ` data-vgcomb="${esc(id)}"` : ''} style="width:${W}px;height:${AL}px">${h}</div>`, className: 'vg-ic', iconSize: [W, AL], iconAnchor: [W / 2, H / 2] });
 }
