@@ -276,21 +276,26 @@ function vgRotaTexto(t) {
   if (has('BAR')) return has('ITC') ? 'bip' : has('PVH') ? 'bpv' : 'bma'; if (has('PVH')) return 'pvh'; if (has('ITC')) return 'ita'; return '';
 }
 const vgAcha = (nome, L) => { const n = String(nome).toUpperCase().replace(/\s+/g, ' ').trim(); return (L.find(v => String(v.nome).toUpperCase() === n) || {}).id || ''; };
+// cada “CJA …” até o próximo é uma saída, se tiver o FLUXO; as balsas vêm antes do FLUXO. A data (07/01/2026) pode vir entre parênteses, solta ou faltar:
+// sem data, a conferência pede (Supervisor, 04/11/2026: colou “CJA XIV - VDA VII; VDA XXIII; VDA XXV / FLUXO: MAO x PVH” e não reconheceu)
 function vgLerHistorico(txt) {
-  const re = /(CJA\s+[IVXL]+)\s*[–—-]\s*([\s\S]*?)FLUXO:\s*([^()]*?)\(\s*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*\)/gi, out = []; let m;
-  while ((m = re.exec(txt))) { const bal = (m[2].match(/VDA\s+[IVXL]+/gi) || []).map(b => b.replace(/\s+/, ' ').toUpperCase());
-    out.push({ emp: m[1].replace(/\s+/, ' ').toUpperCase(), vessel: vgAcha(m[1], S.cfg.frota), balN: bal, balsas: bal.map(b => vgAcha(b, vgBalsas())), fluxo: m[3].trim(), rota: vgRotaTexto(m[3]), date: gsData(m[4]) }); }
+  const T = String(txt || ''), re = /CJA\s+[IVXL]+/gi, P = [], out = []; let m;
+  while ((m = re.exec(T))) P.push([m.index, m[0]]);
+  P.forEach(([i, emp], k) => { const blk = T.slice(i + emp.length, k + 1 < P.length ? P[k + 1][0] : T.length), fx = blk.match(/FLUXO\s*:?\s*([^\n(]*)/i); if (!fx) return;
+    const dt = blk.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/), bal = (blk.slice(0, fx.index).match(/VDA\s+[IVXL]+/gi) || []).map(b => b.replace(/\s+/, ' ').toUpperCase());
+    out.push({ emp: emp.replace(/\s+/, ' ').toUpperCase(), vessel: vgAcha(emp, S.cfg.frota), balN: bal, balsas: bal.map(b => vgAcha(b, vgBalsas())), fluxo: fx[1].replace(/\d{1,2}\/\d{1,2}\/\d{2,4}/, '').trim(), rota: vgRotaTexto(fx[1]), date: dt ? gsData(dt[1]) : '' }); });
   return out;
 }
 function vgColar() {
   if (!S.session) return loginModal(); const L = vgLerHistorico($('#vgC').value), V = vgViagens();
-  if (!L.length) return toast('Não reconheci nenhuma saída. Confira o formato: “CJA I – VDA I e VDA III” e “FLUXO: MAO X ITC X PVH (07/01/2026)”.', 6000);
-  L.forEach(x => { x.dup = V.some(y => y.vessel === x.vessel && y.date === x.date); x.erro = !x.vessel ? 'empurrador não cadastrado' : !x.date ? 'data inválida' : x.balsas.includes('') ? 'balsa não cadastrada' : ''; });
+  if (!L.length) return toast('Não reconheci nenhuma saída. Confira o formato: “CJA I – VDA I e VDA III” e, embaixo, “FLUXO: MAO X PVH (07/01/2026)”.', 6000);
+  L.forEach(x => { x.dup = !!x.date && V.some(y => y.vessel === x.vessel && y.date === x.date); x.erro = !x.vessel ? 'empurrador não cadastrado' : x.balsas.includes('') ? 'balsa não cadastrada' : ''; });
   const ok = L.filter(x => !x.dup && !x.erro);
   modal(`<h2>Conferir histórico · ${L.length} saída(s) lida(s)</h2><p class="note">${ok.length} serão gravadas. ${L.length - ok.length ? (L.length - ok.length) + ' ficam de fora (repetidas ou com erro).' : ''} A chegada fica estimada pela rota até você informar a real (Editar, na lista de saídas).</p>
-    <div class="tw" style="max-height:52vh;overflow:auto"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Balsas</th><th>Fluxo lido</th><th>Rota no SMF</th><th></th></tr></thead><tbody>${L.map(x => `<tr><td class="nowrap">${x.date ? brD(x.date) : '—'}</td><td>${esc(x.emp)}</td><td>${esc(x.balN.join(', '))}</td><td class="note">${esc(x.fluxo)}</td><td>${x.rota ? esc(vgRotaCurta(x.rota)) : '<span style="color:var(--warnt)">não reconhecida</span>'}</td><td>${x.dup ? '<span class="pill p-mut">já existe</span>' : x.erro ? `<span class="pill p-bad">${esc(x.erro)}</span>` : '<span class="pill p-ok">ok</span>'}</td></tr>`).join('')}</tbody></table></div>
+    <div class="tw" style="max-height:52vh;overflow:auto"><table class="t"><thead><tr><th>Data</th><th>Empurrador</th><th>Balsas</th><th>Fluxo lido</th><th>Rota no SMF</th><th></th></tr></thead><tbody>${L.map((x, i) => `<tr><td class="nowrap">${x.date ? brD(x.date) : x.erro ? '—' : `<input type="date" class="vgCd" data-i="${i}" max="${isoD(hoje())}" style="width:auto" title="Data da saída">`}</td><td>${esc(x.emp)}</td><td>${esc(x.balN.join(', '))}</td><td class="note">${esc(x.fluxo)}</td><td>${x.rota ? esc(vgRotaCurta(x.rota)) : '<span style="color:var(--warnt)">não reconhecida</span>'}</td><td>${x.dup ? '<span class="pill p-mut">já existe</span>' : x.erro ? `<span class="pill p-bad">${esc(x.erro)}</span>` : '<span class="pill p-ok">ok</span>'}</td></tr>`).join('')}</tbody></table></div>
     <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="vgCok"${ok.length ? '' : ' disabled'}>Gravar ${ok.length} saída(s)</button></div>`, true);
-  $('#vgCok').onclick = async () => { for (const x of ok) await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'viagem', vessel: x.vessel, date: x.date, rota: x.rota, balsas: x.balsas, cheg: '', fonte: 'histórico colado', por: S.session.name });
+  $('#vgCok').onclick = async () => { for (const el of $$('.vgCd')) { const x = L[+el.dataset.i]; if (!el.value) return toast('Informe a data da saída do ' + x.emp + '.'); x.date = el.value; if (V.some(y => y.vessel === x.vessel && y.date === x.date)) return toast('O ' + x.emp + ' já tem saída em ' + brD(x.date) + '.'); }
+    for (const x of ok) await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'viagem', vessel: x.vessel, date: x.date, rota: x.rota, balsas: x.balsas, cheg: '', fonte: 'histórico colado', por: S.session.name });
     closeModal(); toast(ok.length + ' saída(s) gravada(s) no histórico.'); render(); };
 }
 function vgEditar(id) {
