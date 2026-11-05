@@ -201,8 +201,14 @@ function vgCoord(t) {
 }
 function vgLerBoletim(txt) {
   const F = S.cfg.frota.map(v => ({ v, re: new RegExp('\\b' + v.nome.replace(/\s+/g, '\\s*-?\\s*') + '(?![IVXL])', 'i') })).sort((a, b) => b.v.nome.length - a.v.nome.length);
-  const it = []; let cur = null;
-  String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => { const f = F.find(x => x.re.test(l)); if (f) { cur = { v: f.v, t: l.replace(f.re, ' ') }; it.push(cur); } else if (cur) cur.t += ' ' + l; });
+  // “Localização atual” e as coordenadas escritas em cima do “R/M CJA …” (Supervisor, 04/11/2026) ficam com o empurrador que vem logo embaixo
+  const it = [], LA = /^\W*localiza[cç][aã]o\s+atual/i; let cur = null, pre = null;
+  String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => { const f = F.find(x => x.re.test(l));
+    if (f) { cur = { v: f.v, t: (pre ? pre + ' ' : '') + l.replace(f.re, ' ') }; pre = null; it.push(cur); }
+    else if (pre !== null) pre += ' ' + l;
+    else if (LA.test(l) && (!cur || /localiza[cç][aã]o\s+atual/i.test(cur.t))) pre = l;
+    else if (cur) cur.t += ' ' + l; });
+  if (pre && cur && !/localiza[cç][aã]o\s+atual/i.test(cur.t)) cur.t += ' ' + pre;
   const H = hoje(), J = []; it.forEach(x => { const y = J.find(z => z.v === x.v); if (y) y.t += ' ' + x.t; else J.push(x); });   // e-mail que cita o empurrador mais de uma vez = uma posição só
   return J.map(x => { const c = vgCoord(x.t), tt = c.t.replace(/\s*\|\s*/g, ' · ').replace(/COMBOIO\s*:?/gi, ' ').replace(/\bVDA\s*-?\s*[IVXL]+\b(?:\s*(?:,|\be\b)\s*(?:VDA\s*-?\s*)?[IVXL]+\b)*\s*(?:,|\be\b)?/gi, ' ').replace(/HOR[IÍ]METRO\s*\/?\s*:?\s*[\d.,]+\s*h?/gi, ' ').replace(/[ÚU]LTIMA\s+ATUALIZA[CÇ][AÃ]O\s*:?/gi, ' ').replace(/^[\s\-–:]+/, '');
     const la = tt.match(/LOCALIZA[CÇ][AÃ]O\s+ATUAL\s*:?\s*(.+?)(?=\s*POSI[CÇ][AÃ]O|\s*OBSERVA[CÇ]|$)/i), t = la ? la[1] : tt;   // e-mail do Monitoramento: o local é o que vem depois de “Localização atual”
@@ -218,6 +224,7 @@ function vgLerBoletim(txt) {
     let local = t.replace(/\*+/g, ' ').replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/(?:\s*·\s*){2,}/g, ' · ').replace(/\s{2,}/g, ' ');
     for (let k = 0; k < 4; k++) local = local.replace(/^[\s,.;:\-–|·]+|[\s,.;:\-–|·]+$/g, '').replace(/\s+(?:às|as|desde|em|de)$/i, '');
     if (local.length > 140) local = local.slice(0, 137) + '…';
+    if (!hora && date === isoD(H)) hora = String(H.getHours()).padStart(2, '0') + ':' + String(H.getMinutes()).padStart(2, '0');   // boletim de hoje sem hora = agora (fica depois das posições já lançadas no dia)
     return { vessel: x.v.id, nome: x.v.nome, lat: c.lat, lon: c.lon, date: date > isoD(H) ? isoD(H) : date, hora, situ: porto ? 'por' : 'via', porto: porto ? pt || '' : '', local, parDesde: parado ? date : '' }; });
 }
 function vgBoletimModal(txt0) {
