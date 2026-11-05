@@ -83,9 +83,15 @@ function vgComboioSvg(cor, B, emp) {
   if (!nB) g += `<path d="M${tw + 1},1.5 l4,4 l-4,4 z" fill="${cor}" stroke="#fff" stroke-width="1"/>`; else g += `<path d="M${x},2 l3,3.5 l-3,3.5 z" fill="#2B2F33"/>`;
   return [g, x + 4, H];
 }
-function vgComboioIc(cor, B, id) {
-  const [g, W, H] = vgComboioSvg(cor, B);
-  const ic = vgIc(g, W, H, 2.6, id ? ` data-vgcomb="${esc(id)}" style="cursor:pointer"` : ''); ic.options.tooltipAnchor = [-W * 1.3, 0]; return ic;   // nome à esquerda, colado no empurrador
+// comboio em rota com a foto (Supervisor, 05/11/2026: “aquela imagem realista… ficou tão bom”): a balsa e o empurrador recortados da imagem de dados técnicos
+// (img/comboio-balsa.png e img/comboio-empurrador.png, a mesma foto para todas), uma balsa para cada balsa do comboio, o nome embaixo de cada uma e do empurrador
+const VG_FOTO = { b: [570, 79], e: [227, 150], s: .3, sob: 18 };
+function vgComboioIc(cor, B, id, rot) {
+  B = Array.isArray(B) ? B : []; const s = VG_FOTO.s, bw = Math.round(VG_FOTO.b[0] * s), bh = Math.round(VG_FOTO.b[1] * s), ew = Math.round(VG_FOTO.e[0] * s), eh = Math.round(VG_FOTO.e[1] * s), sob = Math.round(VG_FOTO.sob * s);
+  const H = Math.max(bh, eh), W = B.length * (bw - sob) + ew, AL = H + 24; let x = 0, h = '';
+  B.forEach(b => { h += `<div data-vgbal="${esc(b)}" style="left:${x}px;width:${bw}px;height:${AL}px"><img src="img/comboio-balsa.png" alt="" style="top:${H - bh}px;width:${bw}px;height:${bh}px"><span style="top:${H + 3}px">${esc(vName(b))}</span></div>`; x += bw - sob; });
+  h += `<div style="left:${x}px;width:${ew}px;height:${AL}px"><img src="img/comboio-empurrador.png" alt="" style="top:${H - eh}px;width:${ew}px;height:${eh}px"><span style="top:${H + 3}px;background:${cor};color:#fff">${esc(rot || '')}</span></div>`;
+  return L.divIcon({ html: `<div class="vgcf"${id ? ` data-vgcomb="${esc(id)}"` : ''} style="width:${W}px;height:${AL}px">${h}</div>`, className: 'vg-ic', iconSize: [W, AL], iconAnchor: [W / 2, H / 2] });
 }
 // porto de perto (Supervisor, 04/11/2026, desenho dele): no alto “N - EMPURRADORES (CJA …)” e “N - BALSAS (VDA …)”; uma fileira por empurrador, com o nome
 // à esquerda e as balsas que chegaram com ele na frente; embaixo, uma fileira para cada balsa sem empurrador no porto
@@ -155,8 +161,7 @@ async function vgMapaIniciar() {
   VG_MAPA.rod = {};
   D.R.forEach(({ o, ll, aprox }) => { pts.push(ll); const par = o.parD > VG_PARADO_D;
     VG_MAPA.rod[o.id] = `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`;
-    L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || [], o.id), riseOnHover: true }).addTo(m)
-      .bindTooltip(`<span data-vgcomb="${esc(o.id)}" style="cursor:pointer">${esc(o.nome)}${aprox ? ' · aprox.' : ''}</span>`, Object.assign(tip(par ? 'par' : ''), { direction: 'left', offset: [-4, 0], interactive: true })); });
+    L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || [], o.id, o.nome + (aprox ? ' · aprox.' : '')), riseOnHover: true }).addTo(m); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => { mk.setIcon(perto ? a : b); if (mk._vgPt) perto ? mk.closeTooltip() : mk.openTooltip(); }); }; m.on('zoomend', desenho); desenho();
   // o mapa ocupa o cartão (Supervisor, 02/11/2026: mapa e painel de supervisão em cartões separados): altura do cartão menos o título em cima e as notas e
