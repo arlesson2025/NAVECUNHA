@@ -281,7 +281,11 @@ const vgAcha = (nome, L) => { const n = String(nome).toUpperCase().replace(/\s+/
 function vgLerHistorico(txt) {
   const T = String(txt || ''), re = /CJA\s+[IVXL]+/gi, P = [], out = []; let m;
   while ((m = re.exec(T))) P.push([m.index, m[0]]);
-  P.forEach(([i, emp], k) => { const blk = T.slice(i + emp.length, k + 1 < P.length ? P[k + 1][0] : T.length); let fx = blk.match(/FLUXO\s*:?\s*([^\n(]*)/i);
+  const fx0 = T.search(/FLUXO/i), cima = P.length > 0 && fx0 >= 0 && fx0 < P[0][0];   // FLUXO escrito em cima do “R/M CJA …” (Supervisor, 04/11/2026): vale o FLUXO de cima de cada empurrador
+  P.forEach(([i, emp], k) => { const blk = T.slice(i + emp.length, k + 1 < P.length ? P[k + 1][0] : T.length); let fx = null;
+    if (cima) { const ac = [...T.slice(k ? P[k - 1][0] + P[k - 1][1].length : 0, i).matchAll(/FLUXO\s*:?\s*([^\n(]*)/gi)].pop(), sx = blk.search(/sa[ií]da\s+d[aeo]\s|FLUXO/i);
+      if (ac) fx = Object.assign([ac[0], ac[1]], { index: sx < 0 ? blk.length : sx }); }
+    else fx = blk.match(/FLUXO\s*:?\s*([^\n(]*)/i);
     // resumo do Monitoramento sem FLUXO (Supervisor, 04/11/2026): “Saída de MAO: 04/11/2026 às 06h00min” e “… com destino a cidade de BRETAÑA/PERU” fazem o fluxo
     if (!fx) { const sd = blk.match(/sa[ií]da\s+d[aeo]\s+(?:cidade\s+de\s+)?([^\n:;,\/\d]+)/i), de = blk.match(/destino\s+(?:a|à|ao|para)\s+(?:cidade\s+de\s+)?([^\n;,.\/]+)/i); if (!sd) return;
       fx = ['', sd[1].trim() + (de ? ' X ' + de[1].trim() : '')]; fx.index = sd.index; }
