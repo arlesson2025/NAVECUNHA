@@ -36,9 +36,12 @@ function vgViagens() {
   recs('snap').filter(r => r.tipo === 'viagem' && !r.excluido).forEach(r => L.push({ id: r.id, vessel: r.vessel, date: r.date, rota: r.rota || '', balsas: r.balsas || [], cheg: r.cheg || '', src: 'hist', r }));
   L.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
   const H = isoD(hoje());
+  // sem FR 027_L, a posição “no porto” em Manaus (boia 1, boia 2) depois da saída fecha a viagem (Supervisor, 04/11/2026: boletim “Comunico a chegada”)
+  const PM = recs('snap').filter(r => r.tipo === 'pos' && !r.excluido && r.situ === 'por' && /manaus|boia|\bmao\b/.test(vgNorm(r.porto || r.local)));
   L.forEach(x => {
     const nx = L.find(y => y.vessel === x.vessel && y.date > x.date), lim = nx ? nx.date : '9999';
     if (!x.cheg) { const c = recs('fr027').filter(f => f.vessel === x.vessel && f.mov === 'chegada' && f.date > x.date && f.date <= lim).sort((a, b) => a.date < b.date ? -1 : 1)[0]; if (c) x.cheg = c.date; }
+    if (!x.cheg) { const c = PM.filter(p => p.vessel === x.vessel && p.date > x.date && p.date <= lim).sort((a, b) => a.date < b.date ? -1 : 1)[0]; if (c) { x.cheg = c.date; x.chegPos = true; } }
     if (x.cheg) { x.fim = x.cheg; x.est = false; }
     else { const r = vgRota(x.rota), cic = r ? r.ciclo : 30; let f = isoD(new Date(+pD(x.date) + cic * 864e5)); if (nx && f > nx.date) f = nx.date; x.fim = f; x.est = true; }
     x.via = !x.cheg && x.fim > H && !nx;
@@ -206,9 +209,13 @@ function vgLerBoletim(txt) {
     const md = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); let date = isoD(H), hora = '';
     if (md) { let y = md[3] ? +md[3] : H.getFullYear(); if (y < 100) y += 2000; if (!md[3] && +md[2] > H.getMonth() + 2) y--; date = `${y}-${String(+md[2]).padStart(2, '0')}-${String(+md[1]).padStart(2, '0')}`; }
     const mh = t.match(/(\d{1,2})\s*(?:h|:)\s*(\d{2})/i); if (mh) hora = `${String(+mh[1]).padStart(2, '0')}:${mh[2]}`;
-    const n = vgNorm(tt), fx = /boia|cimento|filial|estaleiro|\beram\b|navecunha/.test(vgNorm(t)) && typeof vgFixo === 'function' ? vgFixo(t) : null, parado = !fx && /parad|sem moviment|fundead/.test(n), porto = !!fx || (/atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado);   // boia 1, boia 2 e filial = no porto, no ponto fixo (js/102)
-    const pt = fx || VG_PORTOS.find(p => vgNorm(t).includes(vgNorm(p))) || VG_PORTOS.find(p => n.includes(vgNorm(p)));
-    let local = t.replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/(?:\s*·\s*){2,}/g, ' · ').replace(/\s{2,}/g, ' ');
+    // e-mail do Monitoramento (Supervisor, 04/11/2026: fechar a viagem no “Comunico a chegada”): “Comunico a chegada … na cidade de PORTO VELHO/RO, no dia
+    // 27/10/2026 às 11h0min” = no porto desde esse dia e hora, mesmo com a palavra “parado”; “Comunico a saída … da cidade de …” = fora do porto
+    const ce = tt.match(/comunico\s+a\s+(chegada|sa[ií]da)\b[\s\S]*?\bcidade\s+de\s+([^\/,;*]+?)\s*(?:\/\s*[A-Za-z]{2,}\s*)?,?\s*no\s+dia\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s*(?:às|as)\s*(\d{1,2})\s*h\s*(\d{1,2})?)?/i), cheg = ce && /^c/i.test(ce[1]);
+    if (cheg) { let y = +ce[5]; if (y < 100) y += 2000; date = `${y}-${ce[4].padStart(2, '0')}-${ce[3].padStart(2, '0')}`; hora = ce[6] ? `${ce[6].padStart(2, '0')}:${(ce[7] || '0').padStart(2, '0')}` : ''; }
+    const n = vgNorm(tt), fx = /boia|cimento|filial|estaleiro|\beram\b|navecunha/.test(vgNorm(t)) && typeof vgFixo === 'function' ? vgFixo(t) : null, parado = !ce && !fx && /parad|sem moviment|fundead/.test(n), porto = ce ? cheg : !!fx || (/atracad|chegou|no porto|chegada|no terminal/.test(n) && !parado);   // boia 1, boia 2 e filial = no porto, no ponto fixo (js/102)
+    const pt = fx || VG_PORTOS.find(p => vgNorm(t).includes(vgNorm(p))) || VG_PORTOS.find(p => n.includes(vgNorm(p))) || (cheg ? ce[2].trim().toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase()) : '');
+    let local = t.replace(/\*+/g, ' ').replace(/(?:\s(?:desde|em|no dia|dia|de))?\s*\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\s*(?:às|as)?\s*\d{1,2}\s*(?:h|:)\s*\d{2}\s*h?)?/gi, ' ').replace(/(?:\s(?:às|as))?\s*\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/gi, ' ').replace(/(?:\s*·\s*){2,}/g, ' · ').replace(/\s{2,}/g, ' ');
     for (let k = 0; k < 4; k++) local = local.replace(/^[\s,.;:\-–|·]+|[\s,.;:\-–|·]+$/g, '').replace(/\s+(?:às|as|desde|em|de)$/i, '');
     if (local.length > 140) local = local.slice(0, 137) + '…';
     return { vessel: x.v.id, nome: x.v.nome, lat: c.lat, lon: c.lon, date: date > isoD(H) ? isoD(H) : date, hora, situ: porto ? 'por' : 'via', porto: porto ? pt || '' : '', local, parDesde: parado ? date : '' }; });
