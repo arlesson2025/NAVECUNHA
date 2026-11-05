@@ -230,7 +230,7 @@ function vgLerBoletim(txt) {
 }
 function vgBoletimModal(txt0) {
   if (!can.edit()) return;
-  modal(`<h2>Informações do monitoramento</h2><p class="note">Cole o e-mail do Monitoramento inteiro (do título até a POSIÇÃO GEOGRÁFICA). Cada empurrador citado vira uma posição; a data e a hora são lidas do texto. Confira os avisos antes de gravar.</p>
+  modal(`<h2>Lançar localização - Boletim Autotrac</h2><p class="note">Cole o e-mail do Monitoramento inteiro (do título até a POSIÇÃO GEOGRÁFICA). Cada empurrador citado vira uma posição; a data e a hora são lidas do texto. Confira os avisos antes de gravar.</p>
     <textarea id="vbT" rows="7" style="width:100%" placeholder="CJA I – Paraná do Miriti, a 145 km de Humaitá – 31/10 às 18h00">${esc(txt0 || '')}</textarea>
     <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="vbL">Ler</button></div><div id="vbR"></div>`, true);
   let R = [];
