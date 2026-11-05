@@ -112,7 +112,8 @@ function vgOndeDe(id, eb, V) {
     const q = Pv[Pv.length - 1];
     if (q) { o.local = q.local; o.at = q.at || q.date; o.obs = q.obs;
       let des = q.parDesde || ''; if (!des) { let k = Pv.length - 1; while (k > 0 && vgNorm(Pv[k - 1].local) === vgNorm(q.local)) k--; if (k < Pv.length - 1) des = Pv[k].at || Pv[k].date; }
-      if (des) { o.parDesde = des; o.parD = dd(des.slice(0, 10), H); } o.semPos = dd(o.at.slice(0, 10), H); }
+      // comboio em viagem não aparece mais como “parado” (Supervisor, 04/11/2026: “dos comboios em viagem tira esse parado”); o dado do boletim continua gravado
+      o.semPos = dd(o.at.slice(0, 10), H); }
     o.dias = o.saida ? dd(o.saida, H) : null;
     if (u && u.via) o.prev = u.fim;
   }
@@ -140,7 +141,7 @@ function vgOnde(V, nAno, ano) {
   const nk = (l, v, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
   // o quadro de números “Onde está a frota · hoje” saiu (Supervisor, 02/11/2026): está no painel embaixo do mapa; o total de comboios do ano foi para Comboios por mês
   return `<div class="card"><h2>Fora do porto · ${via.length} empurrador${via.length === 1 ? '' : 'es'} · ${bVia.size} balsa${bVia.size === 1 ? '' : 's'}</h2>${via.length ? `<div class="tw"><table class="t vg-ag"><thead><tr><th>Empurrador</th><th>Rota</th><th>Última posição</th><th>Balsas</th><th></th><th></th></tr></thead><tbody>${lv}</tbody></table></div>` : '<p class="note">Nenhum empurrador fora do porto.</p>'}
-    <p class="note">Em viagem desde o “Saiu de viagem”; a posição vem do boletim colado ou informado. Mesma posição em boletins seguidos (ou “sem movimento desde”) por mais de ${VG_PARADO_D} dias = parado.</p></div>
+    <p class="note">Em viagem desde o “Saiu de viagem”; a posição vem do boletim colado ou informado.</p></div>
    <div class="card"><h2>No porto · ${por.length} empurrador${por.length === 1 ? '' : 'es'} · ${bPor.length} balsa${bPor.length === 1 ? '' : 's'}</h2>${por.length ? `<div class="tw"><table class="t"><tbody>${lp}</tbody></table></div>` : '<p class="note">Nenhum empurrador no porto.</p>'}
     <h3 class="vg-h3">Balsas no porto</h3><div>${chips(bPor)}</div>
     <h3 class="vg-h3">Em reforma</h3><div>${chips(ref.concat(bRef))}</div>
