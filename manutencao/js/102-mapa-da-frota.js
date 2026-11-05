@@ -36,7 +36,11 @@ function vgMapaDados() {
   // cada balsa fica com o empurrador da viagem mais recente em que ela foi (a mesma balsa passa de um comboio para outro); balsa em reforma fica no estaleiro
   const dono = {}, dt = {}; E.forEach(o => { const d = o.u ? o.u.fim || o.u.date || '' : ''; (o.balsas || []).forEach(b => { if (!(b in dt) || d > dt[b]) { dt[b] = d; dono[b] = o.id; } }); });
   B.forEach(o => delete dono[o.id]);
-  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B, dono };
+  // balsa no porto cujo empurrador já saiu sem ela (Supervisor, 04/11/2026: as balsas soltas no porto aparecem embaixo dos empurradores): fica na boia 1, em Manaus
+  const noP = new Set([].concat(...Object.values(P)).map(o => o.id)), soltas = {};
+  vgBalsas().forEach(b => { if (vgEmReforma(b.id) || noP.has(dono[b.id])) return; if (vgOndeDe(b.id, true, V).st !== 'por') return; (soltas['Boia 1 · porto da Navecunha'] = soltas['Boia 1 · porto da Navecunha'] || []).push(b.id); });
+  Object.keys(soltas).forEach(k => { P[k] = P[k] || []; });
+  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B, dono, soltas };
 }
 function vgMapaCard() {
   const D = vgMapaDados(), nP = Object.values(D.P).reduce((a, L) => a + L.length, 0);
@@ -70,13 +74,29 @@ const vgBalsaSvg = (x, y, w, h) => w > h ? `<rect x="${x}" y="${y}" width="${w}"
 const vgIc = (g, W, H, k, at) => L.divIcon({ html: `<svg${at || ''} width="${W * k}" height="${H * k}" viewBox="0 0 ${W} ${H}" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">${g}</svg>`, className: 'vg-ic', iconSize: [W * k, H * k], iconAnchor: [W * k / 2, H * k / 2], tooltipAnchor: [W * k / 2, 0], popupAnchor: [0, -H * k / 2] });
 // comboio em rota: o empurrador atrás e uma balsa para cada balsa do comboio, em fila, a proa na última; cada balsa com o nome (sem “VDA”)
 // e clicável (data-vgbal): abre o cartão da balsa (Supervisor, 02/11/2026)
-function vgComboioIc(cor, B, id) {
+// o desenho em si (empurrador + balsas em fila), também usado nas fileiras do porto: [svg interno, largura, altura]; emp = id do empurrador (clicável)
+function vgComboioSvg(cor, B, emp) {
   B = Array.isArray(B) ? B : Array.from({ length: B || 0 }, () => '');
-  const bw = 34, H = 11, tw = 12, nB = B.length; let x = tw + 1.5, g = `<rect x="1" y="1" width="${tw}" height="${H - 2}" rx="2.5" fill="${cor}" stroke="#fff" stroke-width="1.1"/><rect x="3" y="3" width="4.5" height="${H - 6}" rx="1" fill="#fff" opacity=".9"/>`;
+  const bw = 34, H = 11, tw = 12, nB = B.length; let x = tw + 1.5, g = `<g${emp ? ` data-vgemp="${esc(emp)}" style="cursor:pointer"` : ''}><rect x="1" y="1" width="${tw}" height="${H - 2}" rx="2.5" fill="${cor}" stroke="#fff" stroke-width="1.1"/><rect x="3" y="3" width="4.5" height="${H - 6}" rx="1" fill="#fff" opacity=".9"/></g>`;
   for (let k = 0; k < nB; k++, x += bw + .6) { const nm = B[k] ? vName(B[k]) : '';   // nome inteiro, com “VDA” (Supervisor, 02/11/2026)
     g += `<g${B[k] ? ` data-vgbal="${esc(B[k])}" style="cursor:pointer"` : ''}>${vgBalsaSvg(x, 1, bw, H - 2)}${nm ? `<text x="${x + bw / 2}" y="${H / 2 + 1.9}" text-anchor="middle" font-size="5.6" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(nm)}</text>` : ''}</g>`; }
   if (!nB) g += `<path d="M${tw + 1},1.5 l4,4 l-4,4 z" fill="${cor}" stroke="#fff" stroke-width="1"/>`; else g += `<path d="M${x},2 l3,3.5 l-3,3.5 z" fill="#2B2F33"/>`;
-  const ic = vgIc(g, x + 4, H, 2.6, id ? ` data-vgcomb="${esc(id)}" style="cursor:pointer"` : ''); ic.options.tooltipAnchor = [-(x + 4) * 1.3, 0]; return ic;   // nome à esquerda, colado no empurrador
+  return [g, x + 4, H];
+}
+function vgComboioIc(cor, B, id) {
+  const [g, W, H] = vgComboioSvg(cor, B);
+  const ic = vgIc(g, W, H, 2.6, id ? ` data-vgcomb="${esc(id)}" style="cursor:pointer"` : ''); ic.options.tooltipAnchor = [-W * 1.3, 0]; return ic;   // nome à esquerda, colado no empurrador
+}
+// porto de perto (Supervisor, 04/11/2026, desenho dele): no alto “N - EMPURRADORES (CJA …)” e “N - BALSAS (VDA …)”; uma fileira por empurrador, com o nome
+// à esquerda e as balsas que chegaram com ele na frente; embaixo, uma fileira para cada balsa sem empurrador no porto
+function vgPortoIc(cor, k, E, B, soltas) {
+  const sv = (g, W, H) => `<svg width="${W * 2.6}" height="${H * 2.6}" viewBox="0 0 ${W} ${H}" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">${g}</svg>`;
+  const rom = (L, re) => L.map(id => vName(id).replace(re, '')).join(', ');
+  const nB = E.reduce((a, e) => a + B[e].length, 0) + soltas.length, tB = E.flatMap(e => B[e]).concat(soltas);
+  let h = `<div class="vg-pt-h"><div>${esc(k)}</div><div><b>${E.length}</b> - EMPURRADOR${E.length === 1 ? '' : 'ES'}${E.length ? ' (CJA ' + esc(rom(E, /^CJA\s*/i)) + ')' : ''}</div><div><b>${nB}</b> - BALSA${nB === 1 ? '' : 'S'}${nB ? ' (VDA ' + esc(rom(tB, /^VDA\s*/i)) + ')' : ''}</div></div>`;
+  E.forEach(e => { h += `<div class="vg-pt-r"><span class="vg-pt-n" data-vgemp="${esc(e)}">${esc(vName(e))}</span>${sv(...vgComboioSvg(cor, B[e], e))}</div>`; });
+  soltas.forEach(b => { h += `<div class="vg-pt-r vg-pt-s">${sv(`<g data-vgbal="${esc(b)}" style="cursor:pointer">${vgBalsaSvg(.5, 1, 34, 9)}<text x="17.5" y="7.4" text-anchor="middle" font-size="5.6" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(vName(b))}</text></g>`, 35, 11)}</div>`; });
+  return L.divIcon({ html: `<div class="vg-pt">${h}</div>`, className: 'vg-ic', iconSize: null });
 }
 // parados na boia ou no estaleiro: as balsas lado a lado em fileiras (até 8 por fileira) e os empurradores encostados embaixo
 function vgFundeioIc(cor, B, E) {
@@ -120,9 +140,11 @@ async function vgMapaIniciar() {
   const cliq = (k, Lp) => e => { const t = e.originalEvent && e.originalEvent.target, q = t && t.closest ? t.closest('[data-vgbal],[data-vgemp]') : null;
     if (q && typeof vgCartaoGrande === 'function') return vgCartaoGrande(q.getAttribute('data-vgbal') || q.getAttribute('data-vgemp'), '');
     if (typeof vgPainelAbrir === 'function') vgPainelAbrir('fix', k, Lp.map(o => o.id)); };
-  Object.entries(D.P).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const mk = L.marker(ll, { icon: vgIcone('#188038', 0, Lp.length), riseOnHover: true });
-    troca(mk, vgFundeioIc('#188038', nBal(Lp), nEmp(Lp)), vgIcone('#188038', 0, Lp.length)); mk.on('click', cliq(k, Lp)); mk.addTo(m)
-      .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')}`, tip('por')); });
+  Object.entries(D.P).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const E = nEmp(Lp), BE = {}, so = (D.soltas || {})[k] || [];
+    E.forEach(e => { BE[e] = (Lp.find(o => o.id === e).balsas || []).filter(b => D.dono[b] === e); });
+    const mk = L.marker(ll, { icon: vgIcone('#188038', 0, E.length || so.length), riseOnHover: true }); mk._vgPt = 1;   // de perto, o nome do porto vai no alto do desenho
+    troca(mk, vgPortoIc('#188038', k, E, BE, so), vgIcone('#188038', 0, E.length || so.length)); mk.on('click', cliq(k, Lp)); mk.addTo(m)
+      .bindTooltip(`${esc(k)}${Lp.length ? ' · ' + Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ') : ''}${so.length ? ' · ' + so.length + ' balsa' + (so.length > 1 ? 's' : '') + ' sem empurrador' : ''}`, tip('por')); });
   Object.entries(D.F).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const nE = Lp.filter(o => !o.bal).length, mk = L.marker(ll, { icon: vgIcone('#5F6368', 0, Lp.length), riseOnHover: true });
     troca(mk, vgFundeioIc('#5F6368', nBal(Lp), nEmp(Lp)), vgIcone('#5F6368', 0, Lp.length)); mk.on('click', cliq(k, Lp)); mk.addTo(m)
       .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref')); });
@@ -134,7 +156,7 @@ async function vgMapaIniciar() {
     L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || [], o.id), riseOnHover: true }).addTo(m)
       .bindTooltip(`<span data-vgcomb="${esc(o.id)}" style="cursor:pointer">${esc(o.nome)}${aprox ? ' · aprox.' : ''}</span>`, Object.assign(tip(par ? 'par' : ''), { direction: 'left', offset: [-4, 0], interactive: true })); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
-  const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => mk.setIcon(perto ? a : b)); }; m.on('zoomend', desenho); desenho();
+  const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => { mk.setIcon(perto ? a : b); if (mk._vgPt) perto ? mk.closeTooltip() : mk.openTooltip(); }); }; m.on('zoomend', desenho); desenho();
   // o mapa ocupa o cartão (Supervisor, 02/11/2026: mapa e painel de supervisão em cartões separados): altura do cartão menos o título em cima e as notas e
   // botões embaixo; acompanha o canto do cartão, a tela cheia (⛶) e o minimizar. Fora das janelas livres (tela estreita), vale a barra embaixo do mapa
   const card = el.closest('.card'), alt = () => { if (!card || card.classList.contains('cm-min')) return; const cheia = document.fullscreenElement === card || card.classList.contains('cm-full'), livre = !!card.style.height;
@@ -150,7 +172,9 @@ async function vgMapaIniciar() {
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); if (!(document.fullscreenElement === card || (card && card.classList.contains('cm-full')))) try { localStorage.setItem('smf_vg_alt', String(el.offsetHeight)); } catch (er) { } };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); };
 }
-{ const st = document.createElement('style'); st.textContent = '.vg-alt{flex:0 0 auto;height:14px;margin:2px 0 6px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;border-radius:6px;touch-action:none}.vg-alt:hover{background:#E3EAF3}.vg-alt i{width:60px;height:4px;border-radius:2px;background:#9AA8BA}.vg-mt{background:rgba(255,255,255,.94);border:0;box-shadow:0 1px 3px rgba(0,0,0,.35);font:600 11.5px/1.2 system-ui,sans-serif;color:#16244A;padding:2px 6px}.vg-mt.por{color:#137333}.vg-mt.par{color:#C5221F}.vg-mt.ref{color:#3C4043}.vg-mt:before{display:none}.vg-ic{background:none;border:0}.vg-cid{pointer-events:none}.vg-cid i{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 2px #000}.vg-cid span{position:absolute;left:6px;top:-8px;white-space:nowrap;font:600 11px/1 system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000}'; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = '.vg-alt{flex:0 0 auto;height:14px;margin:2px 0 6px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;border-radius:6px;touch-action:none}.vg-alt:hover{background:#E3EAF3}.vg-alt i{width:60px;height:4px;border-radius:2px;background:#9AA8BA}.vg-mt{background:rgba(255,255,255,.94);border:0;box-shadow:0 1px 3px rgba(0,0,0,.35);font:600 11.5px/1.2 system-ui,sans-serif;color:#16244A;padding:2px 6px}.vg-mt.por{color:#137333}.vg-mt.par{color:#C5221F}.vg-mt.ref{color:#3C4043}.vg-mt:before{display:none}.vg-ic{background:none;border:0}.vg-cid{pointer-events:none}.vg-cid i{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 2px #000}.vg-cid span{position:absolute;left:6px;top:-8px;white-space:nowrap;font:600 11px/1 system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000}'
+  + '.vg-pt{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;gap:4px;white-space:nowrap}.vg-pt-h{white-space:normal;max-width:560px;font:800 13px/1.35 system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000,0 0 1px #000;margin-bottom:4px}.vg-pt-h div:first-child{font-size:11.5px;font-weight:700;color:#CDEFD7}'
+  + '.vg-pt-r{display:flex;align-items:center;gap:6px}.vg-pt-n{min-width:64px;text-align:center;background:rgba(255,255,255,.94);box-shadow:0 1px 3px rgba(0,0,0,.35);border-radius:3px;font:600 11.5px/1.2 system-ui,sans-serif;color:#16244A;padding:3px 6px;cursor:pointer}.vg-pt-s{padding-left:118px}'; document.head.appendChild(st); }
 // clique numa embarcação do mapa (comboio, balsa do comboio, empurrador ou balsa no porto e no estaleiro, ou no nome do comboio): o cartão grande.
 // Ouvinte da página, na captura, para não depender do clique do Leaflet (Supervisor, 02/11/2026: “o click não funciona”)
 document.addEventListener('click', e => {
