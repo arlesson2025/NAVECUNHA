@@ -6,7 +6,7 @@
    filtro de ar a 500 h, revisão a 1.000 h; folga 0,20 mm a frio, p. 9-25) · Cummins Série C com óleo a 250 h ou 6 meses (filtro LF3349, manual de serviço Série C) · D229 pelo manual MWM Série 229 (óleo a 250 h, filtro de ar 500 h, revisão 1.000 h; atualizado em 02/11/2026) ·
    luzes de navegação Crítica (NP 024 6.1) · escotilhas mensal · diário e semanal ficam no FR 027_A (não entram no cronograma; não conformidade do FR 027_A vira falha, js/100). */
 'use strict';
-// cadastro: planilha de características principais (Supervisor, 25/10/2026) + capacidade e ano do ClickUp
+// cadastro: planilha de características principais (Supervisor, 25/10/2026) + capacidade e ano do ClickUp; capacidade de XIV, XVI, XIX e XXVIII pelos e-mails de disponibilidade do Eliseu e do Geomarques (Supervisor, 05/11/2026)
 // [nome, tanques, marca, modelo na planilha, potência hp, rpm, vazão da bomba m³/h, bateria motor/bomba, bateria alarme, tanque de consumo m³, cabeços (qtde), cabeços (t), boias, extintores, machados, capacidade m³, ano]
 const BAL_CAD = [
   ['VDA I', 8, 'Cummins', 'Mecânico', 234, 2200, 200, '1 × 150 Ah', '1 × 150 Ah', '0,380', '12', '8 t', 6, 10, 1, 2433, 2003],
@@ -22,12 +22,12 @@ const BAL_CAD = [
   ['VDA XI', 8, 'MWM', '6.10 TCA', 234, 2200, 550, '1 × 150 Ah', '1 × 150 Ah', '0,518', '12', '16 t', 8, 10, 1, 3424, 2009],
   ['VDA XII', 8, 'Cummins', 'Mecânico', 234, 2200, 650, '1 × 150 Ah', '1 × 150 Ah', '0,427', '12', '9 t', 8, 10, 1, 3410.81, 2009],
   ['VDA XIII', 10, 'MWM', '6.10 TCA', 212, 1780, 835, '1 × 150 Ah', '1 × 60 Ah', '0,300', '8', '4 de 8 t e 4 de 12 t', 6, 12, 2, 4604.46, 2018],
-  ['VDA XIV', 8, 'MWM', '6.10 TCA', 215, 2200, 600, '2 × 150 Ah', '1 × 60 Ah', '0,300', '14', '5 t', 6, 10, 2, 4052.04, 2015],
+  ['VDA XIV', 8, 'MWM', '6.10 TCA', 215, 2200, 600, '2 × 150 Ah', '1 × 60 Ah', '0,300', '14', '5 t', 6, 10, 2, 4205, 2015],
   ['VDA XV', 10, 'Cummins', 'Mecânico', 234, 2200, null, '', '', '', '', '', null, null, null, 4150.48, 2011],
-  ['VDA XVI', 8, 'MWM', '6.10 TCA', 212, 1780, 600, '1 × 150 Ah', '1 × 60 Ah', '0,300', '14', '5 t', 6, 10, 2, 4052.04, 2015],
+  ['VDA XVI', 8, 'MWM', '6.10 TCA', 212, 1780, 600, '1 × 150 Ah', '1 × 60 Ah', '0,300', '14', '5 t', 6, 10, 2, 4205, 2015],
   ['VDA XVII', 8, 'Cummins', 'Mecânico', 215, 2200, 600, '2 × 150 Ah', '2 × 60 Ah', '0,300', '11', '5 t', 6, 10, 2, 3210, 2012],
   ['VDA XVIII', 8, 'MWM', '6.10 TCA', 212, 1780, 600, '1 × 150 Ah', '1 × 60 Ah', '0,300', '14', '5 t', 6, 10, 2, 4052.04, 2015],
-  ['VDA XIX', 8, 'MWM', '6 CTA 8.3', 215, 2200, 600, '2 × 150 Ah', '1 × 60 Ah', '0,300', '14', '5 t', 6, 10, 2, 4052.04, 2015],
+  ['VDA XIX', 8, 'MWM', '6 CTA 8.3', 215, 2200, 600, '2 × 150 Ah', '1 × 60 Ah', '0,300', '14', '5 t', 6, 10, 2, 4056, 2015],
   ['VDA XX', 10, 'MWM', '6.10 TCA', 212, 1780, 835, '1 × 150 Ah', '1 × 60 Ah', '0,300', '8', '8 t', 6, 12, 2, 4604.46, 2019],
   ['VDA XXI', 8, 'MWM', '6 CTA 8.3', 215, 2200, 600, '2 × 150 Ah', '1 × 60 Ah', '0,300', '12', '5 t', 6, 10, 2, 4052.04, 2015],
   ['VDA XXII', 8, 'MWM', '6.10 TAC', 212, 2500, 600, '1 × 150 Ah', '1 × 60 Ah', '0,300', '12', '5 t', 8, 10, 2, 4108, 2015],
@@ -36,7 +36,7 @@ const BAL_CAD = [
   ['VDA XXV', 8, 'MWM', '6.10 TCA', 212, 1780, 835, '1 × 150 Ah', '1 × 60 Ah', '0,300', '11', '4 de 8 t e 7 de 12 t', 6, 10, 2, 3315.8, 2020],
   ['VDA XXVI', 8, 'MWM', '6.10 TCA', 212, 2500, 835, '1 × 150 Ah', '1 × 60 Ah', '0,300', '11', '4 de 8 t e 7 de 12 t', 6, 10, 2, 3315.8, 2020],
   ['VDA XXVII', 8, 'MWM', '6.10 TCA', 212, 2500, 835, '1 × 150 Ah', '1 × 60 Ah', '0,300', '12', '4 de 8 t e 8 de 12 t', 6, 10, 2, 3315.8, 2020],
-  ['VDA XXVIII', 8, 'MWM', '6.10 TCA', 212, 2500, 835, '1 × 150 Ah', '1 × 60 Ah', '0,300', '4', '12 t', 6, 10, 2, 4000, null],
+  ['VDA XXVIII', 8, 'MWM', '6.10 TCA', 212, 2500, 835, '1 × 150 Ah', '1 × 60 Ah', '0,300', '4', '12 t', 6, 10, 2, 3315, null],
   ['VDA XXIX', 10, 'MWM', '6.10 TCA', 212, null, 835, '1 × 150 Ah', '', '0,664', '18', '5 t', 8, 12, 2, 4694, 2022]];
 // motor adotado no plano (decisão de 25/10/2026, pela potência e pelo nome do modelo):
 // VII, VIII e X = MWM D229-6 (88,5 e 108,6 HP não são de 6.10 TCA; confirmado pelo Supervisor na plaqueta em 02/11/2026) · XIX e XXI = Cummins 6CTA 8.3 (designação Cummins) · XXII = 6.10 TCA (“6.10 TAC” é erro de digitação)
@@ -416,7 +416,7 @@ function vBalFt() {
   if (!b) return balCab('Ficha técnica', 'Planilha de características principais · clique numa balsa para ver o plano, o histórico e registrar')
    + `<div class="card"><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th><th class="r">Ano</th><th class="r">Capacidade (m³)</th><th class="r">Tanques</th><th>Motor (planilha)</th><th>Plano adotado</th><th class="r">Potência</th><th class="r">Rotação</th><th class="r">Bomba</th><th>Baterias (motor · alarme)</th><th class="r">Tanque de consumo</th><th>Cabeços</th><th class="r">Boias</th><th class="r">Extintores</th><th class="r">Machados</th></tr></thead><tbody>
      ${BALSAS.map(b => `<tr class="click" data-balft="${b.id}"><td><b>${esc(b.nome)}</b>${b.nota ? ' <span class="pill p-warn" title="' + esc(b.nota) + '">conferir</span>' : ''}</td><td class="r">${b.ano || '—'}</td><td class="r">${nf(b.cap, 2)}</td><td class="r">${b.tanques}</td><td>${esc(b.marca + ' ' + b.modelo)}</td><td>${esc(BAL_MOTOR[b.mot])}</td><td class="r">${b.hp ? nf(b.hp, 1).replace(',0', '') + ' HP' : '—'}</td><td class="r">${b.rpm ? nf(b.rpm) : '—'}</td><td class="r">${b.vazao ? b.vazao + ' m³/h' : '—'}</td><td>${esc([b.batM, b.batA].filter(Boolean).join(' · ') || '—')}</td><td class="r">${b.tqCons ? b.tqCons + ' m³' : '—'}</td><td>${b.cabQ ? esc(b.cabQ + ' · ' + b.cabT) : '—'}</td><td class="r">${b.boias ?? '—'}</td><td class="r">${b.ext ?? '—'}</td><td class="r">${b.mach ?? '—'}</td></tr>`).join('')}</tbody></table></div>
-     <p class="note">“Conferir” = dado da planilha que não fecha (passe o mouse). Capacidade (m³) e ano vêm do ClickUp.</p></div>`;
+     <p class="note">“Conferir” = dado da planilha que não fecha (passe o mouse). Capacidade (m³) e ano vêm do ClickUp; a capacidade da XIV, XVI, XIX e XXVIII, dos e-mails de disponibilidade (05/11/2026).</p></div>`;
   const e = balEstado(b), hr = balHor(b.id), csn = balCsn(b.id), tx = balTaxa(b.id);
   const H = [...recs('base').filter(r => r.vessel === b.id && !r.excluido && BA1M[r.item]).map(r => ({ d: r.date, tx: `${r.item} ${BA1M[r.item].eq}: ${r.insp ? 'inspecionado sem intervenção' + (r.obs ? ' (' + r.obs + ')' : '') : 'executado'}${r.h != null && r.h !== '' ? ' com ' + nf(r.h) + ' h' : ''}${r.om ? ' · OM ' + r.om : ''}${r.cert ? ' · cert. ' + r.cert : ''}${r.estaleiro ? ' · ' + r.estaleiro : ''}${r.quem && !r.estaleiro ? ' · ' + r.quem : ''}${r.obs ? ' · ' + r.obs : ''}`, by: r.by })),
     ...balCmpHist(b.id).map(p => ({ d: p.date, tx: `Ensaio de compressão: menor ${nf(p.min, 1)} bar (C${p.cil}), diferença ${nf(p.max - p.min, 1)} bar${p.bb ? ' · blow-by ' + p.bb : ''}${p.r.om ? ' · OM ' + p.r.om : ''}`, by: p.r.by })),
