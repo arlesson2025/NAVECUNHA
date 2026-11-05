@@ -2,6 +2,7 @@
 // “Versão do SMF” da Administração (antes iam em toda abertura, ~58 KB). A cada publicação: suba VERSAO_APP (js/02) e acrescente a versão no topo da lista.
 'use strict';
 const VERSOES = [
+  { v: '3.198', data: '05/11/2026', itens: ['Layout da frota: no comboio do mapa, os nomes das balsas ficaram maiores e em cima do desenho (pedido do Supervisor); o nome do empurrador continua embaixo dele, também maior.'] },
   { v: '3.197', data: '05/11/2026', itens: ['Layout da frota: comboio do mapa menor (pedido do Supervisor): a foto da balsa e do empurrador a 17% do tamanho (era 30%) e as etiquetas dos nomes menores.'] },
   { v: '3.196', data: '05/11/2026', itens: ['Layout da frota: no mapa, cada comboio em rota aparece com a foto da balsa (uma por balsa do comboio) e do empurrador, recortadas da imagem de dados técnicos, com o nome embaixo de cada um.', 'Cartão do comboio: faixa Dados técnicos de manutenção, com uma caixa por balsa (situação, preventivas, falhas abertas, docagem pelo CSN, compressão e horímetro do motor-bomba) e uma do empurrador (situação, horímetro dos MCP, preventivas, corretivas, troca de óleo e compressão), a situação do comboio (a pior entre eles) e o comboio com as fotos.'] },
   { v: '3.195', data: '04/11/2026', itens: ['Mapa da frota: a contagem do porto ficou em destaque para a apresentação (pedido do Supervisor): quadro escuro com faixa verde, o número de empurradores e de balsas grande, o nome em negrito e a lista (CJA …, VDA …) embaixo'] },
