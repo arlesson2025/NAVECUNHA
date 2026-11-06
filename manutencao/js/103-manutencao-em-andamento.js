@@ -475,12 +475,12 @@ function vgProgModal(id) {
 }
 // ---------- frota em números (Supervisor, 02/11/2026: “gráfico KPI pra diretoria bater o olho”): totais, onde está cada um e a capacidade ----------
 // cada embarcação conta uma vez só, na ordem: estaleiro · em viagem · programada para sair · no porto · sem posição (cinza = dado não lançado)
-function vgFrotaNum(G, dono, PR, DX0) {   // DX0 = balsas deixadas fora do porto (vgMapaDados().deix): contam fora do porto
+function vgFrotaNum(G, dono, PR, DX0, SO) { const SO0 = new Set(Object.values(SO || {}).flat());   // SO = balsas no porto sem empurrador (vgMapaDados().soltas)   // DX0 = balsas deixadas fora do porto (vgMapaDados().deix): contam fora do porto
   const ehBal = id => typeof balsaDe === 'function' && !!balsaDe(id), BL = vgBalsas(), E = S.cfg.frota, cap = b => +(b.cap || 0) || 0;
   const via = new Set(G.via), est = new Set(G.est), porto = new Set(Object.keys(G).filter(k => k !== 'via' && k !== 'est').flatMap(k => G[k]).filter(id => !ehBal(id)));
   const pE = new Set(PR.map(r => r.vessel)), pB = new Set(PR.flatMap(r => r.balsas || [])), bVia = new Set(G.via.flatMap(id => vgOndeDe(id, false).balsas || []).filter(b => !dono[b] || via.has(dono[b])).concat(BL.filter(b => via.has(dono[b.id]) || (DX0 || {})[b.id]).map(b => b.id)));
   const ondeE = id => est.has(id) ? 'est' : via.has(id) ? 'via' : pE.has(id) ? 'prog' : porto.has(id) ? 'por' : 'sem';
-  const ondeB = b => vgEmReforma(b.id) || est.has(b.id) ? 'est' : bVia.has(b.id) ? 'via' : pB.has(b.id) ? 'prog' : porto.has(dono[b.id]) ? 'por' : 'sem';
+  const ondeB = b => vgEmReforma(b.id) || est.has(b.id) ? 'est' : bVia.has(b.id) ? 'via' : pB.has(b.id) ? 'prog' : porto.has(dono[b.id]) || SO0.has(b.id) ? 'por' : 'sem';
   const K = ['via', 'prog', 'por', 'est', 'sem'], NOME = { via: 'em viagem', prog: 'programado para sair', por: 'no porto', est: 'no estaleiro', sem: 'sem posição' };
   const COR = { via: '#1A73E8', prog: '#7B5CC4', por: '#188038', est: '#B06000', sem: '#C9D3DF' };
   const conta = (L, f) => { const c = {}; K.forEach(k => c[k] = []); L.forEach(x => c[f(x)].push(x)); return c; };
@@ -495,7 +495,7 @@ function vgFrotaNum(G, dono, PR, DX0) {   // DX0 = balsas deixadas fora do porto
   return `<div class="vgn">${linha(cE, E.length, 'empurradores', `${lib} liberados à operação${PR.length ? ` · ${vgdPl(PR.length, 'comboio programado', 'comboios programados')} (${PC} confirmados)` : ''}`)}${linha(cB, BL.length, 'balsas', `${n(tot)} m³ de capacidade`, true)}</div>`;
 }
 // a faixa fica embaixo do mapa, no mesmo quadro (Supervisor, 02/11/2026: “o painel abaixo do mapa… quando expandir o mapa ele esteja lá para a apresentação, em fontes maiores”)
-function vgFrotaNumAgora() { try { const D = vgMapaDados(); return vgFrotaNum(vgGrupos().G, D.dono || {}, vgProgs(), D.deix || {}); } catch (e) { return ''; } }
+function vgFrotaNumAgora() { try { const D = vgMapaDados(); return vgFrotaNum(vgGrupos().G, D.dono || {}, vgProgs(), D.deix || {}, D.soltas || {}); } catch (e) { return ''; } }
 // ---------- resumo (Supervisor, 02/11/2026): antes de escolher uma visão, embaixo dos botões, onde está cada um, com as datas que importam ----------
 function vgResumo() {
   let G; try { G = vgGrupos().G; } catch (e) { return ''; }

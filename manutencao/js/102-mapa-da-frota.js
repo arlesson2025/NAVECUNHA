@@ -45,19 +45,23 @@ function vgMapaDados() {
   // (campo balsas). Cada balsa fica com o empurrador do registro mais recente que a cita (saída ou posição com balsas); balsa que sai da lista numa posição
   // marcada depois fica deixada onde o comboio estava por último com ela
   const ev = V.map(x => ({ t: x.date, v: x.vessel, B: x.balsas || [], pos: false })).concat(recs('snap').filter(r => r.tipo === 'pos' && !r.excluido && Array.isArray(r.balsas) && r.vessel).map(r => ({ t: r.at || r.date, v: r.vessel, B: r.balsas, pos: true, r })))
-    .sort((a, b) => a.t < b.t ? -1 : a.t > b.t ? 1 : (a.pos ? 1 : 0) - (b.pos ? 1 : 0)), deix = {};
+    .sort((a, b) => a.t < b.t ? -1 : a.t > b.t ? 1 : (a.pos ? 1 : 0) - (b.pos ? 1 : 0)), deix = {}, lugarB = {}, cargaB = {};
   if (ev.some(x => x.pos)) vgBalsas().forEach(bl => { const b = bl.id; let k = -1; ev.forEach((x, i) => { if (x.B.includes(b)) k = i; }); if (k < 0) return; const e1 = ev[k];
+    // posição da própria balsa (SMF 3.209: “no porto Navecunha em Manaus: vazias VDA XXIX…; em Porto Velho filial…”): no porto informado, sem empurrador
+    if (e1.v === b) { delete dono[b]; if (e1.r.situ === 'por') { const k0 = vgLugar(e1.r.porto || e1.r.local); if (k0 && vgLL(k0)) lugarB[b] = k0; } if (e1.r.carga) cargaB[b] = e1.r.carga; return; }
     if (e1.pos) dono[b] = e1.v; else if (e1.t >= (dt[b] || '')) dono[b] = e1.v;
     const sai = ev.slice(k + 1).find(x => x.pos && x.v === e1.v && !x.B.includes(b)); if (!sai) return;
     const Pv = vgPosicoes(e1.v).filter(p => p.lat != null && (p.at || p.date) >= e1.t && (p.at || p.date) < sai.t), q = Pv[Pv.length - 1] || (e1.r && e1.r.lat != null ? e1.r : null) || (sai.r.lat != null ? sai.r : null);
     delete dono[b]; deix[b] = { emp: e1.v, desde: sai.t, ll: q ? [+q.lat, +q.lon] : null }; });
-  B.forEach(o => { delete dono[o.id]; delete deix[o.id]; });
+  B.forEach(o => { delete dono[o.id]; delete deix[o.id]; delete lugarB[o.id]; });
   E.forEach(o => { if (ev.some(x => x.pos)) o.balsas = vgBalsas().map(b => b.id).filter(b => dono[b] === o.id); });
   // balsa no porto cujo empurrador já saiu sem ela (Supervisor, 04/11/2026: as balsas soltas no porto aparecem embaixo dos empurradores): fica na boia 1, em Manaus
   const noP = new Set([].concat(...Object.values(P)).map(o => o.id)), soltas = {};
-  vgBalsas().forEach(b => { if (vgEmReforma(b.id) || noP.has(dono[b.id]) || deix[b.id] || (dono[b.id] && !noP.has(dono[b.id]) && ev.some(x => x.pos && x.B.includes(b.id)))) return; if (vgOndeDe(b.id, true, V).st !== 'por') return; (soltas['Boia 1 · porto da Navecunha'] = soltas['Boia 1 · porto da Navecunha'] || []).push(b.id); });
+  Object.entries(lugarB).forEach(([b, k]) => (soltas[k] = soltas[k] || []).push(b));
+  vgBalsas().forEach(b => { if (lugarB[b.id] || vgEmReforma(b.id) || noP.has(dono[b.id]) || deix[b.id] || (dono[b.id] && !noP.has(dono[b.id]) && ev.some(x => x.pos && x.B.includes(b.id)))) return; if (vgOndeDe(b.id, true, V).st !== 'por') return; (soltas['Boia 1 · porto da Navecunha'] = soltas['Boia 1 · porto da Navecunha'] || []).push(b.id); });
   Object.keys(soltas).forEach(k => { P[k] = P[k] || []; });
-  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B, dono, soltas, deix };
+  VG_MAPA.carga = cargaB;
+  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B, dono, soltas, deix, carga: cargaB };
 }
 function vgMapaCard() {
   const D = vgMapaDados(), nP = Object.values(D.P).reduce((a, L) => a + L.length, 0);
@@ -121,7 +125,7 @@ function vgPortoIc(cor, k, E, B, soltas) {
   const cx = (n, t, L) => `<div class="vg-pt-c"><b>${n}</b><div><span>${t}</span>${L ? `<small>${esc(L)}</small>` : ''}</div></div>`;
   let h = `<div class="vg-pt-h"><div class="vg-pt-t">${esc(k)}</div>${cx(E.length, E.length === 1 ? 'EMPURRADOR' : 'EMPURRADORES', E.length ? 'CJA ' + rom(E, /^CJA\s*/i) : '')}${cx(nB, nB === 1 ? 'BALSA' : 'BALSAS', nB ? 'VDA ' + rom(tB, /^VDA\s*/i) : '')}</div>`;
   E.forEach(e => { h += `<div class="vg-pt-r"><span class="vg-pt-n" data-vgemp="${esc(e)}">${esc(vName(e))}</span>${sv(...vgComboioSvg(cor, B[e], e))}</div>`; });
-  soltas.forEach(b => { h += `<div class="vg-pt-r vg-pt-s">${sv(`<g data-vgbal="${esc(b)}" style="cursor:pointer">${vgBalsaSvg(.5, 1, 34, 9)}<text x="17.5" y="7.4" text-anchor="middle" font-size="5.6" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(vName(b))}</text></g>`, 35, 11)}</div>`; });
+  soltas.forEach(b => { h += `<div class="vg-pt-r vg-pt-s">${sv(`<g data-vgbal="${esc(b)}" style="cursor:pointer">${vgBalsaSvg(.5, 1, 34, 9)}<text x="17.5" y="7.4" text-anchor="middle" font-size="5.6" font-weight="800" fill="#16244A" stroke="#ECEDE8" stroke-width="1.4" paint-order="stroke" font-family="system-ui,sans-serif">${esc(vName(b))}</text></g>`, 35, 11)}${(VG_MAPA.carga || {})[b] ? `<span class="vg-pt-n" style="min-width:0;cursor:default;color:${VG_MAPA.carga[b] === 'carregada' ? '#B06000' : '#5F6368'}">${VG_MAPA.carga[b] === 'carregada' ? 'com carga' : 'vazia'}</span>` : ''}</div>`; });
   return L.divIcon({ html: `<div class="vg-pt">${h}</div>`, className: 'vg-ic', iconSize: null });
 }
 // parados na boia ou no estaleiro: as balsas lado a lado em fileiras (até 8 por fileira) e os empurradores encostados embaixo
