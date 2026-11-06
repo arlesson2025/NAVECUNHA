@@ -8,7 +8,18 @@
 const VG_LUGAR = { 'Manaus': [-3.119, -60.022], 'Porto Velho': [-8.761, -63.900], 'Itacoatiara': [-3.139, -58.444], 'Vila do Conde': [-1.542, -48.750], 'Barcarena': [-1.506, -48.626],
   'Santarém': [-2.439, -54.700], 'Munguba': [-0.880, -52.520], 'Belém': [-1.456, -48.490], 'Humaitá': [-7.506, -63.021], 'Manicoré': [-5.809, -61.300], 'Borba': [-4.388, -59.594],
   'Nova Olinda do Norte': [-3.888, -59.094], 'Novo Aripuanã': [-5.121, -60.380], 'Autazes': [-3.580, -59.130], 'Calama': [-8.030, -62.880], 'Parintins': [-2.628, -56.736],
-  'Óbidos': [-1.902, -55.518], 'Almeirim': [-1.523, -52.582], 'Gurupá': [-1.405, -51.640], 'Breves': [-1.682, -50.480] };
+  'Óbidos': [-1.902, -55.518], 'Almeirim': [-1.523, -52.582], 'Gurupá': [-1.405, -51.640], 'Breves': [-1.682, -50.480],
+  // referências do rastreador do Monitoramento (SMF 3.202, 05/11/2026: CJA XX e CJA XIX estavam “fora do mapa”): Uraricoera = comunidade no Solimões, coordenada
+  // estimada pelo mapa do Monitoramento de 05/11/2026 (confiança baixa: ajuste quando tiver a do rastreador) · Bretaña = Loreto, Peru (destino da rota MAO × BRE)
+  'Uraricoera': [-3.386, -60.984], 'Bretaña': [-5.256, -74.356] };
+// “17.88Km SE De URARICOERA” (rastreador): a posição fica a essa distância e nesse rumo do lugar citado, não em cima dele
+const VG_RUMO = { n: 0, nne: 22.5, ne: 45, ene: 67.5, e: 90, l: 90, ese: 112.5, se: 135, sse: 157.5, s: 180, ssw: 202.5, sso: 202.5, sw: 225, so: 225, wsw: 247.5, oso: 247.5, w: 270, o: 270, wnw: 292.5, ono: 292.5, nw: 315, no: 315, nnw: 337.5, nno: 337.5 };
+function vgDesloca(t, ll) {
+  if (!ll) return ll; const m = String(t || '').match(/(\d+(?:[.,]\d+)?)\s*km\s*([NSLEOW]{1,3})\s*d[eo]\b/i); if (!m) return ll;
+  const km = +m[1].replace(',', '.'), r = VG_RUMO[m[2].toLowerCase()]; if (r == null || !(km > 0) || km > 300) return ll;
+  const b = r * Math.PI / 180, dLat = km * Math.cos(b) / 111.32, dLon = km * Math.sin(b) / (111.32 * Math.cos(ll[0] * Math.PI / 180));
+  return [Math.round((ll[0] + dLat) * 1e4) / 1e4, Math.round((ll[1] + dLon) * 1e4) / 1e4];
+}
 // pontos fixos da Navecunha (Supervisor, 02/11/2026: “coordenadas fixas… não muda”): boia 1 = porto da Navecunha em Manaus · boia 2 = porto do Cimento
 // em Manaus (onde às vezes as balsas ficam ancoradas quando chegam do Peru) · filial em Porto Velho. “Manaus” sem boia = boia 1; “Porto Velho” = filial
 const VG_FIXO = { 'Boia 1 · porto da Navecunha': [-3.098460, -60.083036], 'Boia 2 · porto do Cimento': [-3.183579, -59.989933], 'Porto Velho · filial': [-8.694150, -63.917464],
@@ -26,7 +37,7 @@ function vgMapaDados() {
       const k = /\beram\b|estaleiro/.test(vgNorm(tx)) ? 'Estaleiro Rio Amazonas (ERAM)' : vgLugar(tx); if (!k || !vgLL(k)) return sem.push(o); (F[k] = F[k] || []).push(o); return; }
     if (o.st === 'por') { const k = vgLugar(o.porto) || (o.porto === 'Porto não informado' ? null : o.porto); if (!k || !vgLL(k)) return sem.push(o); (P[k] = P[k] || []).push(o); return; }
     const L = vgPosicoes(o.id).filter(x => x.situ !== 'por' && (!o.saida || x.date >= o.saida)), q = L[L.length - 1];
-    const ll = q && q.lat != null && q.lon != null ? [+q.lat, +q.lon] : (k => k ? vgLL(k) : null)(vgLugar(o.local));
+    const ll = q && q.lat != null && q.lon != null ? [+q.lat, +q.lon] : (k => k ? vgDesloca(o.local, vgLL(k)) : null)(vgLugar(o.local));
     if (!ll) return sem.push(o); R.push({ o, ll, aprox: !(q && q.lat != null) });
   });
   // balsas em reforma (Supervisor, 02/11/2026: VDA IX e VDA XXII no ERAM): no estaleiro lançado na reforma (Histórico dos equipamentos → Balsa (casco))
@@ -48,7 +59,7 @@ function vgMapaCard() {
   return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''}${D.refB.length ? ' · ' + D.refB.length + (D.refB.length > 1 ? ' balsas' : ' balsa') + ' em reforma' : ''} · azul = em rota, verde = no porto (número = empurradores no porto; aproximando o mapa, aparecem as balsas e os empurradores), cinza = em reforma · comboio em rota: o empurrador e uma balsa para cada balsa · clique no ponto para ver as balsas e a última posição</p>
     <div id="vgMapa" data-nodrag style="height:${vgAltura()}px;flex:0 0 auto;border-radius:8px;background:#E8EEF5;position:relative"><p class="note" style="padding:12px">Carregando o mapa…</p></div><div class="vg-alt" data-nodrag title="Arraste para aumentar ou diminuir o mapa"><i></i></div><div id="vgNum">${typeof vgFrotaNumAgora === 'function' ? vgFrotaNumAgora() : ''}</div>${sem}
     <p class="note vg-ajuda" style="margin:4px 0 0">Posição em rota pela latitude e longitude do e-mail do Monitoramento; sem elas, pelo lugar citado (posição aproximada da cidade, marcada “aprox.”). O mapa precisa de internet. Clique num comboio ou num ponto de fundeio para ver embaixo os dias, as ocorrências e a linha do tempo.</p>
-    ${can.edit() ? '<div class="row" style="justify-content:flex-end;gap:8px;margin:8px 0 2px"><button class="mbtn" data-vgbol>Lançar localização - Boletim Autotrac</button><button class="mbtn pri" data-vgpos="">Informar posição</button></div>' : ''}</div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin:8px 0 2px"><button class="mbtn" data-vgatu title="Busca na nuvem as posições e as operações lançadas e redesenha o mapa">⟳ Atualizar mapa</button>${can.edit() ? '<button class="mbtn" data-vgbol>Lançar localização - Boletim Autotrac</button><button class="mbtn pri" data-vgpos="">Informar posição</button>' : ''}</div></div>
     <div class="card"><h2>Painel de supervisão de manutenção da frota</h2><div id="vgPainel">${typeof vgResumo === 'function' ? vgResumo() : ''}</div></div>`;
 }
 function vgMapaLib() {
@@ -164,6 +175,7 @@ async function vgMapaIniciar() {
     VG_MAPA.rod[o.id] = `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`;
     L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || [], o.id, o.nome + (aprox ? ' · aprox.' : '')), riseOnHover: true }).addTo(m); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
+  if (typeof opdNoMapa === 'function') opdNoMapa(m);   // quadro de vidro com as operações do dia e as programações (js/104)
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => { mk.setIcon(perto ? a : b); if (mk._vgPt) perto ? mk.closeTooltip() : mk.openTooltip(); }); }; m.on('zoomend', desenho); desenho();
   // o mapa ocupa o cartão (Supervisor, 02/11/2026: mapa e painel de supervisão em cartões separados): altura do cartão menos o título em cima e as notas e
   // botões embaixo; acompanha o canto do cartão, a tela cheia (⛶) e o minimizar. Fora das janelas livres (tela estreita), vale a barra embaixo do mapa
