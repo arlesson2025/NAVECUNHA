@@ -175,13 +175,18 @@ function vgPosModal(id) {
     <label class="f s2">Data<input type="date" id="vpD" value="${isoD(hoje())}"></label><label class="f s1">Hora<input type="time" id="vpH"></label>
     <label class="f s3" id="vpPl">Porto<input id="vpP" list="vpPL" placeholder="Manaus, Porto Velho…"><datalist id="vpPL">${[...(typeof VG_FIXO === 'object' ? Object.keys(VG_FIXO) : []), ...VG_PORTOS].map(x => `<option value="${x}">`).join('')}</datalist></label>
     <label class="f s6">Local / última posição<input id="vpL" placeholder="Paraná do Miriti, a 145 km de Humaitá"></label>
+    <label class="f s3" id="vpCl">Latitude e longitude (se o lugar não for cidade da lista)<input id="vpC" placeholder="-3,4521 -60,1234"></label>
     <label class="f s3" id="vpQl">Sem movimento desde (se parado)<input type="date" id="vpQ"></label>
     <label class="f s3">Observação<input id="vpO" placeholder="opcional"></label></div>
     <div class="row end"><button class="mbtn" data-close>Cancelar</button><button class="mbtn pri" id="vpOk">Salvar</button></div>`);
-  const ui = () => { const pr = $('#vpS').value === 'por'; $('#vpPl').style.display = pr ? '' : 'none'; $('#vpQl').style.display = pr ? 'none' : ''; }; $('#vpS').onchange = ui; ui();
+  const ui = () => { const pr = $('#vpS').value === 'por'; $('#vpPl').style.display = pr ? '' : 'none'; $('#vpQl').style.display = $('#vpCl').style.display = pr ? 'none' : ''; }; $('#vpS').onchange = ui; ui();
   $('#vpOk').onclick = async () => { const d = $('#vpD').value, pr = $('#vpS').value === 'por', l = $('#vpL').value.trim(), pt = $('#vpP').value.trim();
     if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.'); if (pr ? !pt && !l : !l) return toast(pr ? 'Informe o porto.' : 'Informe a posição.');
-    await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: $('#vpV').value, date: d, at: d + 'T' + ($('#vpH').value || '00:00'), situ: pr ? 'por' : 'via', local: l, porto: pr ? pt || l : '', parDesde: !pr ? $('#vpQ').value : '', obs: $('#vpO').value.trim(), fonte: 'manual', por: S.session.name });
+    // posição que o mapa não acha some do mapa (Supervisor, 05/11/2026: o CJA XIX salvo e sumido): só grava com porto da lista ou, fora do porto, com cidade da lista ou latitude e longitude
+    const noMapa = t => { const k = vgLugar(t); return !!(k && vgLL(k)); }, c = pr ? { lat: null } : vgCoord($('#vpC').value.trim() || l);
+    if (pr && !noMapa(pt || l)) return toast(`“${pt || l}” não está no mapa: escolha um porto da lista (${[...Object.keys(VG_FIXO), ...VG_PORTOS].join(', ')}).`);
+    if (!pr && c.lat == null && !noMapa(l)) return toast($('#vpC').value.trim() ? 'Latitude e longitude não reconhecidas: use o formato -3,4521 -60,1234 (região da frota).' : `“${l}” não está no mapa: informe a latitude e a longitude ou cite uma cidade da lista (${Object.keys(VG_LUGAR).join(', ')}).`);
+    await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: $('#vpV').value, date: d, at: d + 'T' + ($('#vpH').value || '00:00'), situ: pr ? 'por' : 'via', local: l, porto: pr ? pt || l : '', lat: c.lat, lon: c.lat == null ? null : c.lon, parDesde: !pr ? $('#vpQ').value : '', obs: $('#vpO').value.trim(), fonte: 'manual', por: S.session.name });
     closeModal(); toast('Posição salva.'); render(); };
 }
 // boletim do Autotrac colado: cada trecho que cita um empurrador vira uma posição (conferida antes de gravar)
