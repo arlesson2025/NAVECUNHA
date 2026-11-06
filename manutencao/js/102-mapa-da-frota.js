@@ -21,7 +21,7 @@ const vgKm = (a, b) => 111.32 * Math.hypot(a[0] - b[0], (a[1] - b[1]) * Math.cos
 const VG_MAPA = { m: null, lib: null };
 function vgLugar(t) { const f = vgFixo(t); if (f) return f; const n = vgNorm(t); if (!n) return null; let b = null; Object.keys(VG_LUGAR).forEach(k => { if (n.includes(vgNorm(k)) && (!b || k.length > b.length)) b = k; }); return b; }
 function vgMapaDados() {
-  const V = vgViagens(), E = S.cfg.frota.filter(v => !foraOp(v) || vgEmReforma(v.id)).map(v => vgOndeDe(v.id, false, V)), P = {}, F = {}, R = [], sem = [];
+  const V = vgViagens(), E = S.cfg.frota.filter(v => !foraOp(v) || vgEmReforma(v.id) || vgPosicoes(v.id).length).map(v => vgOndeDe(v.id, false, V)), P = {}, F = {}, R = [], sem = [];
   E.forEach(o => {
     if (o.st === 'ref') { const r = vgEmReforma(o.id) || {}, P0 = vgPosicoes(o.id), q0 = P0[P0.length - 1], tx = [r.local, r.obs, q0 && (!r.ini || q0.date >= r.ini) ? q0.local + ' ' + (q0.porto || '') : ''].filter(Boolean).join(' ');
       const k = /\beram\b|estaleiro/.test(vgNorm(tx)) ? 'Estaleiro Rio Amazonas (ERAM)' : vgLugar(tx); if (!k || !vgLL(k)) return sem.push(o); (F[k] = F[k] || []).push(o); return; }
