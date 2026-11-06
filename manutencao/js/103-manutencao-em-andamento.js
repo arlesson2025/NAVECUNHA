@@ -481,19 +481,32 @@ function vgFrotaNum(G, dono, PR, DX0, SO) { const SO0 = new Set(Object.values(SO
   const pE = new Set(PR.map(r => r.vessel)), pB = new Set(PR.flatMap(r => r.balsas || [])), bVia = new Set(G.via.flatMap(id => vgOndeDe(id, false).balsas || []).filter(b => !dono[b] || via.has(dono[b])).concat(BL.filter(b => via.has(dono[b.id]) || (DX0 || {})[b.id]).map(b => b.id)));
   const ondeE = id => est.has(id) ? 'est' : via.has(id) ? 'via' : pE.has(id) ? 'prog' : porto.has(id) ? 'por' : 'sem';
   const ondeB = b => vgEmReforma(b.id) || est.has(b.id) ? 'est' : bVia.has(b.id) ? 'via' : pB.has(b.id) ? 'prog' : porto.has(dono[b.id]) || SO0.has(b.id) ? 'por' : 'sem';
-  const K = ['via', 'prog', 'por', 'est', 'sem'], NOME = { via: 'em viagem', prog: 'programado para sair', por: 'no porto', est: 'no estaleiro', sem: 'sem posição' };
-  const COR = { via: '#1A73E8', prog: '#7B5CC4', por: '#188038', est: '#B06000', sem: '#C9D3DF' };
-  const conta = (L, f) => { const c = {}; K.forEach(k => c[k] = []); L.forEach(x => c[f(x)].push(x)); return c; };
-  const cE = conta(E.map(v => v.id), ondeE), cB = conta(BL, ondeB), tot = BL.reduce((a, b) => a + cap(b), 0), cc = k => cB[k].reduce((a, b) => a + cap(b), 0);
+  // por lugar (SMF 3.211, Supervisor 06/11/2026: rosca no lugar das barras, “em viagem, em Manaus, em Porto Velho…”): o porto se divide no lugar de cada um
+  const gE = {}; Object.keys(G).filter(k => k !== 'via' && k !== 'est').forEach(k => G[k].forEach(id => { if (!(id in gE)) gE[id] = k; }));
+  const gB = {}; Object.entries(SO || {}).forEach(([k, L]) => L.forEach(b => { gB[b] = vgGrupoDe(k); }));
+  const NG = k => k === 'man' ? 'em Manaus' : k === 'pvh' ? 'em Porto Velho' : k.startsWith('p:') ? 'em ' + k.slice(2).replace(/\s*·.*$/, '') : 'no porto';
+  const ondeE2 = id => { const o = ondeE(id); return o === 'por' ? (gE[id] || 'por') : o; };
+  const ondeB2 = b => { const o = ondeB(b); return o === 'por' ? (gB[b.id] || gE[dono[b.id]] || 'por') : o; };
+  const COR = { via: '#1A73E8', prog: '#7B5CC4', man: '#188038', pvh: '#00897B', por: '#34A853', est: '#B06000', sem: '#C9D3DF' }, COR2 = ['#43A047', '#2E7D32', '#66BB6A'];
+  const NOME = k => ({ via: 'em viagem', prog: 'programado para sair', est: 'no estaleiro', sem: 'sem posição' })[k] || NG(k);
+  const ordem = k => ['via', 'prog', 'man', 'pvh'].indexOf(k) >= 0 ? ['via', 'prog', 'man', 'pvh'].indexOf(k) : k === 'est' ? 90 : k === 'sem' ? 99 : 50;
+  const conta = (L, f) => { const c = {}; L.forEach(x => { const k = f(x); (c[k] = c[k] || []).push(x); }); return Object.keys(c).sort((a, b) => ordem(a) - ordem(b) || (a < b ? -1 : 1)).map((k, i) => ({ k, L: c[k], cor: COR[k] || COR2[i % 3] })); };
+  const cE = conta(E.map(v => v.id), ondeE2), cB = conta(BL, ondeB2), tot = BL.reduce((a, b) => a + cap(b), 0), m3 = L => L.reduce((a, b) => a + cap(b), 0);
   const SD = typeof sfDados === 'function' ? sfDados() : [], lib = SD.filter(x => x.sit < 2 && !est.has(x.v.id)).length;
   const n = v => Math.round(v).toLocaleString('pt-BR'), pc = v => tot ? ' · ' + Math.round(v / tot * 100) + '%' : '';
-  // uma linha por frota: total à esquerda, barra fina e, embaixo de cada cor, quantos (e quantos m³, nas balsas)
-  const linha = (c, total, nome, sub, m3) => { const KK = K.filter(k => c[k].length);
-    return `<div class="vgn-l"><div class="vgn-t"><b>${total}</b><span>${nome}</span><small>${sub}</small></div><div class="vgn-r"><div class="vgn-b">${KK.map(k => `<i style="flex:${c[k].length};background:${COR[k]}" title="${c[k].length} ${NOME[k]}"></i>`).join('')}</div>
-      <div class="vgn-lg">${KK.map(k => `<span><i style="background:${COR[k]}"></i><b>${c[k].length}</b>${NOME[k]}${m3 ? `<em>${n(cc(k))} m³${k === 'via' || k === 'est' ? pc(cc(k)) : ''}</em>` : ''}</span>`).join('')}</div></div></div>`; };
+  const nomes = L => L.map(x => vName(typeof x === 'string' ? x : x.id)).join(', ');
+  // rosca: fatias por lugar, o total no meio; passando o mouse, os nomes de cada fatia; a legenda ao lado com quantos (e os m³, nas balsas)
+  const rosca = (c, total, nome, sub, bal) => { const R = 52, W = 18, C = 2 * Math.PI * R; let a = 0;
+    const fat = c.map(x => { const f = x.L.length / Math.max(1, total), d = f * C; const g = `<circle r="${R}" cx="66" cy="66" fill="none" stroke="${x.cor}" stroke-width="${W}" stroke-dasharray="${Math.max(0, d - (c.length > 1 ? 2 : 0))} ${C}" stroke-dashoffset="${-a}" transform="rotate(-90 66 66)"><title>${x.L.length} ${NOME(x.k)}: ${esc(nomes(x.L))}</title></circle>`; a += d; return g; }).join('');
+    return `<div class="vgn2-b"><svg viewBox="0 0 132 132" width="132" height="132" data-nodrag><circle r="${R}" cx="66" cy="66" fill="none" stroke="#E6ECF4" stroke-width="${W}"/>${fat}<text x="66" y="66" text-anchor="middle" font-size="30" font-weight="800" fill="#14233B" font-family="system-ui,sans-serif">${total}</text><text x="66" y="86" text-anchor="middle" font-size="10.5" fill="#5B6B80" font-family="system-ui,sans-serif">${nome}</text></svg>
+      <div class="vgn2-lg"><div class="vgn2-s">${sub}</div>${c.map(x => `<div title="${esc(nomes(x.L))}"><i style="background:${x.cor}"></i><b>${x.L.length}</b><span>${NOME(x.k)}${bal ? `<em>${n(m3(x.L))} m³${pc(m3(x.L))}</em>` : ''}<small>${esc(nomes(x.L))}</small></span></div>`).join('')}</div></div>`; };
   const PC = PR.filter(r => r.st === 'conf').length;
-  return `<div class="vgn">${linha(cE, E.length, 'empurradores', `${lib} liberados à operação${PR.length ? ` · ${vgdPl(PR.length, 'comboio programado', 'comboios programados')} (${PC} confirmados)` : ''}`)}${linha(cB, BL.length, 'balsas', `${n(tot)} m³ de capacidade`, true)}</div>`;
+  return `<div class="vgn2">${rosca(cE, E.length, 'empurradores', `${lib} liberados à operação${PR.length ? ` · ${vgdPl(PR.length, 'comboio programado', 'comboios programados')} (${PC} confirmados)` : ''}`)}${rosca(cB, BL.length, 'balsas', `${n(tot)} m³ de capacidade`, true)}</div>`;
 }
+{ const st = document.createElement('style'); st.textContent = '.vgn2{display:flex;flex-wrap:wrap;gap:14px 40px;padding:12px 6px 4px}.vgn2-b{display:flex;gap:16px;align-items:flex-start;flex:1 1 420px;min-width:300px}.vgn2-b svg{flex:0 0 auto}'
+  + '.vgn2-lg{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}.vgn2-s{font-size:12.5px;color:#5B6B80;margin-bottom:2px}.vgn2-lg>div{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:#14233B}.vgn2-lg i{flex:0 0 auto;width:11px;height:11px;border-radius:50%;margin-top:4px}'
+  + '.vgn2-lg b{min-width:22px;text-align:right;font-size:16px}.vgn2-lg span{min-width:0}.vgn2-lg em{font-style:normal;color:#5B6B80;font-size:12px;margin-left:6px}.vgn2-lg small{display:block;color:#7A8899;font-size:11.5px;line-height:1.3;white-space:normal}'
+  + '.cm-full .vgn2-lg>div,:fullscreen .vgn2-lg>div{font-size:16px}.cm-full .vgn2 svg,:fullscreen .vgn2 svg{width:150px;height:150px}'; document.head.appendChild(st); }
 // a faixa fica embaixo do mapa, no mesmo quadro (Supervisor, 02/11/2026: “o painel abaixo do mapa… quando expandir o mapa ele esteja lá para a apresentação, em fontes maiores”)
 function vgFrotaNumAgora() { try { const D = vgMapaDados(); return vgFrotaNum(vgGrupos().G, D.dono || {}, vgProgs(), D.deix || {}, D.soltas || {}); } catch (e) { return ''; } }
 // ---------- resumo (Supervisor, 02/11/2026): antes de escolher uma visão, embaixo dos botões, onde está cada um, com as datas que importam ----------
