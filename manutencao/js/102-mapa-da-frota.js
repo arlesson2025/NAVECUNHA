@@ -35,12 +35,24 @@ function vgMapaDados() {
     const k = /\beram\b|estaleiro/.test(vgNorm(tx)) ? 'Estaleiro Rio Amazonas (ERAM)' : vgLugar(tx); if (!k || !vgLL(k)) return sem.push(o); (F[k] = F[k] || []).push(o); });
   // cada balsa fica com o empurrador da viagem mais recente em que ela foi (a mesma balsa passa de um comboio para outro); balsa em reforma fica no estaleiro
   const dono = {}, dt = {}; E.forEach(o => { const d = o.u ? o.u.fim || o.u.date || '' : ''; (o.balsas || []).forEach(b => { if (!(b in dt) || d > dt[b]) { dt[b] = d; dono[b] = o.id; } }); });
-  B.forEach(o => delete dono[o.id]);
+  // troca de balsas fora de Manaus (SMF 3.206, Supervisor 05/11/2026: “o comboio chega no destino e algumas balsas voltam vazias com outro empurrador, e às vezes
+  // ele fica no destino e só volta com algumas balsas, às vezes diferentes da que levou”): a posição marcada no mapa leva as balsas que estão com o empurrador
+  // (campo balsas). Cada balsa fica com o empurrador do registro mais recente que a cita (saída ou posição com balsas); balsa que sai da lista numa posição
+  // marcada depois fica deixada onde o comboio estava por último com ela
+  const ev = V.map(x => ({ t: x.date, v: x.vessel, B: x.balsas || [], pos: false })).concat(recs('snap').filter(r => r.tipo === 'pos' && !r.excluido && Array.isArray(r.balsas) && r.vessel).map(r => ({ t: r.at || r.date, v: r.vessel, B: r.balsas, pos: true, r })))
+    .sort((a, b) => a.t < b.t ? -1 : a.t > b.t ? 1 : (a.pos ? 1 : 0) - (b.pos ? 1 : 0)), deix = {};
+  if (ev.some(x => x.pos)) vgBalsas().forEach(bl => { const b = bl.id; let k = -1; ev.forEach((x, i) => { if (x.B.includes(b)) k = i; }); if (k < 0) return; const e1 = ev[k];
+    if (e1.pos) dono[b] = e1.v; else if (e1.t >= (dt[b] || '')) dono[b] = e1.v;
+    const sai = ev.slice(k + 1).find(x => x.pos && x.v === e1.v && !x.B.includes(b)); if (!sai) return;
+    const Pv = vgPosicoes(e1.v).filter(p => p.lat != null && (p.at || p.date) >= e1.t && (p.at || p.date) < sai.t), q = Pv[Pv.length - 1] || (e1.r && e1.r.lat != null ? e1.r : null) || (sai.r.lat != null ? sai.r : null);
+    delete dono[b]; deix[b] = { emp: e1.v, desde: sai.t, ll: q ? [+q.lat, +q.lon] : null }; });
+  B.forEach(o => { delete dono[o.id]; delete deix[o.id]; });
+  E.forEach(o => { if (ev.some(x => x.pos)) o.balsas = vgBalsas().map(b => b.id).filter(b => dono[b] === o.id); });
   // balsa no porto cujo empurrador já saiu sem ela (Supervisor, 04/11/2026: as balsas soltas no porto aparecem embaixo dos empurradores): fica na boia 1, em Manaus
   const noP = new Set([].concat(...Object.values(P)).map(o => o.id)), soltas = {};
-  vgBalsas().forEach(b => { if (vgEmReforma(b.id) || noP.has(dono[b.id])) return; if (vgOndeDe(b.id, true, V).st !== 'por') return; (soltas['Boia 1 · porto da Navecunha'] = soltas['Boia 1 · porto da Navecunha'] || []).push(b.id); });
+  vgBalsas().forEach(b => { if (vgEmReforma(b.id) || noP.has(dono[b.id]) || deix[b.id] || (dono[b.id] && !noP.has(dono[b.id]) && ev.some(x => x.pos && x.B.includes(b.id)))) return; if (vgOndeDe(b.id, true, V).st !== 'por') return; (soltas['Boia 1 · porto da Navecunha'] = soltas['Boia 1 · porto da Navecunha'] || []).push(b.id); });
   Object.keys(soltas).forEach(k => { P[k] = P[k] || []; });
-  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B, dono, soltas };
+  return { P, F, R, sem, ref: E.filter(o => o.st === 'ref'), refB: B, dono, soltas, deix };
 }
 function vgMapaCard() {
   const D = vgMapaDados(), nP = Object.values(D.P).reduce((a, L) => a + L.length, 0);
@@ -126,22 +138,28 @@ function vgFundeioIc(cor, B, E) {
 function vgPosClique(m, ll) {
   const H = hoje(), hh = String(H.getHours()).padStart(2, '0') + ':' + String(H.getMinutes()).padStart(2, '0'), V = vgViagens();
   const E = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, st: vgOndeDe(v.id, false, V).st })).sort((a, b) => (a.st === 'via' ? 0 : 1) - (b.st === 'via' ? 0 : 1));
-  const lat = Math.round(ll.lat * 1e5) / 1e5, lon = Math.round(ll.lng * 1e5) / 1e5;
-  const html = `<div class="vg-pc" style="min-width:230px;font:13px/1.35 system-ui,sans-serif"><b style="font-size:14px">Posição do comboio aqui</b>
-    <div class="note" style="margin:2px 0 8px">${String(lat).replace('.', ',')} ${String(lon).replace('.', ',')}</div>
-    <label style="display:block;margin-bottom:6px">Empurrador<br><select id="vpcV" style="width:100%">${E.map(x => `<option value="${x.v.id}">${esc(x.v.nome)}${x.st === 'via' ? ' · em viagem' : x.st === 'por' ? ' · no porto' : ''}</option>`).join('')}</select></label>
-    <label style="display:block;margin-bottom:6px">Situação<br><select id="vpcS" style="width:100%"><option value="mov">Em trânsito</option><option value="par">Parado (fora do porto)</option></select></label>
-    <div style="display:flex;gap:6px;margin-bottom:6px"><label style="flex:1">Data<br><input type="date" id="vpcD" value="${isoD(H)}" max="${isoD(H)}" style="width:100%"></label><label style="width:86px">Hora<br><input type="time" id="vpcH" value="${hh}" style="width:100%"></label></div>
-    <label style="display:block;margin-bottom:8px">Observação<br><input id="vpcO" placeholder="opcional" style="width:100%"></label>
-    <div style="display:flex;gap:6px;justify-content:flex-end"><button class="mbtn sm" id="vpcX">Cancelar</button><button class="mbtn pri sm" id="vpcOk">Salvar</button></div></div>`;
-  const pp = L.popup({ maxWidth: 300, closeOnClick: false }).setLatLng(ll).setContent(html).openOn(m), c = pp.getElement();
-  if (!c) return;
-  c.querySelector('#vpcX').onclick = () => m.closePopup();
-  c.querySelector('#vpcOk').onclick = async () => {
-    const d = c.querySelector('#vpcD').value, h = c.querySelector('#vpcH').value || '00:00', par = c.querySelector('#vpcS').value === 'par', ob = c.querySelector('#vpcO').value.trim();
+  const lat = Math.round(ll.lat * 1e5) / 1e5, lon = Math.round(ll.lng * 1e5) / 1e5, pino = L.circleMarker(ll, { radius: 9, color: '#fff', weight: 3, fillColor: '#D93025', fillOpacity: 1 }).addTo(m);
+  // janela do SMF (a mesma do Informar posição), não o balão do mapa: cabe a lista de balsas e não fica cortada pela altura do mapa
+  const mm = modal(`<h2>Posição do comboio no ponto marcado</h2><p class="note" style="margin-top:0">Ponto vermelho no mapa · ${String(lat).replace('.', ',')} ${String(lon).replace('.', ',')}</p><div class="g">
+    <label class="f s3">Empurrador<select id="vpcV">${E.map(x => `<option value="${x.v.id}">${esc(x.v.nome)}${x.st === 'via' ? ' · em viagem' : x.st === 'por' ? ' · no porto' : ''}</option>`).join('')}</select></label>
+    <label class="f s3">Situação<select id="vpcS"><option value="mov">Em trânsito</option><option value="par">Parado (fora do porto)</option></select></label>
+    <label class="f s3">Data<input type="date" id="vpcD" value="${isoD(H)}" max="${isoD(H)}"></label><label class="f s3">Hora<input type="time" id="vpcH" value="${hh}"></label>
+    <label class="f s6">Observação<input id="vpcO" placeholder="opcional"></label></div>
+    <p style="margin:10px 0 4px"><b>Balsas com ele agora</b> <span class="note">· desmarque as que ficaram no destino, marque as que ele pegou</span></p>
+    <div id="vpcB" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px 10px;max-height:260px;overflow:auto;border:1px solid #D5DEEB;border-radius:8px;padding:6px 8px"></div>
+    <div class="row end" style="margin-top:10px"><button class="mbtn" id="vpcX">Cancelar</button><button class="mbtn pri" id="vpcOk">Salvar</button></div>`, true);
+  const fecha = () => { try { m.removeLayer(pino); } catch (e) { } }; new MutationObserver((r, o) => { if (!mm.isConnected) { fecha(); o.disconnect(); } }).observe(document.body, { childList: true });
+  const D = vgMapaDados(), BL = vgBalsas().filter(b => !vgEmReforma(b.id));
+  const lista = () => { const v = $('#vpcV').value, com = BL.filter(b => D.dono[b.id] === v), out = BL.filter(b => D.dono[b.id] !== v);
+    $('#vpcB').innerHTML = com.concat(out).map(b => { const on = D.dono[b.id] === v, x = (D.deix || {})[b.id], ond = on ? '' : x ? 'deixada pelo ' + vName(x.emp) : D.dono[b.id] ? 'com o ' + vName(D.dono[b.id]) : 'no porto';
+      return `<label style="display:flex;gap:6px;align-items:flex-start;padding:3px 0;cursor:pointer${on ? ';font-weight:700' : ''}"><input type="checkbox" value="${esc(b.id)}"${on ? ' checked' : ''} style="width:auto;margin:3px 0 0;flex:0 0 auto"><span>${esc(b.nome)}${ond ? `<br><small class="note" style="font-weight:400">${esc(ond)}</small>` : ''}</span></label>`; }).join('') || '<span class="note">Nenhuma balsa cadastrada.</span>'; };
+  $('#vpcV').onchange = lista; lista();
+  $('#vpcX').onclick = () => closeModal();
+  $('#vpcOk').onclick = async () => {
+    const d = $('#vpcD').value, h = $('#vpcH').value || '00:00', par = $('#vpcS').value === 'par', ob = $('#vpcO').value.trim();
     if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.');
-    const rec = { id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: c.querySelector('#vpcV').value, date: d, at: d + 'T' + h, situ: 'via', local: 'Marcado no mapa' + (ob ? ' · ' + ob : ''), porto: '', lat, lon, parDesde: par ? d : '', obs: ob, fonte: 'mapa', por: (S.session || {}).name || '' };
-    await saveRec(rec); m.closePopup(); render(); vgPosConfere([rec]);
+    const rec = { id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: $('#vpcV').value, date: d, at: d + 'T' + h, situ: 'via', local: 'Marcado no mapa' + (ob ? ' · ' + ob : ''), porto: '', lat, lon, parDesde: par ? d : '', obs: ob, fonte: 'mapa', por: (S.session || {}).name || '', balsas: [...document.querySelectorAll('#vpcB input:checked')].map(i => i.value) };
+    await saveRec(rec); closeModal(); render(); vgPosConfere([rec]);
   };
 }
 const VG_ZOOM_DESENHO = 11;   // mapa mais longe que isso: no porto volta o ícone pequeno com o número (as fileiras de balsas cobririam o mapa)
@@ -181,6 +199,11 @@ async function vgMapaIniciar() {
   Object.entries(D.F).forEach(([k, Lp]) => { const ll = vgLL(k); pts.push(ll); const nE = Lp.filter(o => !o.bal).length, mk = L.marker(ll, { icon: vgIcone('#5F6368', 0, Lp.length), riseOnHover: true });
     troca(mk, vgFundeioIc('#5F6368', nBal(Lp), nEmp(Lp)), vgIcone('#5F6368', 0, Lp.length)); mk.on('click', cliq(k, Lp)); mk.addTo(m)
       .bindTooltip(`${esc(k)} · ${Lp.map(o => esc(o.nome.replace(/^CJA\s*/, ''))).join(', ')} · em reforma`, tip('ref')); });
+  // balsas deixadas fora do porto (troca de balsas no destino): agrupadas pelo lugar, em laranja, com o empurrador que as deixou e desde quando
+  const DX = {}; Object.entries(D.deix || {}).forEach(([b, x]) => { if (!x.ll) return; const k = x.ll[0].toFixed(2) + ',' + x.ll[1].toFixed(2); (DX[k] = DX[k] || { ll: x.ll, B: [], X: [] }).B.push(b); DX[k].X.push(x); });
+  Object.values(DX).forEach(g => { pts.push(g.ll); const mk = L.marker(g.ll, { icon: vgIcone('#B06000', 0, g.B.length), riseOnHover: true });
+    troca(mk, vgFundeioIc('#B06000', g.B, []), vgIcone('#B06000', 0, g.B.length)); mk.addTo(m)
+      .bindTooltip(`Balsas deixadas · ${g.B.map(b => esc(vName(b))).join(', ')} · pelo ${esc(vName(g.X[0].emp))} · ${esc(vgDH(g.X[0].desde))}`, tip('ref')); });
   // clique no comboio: o cartão do comboio em cima do mapa (dias em viagem, previsão, ocorrências, linha do tempo e fotos); clique numa balsa do desenho: o da balsa
   // o clique (no desenho ou no nome) é tratado pela página, não pelo mapa: ver o ouvinte de [data-vgcomb] no fim deste arquivo
   VG_MAPA.rod = {};
