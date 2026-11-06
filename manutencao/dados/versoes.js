@@ -2,6 +2,7 @@
 // “Versão do SMF” da Administração (antes iam em toda abertura, ~58 KB). A cada publicação: suba VERSAO_APP (js/02) e acrescente a versão no topo da lista.
 'use strict';
 const VERSOES = [
+  { v: '3.200', data: '05/11/2026', itens: ['Layout da frota: Informar posição não grava mais um lugar que o mapa não conhece (o CJA XIX salvo e sumido, pedido do Supervisor): no porto, só porto da lista; fora do porto, cidade da lista ou latitude e longitude (campo novo).', 'Linha Sem posição no mapa: mostra o motivo (o lugar digitado) e o botão Corrigir de cada empurrador.'] },
   { v: '3.199', data: '05/11/2026', itens: ['Balsas · Ficha técnica: capacidade nominal pelos e-mails de disponibilidade do Eliseu e do Geomarques (pedido do Supervisor): VDA XIV e VDA XVI 4.205 m³ (eram 4.052,04), VDA XIX 4.056 m³ (era 4.052,04), VDA XXVIII 3.315 m³ (era 4.000); a VDA XXVI continua com 3.315,8 do ClickUp. O total de capacidade das balsas acompanha.'] },
   { v: '3.198', data: '05/11/2026', itens: ['Layout da frota: no comboio do mapa, os nomes das balsas ficaram maiores e em cima do desenho (pedido do Supervisor); o nome do empurrador continua embaixo dele, também maior.'] },
   { v: '3.197', data: '05/11/2026', itens: ['Layout da frota: comboio do mapa menor (pedido do Supervisor): a foto da balsa e do empurrador a 17% do tamanho (era 30%) e as etiquetas dos nomes menores.'] },
