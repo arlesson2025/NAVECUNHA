@@ -17,6 +17,7 @@ const VG_FIXO = { 'Boia 1 · porto da Navecunha': [-3.098460, -60.083036], 'Boia
 const VG_FIXO_RE = [[/\bboia\s*(?:n\s*)?(?:2|02|ii|dois)\b|cimento/, 'Boia 2 · porto do Cimento'], [/filial|porto velho|\bpvh\b/, 'Porto Velho · filial'], [/\bboia\s*(?:n\s*)?(?:1|01|i|um)\b|navecunha/, 'Boia 1 · porto da Navecunha'], [/\beram\b|estaleiro/, 'Estaleiro Rio Amazonas (ERAM)'], [/manaus|\bmao\b|\bboia\b/, 'Boia 1 · porto da Navecunha']];
 function vgFixo(t) { const n = vgNorm(t); if (!n) return null; const r = VG_FIXO_RE.find(x => x[0].test(n)); return r ? r[1] : null; }
 const vgLL = k => VG_FIXO[k] || VG_LUGAR[k];
+const vgKm = (a, b) => 111.32 * Math.hypot(a[0] - b[0], (a[1] - b[1]) * Math.cos(a[0] * Math.PI / 180));   // distância aproximada em km
 const VG_MAPA = { m: null, lib: null };
 function vgLugar(t) { const f = vgFixo(t); if (f) return f; const n = vgNorm(t); if (!n) return null; let b = null; Object.keys(VG_LUGAR).forEach(k => { if (n.includes(vgNorm(k)) && (!b || k.length > b.length)) b = k; }); return b; }
 function vgMapaDados() {
@@ -27,7 +28,11 @@ function vgMapaDados() {
     if (o.st === 'por') { const k = vgLugar(o.porto) || (o.porto === 'Porto não informado' ? null : o.porto); if (!k || !vgLL(k)) return sem.push(o); (P[k] = P[k] || []).push(o); return; }
     const L = vgPosicoes(o.id).filter(x => x.situ !== 'por' && (!o.saida || x.date >= o.saida)), q = L[L.length - 1];
     const ll = q && q.lat != null && q.lon != null ? [+q.lat, +q.lon] : (k => k ? vgLL(k) : null)(vgLugar(o.local));
-    if (!ll) return sem.push(o); R.push({ o, ll, aprox: !(q && q.lat != null) });
+    if (!ll) return sem.push(o);
+    // comboio parado em cima do nosso porto (boia 1, boia 2, filial de Porto Velho): desenhado arrumado como no porto, não solto em cima do outro
+    // (SMF 3.208, Supervisor 05/11/2026: “aqui é a filial em Porto Velho, as balsas e empurradores que tiverem aqui têm que ficar arrumadas igual no porto em Manaus”)
+    const fx = Object.keys(VG_FIXO).find(k => !/ERAM/.test(k) && vgKm(ll, VG_FIXO[k]) < 3); if (fx) { (P[fx] = P[fx] || []).push(o); return; }
+    R.push({ o, ll, aprox: !(q && q.lat != null) });
   });
   // balsas em reforma (Supervisor, 02/11/2026: VDA IX e VDA XXII no ERAM): no estaleiro lançado na reforma (Histórico dos equipamentos → Balsa (casco))
   const B = vgBalsas().filter(b => vgEmReforma(b.id)).map(b => ({ id: b.id, nome: b.nome, st: 'ref', bal: true }));
