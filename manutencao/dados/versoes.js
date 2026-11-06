@@ -2,6 +2,7 @@
 // “Versão do SMF” da Administração (antes iam em toda abertura, ~58 KB). A cada publicação: suba VERSAO_APP (js/02) e acrescente a versão no topo da lista.
 'use strict';
 const VERSOES = [
+  { v: '3.213', data: '06/11/2026', itens: ['Layout da frota: a rosca das balsas mostra o volume: o total em m³ no meio, embaixo de BALSAS, e o volume de cada fatia ao lado dela, por fora (pedido do Supervisor: “além da qtde e % coloca o total em volume também no gráfico rosca das balsas”).'] },
   { v: '3.212', data: '06/11/2026', itens: ['Layout da frota: as duas roscas da Frota em números ficam juntas, lado a lado e centralizadas; EMPURRADORES e BALSAS em letras maiores no meio; cada fatia mostra a quantidade e o % (pedido do Supervisor: “ficou distante um do outro e o nome balsa e empurrador tá pequeno, colocar qtde e % nos gráficos rosca”).'] },
   { v: '3.211', data: '06/11/2026', itens: ['Layout da frota: a faixa Frota em números embaixo do mapa passa a ser duas roscas (empurradores e balsas) no lugar das barras, aprovado pelo Supervisor (“substitui”). Fatias por lugar: em viagem, em Manaus, em Porto Velho, outro porto, no estaleiro; legenda com quantos, os m³ das balsas e os nomes de cada fatia. Em tela cheia a faixa fica junto do mapa, com letras maiores.'] },
   { v: '3.210', data: '06/11/2026', itens: ['Layout da frota: empurrador fora de operação com posição informada também aparece no mapa (o CJA XXI, ativo novo aguardando liberação, no porto Navecunha).'] },
