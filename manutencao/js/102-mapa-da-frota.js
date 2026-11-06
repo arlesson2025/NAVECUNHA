@@ -47,7 +47,7 @@ function vgMapaCard() {
   const sem = D.sem.length ? `<p class="note" style="margin:6px 0 0"><b>Sem posição no mapa:</b> ${D.sem.map(o => `${esc(o.nome)}${o.st === 'via' ? ' (em rota' + (o.dias != null ? ', ' + o.dias + ' d' : '') + (o.local ? ', “' + esc(o.local) + '” fora do mapa' : '') + ')' : o.st === 'ref' ? ' (em reforma, local não informado)' : o.st === 'por' ? ' (no porto “' + esc(o.porto || '') + '”, lugar fora do mapa)' : ''}${can.edit() && !o.bal ? ` <button class="mbtn sm" data-vgpos="${o.id}">Corrigir</button>` : ''}`).join(' · ')} · use “Informar posição” ou cole o e-mail do Monitoramento</p>` : '';
   return `<div class="card"><h2>Mapa da frota · hoje</h2><p class="note" style="margin-top:0">${D.R.length} em rota · ${nP} no porto${D.ref.length ? ' · ' + D.ref.length + ' em reforma' : ''}${D.refB.length ? ' · ' + D.refB.length + (D.refB.length > 1 ? ' balsas' : ' balsa') + ' em reforma' : ''} · azul = em rota, verde = no porto (número = empurradores no porto; aproximando o mapa, aparecem as balsas e os empurradores), cinza = em reforma · comboio em rota: o empurrador e uma balsa para cada balsa · clique no ponto para ver as balsas e a última posição</p>
     <div id="vgMapa" data-nodrag style="height:${vgAltura()}px;flex:0 0 auto;border-radius:8px;background:#E8EEF5;position:relative"><p class="note" style="padding:12px">Carregando o mapa…</p></div><div class="vg-alt" data-nodrag title="Arraste para aumentar ou diminuir o mapa"><i></i></div><div id="vgNum">${typeof vgFrotaNumAgora === 'function' ? vgFrotaNumAgora() : ''}</div>${sem}
-    <p class="note vg-ajuda" style="margin:4px 0 0">Posição em rota pela latitude e longitude do e-mail do Monitoramento; sem elas, pelo lugar citado (posição aproximada da cidade, marcada “aprox.”). O mapa precisa de internet. Clique num comboio ou num ponto de fundeio para ver embaixo os dias, as ocorrências e a linha do tempo.</p>
+    <p class="note vg-ajuda" style="margin:4px 0 0">Posição em rota pela latitude e longitude do e-mail do Monitoramento; sem elas, pelo lugar citado (posição aproximada da cidade, marcada “aprox.”). O mapa precisa de internet. Clique num comboio ou num ponto de fundeio para ver embaixo os dias, as ocorrências e a linha do tempo.${can.edit() ? ' <b>Para atualizar um comboio em viagem: clique no ponto do rio onde ele está e escolha o empurrador.</b>' : ''}</p>
     ${can.edit() ? '<div class="row" style="justify-content:flex-end;gap:8px;margin:8px 0 2px"><button class="mbtn" data-vgbol>Lançar localização - Boletim Autotrac</button><button class="mbtn pri" data-vgpos="">Informar posição</button></div>' : ''}</div>
     <div class="card"><h2>Painel de supervisão de manutenção da frota</h2><div id="vgPainel">${typeof vgResumo === 'function' ? vgResumo() : ''}</div></div>`;
 }
@@ -120,6 +120,30 @@ function vgFundeioIc(cor, B, E) {
     g += `<g${E[k] ? ` data-vgemp="${esc(E[k])}" style="cursor:pointer"` : ''}><rect x="${x}" y="${y}" width="${pw}" height="${ph}" rx="2" fill="${cor}" stroke="#fff" stroke-width="1"/>${t ? `<text transform="translate(${x + pw / 2 + 1.5},${y + ph / 2}) rotate(-90)" text-anchor="middle" font-size="4.4" font-weight="800" fill="#fff" font-family="system-ui,sans-serif">${t}</text>` : `<rect x="${x + 1.5}" y="${y + 5.5}" width="${pw - 3}" height="3.5" rx=".8" fill="#fff" opacity=".9"/>`}</g>`; }
   return vgIc(g, W, y + ph + 1, 2.2);
 }
+// clique no mapa = posição do comboio naquele ponto (SMF 3.205, Supervisor 05/11/2026: “clicar um ponto no mapa e escolher o comboio e atualizar a movimentação
+// dele”): o mapinha do Monitoramento no WhatsApp não traz coordenada; o Supervisor marca o ponto olhando o mapinha. Grava a mesma posição do Informar posição
+// (snap 'pos', fora do porto, com latitude e longitude exatas); no porto continua pelo Informar posição (porto da lista)
+function vgPosClique(m, ll) {
+  const H = hoje(), hh = String(H.getHours()).padStart(2, '0') + ':' + String(H.getMinutes()).padStart(2, '0'), V = vgViagens();
+  const E = S.cfg.frota.filter(v => !foraOp(v)).map(v => ({ v, st: vgOndeDe(v.id, false, V).st })).sort((a, b) => (a.st === 'via' ? 0 : 1) - (b.st === 'via' ? 0 : 1));
+  const lat = Math.round(ll.lat * 1e5) / 1e5, lon = Math.round(ll.lng * 1e5) / 1e5;
+  const html = `<div class="vg-pc" style="min-width:230px;font:13px/1.35 system-ui,sans-serif"><b style="font-size:14px">Posição do comboio aqui</b>
+    <div class="note" style="margin:2px 0 8px">${String(lat).replace('.', ',')} ${String(lon).replace('.', ',')}</div>
+    <label style="display:block;margin-bottom:6px">Empurrador<br><select id="vpcV" style="width:100%">${E.map(x => `<option value="${x.v.id}">${esc(x.v.nome)}${x.st === 'via' ? ' · em viagem' : x.st === 'por' ? ' · no porto' : ''}</option>`).join('')}</select></label>
+    <label style="display:block;margin-bottom:6px">Situação<br><select id="vpcS" style="width:100%"><option value="mov">Em trânsito</option><option value="par">Parado (fora do porto)</option></select></label>
+    <div style="display:flex;gap:6px;margin-bottom:6px"><label style="flex:1">Data<br><input type="date" id="vpcD" value="${isoD(H)}" max="${isoD(H)}" style="width:100%"></label><label style="width:86px">Hora<br><input type="time" id="vpcH" value="${hh}" style="width:100%"></label></div>
+    <label style="display:block;margin-bottom:8px">Observação<br><input id="vpcO" placeholder="opcional" style="width:100%"></label>
+    <div style="display:flex;gap:6px;justify-content:flex-end"><button class="mbtn sm" id="vpcX">Cancelar</button><button class="mbtn pri sm" id="vpcOk">Salvar</button></div></div>`;
+  const pp = L.popup({ maxWidth: 300, closeOnClick: false }).setLatLng(ll).setContent(html).openOn(m), c = pp.getElement();
+  if (!c) return;
+  c.querySelector('#vpcX').onclick = () => m.closePopup();
+  c.querySelector('#vpcOk').onclick = async () => {
+    const d = c.querySelector('#vpcD').value, h = c.querySelector('#vpcH').value || '00:00', par = c.querySelector('#vpcS').value === 'par', ob = c.querySelector('#vpcO').value.trim();
+    if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.');
+    const rec = { id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: c.querySelector('#vpcV').value, date: d, at: d + 'T' + h, situ: 'via', local: 'Marcado no mapa' + (ob ? ' · ' + ob : ''), porto: '', lat, lon, parDesde: par ? d : '', obs: ob, fonte: 'mapa', por: (S.session || {}).name || '' };
+    await saveRec(rec); m.closePopup(); render(); vgPosConfere([rec]);
+  };
+}
 const VG_ZOOM_DESENHO = 11;   // mapa mais longe que isso: no porto volta o ícone pequeno com o número (as fileiras de balsas cobririam o mapa)
 const vgGoogle = ll => `<br><a href="https://www.google.com/maps?q=${ll[0]},${ll[1]}" target="_blank" rel="noopener">Abrir no Google Maps ↗</a>`;
 const vgAltura = () => { try { const h = +localStorage.getItem('smf_vg_alt'); return h >= 260 ? h : 560; } catch (e) { return 560; } };
@@ -164,6 +188,7 @@ async function vgMapaIniciar() {
     VG_MAPA.rod[o.id] = `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`;
     L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || [], o.id, o.nome + (aprox ? ' · aprox.' : '')), riseOnHover: true }).addTo(m); });
   if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
+  if (can.edit()) { el.style.cursor = 'crosshair'; m.on('click', e => vgPosClique(m, e.latlng)); }   // clique no rio: marca a posição de um comboio (SMF 3.205)
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => { mk.setIcon(perto ? a : b); if (mk._vgPt) perto ? mk.closeTooltip() : mk.openTooltip(); }); }; m.on('zoomend', desenho); desenho();
   // o mapa ocupa o cartão (Supervisor, 02/11/2026: mapa e painel de supervisão em cartões separados): altura do cartão menos o título em cima e as notas e
   // botões embaixo; acompanha o canto do cartão, a tela cheia (⛶) e o minimizar. Fora das janelas livres (tela estreita), vale a barra embaixo do mapa
