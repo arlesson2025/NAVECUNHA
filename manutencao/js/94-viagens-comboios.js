@@ -167,6 +167,12 @@ function vgLayMigra() { try {
   const m0 = n.b0, M = 220; if (m0 && !m0.m && m0.h) { m0.h += M; const p1 = n.b1; if (p1 && p1.y != null && p1.y > m0.y) { p1.y += M; if (p1.h) p1.h = Math.max(320, p1.h - M); } }
   localStorage.setItem('smf_enxviag_lay5', JSON.stringify(n));
 } catch (e) { } }
+// campo Latitude e longitude do Informar posição: “-3,30 -60,90”, “-3.3, -60.9”, “-3,30; -60,90” ou em graus (vgCoord); longitude sem sinal = oeste
+function vgCoordCampo(t) {
+  if (!t) return null; t = t.replace(/[−–]/g, '-').replace(/^(\s*-?\d+\.\d+)\s*,\s*(-?\d+\.\d+\s*)$/, '$1 $2'); const n = v => +String(v).replace(',', '.'), m = t.match(/^\s*(-?\d{1,2}(?:[.,]\d+)?)\s*(?:[;/]|,\s|\s)\s*(-?\d{1,3}(?:[.,]\d+)?)\s*$/);
+  if (m) { const a = n(m[1]), o = -Math.abs(n(m[2])); return a >= -15 && a <= 6 && o >= -76 && o <= -44 ? { lat: a, lon: o } : { lat: null }; }
+  const c = vgCoord(t); return c.lat != null ? c : { lat: null };
+}
 function vgPosModal(id) {
   if (!can.edit()) return; const o = id ? vgOndeDe(id, false) : null;
   modal(`<h2>Informar posição</h2><div class="g">
@@ -183,11 +189,30 @@ function vgPosModal(id) {
   $('#vpOk').onclick = async () => { const d = $('#vpD').value, pr = $('#vpS').value === 'por', l = $('#vpL').value.trim(), pt = $('#vpP').value.trim();
     if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.'); if (pr ? !pt && !l : !l) return toast(pr ? 'Informe o porto.' : 'Informe a posição.');
     // posição que o mapa não acha some do mapa (Supervisor, 05/11/2026: o CJA XIX salvo e sumido): só grava com porto da lista ou, fora do porto, com cidade da lista ou latitude e longitude
-    const noMapa = t => { const k = vgLugar(t); return !!(k && vgLL(k)); }, c = pr ? { lat: null } : vgCoord($('#vpC').value.trim() || l);
+    const noMapa = t => { const k = vgLugar(t); return !!(k && vgLL(k)); }, c = pr ? { lat: null } : vgCoordCampo($('#vpC').value.trim()) || vgCoord(l);
     if (pr && !noMapa(pt || l)) return toast(`“${pt || l}” não está no mapa: escolha um porto da lista (${[...Object.keys(VG_FIXO), ...VG_PORTOS].join(', ')}).`);
     if (!pr && c.lat == null && !noMapa(l)) return toast($('#vpC').value.trim() ? 'Latitude e longitude não reconhecidas: use o formato -3,4521 -60,1234 (região da frota).' : `“${l}” não está no mapa: informe a latitude e a longitude ou cite uma cidade da lista (${Object.keys(VG_LUGAR).join(', ')}).`);
-    await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: $('#vpV').value, date: d, at: d + 'T' + ($('#vpH').value || '00:00'), situ: pr ? 'por' : 'via', local: l, porto: pr ? pt || l : '', lat: c.lat, lon: c.lat == null ? null : c.lon, parDesde: !pr ? $('#vpQ').value : '', obs: $('#vpO').value.trim(), fonte: 'manual', por: S.session.name });
-    closeModal(); toast('Posição salva.'); render(); };
+    const rec = { id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: $('#vpV').value, date: d, at: d + 'T' + ($('#vpH').value || (d === isoD(hoje()) ? String(hoje().getHours()).padStart(2, '0') + ':' + String(hoje().getMinutes()).padStart(2, '0') : '00:00')), situ: pr ? 'por' : 'via', local: l, porto: pr ? pt || l : '', lat: c.lat, lon: c.lat == null ? null : c.lon, parDesde: !pr ? $('#vpQ').value : '', obs: $('#vpO').value.trim(), fonte: 'manual', por: S.session.name };
+    await saveRec(rec);
+    closeModal(); render(); vgPosConfere([rec]); };
+}
+// depois de gravar (Supervisor, 05/11/2026: “por que você não mostra uma mensagem de erro pra corrigir em vez de apagar do mapa?”): confere onde cada
+// empurrador ficou no mapa, pela mesma conta do mapa (vgMapaDados, js/102); fora do mapa ou posição que não vale = aviso com o motivo e o botão Corrigir
+function vgPosConfere(G, ok0) {
+  if (typeof vgMapaDados !== 'function') return toast(ok0 || 'Posição salva.');
+  const D = vgMapaDados(), A = [], B = [];
+  G.forEach(rec => { const v = rec.vessel, nm = vName(v), o = vgOndeDe(v, false), P = vgPosicoes(v), ult = P[P.length - 1], M = [];
+    if (ult && ult.id !== rec.id) M.push(`há uma posição mais recente (${vgDH(ult.at || ult.date)}, ${ult.situ === 'por' ? 'no porto ' + (ult.porto || ult.local || '') : ult.local || 'em rota'}): o mapa usa ela. Informe a hora desta posição ou corrija a outra.`);
+    else if (o.st === 'ref') M.push('está em reforma: o mapa mostra o estaleiro, não a posição informada.');
+    else if (o.st !== (rec.situ === 'por' ? 'por' : 'via')) M.push(`a data (${brD(rec.date)}) é anterior à ${o.st === 'via' ? 'saída' : 'chegada'} registrada da última viagem (${brD(o.st === 'via' ? (o.u || {}).date || '' : (o.u || {}).fim || '')}): vale a viagem. Confira a data.`);
+    else if (o.st === 'via' && o.saida && rec.date < o.saida) M.push(`a data (${brD(rec.date)}) é anterior à saída da viagem (${brD(o.saida)}): não conta para esta viagem. Confira a data.`);
+    const r = D.R.find(x => x.o.id === v), pk = Object.keys(D.P).find(k => D.P[k].some(x => x.id === v)), fk = Object.keys(D.F).find(k => D.F[k].some(x => x.id === v));
+    if (!r && !pk && !fk) M.push(D.sem.some(x => x.id === v) ? `não aparece no mapa: ${o.st === 'por' ? 'o porto “' + (o.porto || '') + '” não está na lista do mapa' : 'sem latitude e longitude, e o lugar “' + (o.local || '') + '” não está na lista do mapa'}.` : 'não aparece no mapa (empurrador fora de operação).');
+    if (M.length) A.push(`<li><b>${esc(nm)}</b>: ${M.map(esc).join(' ')} <button class="mbtn sm" data-vgpos="${v}">Corrigir</button></li>`);
+    else B.push(`${nm} ${r ? 'em rota' + (r.aprox ? ' (posição aproximada pela cidade)' : '') : pk ? 'no ponto verde de ' + pk : 'no estaleiro ' + fk}`); });
+  if (!A.length) return toast((ok0 ? ok0 + ' ' : 'Posição salva. ') + 'No mapa: ' + B.join(' · ') + '.');
+  const mm = modal(`<h2>Posição gravada, mas confira</h2><ul class="bal-ag">${A.join('')}</ul>${B.length ? `<p class="note">No mapa: ${esc(B.join(' · '))}.</p>` : ''}<div class="row end"><button class="mbtn pri" data-close>Fechar</button></div>`);
+  mm.addEventListener('click', e => { const t = e.target.closest('[data-vgpos]'); if (t) { closeModal(); vgPosModal(t.dataset.vgpos); } });
 }
 // boletim do Autotrac colado: cada trecho que cita um empurrador vira uma posição (conferida antes de gravar)
 // latitude e longitude no texto (decimal “-7,1234 -63,4567” ou “7°30'12\" S 63°02' W”); fora da região da frota (lat −15 a 6, lon −76 a −44) não conta
@@ -251,10 +276,10 @@ function vgBoletimModal(txt0) {
     const nm = S.cfg.frota.map(v => v.nome).join(', ');
     $('#vbR').innerHTML = !R.length ? `<p class="note" style="color:var(--badt)">⚠ Nenhum empurrador encontrado no texto. O texto precisa ter o nome do empurrador como está cadastrado (${esc(nm)}), por exemplo “R/M CJA XX”.</p>` : `<div class="tw"><table class="t"><thead><tr><th></th><th>Empurrador</th><th>Situação</th><th>Data</th><th>Hora</th><th>Posição / porto</th><th>Parado</th></tr></thead><tbody>${R.map((r, k) => `<tr data-k="${k}"><td><input type="checkbox" class="vbI" checked></td><td><b>${esc(r.nome)}</b></td><td><select class="vbS"><option value="via"${r.situ === 'via' ? ' selected' : ''}>fora do porto</option><option value="por"${r.situ === 'por' ? ' selected' : ''}>no porto</option></select></td><td><input type="date" class="vbD" value="${r.date}"></td><td><input type="time" class="vbH" value="${r.hora}"></td><td><input class="vbLc" value="${esc(r.situ === 'por' && r.porto ? r.porto : r.local)}">${r.lat != null ? `<div class="note">${nf(r.lat, 4)} · ${nf(r.lon, 4)}</div>` : ''}</td><td><input type="checkbox" class="vbP"${r.parDesde ? ' checked' : ''}></td></tr><tr class="vbAv"><td></td><td colspan="6"><div class="vbA" style="color:var(--warnt);font-size:12.5px"></div></td></tr>`).join('')}</tbody></table></div><div class="row end"><button class="mbtn pri" id="vbOk">Gravar ${R.length} posição(ões)</button></div>`;
     $$('#vbR tr[data-k]').forEach(tr => { avs(tr); tr.oninput = tr.onchange = () => avs(tr); });
-    const ok = $('#vbOk'); if (ok) ok.onclick = async () => { let n = 0;
+    const ok = $('#vbOk'); if (ok) ok.onclick = async () => { let n = 0; const G = [];
       for (const tr of $$('#vbR tr[data-k]')) { if (!tr.querySelector('.vbI').checked) continue; const r = R[+tr.dataset.k], d = tr.querySelector('.vbD').value, st = tr.querySelector('.vbS').value, l = tr.querySelector('.vbLc').value.trim(); if (!d || d > isoD(hoje())) continue;
-        await saveRec({ id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: r.vessel, date: d, at: d + 'T' + (tr.querySelector('.vbH').value || '00:00'), situ: st, local: l, porto: st === 'por' ? l : '', parDesde: st === 'via' && tr.querySelector('.vbP').checked ? d : '', obs: '', fonte: 'boletim', por: S.session.name, ...(r.lat != null ? { lat: r.lat, lon: r.lon } : {}) }); n++; }
-      closeModal(); toast(n + ' posição(ões) gravada(s).'); const ta = $('#vgMo'); if (ta) ta.value = ''; render(); }; };
+        const rec = { id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: r.vessel, date: d, at: d + 'T' + (tr.querySelector('.vbH').value || '00:00'), situ: st, local: l, porto: st === 'por' ? l : '', parDesde: st === 'via' && tr.querySelector('.vbP').checked ? d : '', obs: '', fonte: 'boletim', por: S.session.name, ...(r.lat != null ? { lat: r.lat, lon: r.lon } : {}) }; await saveRec(rec); G.push(rec); n++; }
+      closeModal(); const ta = $('#vgMo'); if (ta) ta.value = ''; render(); vgPosConfere(G, n + ' posição(ões) gravada(s).'); }; };
   if (txt0) $('#vbL').onclick();
 }
 // ---------- tela ----------
