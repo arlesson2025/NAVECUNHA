@@ -1,0 +1,31 @@
+{
+  "lido": "2026-11-05T21:45",
+  "fonte": "WhatsApp · grupos Logística Navecunha e Monitoramento Navecunha",
+  "operacoes": {
+    "date": "2026-11-05",
+    "itens": [
+      {"hora": "08:55", "titulo": "Atracação BT VDA XVII", "detalhe": "S-500 · Ipiranga · R/M Cap José Alecrim II · operadores Marcos Lobato e Mateus Santos · sem ocorrência", "status": "concluida"},
+      {"hora": "10:00", "titulo": "VDA XVII aguardando autorização", "detalhe": "Boletim de abertura enviado; aguardando autorização para iniciar a descarga", "status": "aguardando"},
+      {"hora": "11:15", "titulo": "Saída CJA XVII + VDA I", "detalhe": "Para o terminal Ipiranga; atracou no píer às 13h20", "status": "concluida"},
+      {"hora": "16:00", "titulo": "Transferência de consumo VDA X → CJA XVIII", "detalhe": "35.000 m³ (como informado) · fim 19h15 · Operador Veiga", "status": "concluida"},
+      {"hora": "16:35", "titulo": "Descarga A S10 · BT VDA I", "detalhe": "120 m³ · cliente IPP MAO · fim 17h08 · parcial para aliviar (≈150 m³) · Levy", "status": "concluida"},
+      {"hora": "17:40", "titulo": "Descarga Gasolina A · BT VDA I", "detalhe": "1.000 m³ programados · cliente Ipiranga · Levy · sem aviso de fim até 19h16", "status": "andamento"}
+    ],
+    "prog": [
+      {"data": "2026-11-06", "hora": "06:00", "titulo": "Descarga Diesel A S10 · 900 m³", "detalhe": "CJA XVII / balsa VDA II · píer IPP (2ª parcial, lado externo) · Levy"},
+      {"data": "2026-11-06", "hora": "09:00", "titulo": "Carregamento BT VDA VIII", "detalhe": "2º comboio CJA XVIII · cliente ATEM"},
+      {"data": "2026-11-07", "hora": "07:00", "titulo": "Carregamento BT VDA XII", "detalhe": "2º comboio CJA XVIII · cliente ATEM"},
+      {"data": "2026-11-08", "hora": "07:00", "titulo": "Carregamento BT VDA XXIV", "detalhe": "2º comboio CJA XVIII · cliente ATEM"}
+    ],
+    "pend": [
+      "Descarga de gasolina da VDA I ainda sem aviso de término",
+      "Não houve confirmação no grupo da autorização de descarga da VDA XVII (S-500)"
+    ]
+  },
+  "posicoes": [
+    {"empurrador": "CJA XX", "situ": "via", "at": "2026-11-05T08:47", "lat": -3.50, "lon": -60.87, "local": "17,88 km SE de Uraricoera, AM · 5,0 km/h · em trânsito (MAO × BRE × MAO, NOVUM, VDA XIII, XVIII, XXVI e XXVII vazias)"},
+    {"empurrador": "CJA II", "situ": "por", "at": "2026-11-05T08:55", "porto": "Manaus", "local": "Terminal Ipiranga, Manaus · atracado com a BT VDA XVII (S-500)"},
+    {"empurrador": "CJA XVII", "situ": "por", "at": "2026-11-05T13:20", "porto": "Manaus", "local": "Píer da Ipiranga, Manaus · com a BT VDA I, descarregando"},
+    {"empurrador": "CJA XVIII", "situ": "por", "at": "2026-11-05T19:15", "porto": "Manaus", "local": "Porto Navecunha, Manaus · transferência de consumo concluída"}
+  ]
+}

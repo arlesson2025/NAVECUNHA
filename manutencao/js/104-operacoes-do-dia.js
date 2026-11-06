@@ -7,7 +7,19 @@
      ou à mão. Sobe para a nuvem como qualquer snap (o servidor já aceita): sem mudança no Code.gs.
    · Posição dos comboios lida no WhatsApp: smfLancarBoletim(texto, coordenadas) usa a mesma leitura do Boletim Autotrac (vgLerBoletim, js/94).
    · Botão “Atualizar mapa”: sincroniza com a nuvem e redesenha o mapa e o quadro. */
-const OPD = { aba: 'ops', min: false };
+const OPD = { aba: 'ops', min: false, wa: null, carregando: null };
+// leitura do WhatsApp publicada em dados/whatsapp.json (SMF 3.203, Supervisor 05/11/2026: “não aparece isso que eu pedi ao lado do mapa… a localização dos
+// comboios está errada, não é a realidade do WhatsApp”): o Claude lê os grupos e atualiza o arquivo todo dia. As posições entram só na memória deste aparelho
+// (registro 'pos' com wa: true, fora da fila da nuvem) e valem por cima das antigas quando são mais recentes; as operações viram o quadro do mapa.
+async function opdCarregar() {
+  try { const r = await fetch('dados/whatsapp.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return false; const j = await r.json();
+    if (OPD.wa && OPD.wa.lido === j.lido) return false; OPD.wa = j;
+    [...S.recs.keys()].filter(k => String(k).startsWith('wa-')).forEach(k => S.recs.delete(k));
+    const o = j.operacoes; if (o && o.date) S.recs.set('wa-opdia-' + o.date, { id: 'wa-opdia-' + o.date, kind: 'snap', tipo: 'opdia', wa: true, date: o.date, at: j.lido, itens: o.itens || [], prog: o.prog || [], pend: o.pend || [], fonte: j.fonte });
+    (j.posicoes || []).forEach(p => { const v = S.cfg.frota.find(x => vgNorm(x.nome) === vgNorm(p.empurrador)); if (!v || !p.at) return;
+      const id = 'wa-pos-' + v.id + '-' + p.at; S.recs.set(id, { id, kind: 'snap', tipo: 'pos', wa: true, vessel: v.id, date: p.at.slice(0, 10), at: p.at, situ: p.situ === 'por' ? 'por' : 'via', local: p.local || '', porto: p.situ === 'por' ? p.porto || p.local || '' : '', parDesde: '', obs: '', fonte: 'whatsapp', ...(p.lat != null ? { lat: +p.lat, lon: +p.lon } : {}) }); });
+    return true; } catch (e) { return false; }
+}
 const OPD_ST = { concluida: ['Concluída', '#3ECF8E'], andamento: ['Em andamento', '#4FB3FF'], aguardando: ['Aguardando', '#F5B942'] };
 function opdUlt() {
   const L = recs('snap').filter(r => r.tipo === 'opdia' && !r.excluido && r.date).sort((a, b) => (a.date + (a.at || '')) < (b.date + (b.at || '')) ? -1 : 1);
@@ -30,6 +42,7 @@ function opdHtml() {
 }
 // chamado por vgMapaIniciar (js/102) depois de montar o mapa
 function opdNoMapa(m) {
+  if (!OPD.wa && !OPD.carregando) OPD.carregando = opdCarregar().then(n => { OPD.carregando = null; if (n && $('#vgMapa')) render(); });
   const C = L.Control.extend({ options: { position: 'topright' }, onAdd() {
     const d = L.DomUtil.create('div', 'opd' + (OPD.min ? ' min' : '')); d.innerHTML = OPD.min ? '<button class="opd-abre" data-opdmin>Operações do dia ▸</button>' : opdHtml();
     L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
@@ -45,6 +58,7 @@ document.addEventListener('click', async e => {
   const t = e.target && e.target.closest ? e.target.closest('[data-vgatu]') : null; if (!t) return; e.preventDefault();
   t.disabled = true; const tx = t.textContent; t.textContent = 'Atualizando…';
   try { await syncNow(); } catch (er) { }
+  OPD.wa = null; await opdCarregar();
   render(); toast('Mapa atualizado' + (opdUlt() ? ' · operações de ' + brD(opdUlt().date) : '') + '.');
 });
 // ---------- lançamento pelo Claude (depois de ler os grupos do WhatsApp) ----------
@@ -73,7 +87,7 @@ async function smfLancarBoletim(txt, coords) {
   const D = vgMapaDados(), fora = D.sem.filter(o => G.some(g => g.vessel === o.id)).map(o => o.nome);
   return (G.length ? G.length + ' posição(ões) gravada(s). ' : 'Nenhuma posição nova. ') + A.join(' · ') + (fora.length ? ' · FORA DO MAPA: ' + fora.join(', ') : '');
 }
-{ const st = document.createElement('style'); st.textContent = '.opd{width:340px;max-width:calc(100vw - 80px);overflow:auto;background:rgba(10,30,44,.62);border:1px solid rgba(140,200,230,.22);border-radius:14px;backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);box-shadow:0 8px 30px rgba(0,0,0,.4);color:#E8F3F8;font:13px/1.35 system-ui,sans-serif;margin-top:12px!important}'
+{ const st = document.createElement('style'); st.textContent = '.opd{width:380px;max-width:calc(100vw - 80px);overflow:auto;background:rgba(10,30,44,.62);border:1px solid rgba(140,200,230,.22);border-radius:14px;backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);box-shadow:0 8px 30px rgba(0,0,0,.4);color:#E8F3F8;font:13px/1.35 system-ui,sans-serif;margin-top:12px!important}'
   + '.opd.min{width:auto;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;overflow:visible}.opd-abre{background:rgba(10,30,44,.75);color:#fff;border:1px solid rgba(140,200,230,.3);border-radius:10px;padding:8px 12px;font:600 12.5px system-ui,sans-serif;cursor:pointer;backdrop-filter:blur(8px)}'
   + '.opd-cab{display:flex;align-items:center;gap:8px;padding:11px 12px 4px 14px}.opd-cab b{font-size:14px}.opd-cab span{flex:1;font-size:11px;color:#8FB0C0}.opd-x{background:rgba(255,255,255,.1);border:0;color:#fff;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:15px;line-height:1}'
   + '.opd-abas{display:flex;gap:2px;padding:4px 8px 0;border-bottom:1px solid rgba(140,200,230,.15)}.opd-ab{flex:1;background:none;border:0;border-bottom:2px solid transparent;color:#8FB0C0;font:600 11.5px system-ui,sans-serif;padding:7px 2px;cursor:pointer}.opd-ab.on{color:#fff;border-bottom-color:#4FB3D9}.opd-ab i{font-style:normal;margin-left:4px;padding:0 5px;border-radius:8px;background:rgba(255,255,255,.14);font-size:10.5px}'
