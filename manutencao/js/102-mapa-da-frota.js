@@ -148,7 +148,9 @@ function vgPosClique(m, ll) {
     <p style="margin:10px 0 4px"><b>Balsas com ele agora</b> <span class="note">· desmarque as que ficaram no destino, marque as que ele pegou</span></p>
     <div id="vpcB" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px 10px;max-height:260px;overflow:auto;border:1px solid #D5DEEB;border-radius:8px;padding:6px 8px"></div>
     <div class="row end" style="margin-top:10px"><button class="mbtn" id="vpcX">Cancelar</button><button class="mbtn pri" id="vpcOk">Salvar</button></div>`, true);
-  const fecha = () => { try { m.removeLayer(pino); } catch (e) { } }; new MutationObserver((r, o) => { if (!mm.isConnected) { fecha(); o.disconnect(); } }).observe(document.body, { childList: true });
+  const naTela = () => { const fs = document.fullscreenElement, x = $('#modal'); if (fs && x && !fs.contains(x)) fs.appendChild(x); };   // em tela cheia a janela vai para dentro do quadro (senão fica escondida)
+  naTela();
+  const fecha = () => { try { m.removeLayer(pino); } catch (e) { } }; new MutationObserver((r, o) => { if (!mm.isConnected) { fecha(); o.disconnect(); } }).observe(document.body, { childList: true, subtree: true });
   const D = vgMapaDados(), BL = vgBalsas().filter(b => !vgEmReforma(b.id));
   const lista = () => { const v = $('#vpcV').value, com = BL.filter(b => D.dono[b.id] === v), out = BL.filter(b => D.dono[b.id] !== v);
     $('#vpcB').innerHTML = com.concat(out).map(b => { const on = D.dono[b.id] === v, x = (D.deix || {})[b.id], ond = on ? '' : x ? 'deixada pelo ' + vName(x.emp) : D.dono[b.id] ? 'com o ' + vName(D.dono[b.id]) : 'no porto';
@@ -159,7 +161,7 @@ function vgPosClique(m, ll) {
     const d = $('#vpcD').value, h = $('#vpcH').value || '00:00', par = $('#vpcS').value === 'par', ob = $('#vpcO').value.trim();
     if (!d) return toast('Informe a data.'); if (d > isoD(hoje())) return toast('A data não pode ser futura.');
     const rec = { id: uid('snap'), kind: 'snap', tipo: 'pos', vessel: $('#vpcV').value, date: d, at: d + 'T' + h, situ: 'via', local: 'Marcado no mapa' + (ob ? ' · ' + ob : ''), porto: '', lat, lon, parDesde: par ? d : '', obs: ob, fonte: 'mapa', por: (S.session || {}).name || '', balsas: [...document.querySelectorAll('#vpcB input:checked')].map(i => i.value) };
-    await saveRec(rec); closeModal(); render(); vgPosConfere([rec]);
+    await saveRec(rec); closeModal(); rerender(); vgPosConfere([rec]); naTela();
   };
 }
 const VG_ZOOM_DESENHO = 11;   // mapa mais longe que isso: no porto volta o ícone pequeno com o número (as fileiras de balsas cobririam o mapa)
@@ -210,7 +212,11 @@ async function vgMapaIniciar() {
   D.R.forEach(({ o, ll, aprox }) => { pts.push(ll); const par = o.parD > VG_PARADO_D;
     VG_MAPA.rod[o.id] = `${aprox ? 'posição aproximada pelo lugar citado · ' : ''}<a href="#" data-vgficha="${o.id}">Ficha do empurrador</a>${vgGoogle(ll).replace('<br>', ' · ')}`;
     L.marker(ll, { icon: vgComboioIc(par ? '#D93025' : '#1A73E8', o.balsas || [], o.id, o.nome + (aprox ? ' · aprox.' : '')), riseOnHover: true }).addTo(m); });
-  if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
+  // o mapa é refeito a cada sincronização e a cada gravação (render): mantém o zoom e o lugar que o Supervisor deixou (SMF 3.207, 05/11/2026: “quando estou com
+  // o mapa ampliado ele está voltando ao tamanho real sozinho”); só a primeira abertura enquadra a frota toda
+  if (VG_MAPA.vista) m.setView(VG_MAPA.vista.c, VG_MAPA.vista.z, { animate: false });
+  else if (pts.length > 1) m.fitBounds(pts, { padding: [50, 50], maxZoom: 8 }); else m.setView(pts[0] || VG_FIXO['Boia 1 · porto da Navecunha'], 6);
+  setTimeout(() => { if (VG_MAPA.m !== m) return; m.on('moveend', () => { VG_MAPA.vista = { c: m.getCenter(), z: m.getZoom() }; }); }, 600);
   if (can.edit()) { el.style.cursor = 'crosshair'; m.on('click', e => vgPosClique(m, e.latlng)); }   // clique no rio: marca a posição de um comboio (SMF 3.205)
   const desenho = () => { const perto = m.getZoom() >= VG_ZOOM_DESENHO; Z.forEach(([mk, a, b]) => { mk.setIcon(perto ? a : b); if (mk._vgPt) perto ? mk.closeTooltip() : mk.openTooltip(); }); }; m.on('zoomend', desenho); desenho();
   // o mapa ocupa o cartão (Supervisor, 02/11/2026: mapa e painel de supervisão em cartões separados): altura do cartão menos o título em cima e as notas e

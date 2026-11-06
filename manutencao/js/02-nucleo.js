@@ -3,7 +3,7 @@ const LOGOS = { nav: 'img/logo-nav.png', vda: 'img/logo-vda.png' };   // logos e
    SMF · núcleo: dados, armazenamento, nuvem, login e cálculos
    ===================================================================== */
 'use strict';
-const VERSAO_APP = '3.206';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (dados/versoes.js)
+const VERSAO_APP = '3.207';   // a cada publicação: sobe a versão e acrescenta o que mudou em VERSOES (dados/versoes.js)
 const SISTEMAS = ['1.0 Sistema de Propulsão','2.0 Manobrabilidade e Governo','3.0 Geração Elétrica de Bordo','4.0 Resposta a Emergências','5.0 Salvaguarda e Flutuabilidade','6.0 Alimentação de Combustível','7.0 Sinalização e Comunicação','8.0 Fainas de Amarra e Carga','9.0 Casco e Estrutura','10.0 Habitabilidade','11.0 Auxílio à Navegação'];
 const A1M = Object.fromEntries(A1.map(t => [t.id, t]));
 // combate a incêndio no plano (NP 6.3 item 4; decisão do Supervisor, 24/10/2026): bombas elétricas em todos e, no CJA XX, também a motobomba do canhão;
@@ -495,7 +495,11 @@ function renderUser() {
 function go(h) { location.hash = h; }
 window.addEventListener('hashchange', route);
 function route() { const h = location.hash.slice(1) || 'geral'; const [v, a] = h.split('/'); VIEW = v; ARG = a ? decodeURIComponent(a) : ''; document.body.classList.remove('menu'); render(); window.scrollTo(0, 0); }
-function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { renderNav(); return; } render(); }
+function rerender() { const a = document.activeElement; if (a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { renderNav(); return; }
+  // quadro em tela cheia (⛶): redesenhar a tela tiraria da tela cheia (SMF 3.207, Supervisor 05/11/2026: “com o mapa ampliado ele volta ao tamanho real sozinho”);
+  // fica como está e só o mapa da frota se refaz no lugar, com os dados novos
+  const fs = document.fullscreenElement; if ((fs && $('#main').contains(fs)) || $('#main .cm-full')) { renderNav(); if ($('#vgMapa') && typeof vgMapaIniciar === 'function') vgMapaIniciar(); return; }
+  render(); }
 /* montagem da página num lugar só (24/10/2026): antes eram 11 camadas por cima de render, aplicadas nesta mesma ordem */
 let RENDER_ULTV = '';
 document.addEventListener('change', e => { const s = e.target.closest('#frTipo'); if (!s) return; FROTA_TIPO = s.value === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } location.hash = FROTA_TIPO === 'bal' ? '#bal' : '#rotina'; });
