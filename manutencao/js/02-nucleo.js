@@ -509,7 +509,7 @@ function rerender() { const a = document.activeElement; if (a && $('#main').cont
 /* montagem da página num lugar só (24/10/2026): antes eram 11 camadas por cima de render, aplicadas nesta mesma ordem */
 let RENDER_ULTV = '';
 document.addEventListener('change', e => { const s = e.target.closest('#frTipo'); if (!s) return; FROTA_TIPO = s.value === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } location.hash = FROTA_TIPO === 'bal' ? '#bal' : '#rotina'; });
-document.addEventListener('click', e => { const b = e.target.closest('[data-frtipo]'); if (!b) return; FROTA_TIPO = b.dataset.frtipo === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } location.hash = FROTA_TIPO === 'bal' ? '#bal' : '#rotina'; });
+document.addEventListener('click', e => { const b = e.target.closest('[data-frtipo]'); if (!b) return; FROTA_TIPO = b.dataset.frtipo === 'bal' ? 'bal' : 'emp'; try { localStorage.setItem('smf_frota_tipo', FROTA_TIPO); } catch (er) { } location.hash = b.dataset.frdest || (FROTA_TIPO === 'bal' ? '#bal' : '#rotina'); });   // data-frdest: a tela equivalente na outra frota (frotaSw, js/83)
 { const st = document.createElement('style'); st.textContent = `.fr-tipo{display:flex;flex-direction:column;gap:3px;margin:2px 6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#5F6368}.fr-tipo select{font:600 13.5px inherit;text-transform:none;letter-spacing:0;padding:7px 8px;border:1px solid #DADCE0;border-radius:8px;background:#fff;color:#1F2A44}`; document.head.appendChild(st); }
 function render() {
   situRecalc(); document.body.classList.toggle('perfil-opr', ehOperador());

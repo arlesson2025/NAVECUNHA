@@ -121,7 +121,8 @@ const BAL_VIEWS = [['bal', 'Integridade técnica da frota'], ['balcr', 'Cronogra
 // mesma numeração e mesma ordem do menu dos empurradores (Supervisor, 06/11/2026: “padroniza os nomes e a sequência, vale o do empurrador”)
 // botão Empurradores | Balsas no cabeçalho (Supervisor, 06/11/2026: “eliminar futuramente o seletor de frota, começando por esta tela”): faz o mesmo que o
 // seletor do menu (data-frtipo, js/02), que continua lá até todas as telas terem o botão
-const frotaSw = () => `<span class="seg fr-sw">${[['emp', 'Empurradores', S.cfg.frota.length], ['bal', 'Balsas', BALSAS.length]].map(([k, n, c]) => `<button data-frtipo="${k}" class="${FROTA_TIPO === k ? 'on' : ''}">${n} <b>${c}</b></button>`).join('')}</span>`;
+// de / db = a tela equivalente na outra frota (ex.: '#enxhor' e '#balhor'); sem elas, a Integridade técnica de cada frota
+const frotaSw = (de, db) => `<span class="seg fr-sw">${[['emp', 'Empurradores', S.cfg.frota.length, de || '#enxhoje'], ['bal', 'Balsas', BALSAS.length, db || '#bal']].map(([k, n, c, d]) => `<button data-frtipo="${k}" data-frdest="${d}" class="${FROTA_TIPO === k ? 'on' : ''}">${n} <b>${c}</b></button>`).join('')}</span>`;
 const BAL_NUM = { balhor: '1.1', balcor: '1.2', balfal: '1.2', balcr: '2.1', balprog: '2.2', balpl: '2.3', balcal: '3.2', balcmp: '3.2', baldoca: '3.2', balkpi: '5.1', balrel: '5.3' };
 const BAL_ETAPAS = [['1', 'Recebimento', ['balhor', 'balcor', 'balfal']], ['2', 'Planejamento', ['balcr', 'balprog', 'balpl']], ['3', 'Condição', ['balcal', 'balcmp', 'baldoca']], ['5', 'Fechamento', ['balkpi', 'balrel']]];
 function balFaixa() {
