@@ -102,6 +102,7 @@ const oms = () => recs('om');
 const vessel = id => S.cfg.frota.find(v => v.id === id);
 const vName = id => (vessel(id) || (typeof balsaDe === 'function' && balsaDe(id)) || { nome: id }).nome;   // balsas petroleiras (js/83) ficam fora de S.cfg.frota
 async function saveRec(r, opts = {}) {
+  if (typeof SO_LER !== 'undefined' && SO_LER) { opts = Object.assign({}, opts, { localOnly: true }); if (S.pronto) avisoLeitura(); }
   r.updatedAt = Date.now();
   if (!r.createdAt) r.createdAt = r.updatedAt;
   S.recs.set(r.id, r);
@@ -118,8 +119,13 @@ async function kvGet(k) { if (MEM) return MEM.get('kv:' + k); try { return await
 async function sha256(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
 
 /* ---------- nuvem (Apps Script) ---------- */
+// endereço local deste PC (Supervisor, 06/11/2026: “qualquer mudança está levando 10 min”): o SMF em http://localhost lê os dados reais da planilha
+// para conferir cada mudança na hora, e não envia nada (nem registro, nem foto, nem configuração): o código em edição nunca estraga dado de verdade
+const SO_LER = location.hostname === 'localhost';
+let SO_LER_T = 0; const avisoLeitura = () => { if (Date.now() - SO_LER_T < 30000) return; SO_LER_T = Date.now(); toast('Endereço local: só leitura. O que você grava aqui não vai para a planilha; registre pelo site publicado.', 6000); };
 async function api(action, body = {}) {
   if (!S.url) throw new Error('sem_nuvem');
+  if (SO_LER && !['ping', 'login', 'list', 'getFile'].includes(action)) return { ok: false, error: 'so_leitura' };
   const res = await fetch(S.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, token: S.session && S.session.token }, body)) });
   const j = await res.json();
   if (!j.ok && j.error === 'auth' && S.session) { S.session = null; await kvSet('session', null); renderUser(); }
@@ -127,7 +133,7 @@ async function api(action, body = {}) {
 }
 let syncTimer = null, syncing = false;
 function scheduleSync(ms = 1500) { clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, ms); }
-function setSync(state, msg) { S.syncState = state; S.syncMsg = msg; const el = $('#sync'); if (el) { el.className = 'sync ' + state; el.querySelector('span').textContent = msg; } const m = $('#mSync'); if (m) m.textContent = msg; }
+function setSync(state, msg) { if (SO_LER && msg) msg += ' · local, só leitura'; S.syncState = state; S.syncMsg = msg; const el = $('#sync'); if (el) { el.className = 'sync ' + state; el.querySelector('span').textContent = msg; } const m = $('#mSync'); if (m) m.textContent = msg; }
 async function syncNow() {
   if (!S.url) { setSync('', S.pending.size ? 'Modo local · ' + S.pending.size + ' não enviados' : 'Modo local (sem nuvem)'); return; }
   if (syncing || !navigator.onLine) { if (!navigator.onLine) setSync('pend', 'Sem internet · ' + S.pending.size + ' na fila'); return; }
@@ -1268,6 +1274,10 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window
   if (document.readyState === 'loading') await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));   // espera todos os blocos de código: com internet lenta a página chega aos pedaços e a carga corria antes dos últimos blocos
   $$('img[data-logo]').forEach(i => i.src = LOGOS[i.dataset.logo]);
   try { await DB.open(); } catch (e) { MEM = new Map(); }
+  // primeira vez no endereço local só leitura: apaga o exemplo e a fila do modo local antigo (dados deste navegador em localhost, não da planilha)
+  if (SO_LER && !MEM && !(await kvGet('localLeitura'))) { try { for (const r of await DB.all()) await DB.del(r.id); } catch (e) { }
+    for (const k of ['pending', 'pdfPend', 'lastSync', 'session', 'cfg']) await kvSet(k, null); await kvSet('url', NUVEM_PADRAO); await kvSet('seeded', true); await kvSet('frotaV', 2); await kvSet('localLeitura', 1); }
+  if (SO_LER) document.title = 'LOCAL · ' + document.title;
   try {
     const all = MEM ? [] : await DB.all(); all.forEach(r => S.recs.set(r.id, r));
     S.cfg = normFrota(Object.assign(cfgPadrao(), (await kvGet('cfg')) || {}));

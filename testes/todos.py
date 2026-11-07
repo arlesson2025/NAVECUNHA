@@ -1,6 +1,7 @@
 # Roda os testes antes de publicar: sintaxe de todos os js (precisa de node + acorn; sem eles, avisa e segue), fumaça, cliques,
 # horímetro e sincronização. O teste das telas (telas.py, compara com a main) roda à parte.
-# Uso: python testes/todos.py
+# Uso: python testes/todos.py · rápido (a cada publicação, ~2 min): python testes/todos.py --rapido = cópia, sintaxe, fumaça e gráficos;
+# o completo uma vez por dia (Supervisor, 06/11/2026: “qualquer mudança está levando 10 min”)
 import os, shutil, subprocess, sys
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -36,10 +37,11 @@ if node:
 else:
     print('AVISO  sintaxe não conferida: node não encontrado')
 
-for t in ['fumaca.py', 'graficos.py', 'cliques.py', 'horimetro.py', 'sincronizacao.py', 'comecar_do_zero.py', 'formularios.py']:
+RAPIDO = '--rapido' in sys.argv
+for t in ['fumaca.py', 'graficos.py'] + ([] if RAPIDO else ['cliques.py', 'horimetro.py', 'sincronizacao.py', 'comecar_do_zero.py', 'formularios.py']):
     print('\n— ' + t)
     r = subprocess.run([sys.executable, os.path.join(AQUI, t)], cwd=RAIZ, env=dict(os.environ, PYTHONIOENCODING='utf-8'))
     ok &= r.returncode == 0
 
-print('\n' + ('TUDO OK' if ok else 'HÁ FALHAS'))
+print('\n' + ('TUDO OK' if ok else 'HÁ FALHAS') + (' (teste rápido)' if RAPIDO else ''))
 sys.exit(0 if ok else 1)

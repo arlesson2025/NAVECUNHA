@@ -2,10 +2,7 @@
 'use strict';
 const sessOk = () => { try { return sessionStorage.getItem('sgmf_ok') === '1'; } catch (e) { return false; } };
 function gate() {
-  // localhost (só este PC, durante a montagem; Supervisor, 02/11/2026): entra direto como Supervisor, em modo local, sem falar com a planilha do Google.
-  // Os testes usam 127.0.0.1 e continuam passando pela senha; o endereço publicado não muda.
-  if (location.hostname === 'localhost') S.url = '';
-  if (!S.session && location.hostname === 'localhost') { S.session = { name: 'Supervisor (teste local)', role: 'admin', token: null }; try { sessionStorage.setItem('sgmf_ok', '1'); } catch (e) { } }
+  // localhost (só este PC): entra com a senha e lê os dados reais da planilha, sem enviar nada (SO_LER no js/02; Supervisor, 06/11/2026)
   if (S.session && !sessOk()) { S.session = null; kvSet('session', null); }
   let g = document.getElementById('gate');
   if (S.session) { if (g) g.remove(); document.documentElement.classList.remove('gated'); return; }
@@ -26,7 +23,7 @@ function gate() {
    <label>Seu nome<input id="gN" autocomplete="username" required></label>
    <label>Senha<input id="gP" type="password" autocomplete="current-password" required></label>
    <div id="gCaps" style="display:none;color:#B06000;font-size:12px">Caps Lock está ligado.</div><div id="gE"></div><button type="submit" id="gB">Entrar</button>
-   <p class="gnote">Acesso restrito à equipe de manutenção Navecunha.<br><span id="gMode">${S.url ? 'Conectado à planilha do Google' : 'Modo local (sem planilha)'}</span></p></form>${ban}</div>`;
+   <p class="gnote">Acesso restrito à equipe de manutenção Navecunha.<br><span id="gMode">${SO_LER ? 'Endereço local deste PC: lê a planilha, não envia nada' : S.url ? 'Conectado à planilha do Google' : 'Modo local (sem planilha)'}</span></p></form>${ban}</div>`;
   document.body.appendChild(g);
   try { const n = localStorage.getItem('sgmf_nome'); if (n) { $('#gN').value = n; setTimeout(() => $('#gP').focus(), 50); } else setTimeout(() => $('#gN').focus(), 50); } catch (e) { }
   $('#gP').addEventListener('keyup', ev => { $('#gCaps').style.display = ev.getModifierState && ev.getModifierState('CapsLock') ? '' : 'none'; });
