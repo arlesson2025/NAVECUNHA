@@ -515,7 +515,7 @@ function render() {
   situRecalc(); document.body.classList.toggle('perfil-opr', ehOperador());
   if (!ehOperador() && typeof BAL_VIEWS !== 'undefined') { const ehBal = BAL_VIEWS.some(v => v[0] === VIEW);   // frota de balsas (js/83)
     if (ehBal && FROTA_TIPO !== 'bal') { FROTA_TIPO = 'bal'; try { localStorage.setItem('smf_frota_tipo', 'bal'); } catch (e) { } }
-    else if (!ehBal && FROTA_TIPO === 'bal' && !['admin', 'enxbib'].includes(VIEW)) { VIEW = 'bal'; ARG = ''; try { history.replaceState(null, '', '#bal'); } catch (e) { } } }
+    else if (!ehBal && FROTA_TIPO === 'bal' && !['admin', 'enxbib', 'semsc'].includes(VIEW)) { VIEW = 'bal'; ARG = ''; try { history.replaceState(null, '', '#bal'); } catch (e) { } } }
   if (typeof enxRota === 'function') enxRota();   // modo enxuto: só as telas dele (js/85)
   if (ehOperador() && VIEW !== 'rotina') { VIEW = 'rotina'; ARG = ''; if (location.hash !== '#rotina') history.replaceState(null, '', '#rotina'); }   // perfil Operador só vê Chegada e saída
   const mesma = VIEW === RENDER_ULTV, y = scrollY;   // re-render da mesma tela: volta para onde estava a rolagem

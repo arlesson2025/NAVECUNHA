@@ -27,20 +27,21 @@ const gsAberta = r => !['fim', 'can'].includes(r.st);
 const gsDias = r => { const a = pD(r.date); if (!a) return 0; const b = gsAberta(r) ? hoje() : pD(r.fim || isoD(hoje())); return Math.max(0, Math.round((pD(isoD(b)) - a) / 864e5)); };
 const gsFaixa = d => d > 30 ? ['p-bad', 'mais de 30 dias'] : d > 15 ? ['p-bad', '16 a 30 dias'] : d > 7 ? ['p-warn', '8 a 15 dias'] : ['p-ok', 'até 7 dias'];
 const gsOnde = id => id ? vName(id) : 'Geral / oficina';
-const GS = { f: 'ab', q: '' };
+const GS = { f: 'ab', q: '', fr: 'todas' };   // fr: Todas · Empurradores · Balsas (a mesma tela serve às duas frotas, sem aba; Supervisor, 07/11/2026)
+const gsDaFrota = (r, fr) => fr === 'bal' ? !!(typeof balsaDe === 'function' && balsaDe(r.vessel)) : fr === 'emp' ? !(typeof balsaDe === 'function' && balsaDe(r.vessel)) : true;
 function gsOndeOps(sel) {
   const E = (S.cfg.frota || []).map(v => [v.id, v.nome]), B = typeof BALSAS !== 'undefined' ? BALSAS.map(b => [b.id, b.nome]) : [];
   const o = ([id, n]) => `<option value="${esc(id)}"${id === sel ? ' selected' : ''}>${esc(n)}</option>`;
   return `<option value="">Geral / oficina</option><optgroup label="Empurradores">${E.map(o).join('')}</optgroup>${B.length ? `<optgroup label="Balsas">${B.map(o).join('')}</optgroup>` : ''}`;
 }
-function gsResumo() {
-  const R = gsReqs(), A = R.filter(gsAberta), h7 = isoD(new Date(hoje() - 7 * 864e5)), h30 = isoD(new Date(hoje() - 30 * 864e5));
+function gsResumo(R) {
+  R = R || gsReqs(); const A = R.filter(gsAberta), h7 = isoD(new Date(hoje() - 7 * 864e5)), h30 = isoD(new Date(hoje() - 30 * 864e5));
   const F30 = R.filter(r => r.st === 'fim' && (r.fim || '') >= h30);
   return { A, d15: A.filter(r => gsDias(r) > 15), d30: A.filter(r => gsDias(r) > 30), f7: R.filter(r => r.st === 'fim' && (r.fim || '') >= h7),
     med: F30.length ? F30.reduce((s, r) => s + gsDias(r), 0) / F30.length : null };
 }
 function vSemSc() {
-  const R = gsReqs(), M = gsResumo(), q = GS.q.toLowerCase();
+  const R0 = gsReqs(), R = R0.filter(r => gsDaFrota(r, GS.fr)), M = gsResumo(R), q = GS.q.toLowerCase();
   let L = GS.f === 'fim' ? R.filter(r => !gsAberta(r)).sort((a, b) => (b.fim || '') < (a.fim || '') ? -1 : 1).slice(0, 60) : R.filter(gsAberta).filter(r => GS.f === 'ab' || r.tp === GS.f).sort((a, b) => gsDias(b) - gsDias(a) || (b.urg ? 1 : 0) - (a.urg ? 1 : 0));
   if (q) L = L.filter(r => [r.tp, r.num, r.txt, r.om, gsOnde(r.vessel), r.obs, r.stSk, ...(r.itens || []).map(i => i[1] + ' ' + i[2])].join(' ').toLowerCase().includes(q));
   const lin = r => { const d = gsDias(r), fx = gsFaixa(d), ab = gsAberta(r);
@@ -51,7 +52,8 @@ function vSemSc() {
       <td class="nowrap">${can.edit() ? (ab ? `<button class="mbtn sm pri" data-gsfim="${r.id}">${r.tp === 'RM' ? 'Atendida' : 'Entregue'}</button> <button class="mbtn sm" data-gsed="${r.id}">Atualizar</button>` : `<button class="mbtn sm" data-gsed="${r.id}">Ver</button>`) : ''}</td></tr>`; };
   const chip = (k, t) => `<button class="${GS.f === k ? 'on' : ''}" data-gsf="${k}">${t}</button>`;
   const nk = (l, v, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
-  return enxCab('4.1 Solicitações e requisições', 'O que foi pedido no Sankhya e há quanto tempo · SC = solicitação de serviço externo ou material · RM = requisição de material do estoque', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+  const nA = fr => R0.filter(r => gsAberta(r) && gsDaFrota(r, fr)).length, frc = (k, t) => `<button class="${GS.fr === k ? 'on' : ''}" data-gsfr="${k}">${t} <b>${nA(k)}</b></button>`;
+  return enxCab('4.1 Solicitações e requisições', 'O que foi pedido no Sankhya e há quanto tempo · SC = solicitação de serviço externo ou material · RM = requisição de material do estoque · empurradores e balsas na mesma lista', `<span class="seg fr-sw">${frc('todas', 'Todas')}${frc('emp', 'Empurradores')}${frc('bal', 'Balsas')}</span>` + '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Resumo</h2><div class="sf-k">${nk('Em aberto', M.A.length)}${nk('Mais de 15 dias', M.d15.length, M.d15.length ? 'var(--badt)' : 'var(--okt)')}${nk('Mais de 30 dias', M.d30.length, M.d30.length ? 'var(--badt)' : 'var(--okt)')}${nk('Atendidas em 7 dias', M.f7.length)}${nk('Tempo médio de atendimento (30 dias)', M.med == null ? '—' : nf(M.med, 1) + ' dias')}</div></div>
    <div class="card"><div class="row"><h2>${GS.f === 'fim' ? 'Atendidas e canceladas' : 'Em aberto · do mais antigo para o mais novo'} · ${L.length}</h2><span class="sp"></span><input id="gsQ" placeholder="Buscar nº, item, OM…" value="${esc(GS.q)}" style="max-width:220px"></div>
      <div class="cm-chips">${chip('ab', 'Todas em aberto')}${chip('SC', 'SC')}${chip('RM', 'RM')}${chip('fim', 'Atendidas e canceladas')}</div>
@@ -189,7 +191,8 @@ async function gsAtendida(id) {
 // ---------- telas, cliques e menu ----------
 VX.semsc = vSemSc;
 AFTER.semsc = () => { const m = $('#main');
-  m.onclick = async e => { const t = e.target.closest('[data-gsf],[data-gsnova],[data-gscola],[data-gsed],[data-gsfim]'); if (!t) return; const d = t.dataset;
+  m.onclick = async e => { const t = e.target.closest('[data-gsf],[data-gsfr],[data-gsnova],[data-gscola],[data-gsed],[data-gsfim]'); if (!t) return; const d = t.dataset;
+    if (d.gsfr) { GS.fr = d.gsfr; return render(); }
     if (d.gsf) { GS.f = d.gsf; return render(); }
     if (d.gsnova !== undefined) return gsNova();
     if (d.gscola !== undefined) return gsColar();
