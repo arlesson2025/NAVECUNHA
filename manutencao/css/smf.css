@@ -1136,3 +1136,4 @@ table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.c
 #main table.bal-t:has(.bhlH) td{vertical-align:middle}#main table.bal-t:has(.bhlH) .mbtn{padding:0 8px;min-height:0;height:22px;line-height:20px;font-size:12px}#main table.bal-t .bhlH{height:22px}
 #main iframe.ax1-fr{display:block;width:100%;height:calc(100vh - 230px);min-height:520px;border:1px solid #DCE3EC;border-radius:8px;background:#fff}
 #main .bhl-top{align-items:flex-end;gap:12px;flex-wrap:wrap;margin:0 0 8px}#main .bhl-top .f{margin:0}#main .bhl-top .note{margin:0 0 8px}
+#main .mc-diag .mc-t td:last-child .pill{white-space:normal;display:inline-block;line-height:1.3}

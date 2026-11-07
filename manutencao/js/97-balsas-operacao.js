@@ -249,3 +249,45 @@ VX.ballub = () => vOleoP(balO3Dados());
 BAL_VIEWS.splice(BAL_VIEWS.findIndex(v => v[0] === 'balcal'), 0, ['ballub', 'Lubrificação']); BAL_NUM.ballub = '3.1'; NP_TAG.ballub = 'NP 024 · 8 · FR 049_B';
 BAL_ETAPAS[2][2].unshift('ballub'); if (typeof PCM_TIT !== 'undefined') PCM_TIT.ballub = '3.1 Lubrificação · troca de óleo (FR 049_B)';
 AFTER.ballub = () => AFTER.oleo();
+
+// ---------- 3.3 Diagnóstico dos motores-bomba (Supervisor, 07/11/2026: “agora controle e diagnósticos”) ----------
+// no mesmo desenho do 3.3 Diagnóstico dos MCP: os sinais de cada motor-bomba juntos (compressão do último ensaio, calibração dos bicos e da bomba injetora,
+// troca de óleo, leitura do horímetro e falha aberta no motor) e a recomendação; não há laudo de óleo nem consumo (complemento) nas balsas
+function balDiag() {
+  const H0 = pD(isoD(hoje())), O = balO3Dados().ENG, out = [];
+  BALSAS.filter(b => !(typeof vgEmReforma === 'function' && vgEmReforma(b.id))).forEach(b => {
+    const c = balCmpSit(b), cs = { fora: 'bad', aten: 'at', ok: 'ok', sem: 'sem' }[c.st] || 'sem', cv = c.vencida;
+    const ti = BA1M[balInj(b)], si = ti ? balSit(b, ti) : null, is = !si || si.st === 'sem' ? 'sem' : si.st === 'venc' ? 'bad' : si.st === 'prox' ? 'at' : 'ok';
+    const ol = O.find(e => e.vid === b.id && e.g === 'mot'), os = !ol || ol.sem ? 'sem' : { red: 'bad', amber: 'at', green: 'ok' }[ol.st];
+    const hr = balHor(b.id), hd = hr ? Math.round((H0 - pD(hr.date)) / 864e5) : null, hs = hd == null ? 'sem' : hd > 30 ? 'bad' : hd > 14 ? 'at' : 'ok';
+    const fa = balAvarias(b.id).filter(a => /motor/i.test(a.sis || '')), fs = fa.some(a => a.c === 'Crítica') ? 'bad' : fa.length ? 'at' : 'ok';
+    let rec, rc;
+    if (cs === 'bad' || (cs === 'at' && (is === 'bad' || fs !== 'ok'))) { rec = 'Programar inspeção / retífica (overhaul) do motor-bomba'; rc = 'bad'; }
+    else if (fs === 'bad') { rec = 'Falha crítica aberta no motor: corrigir antes de operar'; rc = 'bad'; }
+    else if (cs === 'at' || cv) { rec = 'Monitorar: antecipar o ensaio de compressão'; rc = 'at'; }
+    else if (is === 'bad') { rec = 'Calibração dos bicos e da bomba injetora vencida'; rc = 'at'; }
+    else if (os === 'bad') { rec = 'Troca de óleo do motor vencida'; rc = 'at'; }
+    else if (cs === 'sem') { rec = 'Completar a base: ensaio de compressão'; rc = 'sem'; }
+    else { rec = 'Manter'; rc = 'ok'; }
+    out.push({ b, c, cs, cv, si, is, ol, os, hr, hd, hs, fa, fs, rec, rc, ord: { bad: 0, at: 1, sem: 2, ok: 3 }[rc] }); });
+  return out.sort((a, z) => a.ord - z.ord || a.b.nome.localeCompare(z.b.nome, 'pt-BR', { numeric: true }));
+}
+function vBalDiag() {
+  const D = balDiag(), dot = s => `<i class="mc-dot" style="background:${MC_DOT[s]}"></i>`, n = k => D.filter(x => x.rc === k).length, P = { bad: 'p-bad', at: 'p-warn', sem: 'p-mut', ok: 'p-ok' };
+  return balCab('3.3 Diagnóstico dos motores-bomba · condição dos motores', 'Compressão, calibração dos bicos, troca de óleo, horímetro e falhas de cada motor-bomba juntos, com a recomendação · os dados vêm de 1.1, 1.2, 3.1 e 3.2', frotaSw('#enxdiag', '#baldiag'))
+   + `<div class="card mc-diag"><h2>Diagnóstico de condição dos motores-bomba das balsas</h2>
+    <div class="sf-k">${[['Programar overhaul', n('bad'), 'var(--badt)'], ['Monitorar', n('at'), 'var(--warnt)'], ['Completar a base', n('sem'), ''], ['Manter', n('ok'), 'var(--okt)']].map(([l, x, c]) => `<div><span>${l}</span><b${c && x ? ` style="color:${c}"` : ''}>${x}</b></div>`).join('')}</div>
+    <div class="tw"><table class="t mc-t"><thead><tr><th>Motor-bomba</th><th>Compressão (pior cilindro)</th><th>Bicos e bomba injetora</th><th>Troca de óleo</th><th>Horímetro</th><th>Falha no motor</th><th>Recomendação</th></tr></thead><tbody>
+    ${D.map(x => `<tr><td class="nowrap"><b>${esc(x.b.nome)}</b> <span class="mut">· ${esc(BAL_MOTOR[x.b.mot] || '')}</span></td>
+      <td class="nowrap">${dot(x.cs)}${x.c.u ? `${nf(x.c.u.min, 1)} bar <span class="mut">cil. ${x.c.u.cil}</span>${x.cv ? ' <span class="mut">· ensaio vencido</span>' : ''}` : '<span class="mut">sem ensaio</span>'}</td>
+      <td class="nowrap">${dot(x.is)}${x.si && x.si.L ? brD(x.si.L.date) + (x.si.txt ? ` <span class="mut">· ${esc(x.si.txt)}</span>` : '') : '<span class="mut">sem registro</span>'}</td>
+      <td class="nowrap">${dot(x.os)}${x.ol && !x.ol.sem ? esc(x.ol.restTxt.replace('−', '')) + (x.ol.v < 0 ? ' <span class="mut">de atraso</span>' : ' <span class="mut">para a troca</span>') : '<span class="mut">sem histórico</span>'}</td>
+      <td class="nowrap">${dot(x.hs)}${x.hr ? nf(x.hr.h) + ' h <span class="mut">· ' + (x.hd === 0 ? 'hoje' : 'há ' + x.hd + ' d') + '</span>' : '<span class="mut">sem leitura</span>'}</td>
+      <td>${dot(x.fs)}${x.fa.length ? `<span style="color:${MC_DOT[x.fs]}">${esc(x.fa.map(a => a.c + ': ' + (a.desc || a.sis || '')).join('; '))}</span>` : 'nenhuma'}</td>
+      <td><span class="pill ${P[x.rc]}">${esc(x.rec)}</span></td></tr>`).join('')}</tbody></table></div>
+    <p class="note">Os sinais juntos dão a recomendação: compressão do último ensaio (3.2 · 2 Compressão; mínimo do fabricante e diferença entre cilindros), calibração dos bicos e da bomba injetora (revisão de 1.000 h), troca de óleo do motor (3.1), leitura do horímetro (1.1) e falha aberta no motor (1.2). Overhaul = compressão abaixo do mínimo, ou em atenção junto com bicos vencidos ou falha no motor. As balsas não têm laudo de óleo nem registro de complemento de nível.</p></div>`;
+}
+VX.baldiag = balJan('baldiag', vBalDiag);
+BAL_VIEWS.splice(BAL_VIEWS.findIndex(v => v[0] === 'baldoca') + 1, 0, ['baldiag', 'Diagnóstico dos motores-bomba']); BAL_NUM.baldiag = '3.3'; NP_TAG.baldiag = 'NP 024 · 8.13';
+BAL_ETAPAS[2][2].push('baldiag');
+AFTER.baldiag = () => { balAfter(); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_baldiag_lay', '[data-balreset="baldiag"]'); };

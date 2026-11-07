@@ -432,12 +432,16 @@ function mcTopo() {   // chamado pelo render logo depois de montar a tela
   sfFocoAplicar();
   if (typeof falTopo === 'function') falTopo();   // abas da 1.2 (js/89)
   // balsas: a 3.2 Controles com as abas na mesma ordem dos empurradores (Supervisor, 06/11/2026)
+  // botão Empurradores | Balsas no cabeçalho das abas da 3.2, levando à aba equivalente da outra frota (Supervisor, 07/11/2026)
+  const PAR = { enxcal: 'balcal', compr: 'balcmp', enxdoca: 'baldoca' }, sw = (de, db) => { const sp = $('#main .vh > .sp'); if (sp && typeof frotaSw === 'function' && !$('#main .vh .fr-sw')) sp.insertAdjacentHTML('afterend', frotaSw(de, db)); };
+  if (BAL_MC.some(x => x[0] === VIEW)) { const e0 = Object.keys(PAR).find(k => PAR[k] === VIEW) || 'enxcal'; sw('#' + e0, '#' + VIEW); }
+  else if (MC_VIEWS.some(x => x[0] === VIEW)) sw('#' + VIEW, '#' + (PAR[VIEW] || 'balcal'));
   if (BAL_MC.some(x => x[0] === VIEW)) { const vb = $('#main .vh'); if (vb && !$('#main .mc-tabs')) vb.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLES</span>${BAL_MC.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`); return; }
   if (!enxuto() || !MC_VIEWS.some(x => x[0] === VIEW)) return; const vh = $('#main .vh'); if (!vh) return;
   vh.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLES</span>${MC_VIEWS.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`);
 }
 function vEnxDiag() {
-  return enxCab('3.3 Diagnóstico dos MCP · condição dos motores principais', 'Compressão, consumo de óleo, último laudo e calibração de cada MCP da frota juntos, com a recomendação · os dados vêm de 3.1 Lubrificação e 3.2 Controles', '<button class="mbtn" data-enxreset>Reorganizar</button>') + mcDiagCard() + '</div></div>';
+  return enxCab('3.3 Diagnóstico dos MCP · condição dos motores principais', 'Compressão, consumo de óleo, último laudo e calibração de cada MCP da frota juntos, com a recomendação · os dados vêm de 3.1 Lubrificação e 3.2 Controles', (typeof frotaSw === 'function' ? frotaSw('#enxdiag', '#baldiag') : '') + '<button class="mbtn" data-enxreset>Reorganizar</button>') + mcDiagCard() + '</div></div>';
 }
 Object.assign(VX, { enxdiag: vEnxDiag }); AFTER.enxdiag = pcmAfter('enxdiag'); Object.assign(NP_TAG, { enxdiag: '7 · Anexo I 1.1.12, 1.1.29' });
 
