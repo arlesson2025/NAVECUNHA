@@ -10,7 +10,7 @@ const PCM_ETAPAS = [['1', 'Recebimento', ['enxhor', 'enxcor']], ['2', 'Planejame
 const PCM_TIT = { oleo: '3.1 Lubrificação · troca de óleo (FR 049_B)', compr: '3.2 Controles · compressão do MCP', anoleo: '3.2 Controles · análise de óleo do MCP' };
 function pcmFaixa() {
   if (!PCM_ETAPAS.some(e => e[2].includes(VIEW)) && !['enxhoje', 'enxpend'].includes(VIEW)) return '';
-  return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Situação da frota</a><i>→</i><a href="#enxpend" class="${VIEW === 'enxpend' ? 'on' : ''}">Pendências</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
+  return `<nav class="op-ps" aria-label="Etapas do PCM"><a href="#enxhoje" class="${VIEW === 'enxhoje' ? 'on' : ''}">Integridade técnica da frota</a><i>→</i><a href="#enxpend" class="${VIEW === 'enxpend' ? 'on' : ''}">Pendências</a>${PCM_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
 }
 // ---------- plano de ação ----------
 const pcmAcoes = () => recs('snap').filter(r => r.tipo === 'acao' && !r.excluido);
@@ -128,7 +128,8 @@ function pcmPainel() {
   return G;
 }
 function vEnxHoje() {
-  return enxCab('Situação da frota', 'Como a frota está hoje · o que fazer está em <a href="#enxpend">Pendências</a>', '<button class="mbtn" data-enxreset>Reorganizar</button>') + sfCard() + sfPorque(sfDados()) + '</div></div>';
+  // nome técnico (Supervisor, 06/11/2026): Integridade técnica da frota, com o termo internacional (Asset Integrity) e a NP 055 embaixo, pequenos
+  return enxCab('Integridade técnica da frota', '<i>Asset Integrity</i> · plano preventivo do Anexo I, condição e falhas de cada empurrador · NP 055 · o que fazer está em <a href="#enxpend">Pendências</a>', '<button class="mbtn" data-enxreset>Reorganizar</button>') + sfCard() + sfPorque(sfDados()) + '</div></div>';
 }
 // Pendências em colunas por etapa (SMF 3.45; Supervisor, 29/10/2026: separada da Situação da frota, “organizada assim” como o quadro de OMs). Pendência não anda entre colunas: some quando é resolvida
 const PD_ETAPAS = [['1 · Recebimento', 'horímetros e corretivas'], ['2 · Planejamento (PCM)', 'backlog e plano anual'], ['3 · Monitoramento de condição', 'óleo, compressão e calibração'], ['4 · Fechamento mensal', 'relatório e plano de ação']];
@@ -273,7 +274,7 @@ function sfPorque(L) {
 }
 function sfCard() {
   const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => /^em viagem/.test(sfOnde(x) || '')).length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
-  return `<div class="card"><h2>Situação da frota · ${md === 'matriz' ? 'empurrador × sistema do Anexo I' : 'cartões por empurrador'}</h2>
+  return `<div class="card"><h2>Integridade técnica · ${md === 'matriz' ? 'empurrador × sistema do Anexo I' : 'cartões por empurrador'}</h2>
     <div class="sf-k">${[['Liberados à operação', n(0), 'var(--okt)'], ['Liberados com restrição', n(1), 'var(--warnt)'], ['Impedidos de operar', n(2) + n(3), 'var(--badt)'], ['Em viagem', via, ''], ['Críticos NP 6.3 vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)']].map(([l, v, c]) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`).join('')}
       <span class="sp"></span><div class="seg"><button data-sfm="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-sfm="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button></div></div>
     ${md === 'matriz' ? `<div class="sf-leg"><span><span class="sf-c sf-r">3</span> vencidos</span><span><span class="sf-c sf-a">2</span> vencem no mês</span><span><span class="sf-g"></span> em dia</span><span><span class="sf-o"></span> sem histórico</span><span><span class="sf-na">—</span> não se aplica</span></div>` + sfMatriz(L) : sfCartoes(L)}</div>`;

@@ -16,7 +16,7 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
   VIEW = ENX_ALIAS[VIEW] || 'enxhoje'; ARG = ''; try { history.replaceState(null, '', '#' + VIEW); } catch (e) { }
 }
 // menu em 4 etapas do PCM (SMF 3.22, Supervisor: “sequência, etapas, nomes técnicos”; “não deixa ruim de operar”)
-const PCM_MENU = [['', [['enxhoje', 'Situação da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
+const PCM_MENU = [['', [['enxhoje', 'Integridade técnica da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
   ['1 · Recebimento do empurrador', [['enxhor', '1.1 Horímetros', 'hor'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
   ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2'], ['enxrisco', '2.3 Equipamentos críticos e riscos', 'risco']]],
   ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnóstico dos MCP\'s', 'graf']]],
@@ -55,7 +55,7 @@ function vEnx() {
        ${aprov < D.length ? `<p class="note">O previsto do ano só fica valendo para a aderência depois de aprovado: aprove em <a href="#enxcr">2 · Cronograma</a>.</p>` : ''}</div>
      <div class="card"><h2>Escolha o empurrador</h2><div class="row" style="gap:6px;flex-wrap:wrap">
      ${D.sort((a, b) => b.venc.length - a.venc.length || b.mes.length - a.mes.length).map(x => `<button class="mbtn" data-enxv="${x.v.id}"><b>${esc(x.v.nome)}</b>${x.venc.length ? ` <span class="pill p-bad">${x.venc.length}</span>` : ''}${x.mes.length ? ` <span class="pill p-warn">${x.mes.length}</span>` : ''}</button>`).join('')}</div>
-     <p class="note">Vermelho = vencidos, âmbar = vencem no mês. A situação de cada empurrador (sistemas, horímetro, condição) está em <a href="#enxhoje">Situação da frota</a>.</p></div></div></div>`;
+     <p class="note">Vermelho = vencidos, âmbar = vencem no mês. A situação de cada empurrador (sistemas, horímetro, condição) está em <a href="#enxhoje">Integridade técnica da frota</a>.</p></div></div></div>`;
   }
   const x = D.find(y => y.v === v), ord = { venc: 0, mes: 1, sem: 2 }, L = x.P.filter(y => ENX.emDia || ['venc', 'mes', 'sem'].includes(y.g)).sort((a, b) => (ord[a.g] ?? 3) - (ord[b.g] ?? 3) || a.t.id.localeCompare(b.t.id, 'pt-BR', { numeric: true }));
   const lin = y => { const nfr = enxNF(v.id, y.pos, y.t.id), k = y.pos + '|' + y.t.id, L0 = y.s.L;
