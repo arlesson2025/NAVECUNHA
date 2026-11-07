@@ -53,7 +53,7 @@ Várias sessões do Claude trabalham no projeto em paralelo (locais e na nuvem).
 ## Menu de hoje
 
 **Empurradores** (`PCM_MENU` no js/85; faixa das etapas `pcmFaixa`):
-- **Situação da frota** (`enxhoje`: Matriz `sfMatriz` ou Cartões `sfCartoes`; “Por que não está liberado”) · **Pendências** (`enxpend`)
+- **Integridade técnica da frota** (`enxhoje`: Matriz `sfMatriz` ou Cartões `sfCartoes`; “Pontos de atenção”) · **Pendências** (`enxpend`)
 - **1 Recebimento do empurrador**: 1.1 Horímetros (`enxhor`) · 1.2 Manutenção corretiva (`enxcor`, aba Análise de falhas `enxfal`, js/89) · 1.3 Viagens e comboios (`enxviag`, js/94)
 - **2 Planejamento (PCM)**: 2.1 Plano anual preventivo (`enxcr`) · 2.2 Backlog e OM preventiva (`enx`) · 2.3 Equipamentos críticos e riscos (`enxrisco`, js/91)
 - **3 Monitoramento de condição**: 3.1 Lubrificação (`oleo`) · 3.2 Controles (abas `MC_VIEWS`: Calibração `enxcal`, Compressão `compr`, Análise de óleo `anoleo`, Arrefecimento `enxarr`, Sensores `enxsen`, Docagem `enxdoca` js/96) · 3.3 Diagnóstico dos MCP (`enxdiag`)

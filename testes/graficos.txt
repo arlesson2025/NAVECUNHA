@@ -23,7 +23,6 @@ enxeq/… | Linha do tempo
 enxfal | A · Pareto de falhas por sistema
 enxfal | D · Modo de falha
 enxfal | E · Causa da falha
-enxhoje | Integridade técnica
 enxhor | Horas de operação da frota por mês
 enxhor | Horas de operação dos MCA por empurrador
 enxhor | Horas de operação dos MCP por empurrador
