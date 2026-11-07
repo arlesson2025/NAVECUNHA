@@ -398,6 +398,7 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
 // um item no menu; em cima das telas Compressão (compr), Calibração (enxcal) e Análise de óleo (anoleo): as abas e o diagnóstico (compressão + consumo de óleo + último laudo + calibração → recomendação)
 // 3.58 (Supervisor, 29/10/2026: “1 calibração, 2 compressão, 3 análise de óleo numa tela com abas, ‘Controles’; outra aba ‘Diagnósticos’ só com o diagnóstico”)
 const MC_VIEWS = [['enxcal', '1 · Calibração'], ['compr', '2 · Compressão'], ['anoleo', '3 · Análise de óleo'], ['enxarr', '4 · Sistema de arrefecimento'], ['enxsen', '5 · Sensores']];
+const BAL_MC = [['balcal', '1 · Calibração'], ['balcmp', '2 · Compressão'], ['baldoca', '3 · Docagem']];
 const MC_DOT = { ok: '#1E8E3E', at: '#F9AB00', bad: '#C5221F', sem: '#9AA4B1' };
 function mcDiag() {
   const CM = lubConsumoMCP(120).out, CAL = calibDados().filter(x => isMcp(x.pos)), out = [];
@@ -430,11 +431,13 @@ function mcDiagCard() {
 function mcTopo() {   // chamado pelo render logo depois de montar a tela
   sfFocoAplicar();
   if (typeof falTopo === 'function') falTopo();   // abas da 1.2 (js/89)
+  // balsas: a 3.2 Controles com as abas na mesma ordem dos empurradores (Supervisor, 06/11/2026)
+  if (BAL_MC.some(x => x[0] === VIEW)) { const vb = $('#main .vh'); if (vb && !$('#main .mc-tabs')) vb.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLES</span>${BAL_MC.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`); return; }
   if (!enxuto() || !MC_VIEWS.some(x => x[0] === VIEW)) return; const vh = $('#main .vh'); if (!vh) return;
-  vh.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLE DOS MCP's</span>${MC_VIEWS.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`);
+  vh.insertAdjacentHTML('afterend', `<div class="mc-tabs"><span class="mc-tl">CONTROLES</span>${MC_VIEWS.map(([k, n]) => `<a href="#${k}" class="${VIEW === k ? 'on' : ''}">${n}</a>`).join('')}</div>`);
 }
 function vEnxDiag() {
-  return enxCab('3.3 Diagnóstico dos MCP\'s · condição dos motores principais', 'Compressão, consumo de óleo, último laudo e calibração de cada MCP da frota juntos, com a recomendação · os dados vêm de 3.1 Lubrificação e 3.2 Controles', '<button class="mbtn" data-enxreset>Reorganizar</button>') + mcDiagCard() + '</div></div>';
+  return enxCab('3.3 Diagnóstico dos MCP · condição dos motores principais', 'Compressão, consumo de óleo, último laudo e calibração de cada MCP da frota juntos, com a recomendação · os dados vêm de 3.1 Lubrificação e 3.2 Controles', '<button class="mbtn" data-enxreset>Reorganizar</button>') + mcDiagCard() + '</div></div>';
 }
 Object.assign(VX, { enxdiag: vEnxDiag }); AFTER.enxdiag = pcmAfter('enxdiag'); Object.assign(NP_TAG, { enxdiag: '7 · Anexo I 1.1.12, 1.1.29' });
 

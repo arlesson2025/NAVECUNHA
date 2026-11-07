@@ -58,7 +58,7 @@ function vBalProg() {
   const b = balsaDe(ARG);
   if (!b) { const E = BALSAS.map(balLinhas).filter(x => x.e.st !== 'ref'), n = (x, g) => x.I.filter(y => y.g === g).length;
     const L = E.map(x => ({ x, v: n(x, 'venc'), m: n(x, 'mes'), s: n(x, 'sem') })).sort((a, b) => b.v - a.v || b.m - a.m || (a.x.e.b.nome < b.x.e.b.nome ? -1 : 1));
-    return balCab('Programar preventiva', 'O que vence em cada balsa · escolha a balsa, marque os serviços, copie o texto da OM do Sankhya, imprima o formulário de campo e registre a execução', '')
+    return balCab('2.2 Backlog e OM preventiva', 'O que vence em cada balsa · escolha a balsa, marque os serviços, copie o texto da OM do Sankhya, imprima o formulário de campo e registre a execução', '')
      + `<div class="cm-chips"><span class="cm-chip">Balsas com vencidos <b>${L.filter(y => y.v).length}</b></span><span class="cm-chip">Serviços vencidos <b>${L.reduce((a, y) => a + y.v, 0)}</b></span><span class="cm-chip">Vencem no mês <b>${L.reduce((a, y) => a + y.m, 0)}</b></span></div>
      <div class="card"><h2>Balsas</h2><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th><th>Para operar</th><th class="r">Vencidos</th><th class="r">Vencem no mês</th><th class="r">Sem histórico</th><th></th></tr></thead><tbody>
      ${L.map(y => `<tr class="click" data-balpg="${y.x.e.b.id}"><td><b>${esc(y.x.e.b.nome)}</b><div class="note">${esc(BAL_MOTOR[y.x.e.b.mot] || '')}</div></td><td>${balPil(BAL_ST, y.x.e.st)}</td><td class="r">${y.v ? `<b class="rl-ruim">${y.v}</b>` : '0'}</td><td class="r">${y.m ? `<b style="color:#B06000">${y.m}</b>` : '0'}</td><td class="r note">${y.s || ''}</td><td><button class="mbtn sm pri" data-balpg="${y.x.e.b.id}">Programar</button></td></tr>`).join('')}</tbody></table></div>
@@ -67,7 +67,7 @@ function vBalProg() {
   const { e, I } = balLinhas(b), sel = balProgSel(b, I), hr = balHor(b.id), G = BAL_GR.filter(g => I.some(x => balGr(x.t) === g));
   const pil = g => g === 'venc' ? '<span class="pill p-bad">Vencido</span>' : g === 'mes' ? '<span class="pill p-warn">Vence no mês</span>' : g === 'ok' ? '<span class="pill p-ok">Em dia</span>' : '<span class="pill p-mut">Sem histórico</span>';
   const OM = balOMs(b.id).slice(0, 8);
-  return balCab(`Programar preventiva · ${b.nome}`, `${esc(balMotTx(b))} · motor-bomba ${hr ? nf(hr.h) + ' h em ' + brD(hr.date) : 'sem leitura'} · vencidos e os que vencem no mês já vêm marcados`, `<a class="mbtn" href="#balprog">← Balsas</a><a class="mbtn" href="#balft/${b.id}">Ficha técnica</a>`)
+  return balCab(`2.2 Backlog e OM preventiva · ${b.nome}`, `${esc(balMotTx(b))} · motor-bomba ${hr ? nf(hr.h) + ' h em ' + brD(hr.date) : 'sem leitura'} · vencidos e os que vencem no mês já vêm marcados`, `<a class="mbtn" href="#balprog">← Balsas</a><a class="mbtn" href="#balft/${b.id}">Ficha técnica</a>`)
    + balLinhaTempo(b, I) + `<div class="card"><h2>Serviços · ${sel.size} marcado${sel.size === 1 ? '' : 's'}</h2>
      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="mbtn" data-balpcop>📋 Copiar texto da OM</button><button class="mbtn" data-balpcampo>🖨 Formulário de campo (II-B)</button><button class="mbtn pri" data-balpreg>Registrar execução</button><span class="sp"></span><button class="mbtn sm" data-balptodos="venc">Marcar vencidos e do mês</button><button class="mbtn sm" data-balptodos="">Desmarcar</button></div>
      <div class="tw"><table class="t bal-t"><thead><tr><th></th><th>Serviço</th><th>A cada</th><th>Último</th><th>Situação</th><th>Executa</th></tr></thead><tbody>
@@ -111,7 +111,7 @@ function balIIB(vid, om) {
 // ---------- tela, cliques e menu ----------
 VX.bal = balJan('bal', vBal2);
 VX.balprog = balJan('balprog', vBalProg);
-BAL_VIEWS.splice(BAL_VIEWS.findIndex(v => v[0] === 'bal') + 1, 0, ['balprog', 'Programar preventiva']);
+BAL_VIEWS.splice(BAL_VIEWS.findIndex(v => v[0] === 'bal') + 1, 0, ['balprog', 'Backlog e OM preventiva']);
 NP_TAG.balprog = 'NP 024 · 6.4 e 8';
 AFTER.balprog = () => { balAfter(); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_balprog_lay', '[data-balreset]'); };
 document.addEventListener('click', e => {

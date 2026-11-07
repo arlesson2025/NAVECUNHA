@@ -92,7 +92,7 @@ function balCalGraf() {
   return `<div class="card"><h2>Dias até a próxima calibração</h2><p class="note" style="margin-top:0">PSV, válvula de alívio e manômetro da rede de carga (anuais) · mais urgente primeiro · só os que vencem em até 120 dias · clique numa linha para registrar a calibração</p>
     ${A.length ? balSgGraf(A, 'atrasada', 'vence agora · quanto falta (barra cheia = 1 ano)') : '<p class="note">Nenhuma calibração vence nos próximos 120 dias.</p>'}
     <div class="ol-leg"><span><i style="background:#D93025"></i>Vencida (atraso)</span><span><i style="background:#F9AB00"></i>Vence em até ${BAL_PROX_D} dias</span><span><i style="background:#1E8E3E"></i>Em dia</span></div>
-    <p class="note">${resto ? `Mais ${resto} calibraç${resto === 1 ? 'ão' : 'ões'} com mais de 120 dias. ` : ''}${sem.length ? `${sem.length} sem registro (na tabela abaixo). ` : ''}Bicos e bomba injetora vencem pelas horas, na revisão de 1.000 h: veja a 2.2 Programar preventiva.</p></div>`;
+    <p class="note">${resto ? `Mais ${resto} calibraç${resto === 1 ? 'ão' : 'ões'} com mais de 120 dias. ` : ''}${sem.length ? `${sem.length} sem registro (na tabela abaixo). ` : ''}Bicos e bomba injetora vencem pelas horas, na revisão de 1.000 h: veja a 2.2 Backlog e OM preventiva.</p></div>`;
 }
 // ---------- 3.3 · pior cilindro de cada motor contra o mínimo ----------
 function balCmpBarras(D) {
