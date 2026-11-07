@@ -2,6 +2,7 @@
 // “Versão do SMF” da Administração (antes iam em toda abertura, ~58 KB). A cada publicação: suba VERSAO_APP (js/02) e acrescente a versão no topo da lista.
 'use strict';
 const VERSOES = [
+  { v: '3.215', data: '06/11/2026', itens: ['Endereço local deste PC (só para o Supervisor conferir as mudanças na hora): em http://localhost o SMF pede a senha, lê os dados reais da planilha e não envia nada. O site publicado não muda.'] },
   { v: '3.214', data: '06/11/2026', itens: ['Layout da frota: as roscas da Frota em números ganham rótulos com setas por fora, como no modelo do Supervisor (“usa essas setas como esse exemplo, fica mais elegante”): de cada fatia sai a linha até o % grande, com quantos e o lugar embaixo e, nas balsas, os m³.'] },
   { v: '3.213', data: '06/11/2026', itens: ['Layout da frota: a rosca das balsas mostra o volume: o total em m³ no meio, embaixo de BALSAS, e o volume de cada fatia ao lado dela, por fora (pedido do Supervisor: “além da qtde e % coloca o total em volume também no gráfico rosca das balsas”).'] },
   { v: '3.212', data: '06/11/2026', itens: ['Layout da frota: as duas roscas da Frota em números ficam juntas, lado a lado e centralizadas; EMPURRADORES e BALSAS em letras maiores no meio; cada fatia mostra a quantidade e o % (pedido do Supervisor: “ficou distante um do outro e o nome balsa e empurrador tá pequeno, colocar qtde e % nos gráficos rosca”).'] },
