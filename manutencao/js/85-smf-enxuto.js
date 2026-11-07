@@ -472,7 +472,7 @@ const ENXB_DOCS = [
   ['form', 'Anexo II-A · Relatório de serviço realizado · corretiva', 'Em branco, uma folha. Com a falha já preenchida: 1.2 Manutenção corretiva → Formulário de campo', 'iia', 'emp'],
   ['form', 'FR 049_B Rev.03 · Troca de óleo, filtros e fluidos', 'Preencher pelo SMF (Óleo) ou imprimir em branco', 'forms/FR_049_B.html', 'com'],
   ['form', 'FR 027_L Rev.05 · Check-list de chegada e saída', 'Operador de Medição / Líder, CTF e Coordenador de Operações', 'forms/FR_027_L.html', 'emp'],
-  ['form', 'FR 027_A Rev.04 · Check-list da balsa tanque', 'Balsas: preencher pelo SMF (Situação das balsas → FR 027_A) ou imprimir em branco', 'forms/FR_027_A.html', 'bal'],
+  ['form', 'FR 027_A Rev.04 · Check-list da balsa tanque', 'Balsas: preencher pelo SMF (Integridade técnica da frota das balsas → FR 027_A) ou imprimir em branco', 'forms/FR_027_A.html', 'bal'],
   ['form', 'FR 016_E · Controle de materiais Classe I e II', 'Entrega de resíduos ao SGI (NP 5.7)', 'forms/FR_016_E.html', 'com'],
   ['ref', 'Matriz técnica de equipamentos e lubrificação', 'Modelos, óleos, volumes e intervalos da frota', '../docs/empurradores/Matriz_tecnica.atual17.10.26.html', 'emp'],
   ['ref', 'Anexo I · Matriz de manutenção preventiva', 'Serviços, frequências e métodos (o plano que gera o cronograma)', '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html', 'emp'],

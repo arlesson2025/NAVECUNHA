@@ -129,7 +129,7 @@ function pcmPainel() {
 }
 function vEnxHoje() {
   // nome técnico (Supervisor, 06/11/2026): Integridade técnica da frota, com o termo internacional (Asset Integrity) e a NP 055 embaixo, pequenos
-  return enxCab('<span style="font-size:115%">Integridade técnica da frota</span>', '<i style="font-size:17px">Asset Integrity Management</i>', '<button class="mbtn" data-enxreset>Reorganizar</button>') + sfCard() + sfPorque(sfDados()) + '</div></div>';
+  return enxCab('<span style="font-size:115%">Integridade técnica da frota</span>', '<i style="font-size:17px">Asset Integrity Management</i>', (typeof frotaSw === 'function' ? frotaSw() : '') + '<button class="mbtn" data-enxreset>Reorganizar</button>') + sfCard() + sfPorque(sfDados()) + '</div></div>';
 }
 // Pendências em colunas por etapa (SMF 3.45; Supervisor, 29/10/2026: separada da Situação da frota, “organizada assim” como o quadro de OMs). Pendência não anda entre colunas: some quando é resolvida
 const PD_ETAPAS = [['1 · Recebimento', 'horímetros e corretivas'], ['2 · Planejamento (PCM)', 'backlog e plano anual'], ['3 · Monitoramento de condição', 'óleo, compressão e calibração'], ['4 · Fechamento mensal', 'relatório e plano de ação']];

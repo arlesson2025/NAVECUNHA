@@ -116,14 +116,17 @@ const balPil = (M, k) => `<span class="pill ${M[k][0]}">${M[k][1]}</span>`;
 const balIvTx = t => t.doca ? 'na docagem (CSN)' : [t.h ? nf(t.h) + ' h' : '', t.m ? (t.m === 1 ? 'mensal' : t.m === 6 ? 'semestral' : t.m === 12 ? 'anual' : t.m + ' meses') : ''].filter(Boolean).join(' ou ');
 const balMotTx = b => `${BAL_MOTOR[b.mot]}`;
 // ---------- telas ----------
-const BAL_VIEWS = [['bal', 'Situação das balsas'], ['balcr', 'Cronograma'], ['balpl', 'Plano preventivo'], ['baldoca', 'Docagem'], ['balcal', 'Plano de calibração'], ['balcmp', 'Compressão dos motores'], ['balkpi', 'Indicadores'], ['balft', 'Ficha técnica']];
+const BAL_VIEWS = [['bal', 'Integridade técnica da frota'], ['balcr', 'Cronograma'], ['balpl', 'Plano preventivo'], ['baldoca', 'Docagem'], ['balcal', 'Plano de calibração'], ['balcmp', 'Compressão dos motores'], ['balkpi', 'Indicadores'], ['balft', 'Ficha técnica']];
 // numeração e etapas como as dos empurradores (SMF 3.157, Supervisor 02/11/2026): menu, título da tela e faixa no topo
 // mesma numeração e mesma ordem do menu dos empurradores (Supervisor, 06/11/2026: “padroniza os nomes e a sequência, vale o do empurrador”)
+// botão Empurradores | Balsas no cabeçalho (Supervisor, 06/11/2026: “eliminar futuramente o seletor de frota, começando por esta tela”): faz o mesmo que o
+// seletor do menu (data-frtipo, js/02), que continua lá até todas as telas terem o botão
+const frotaSw = () => `<span class="seg fr-sw">${[['emp', 'Empurradores', S.cfg.frota.length], ['bal', 'Balsas', BALSAS.length]].map(([k, n, c]) => `<button data-frtipo="${k}" class="${FROTA_TIPO === k ? 'on' : ''}">${n} <b>${c}</b></button>`).join('')}</span>`;
 const BAL_NUM = { balhor: '1.1', balcor: '1.2', balfal: '1.2', balcr: '2.1', balprog: '2.2', balpl: '2.3', balcal: '3.2', balcmp: '3.2', baldoca: '3.2', balkpi: '5.1', balrel: '5.3' };
 const BAL_ETAPAS = [['1', 'Recebimento', ['balhor', 'balcor', 'balfal']], ['2', 'Planejamento', ['balcr', 'balprog', 'balpl']], ['3', 'Condição', ['balcal', 'balcmp', 'baldoca']], ['5', 'Fechamento', ['balkpi', 'balrel']]];
 function balFaixa() {
   if (VIEW !== 'bal' && !BAL_ETAPAS.some(e => e[2].includes(VIEW))) return '';
-  return `<nav class="op-ps" aria-label="Etapas da manutenção das balsas"><a href="#bal" class="${VIEW === 'bal' ? 'on' : ''}">Situação das balsas</a>${BAL_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
+  return `<nav class="op-ps" aria-label="Etapas da manutenção das balsas"><a href="#bal" class="${VIEW === 'bal' ? 'on' : ''}">Integridade técnica da frota</a>${BAL_ETAPAS.map(([n, t, L]) => `<i>→</i><a href="#${L[0]}" class="${L.includes(VIEW) ? 'on' : ''}"><b>${n}</b> ${t}</a>`).join('')}</nav>`;
 }
 const balTit = tit => (!ARG && BAL_NUM[VIEW] && !/^\d/.test(tit) ? BAL_NUM[VIEW] + ' ' : '') + tit;
 const balCab = (tit, sub, bt) => `<div class="vh"><div><h1>${esc(balTit(tit))}</h1><p>${sub}</p></div><span class="sp"></span>${bt || ''}</div>`;
@@ -138,7 +141,7 @@ function vBal() {
   const agora = E.flatMap(e => [...(e.crit.length ? [{ p: 1, b: e.b, tx: `${e.crit.length} serviço${e.crit.length === 1 ? '' : 's'} crítico${e.crit.length === 1 ? '' : 's'} vencido${e.crit.length === 1 ? '' : 's'}: ${[...new Set(e.crit.map(x => x.t.eq))].join(', ')}` }] : []),
     ...(e.venc.length > e.crit.length ? [{ p: 2, b: e.b, tx: `${e.venc.length - e.crit.length} outro${e.venc.length - e.crit.length === 1 ? '' : 's'} vencido${e.venc.length - e.crit.length === 1 ? '' : 's'}: ${[...new Set(e.venc.filter(x => x.t.prio !== 'Crítica').map(x => x.t.eq))].join(', ')}` }] : []),
     ...e.A.map(a => ({ p: a.c === 'Crítica' ? 1 : 2, b: e.b, tx: `Falha ${a.c}: ${a.desc}${a.om ? ' · OM ' + a.om : ' · sem OM no Sankhya'}` }))]).sort((a, b) => a.p - b.p);
-  return balCab('Situação das balsas', `${BALSAS.length} balsas petroleiras · vencido, em breve e em dia pelo plano da NP 024 · impedida de operar = serviço Crítico vencido ou falha Crítica aberta`, `<button class="mbtn" data-balfalha="">⚠ Registrar falha</button>`)
+  return balCab('Integridade técnica da frota', `${BALSAS.length} balsas petroleiras · vencido, em breve e em dia pelo plano da NP 024 · impedida de operar = serviço Crítico vencido ou falha Crítica aberta`, `<button class="mbtn" data-balfalha="">⚠ Registrar falha</button>`)
    + `<div class="cm-chips">${[['todas', 'Todas', E.length], ['bloq', 'Impedidas de operar', cnt('bloq')], ['rest', 'Liberadas com restrição', cnt('rest')], ['lib', 'Liberadas', cnt('lib')], ['sem', 'Sem histórico', cnt('sem')]].map(([k, t, n]) => `<button class="cm-chip${BALF.f === k ? ' on' : ''}" data-balf="${k}">${t} <b>${n}</b></button>`).join('')}</div>
    ${agora.length ? `<div class="card"><h2>O que precisa de você agora · ${agora.length}</h2><ul class="bal-ag">${agora.slice(0, 12).map(a => `<li><span class="pill ${a.p === 1 ? 'p-bad' : 'p-warn'}">P${a.p}</span> <a href="#balft/${a.b.id}"><b>${esc(a.b.nome)}</b></a> · ${esc(a.tx)}</li>`).join('')}</ul>${agora.length > 12 ? `<p class="note">Mais ${agora.length - 12} nas fichas das balsas.</p>` : ''}</div>` : ''}
    <div class="card"><h2>Balsas</h2><div class="tw"><table class="t bal-t"><thead><tr><th>Balsa</th><th class="r">Horímetro do motor-bomba</th><th>Para operar</th><th class="r">Vencidos</th><th class="r">Em breve</th><th>Falhas</th><th>Próximo serviço</th><th></th></tr></thead><tbody>${F.map(lin).join('') || '<tr><td colspan="8" class="mut">Nenhuma balsa neste filtro.</td></tr>'}</tbody></table></div>
@@ -532,7 +535,7 @@ BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.
 function balNav() {
   const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k || (k === 'balcor' && VIEW === 'balfal') || (k === 'balcal' && ['balcmp', 'baldoca'].includes(VIEW)) ? 'on' : ''}">${ico(ic)}<span>${n}</span>${(n2 => n2 ? `<span class="n">${n2}</span>` : '')(k === 'bal' ? BALSAS.filter(b => balEstado(b).st === 'bloq').length : k === 'balcor' ? recs('avaria').filter(r => r.bal && !r.excluido && !r.fim && balsaDe(r.vessel)).length : 0)}</a>`;
   const g = (t, c) => `<div class="grp-t${c ? ' ' + c : ''}">${t}</div>`;   // menu em etapas, como o dos empurradores (SMF 3.140)
-  return it('bal', 'Situação das balsas', 'hoje')
+  return it('bal', 'Integridade técnica da frota', 'hoje')
     + g('1 · Recebimento da balsa', 'grp-trab') + (VX.balhor ? it('balhor', '1.1 Horímetros', 'hor') : '') + (VX.balcor ? it('balcor', '1.2 Manutenção corretiva', 'exec') : '')
     + g('2 · Planejamento (PCM)') + it('balcr', '2.1 Cronograma de manutenção', 'crono') + (VX.balprog ? it('balprog', '2.2 Backlog e OM preventiva', 'prev2') : '') + it('balpl', '2.3 Plano preventivo', 'plan')
     + g('3 · Monitoramento de condição') + it('balcal', '3.2 Controles', 'compr')   // abas Calibração · Compressão · Docagem, como a 3.2 dos empurradores (mcTopo no js/87)
