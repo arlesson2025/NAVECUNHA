@@ -315,7 +315,7 @@ function sfCard() {
   const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => /^em viagem/.test(sfOnde(x) || '')).length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
   // Matriz | Cartões na linha do título do quadro; as caixas de números na largura toda; a legenda desce para o rodapé da matriz (Supervisor, 06/11/2026)
   const seg = `<span class="sf-segh seg" data-nodrag><button data-sfm="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-sfm="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button></span>`;
-  return `<div class="card"><h2 class="sf-h2">${md === 'matriz' ? 'Empurrador × sistema do ANEXO - I <span style="font-weight:400">(Plano de manutenção preventiva da frota de empurradores)</span>' : 'Cartões por empurrador'}${seg}</h2>
+  return `<div class="card"><h2 class="sf-h2">${md === 'matriz' ? 'Integridade do Plano de Manutenção - Frota de Empurradores' : 'Cartões por empurrador'}${seg}</h2>
     <div class="sf-k">${[['Liberados à operação', n(0), 'var(--okt)'], ['Liberados com restrição', n(1), 'var(--warnt)'], ['Impedidos de operar', n(2) + n(3), 'var(--badt)'], ['Em viagem', via, '', '#enxviag', 'Abrir o Layout da frota (1.3)'], ['Críticos NP 6.3 vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)', '#enxrisco', 'Abrir a lista de itens críticos (2.3 Equipamentos críticos e riscos)']].map(([l, v, c, h, t]) => `<div${h ? ` class="sf-kl" role="link" tabindex="0" title="${t}" onclick="location.hash='${h}'"` : ''}><span>${l}${h ? ' ›' : ''}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`).join('')}</div>
     ${md === 'matriz' ? sfMatriz(L) : sfCartoes(L)}</div>`;
 }
