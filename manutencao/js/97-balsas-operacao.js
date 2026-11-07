@@ -73,7 +73,7 @@ function vBal2() {
   const E = BALSAS.map(balLinhas), md = ['matriz', 'cartoes', 'lista'].includes(BALM.modo) ? BALM.modo : 'matriz';
   if (md === 'lista') return vBal().replace('<button class="mbtn" data-balfalha="">', balModoBt(md) + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">');
   const ord = { bloq: 0, rest: 1, lib: 2, sem: 3, ref: 4 }, L = [...E].sort((a, b) => ord[a.e.st] - ord[b.e.st] || b.e.venc.length - a.e.venc.length || (a.e.b.nome < b.e.b.nome ? -1 : 1));
-  return balCab('Integridade técnica da frota', '<i style="font-size:17px">Asset Integrity Management</i>', frotaSw() + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">⚠ Registrar falha</button>')
+  return balCab('Integridade técnica da frota', '<i style="font-size:17px">Asset Integrity Management</i>', frotaSw() + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">⚠ Registrar falha</button>').replace('<h1>Integridade técnica da frota</h1>', '<h1><span style="font-size:115%">Integridade técnica da frota</span></h1>')   // mesmo tamanho do título dos empurradores
    + `<div class="card"><h2 class="sf-h2">Integridade do Plano de Manutenção - Frota de Balsas<span class="sf-segh" data-nodrag>${balModoBt(md)}</span></h2>${balKpis(E)}${md === 'cartoes' ? balCartoes(L) : balMatriz(L)}</div>
    <div class="card"><h2>Pontos de atenção</h2>${balPorque(E)}</div>`;
 }
