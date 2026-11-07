@@ -208,7 +208,7 @@ const BAL_CR_LEG = '<div class="ecr-lg"><span><i class="ok"></i>executado no pra
 function balCrFrota(y, anoBt) {
   const G = balCrGrade(y), k = (l, x, c, d) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${x}</b>${d ? `<small>${d}</small>` : ''}</div>`;
   const imp = `<select id="balcrPapel" style="width:auto">${['A4', 'A3'].map(p => `<option${p === (BALCR.papel || 'A4') ? ' selected' : ''}>${p}</option>`).join('')}</select><button class="mbtn pri" data-balcrimp>🖨 Imprimir</button>`;
-  return balCab('Cronograma anual das balsas', `Frota de balsas petroleiras · ${y} · plano da NP Navecunha 024 item 8 · clique na balsa para ver serviço por serviço`, anoBt + imp)
+  return balCab('Cronograma de manutenção', `Frota de balsas petroleiras · ${y} · plano da NP Navecunha 024 item 8 · clique na balsa para ver serviço por serviço`, anoBt + imp)
    + `<div class="card"><h2>Cronograma da Frota de Balsas ${y}</h2><p class="note" style="margin:-4px 0 8px">${esc(G.aprovTxt)}${can.admin() && G.aprov < G.n ? ` · <button class="mbtn sm pri" data-balcraprov="todas">Aprovar o cronograma ${y} das balsas</button>` : ''}</p>
      <div class="sf-k ecr-k">${k('Aderência no ano', G.ad == null ? '—' : G.ad + '%', G.ad == null ? '' : G.ad >= 90 ? 'var(--okt)' : G.ad >= 75 ? 'var(--warnt)' : 'var(--badt)', 'meta 90%')}${k('Executado até agora', G.exe + ' de ' + G.prevAte, '', 'serviços previstos até o mês atual')}${k('Vencidos sem execução', G.ms, G.ms ? 'var(--badt)' : '')}${k('Executados com atraso', G.lt, G.lt ? 'var(--warnt)' : '')}${k('Previsto até dezembro', G.fut)}${k('Cronogramas aprovados', G.aprov + ' de ' + G.n, G.aprov < G.n ? 'var(--warnt)' : 'var(--okt)')}</div>
      ${BAL_CR_LEG}<div class="tw">${G.html}</div>
@@ -533,7 +533,7 @@ function balNav() {
   const g = (t, c) => `<div class="grp-t${c ? ' ' + c : ''}">${t}</div>`;   // menu em etapas, como o dos empurradores (SMF 3.140)
   return it('bal', 'Situação das balsas', 'hoje')
     + g('1 · Recebimento da balsa', 'grp-trab') + (VX.balhor ? it('balhor', '1.1 Horímetros', 'hor') : '') + (VX.balcor ? it('balcor', '1.2 Manutenção corretiva', 'exec') : '')
-    + g('2 · Planejamento') + it('balcr', '2.1 Cronograma', 'crono') + (VX.balprog ? it('balprog', '2.2 Programar preventiva', 'prev2') : '') + it('balpl', '2.3 Plano preventivo', 'plan')
+    + g('2 · Planejamento') + it('balcr', '2.1 Cronograma de manutenção', 'crono') + (VX.balprog ? it('balprog', '2.2 Programar preventiva', 'prev2') : '') + it('balpl', '2.3 Plano preventivo', 'plan')
     + g('3 · Condição') + it('baldoca', '3.1 Docagem', 'cons') + it('balcal', '3.2 Plano de calibração', 'cond2') + it('balcmp', '3.3 Compressão dos motores', 'compr')
     + g('4 · Fechamento') + it('balkpi', '4.1 Indicadores', 'graf') + (VX.balrel ? it('balrel', '4.2 Relatório mensal', 'relg') : '')
     + g('Apoio', 'grp-apoio') + it('balft', 'Ficha técnica', 'barcos') + it('enxbib', 'Biblioteca técnica', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores

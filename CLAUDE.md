@@ -55,13 +55,13 @@ Várias sessões do Claude trabalham no projeto em paralelo (locais e na nuvem).
 **Empurradores** (`PCM_MENU` no js/85; faixa das etapas `pcmFaixa`):
 - **Integridade técnica da frota** (`enxhoje`: Matriz `sfMatriz` ou Cartões `sfCartoes`; “Pontos de atenção”) · **Layout da frota** (`enxviag`, js/94 e js/102-103: mapa, comboios, painel) · **Pendências** (`enxpend`)
 - **1 Recebimento do empurrador**: 1.1 Horímetros (`enxhor`) · 1.2 Manutenção corretiva (`enxcor`, aba Análise de falhas `enxfal`, js/89)
-- **2 Planejamento (PCM)**: 2.1 Plano anual preventivo (`enxcr`) · 2.2 Backlog e OM preventiva (`enx`) · 2.3 Equipamentos críticos e riscos (`enxrisco`, js/91)
+- **2 Planejamento (PCM)**: 2.1 Cronograma de manutenção (`enxcr`) · 2.2 Backlog e OM preventiva (`enx`) · 2.3 Equipamentos críticos e riscos (`enxrisco`, js/91)
 - **3 Monitoramento de condição**: 3.1 Lubrificação (`oleo`) · 3.2 Controles (abas `MC_VIEWS`: Calibração `enxcal`, Compressão `compr`, Análise de óleo `anoleo`, Arrefecimento `enxarr`, Sensores `enxsen`, Docagem `enxdoca` js/96) · 3.3 Diagnóstico dos MCP (`enxdiag`)
 - **4 Gestão semanal**: 4.1 Solicitações e requisições (`semsc`, js/93; lê o PDF do Sankhya)
 - **5 Fechamento mensal**: 5.1 Indicadores da NP 055 (`enxkpi`, js/90) · 5.2 Plano de ação (`enxacao`) · 5.3 Relatório gerencial (`enxrel`, js/86) · 5.4 Apresentação técnica (`enxapres`, js/92)
 - **Apoio**: Histórico dos equipamentos (`enxeq`, js/95) · Biblioteca técnica (`enxbib`, botões Empurradores · Balsas · Comuns) · Administração (`admin`)
 
-**Balsas** (`balNav` no js/83; frota escolhida no seletor do topo do menu, `FROTA_TIPO = 'bal'`; só Biblioteca e Administração são comuns): Situação das balsas (`bal`, Matriz ou Lista) · 1 Recebimento: 1.1 Horímetros (`balhor`), 1.2 Manutenção corretiva (`balcor`, com Análise de falhas) · 2 Planejamento: 2.1 Cronograma (`balcr`), 2.2 Programar preventiva (`balprog`), 2.3 Plano preventivo (`balpl`, um quadro só) · 3 Condição: 3.1 Docagem (`baldoca`), 3.2 Plano de calibração (`balcal`), 3.3 Compressão dos motores (`balcmp`) · 4 Fechamento: 4.1 Indicadores (`balkpi`), 4.2 Relatório mensal (`balrel`) · Apoio: Ficha técnica (`balft`), Biblioteca, Administração. Código em `js/83` e `js/97` a `js/100`. As balsas **não** entram em `S.cfg.frota` nem nas contas dos empurradores.
+**Balsas** (`balNav` no js/83; frota escolhida no seletor do topo do menu, `FROTA_TIPO = 'bal'`; só Biblioteca e Administração são comuns): Situação das balsas (`bal`, Matriz ou Lista) · 1 Recebimento: 1.1 Horímetros (`balhor`), 1.2 Manutenção corretiva (`balcor`, com Análise de falhas) · 2 Planejamento: 2.1 Cronograma de manutenção (`balcr`), 2.2 Programar preventiva (`balprog`), 2.3 Plano preventivo (`balpl`, um quadro só) · 3 Condição: 3.1 Docagem (`baldoca`), 3.2 Plano de calibração (`balcal`), 3.3 Compressão dos motores (`balcmp`) · 4 Fechamento: 4.1 Indicadores (`balkpi`), 4.2 Relatório mensal (`balrel`) · Apoio: Ficha técnica (`balft`), Biblioteca, Administração. Código em `js/83` e `js/97` a `js/100`. As balsas **não** entram em `S.cfg.frota` nem nas contas dos empurradores.
 
 ## Regras que valem hoje
 

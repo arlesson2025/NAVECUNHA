@@ -20,7 +20,7 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
 ICO.diag = '<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2.5a4.5 4.5 0 0 0 9 0V13"/><circle cx="19" cy="11" r="2"/>';
 const PCM_MENU = [['', [['enxhoje', 'Integridade técnica da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
   ['1 · Recebimento do empurrador', [['enxhor', '1.1 Horímetros', 'hor'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
-  ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2'], ['enxrisco', '2.3 Equipamentos críticos e riscos', 'risco']]],
+  ['2 · Planejamento (PCM)', [['enxcr', '2.1 Cronograma de manutenção', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2'], ['enxrisco', '2.3 Equipamentos críticos e riscos', 'risco']]],
   ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnóstico dos MCP', 'diag']]],
   ['5 · Fechamento mensal', [['enxkpi', '5.1 Indicadores da NP 055', 'kpi'], ['enxacao', '5.2 Plano de ação', 'acao'], ['enxrel', '5.3 Relatório gerencial', 'relg']]],
   ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];
@@ -621,7 +621,7 @@ function vEnxCr() {
   const ano = ENXC.ano, v = vessel(ENXC.v), anos = [ano - 1, ano, ano + 1], seg = `<div class="seg">${anos.map(a => `<button data-ecrano="${a}" class="${a === ano ? 'on' : ''}">${a}</button>`).join('')}</div>`;
   const imp = `<select id="ecrPapel" style="width:auto">${['A4', 'A3'].map(p => `<option${p === ENXC.papel ? ' selected' : ''}>${p}</option>`).join('')}</select><button class="mbtn pri" data-ecrimp>🖨 Imprimir</button>`;
   if (!v) { const G = enxCrGrade(ano), k = (l, x, c, d) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${x}</b>${d ? `<small>${d}</small>` : ''}</div>`;
-    return enxCab('2.1 Plano anual de manutenção preventiva', `Frota de empurradores · ${ano} · plano do Anexo I (NP Navecunha 055 item 7.3) · clique no empurrador para ver serviço por serviço`, seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
+    return enxCab('2.1 Cronograma de manutenção', `Frota de empurradores · ${ano} · plano do Anexo I (NP Navecunha 055 item 7.3) · clique no empurrador para ver serviço por serviço`, seg + imp + '<button class="mbtn" data-enxreset>Reorganizar</button>')
      + `<div class="card"><h2>Cronograma da Frota de Empurradores ${ano}</h2><p class="note" style="margin:-4px 0 8px">${esc(G.aprovTxt)}${can.admin() && G.aprov < G.n ? ` · <button class="mbtn sm pri" data-ecraprov="todos">Aprovar o cronograma ${ano} da frota</button>` : ''}</p>
        <div class="sf-k ecr-k">${k('Aderência no ano', G.ad == null ? '—' : G.ad + '%', G.ad == null ? '' : G.ad >= 90 ? 'var(--okt)' : G.ad >= 75 ? 'var(--warnt)' : 'var(--badt)', 'meta 90%')}${k('Executado até agora', G.exe + ' de ' + G.prevAte, '', 'serviços previstos até o mês atual')}${k('Vencidos sem execução', G.ms, G.ms ? 'var(--badt)' : 'var(--okt)')}${k('Executados com atraso', G.lt, G.lt ? 'var(--warnt)' : '')}${k('Previsto até dezembro', G.fut, '')}${k('Cronogramas aprovados', G.aprov + ' de ' + G.n, G.aprov < G.n ? 'var(--warnt)' : 'var(--okt)')}</div>
        ${ENX_LEG}<div class="tw">${G.html}</div></div></div></div>`; }
