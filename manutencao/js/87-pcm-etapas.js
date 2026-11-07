@@ -294,7 +294,7 @@ function sfPorque(L) {
 }
 function sfCard() {
   const L = sfDados(), n = k => L.filter(x => x.sit === k).length, via = L.filter(x => /^em viagem/.test(sfOnde(x) || '')).length, cr = L.reduce((a, x) => a + x.crit, 0), md = sfModo();
-  return `<div class="card"><h2>${md === 'matriz' ? 'Empurrador × sistema do Anexo I' : 'Cartões por empurrador'}</h2>
+  return `<div class="card"><h2>${md === 'matriz' ? 'Empurrador × sistema do Anexo I (Plano de manutenção da frota de empurradores)' : 'Cartões por empurrador'}</h2>
     <div class="sf-k">${[['Liberados à operação', n(0), 'var(--okt)'], ['Liberados com restrição', n(1), 'var(--warnt)'], ['Impedidos de operar', n(2) + n(3), 'var(--badt)'], ['Em viagem', via, ''], ['Críticos NP 6.3 vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)']].map(([l, v, c]) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`).join('')}
       <span class="sp"></span><div class="seg"><button data-sfm="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-sfm="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button></div></div>
     ${md === 'matriz' ? `<div class="sf-leg"><span><span class="sf-c sf-r">3</span> vencidos</span><span><span class="sf-c sf-a">2</span> vencem no mês</span><span><span class="sf-g"></span> em dia</span><span><span class="sf-o"></span> sem histórico</span><span><span class="sf-na">—</span> não se aplica</span></div>` + sfMatriz(L) : sfCartoes(L)}</div>`;
