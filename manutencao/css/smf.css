@@ -1134,3 +1134,4 @@ table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.c
 #main .sf-mx td.sf-n a.sf-lk,#main .sf-mx td.sf-n a.sf-lk b{color:#1F2A37;text-decoration:none}#main .sf-mx td.sf-n a.sf-lk:hover b{color:#1A73E8}
 /* 1.1 Horímetros das balsas compacta (Supervisor, 06/11/2026: “diminui o máximo que der os espaços”) */#main table.bal-t:has(.bhlH) td,#main table.bal-t:has(.bhlH) th{padding:1px 6px;line-height:1.2}#main table.bal-t .bhlH{height:24px;min-height:0;padding:1px 6px;font-size:13px;margin:0}#main table.bal-t:has(.bhlH) .pill{padding:0 6px;line-height:16px}
 #main table.bal-t:has(.bhlH) td{vertical-align:middle}#main table.bal-t:has(.bhlH) .mbtn{padding:0 8px;min-height:0;height:22px;line-height:20px;font-size:12px}#main table.bal-t .bhlH{height:22px}
+#main iframe.ax1-fr{display:block;width:100%;height:calc(100vh - 230px);min-height:520px;border:1px solid #DCE3EC;border-radius:8px;background:#fff}

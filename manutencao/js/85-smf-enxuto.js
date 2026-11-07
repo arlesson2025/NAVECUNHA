@@ -20,7 +20,7 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
 ICO.diag = '<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2.5a4.5 4.5 0 0 0 9 0V13"/><circle cx="19" cy="11" r="2"/>';
 const PCM_MENU = [['', [['enxhoje', 'Integridade técnica da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
   ['1 · Recebimento do empurrador', [['enxhor', '1.1 Horímetros', 'hor'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
-  ['2 · Planejamento (PCM)', [['enxcr', '2.1 Cronograma de manutenção', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2'], ['enxrisco', '2.3 Equipamentos críticos e riscos', 'risco']]],
+  ['2 · Planejamento (PCM)', [['enxcr', '2.1 Cronograma de manutenção', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2'], ['enxplano', '2.3 Plano preventivo', 'plan'], ['enxrisco', '2.4 Equipamentos críticos e riscos', 'risco']]],
   ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnóstico dos MCP', 'diag']]],
   ['5 · Fechamento mensal', [['enxkpi', '5.1 Indicadores da NP 055', 'kpi'], ['enxacao', '5.2 Plano de ação', 'acao'], ['enxrel', '5.3 Relatório gerencial', 'relg']]],
   ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];

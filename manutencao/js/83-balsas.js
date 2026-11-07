@@ -407,7 +407,7 @@ function balCmpGraf(b) {
 { const st = document.createElement('style'); st.textContent = '.bpl-t tr.bpl-g td{background:#EEF3FA;border-top:2px solid #C9D6EA;padding-top:7px;padding-bottom:5px}.bpl-t tr.bpl-g:first-child td{border-top:0}'; document.head.appendChild(st); }
 function vBalPl() {
   const G = [...new Set(BA1.map(t => t.eq))], n = mot => BALSAS.filter(b => !mot || b.mot === mot).length;
-  return balCab('Plano preventivo', 'NP Navecunha 024 itens 7 e 8 (numeração da Rev. 02), com as correções aprovadas em 25/10/2026 · o diário e o semanal ficam no FR 027_A e na rotina da tripulação · extintores e salvatagem com o SESMT (FR 022_C)')
+  return balCab('Plano preventivo', 'NP Navecunha 024 itens 7 e 8 (numeração da Rev. 02), com as correções aprovadas em 25/10/2026 · o diário e o semanal ficam no FR 027_A e na rotina da tripulação · extintores e salvatagem com o SESMT (FR 022_C)', frotaSw('#enxplano', '#balpl'))
    // um quadro só com o plano inteiro, agrupado por equipamento (Supervisor, 02/11/2026: “em vez de ter vários cartões faça só 1”)
    + `<div class="card"><h2>Plano preventivo das balsas · ${BA1.length} serviços</h2><div class="tw"><table class="t bpl-t"><thead><tr><th>Item</th><th>Serviço</th><th>Intervalo</th><th>Criticidade</th><th>Quem executa</th><th>Referência</th></tr></thead><tbody>${G.map(g => { const L = BA1.filter(t => t.eq === g), mot = L[0].mot;
      return `<tr class="bpl-g"><td colspan="6"><b>${esc(g)}</b> <span class="note">${n(mot)} balsa${n(mot) === 1 ? '' : 's'}${mot ? ': ' + BALSAS.filter(b => b.mot === mot).map(b => esc(b.nome.replace('VDA ', ''))).join(', ') : ''}</span></td></tr>`

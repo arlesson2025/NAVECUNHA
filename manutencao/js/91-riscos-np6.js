@@ -1,5 +1,5 @@
 'use strict';
-/* ===== 2.3 Equipamentos críticos e riscos · NP 055 item 6 (SMF 3.93, 30/10/2026) =====
+/* ===== 2.4 Equipamentos críticos e riscos · NP 055 item 6 (SMF 3.93, 30/10/2026) =====
    Pedido do Supervisor (auditoria): controle do item 6 da NP 055 numa tela só.
    · 6.2 Matriz de risco 5 × 5 (escolha do Supervisor: “faça da sua escolha”) · severidade = maior nota entre os três impactos da 6.2
      (Segurança e saúde, Meio ambiente, Operação e qualidade), em RSK_SEV · probabilidade = histórico do SMF (decisão do Supervisor):
@@ -40,7 +40,7 @@ function vEnxRisco() {
   const venc = SF.reduce((a, x) => a + x.sis.slice(0, 8).reduce((b, L) => b + L.filter(y => enxCrit(y.t) && y.g === 'venc').length, 0), 0);
   const MD = typeof mcDiag === 'function' ? mcDiag() : [], md = k => MD.filter(x => x.rc === k).length;
   const aprov = A ? `Matriz aprovada em ${brD(A.date)} por ${esc(A.por || '')}${A.date.slice(0, 4) < isoD(hoje()).slice(0, 4) ? ' · <b style="color:var(--badt)">revisão anual pendente</b>' : ''}` : '<b style="color:var(--badt)">Matriz ainda não aprovada</b>';
-  return enxCab('2.3 Equipamentos críticos e riscos · NP 055 item 6', 'Matriz de risco dos 8 sistemas críticos (6.2), controles da 6.3 em cada empurrador e monitoramento de desgaste (6.1)', '<button class="mbtn" data-rskpdf>🖨 Imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>')
+  return enxCab('2.4 Equipamentos críticos e riscos · NP 055 item 6', 'Matriz de risco dos 8 sistemas críticos (6.2), controles da 6.3 em cada empurrador e monitoramento de desgaste (6.1)', '<button class="mbtn" data-rskpdf>🖨 Imprimir</button><button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Resumo</h2><div class="kn-int kn-4"><div><i>Sistemas críticos (NP 6.3)</i><b>8</b></div><div><i>Risco crítico ou alto</i><b style="color:${nC + nA ? 'var(--badt)' : ''}">${nC + nA}</b><small>${nC} crítico · ${nA} alto</small></div>
      <div><i>Serviços críticos vencidos</i><b style="color:${venc ? 'var(--badt)' : 'var(--okt)'}">${venc}</b><small>na frota (impedem a saída sem OM)</small></div><div><i>Falhas abertas em sistema crítico</i><b style="color:${ab.filter(o => parseInt(o.sistema) <= 8).length ? 'var(--badt)' : ''}">${ab.filter(o => parseInt(o.sistema) <= 8).length}</b><small>corretivas não encerradas</small></div></div>
      <p class="note">${aprov}${can.admin() ? ' · <button class="mbtn sm" data-rskap>Aprovar a matriz atual</button>' : ''}</p></div>`
@@ -77,6 +77,15 @@ function rskPDF() {
 }
 Object.assign(VX, { enxrisco: vEnxRisco }); AFTER.enxrisco = pcmAfter('enxrisco');
 Object.assign(NP_TAG, { enxrisco: '6' });
+// 2.3 Plano preventivo dos empurradores (Supervisor, 06/11/2026: “2.3 plano preventivo e coloca o Anexo I aqui dentro; 2.4 equipamentos críticos”): o Anexo I da
+// NP 055 aberto dentro do SMF, como o plano preventivo das balsas (2.3); o documento é o mesmo da Biblioteca técnica
+const ANEXO1_URL = '../docs/empurradores/Anexo_I_NP_055_visual_matriz.html';
+function vEnxPlano() {
+  return enxCab('2.3 Plano preventivo', 'Anexo I da NP 055 · Matriz de manutenção preventiva: serviços, frequências e métodos de cada sistema · é o plano que gera o 2.1 Cronograma de manutenção',
+    (typeof frotaSw === 'function' ? frotaSw('#enxplano', '#balpl') : '') + `<a class="mbtn" href="${ANEXO1_URL}" target="_blank" rel="noopener">Abrir em nova aba ↗</a><button class="mbtn" data-enxreset>Reorganizar</button>`)
+    + `<div class="card"><h2>Anexo I · Matriz de manutenção preventiva · NP 055</h2><iframe class="ax1-fr" src="${ANEXO1_URL}" title="Anexo I da NP 055"></iframe></div></div></div>`;
+}
+VX.enxplano = vEnxPlano; AFTER.enxplano = pcmAfter('enxplano'); ENX_OK.push('enxplano'); PCM_ETAPAS[1][2].push('enxplano'); NP_TAG.enxplano = '7.3 · Anexo I';
 ENX_OK.push('enxrisco'); PCM_ETAPAS[1][2].push('enxrisco');
 document.addEventListener('click', e => { if (VIEW !== 'enxrisco') return; const b = e.target.closest('[data-rskap],[data-rskpdf]'); if (!b) return;
   if (b.dataset.rskap !== undefined) return rskAprovar(); return rskPDF(); });
