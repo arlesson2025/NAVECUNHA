@@ -216,3 +216,36 @@ VX.balrisco = balJan('balrisco', vBalRisco);
 BAL_VIEWS.splice(BAL_VIEWS.findIndex(v => v[0] === 'balpl') + 1, 0, ['balrisco', 'Equipamentos críticos e riscos']); BAL_NUM.balrisco = '2.4'; NP_TAG.balrisco = 'NP 024 · 6.1 e 8';
 BAL_ETAPAS[1][2].push('balrisco');
 AFTER.balrisco = () => { balAfter(); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_balrisco_lay', '[data-balreset="balrisco"]'); };
+
+// ---------- 3.1 Lubrificação das balsas (Supervisor, 06/11/2026: “agora lubrificação, fazer botão”; “padronize, deixe como o do empurrador tudo, até os gráficos”) ----------
+// a mesma tela 3.1 dos empurradores (vOleoP, js/44) com os dados das balsas: as trocas de óleo do plano BA1, o óleo do motor-bomba (B2.1, B3.1, B4.1, conforme o motor)
+// e o óleo dos mancais da bomba (B1.2); o registro é o FR 049_B da balsa, que dá baixa no plano
+const BAL_OL_SIS = [['mot', 'Motor-bomba', 'Óleo do motor diesel'], ['bom', 'Bomba', 'Mancais da bomba centrífuga']];
+const BAL_LUB = [['Óleo do motor-bomba', t => !!t.mot && /^Troca do óleo/i.test(t.serv || ''), 'mot'], ['Óleo dos mancais da bomba', t => t.id === 'B1.2', 'bom']];
+function balO3Dados() {
+  const H = hoje(), H0 = pD(isoD(H)), F = [], ENG = [];
+  BALSAS.filter(b => !(typeof vgEmReforma === 'function' && vgEmReforma(b.id))).forEach(b => { const hr = balHor(b.id), tx = balTaxa(b.id);
+    BAL_LUB.forEach(([nome, f, g]) => { const t = balItens(b).find(f); if (!t) return; const s = balSit(b, t), iv = balIv(t), L = s.L || null;
+      const dias = s.alvoD ? Math.round((s.alvoD - H0) / 864e5) : null, porH = s.rest != null && (dias == null || !tx || s.rest / tx <= dias);
+      const sem = s.st === 'sem' || (s.rest == null && dias == null), u = porH ? 'h' : 'd', val = sem ? null : porH ? Math.round(s.rest) : dias;
+      const pH = s.rest != null && tx ? new Date(H.getTime() + s.rest / tx * 864e5) : null, proxD = [s.alvoD, pH].filter(Boolean).sort((a, z) => a - z)[0] || null;
+      const I = porH ? iv.h : (iv.m ? iv.m * 30.44 : 365), sv = String(t.serv || ''), sae = (sv.match(/SAE [^;,)]+/) || [''])[0].trim(), car = (sv.match(/(\d+(?:,\d+)?(?: a \d+(?:,\d+)?)?) ?L\b/) || ['', ''])[1];
+      if (!F.some(x => x.id === b.id)) F.push({ id: b.id, n: b.nome, st: '' });
+      ENG.push({ b: b.nome, vid: b.id, g, name: nome, car: car ? car + ' L' : '—', carS: sv, oleo: sae, oleoS: sv, atual: hr ? hr.h : null, ultH: L && L.h != null && L.h !== '' ? +L.h : null, ultD: L && L.date ? pD(L.date) : null,
+        proxH: s.alvoH != null ? s.alvoH : null, proxD, v: val, u, sem, restTxt: sem ? 'sem hist.' : (val < 0 ? '−' : '') + nf(Math.abs(val)) + ' ' + u,
+        pct: sem ? 0 : Math.max(0, Math.min(1, val / (I || 1))), st: sem ? 'sem' : val < 0 ? 'red' : ((u === 'h' && val <= 50) || (u === 'd' && val <= 7)) ? 'amber' : 'green', daysLeft: proxD ? (proxD - H) / 864e5 : 1e9 }); }); });
+  return { F: F.filter(b => ENG.some(e => e.vid === b.id)), ENG };
+}
+// óleo para as trocas programadas das balsas: volume do item do plano (cárter do motor; mancais) das trocas vencidas e das que vencem em até 30, 60 e 90 dias
+function balOlDemanda(ENG) {
+  const P = [30, 60, 90], T = {}; let sem = 0;
+  ENG.filter(e => !e.sem && e.daysLeft <= 90).forEach(e => { const n = (e.car.match(/\d+(?:,\d+)?/g) || []).map(x => +x.replace(',', '.')); if (!n.length) { sem++; return; } const Lt = n.reduce((a, x) => a + x, 0) / n.length, k = e.oleo || 'Outros', r = T[k] = T[k] || [0, 0, 0]; P.forEach((d, i) => { if (e.daysLeft <= d) r[i] += Lt; }); });
+  const L = Object.entries(T).sort((a, b) => b[1][2] - a[1][2]), f = n => nf(Math.round(n)) + ' L';
+  return `<div class="card"><h2>Óleo para as trocas programadas</h2><div class="tw"><table class="t"><thead><tr><th>Óleo</th><th class="r">Até 30 dias</th><th class="r">Até 60 dias</th><th class="r">Até 90 dias</th></tr></thead><tbody>
+    ${L.length ? L.map(([k, r]) => `<tr><td><b>${esc(k)}</b></td>${r.map(n => `<td class="r mono">${f(n)}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="4" class="note">Nenhuma troca nos próximos 90 dias.</td></tr>'}</tbody></table></div>
+    <p class="note">Soma do volume do item do plano (cárter do motor-bomba; mancais da bomba) das trocas vencidas e das que vencem no prazo: use para o pedido de compra. Cada coluna inclui a anterior. Faixa de volume entra pelo meio (≈).${sem ? ` ${sem} troca(s) sem volume no plano.` : ''}</p></div>`;
+}
+VX.ballub = () => vOleoP(balO3Dados());
+BAL_VIEWS.splice(BAL_VIEWS.findIndex(v => v[0] === 'balcal'), 0, ['ballub', 'Lubrificação']); BAL_NUM.ballub = '3.1'; NP_TAG.ballub = 'NP 024 · 8 · FR 049_B';
+BAL_ETAPAS[2][2].unshift('ballub'); if (typeof PCM_TIT !== 'undefined') PCM_TIT.ballub = '3.1 Lubrificação · troca de óleo (FR 049_B)';
+AFTER.ballub = () => AFTER.oleo();

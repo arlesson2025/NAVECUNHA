@@ -4,7 +4,7 @@
 'use strict';
 { const st = document.createElement('style'); st.textContent = `.ol-old{background:#FEF7E0;color:#B06000;border-radius:4px;padding:0 3px}`; document.head.appendChild(st); }
 function olSisChips(ENG) { const c = g => ENG.filter(e => e.g === g).length;
-  return `<div class="cm-chips" style="margin:-2px 0 10px"><span class="note" style="margin-right:4px">Sistema</span><button class="cm-chip${OLF.g ? '' : ' on'}" data-olg="${OLF.g}">Todos</button>${OL_SIS.filter(([g]) => c(g)).map(([g, nome]) => `<button class="cm-chip${OLF.g === g ? ' on' : ''}" data-olg="${g}">${nome} <b>${c(g)}</b></button>`).join('')}</div>`; }
+  return `<div class="cm-chips" style="margin:-2px 0 10px"><span class="note" style="margin-right:4px">Sistema</span><button class="cm-chip${OLF.g ? '' : ' on'}" data-olg="${OLF.g}">Todos</button>${(VIEW === 'ballub' && typeof BAL_OL_SIS !== 'undefined' ? BAL_OL_SIS : OL_SIS).filter(([g]) => c(g)).map(([g, nome]) => `<button class="cm-chip${OLF.g === g ? ' on' : ''}" data-olg="${g}">${nome} <b>${c(g)}</b></button>`).join('')}</div>`; }
 
 /* Pareto das horas rodadas por MCP nos últimos 12 meses (pedido do Supervisor, 22/10/2026): barras em ordem decrescente + % acumulada e linha de 80%; horas = soma dos meses com leitura (horasMes). */
 

@@ -8,8 +8,10 @@ function olAnel(L) { const n = st => L.filter(e => e.st === st).length, ok = n('
   let off = 0; const seg = (q, cor) => { if (!q) return ''; const l = q / tot * C, h = `<circle r="${R}" cx="40" cy="40" fill="none" stroke="${cor}" stroke-width="9" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 40 40)"/>`; off += l; return h; };
   const pct = ch ? Math.round(ok / ch * 100) : null;
   return { svg: `<svg viewBox="0 0 80 80" width="84" height="84"><circle r="${R}" cx="40" cy="40" fill="none" stroke="#EEF2F6" stroke-width="9"/>${seg(ok, '#1967D2')}${seg(am, '#E3A008')}${seg(rd, '#D93025')}${seg(sm, '#BDC1C6')}<text x="40" y="45" text-anchor="middle" font-size="16" font-weight="700" fill="#202124">${pct == null ? '—' : pct + '%'}</text></svg>`, ok, am, rd, sm, tot }; }
-function vOleoP() {
-  const { F, ENG } = o3Dados(), H = id => ENG.some(e => e.vid === id && e.st === 'red');
+// src (Supervisor, 06/11/2026: “padronize, deixe como o do empurrador tudo, até os gráficos”): a mesma tela para as balsas, com os dados delas (balO3Dados, js/97)
+function vOleoP(src) {
+  const BS = !!src, { F, ENG } = src || o3Dados(), H = id => ENG.some(e => e.vid === id && e.st === 'red'), Q = BS ? 'balsa' : 'empurrador', SIS = BS ? BAL_OL_SIS : OL_SIS;
+  if (OLF.g && !SIS.some(x => x[0] === OLF.g)) OLF.g = '';
   if (!O3.open) O3.open = new Set(O3.G('open', F.filter(b => H(b.id)).map(b => b.id)));
   if (!O3.mode) O3.mode = O3.G('mode', 'frota');
   if (!O3.ves || !F.some(b => b.id === O3.ves)) { const s = O3.G('ves', ''); O3.ves = F.some(b => b.id === s) ? s : (F[0] || {}).id; }
@@ -31,11 +33,11 @@ function vOleoP() {
       <td class="mono r">${e.proxH != null ? nf(e.proxH) : '—'}</td><td class="mono r">${dt(e.proxD)}</td><td class="r">${sitP(e)}</td></tr>`; }); });
   const sis = `<div class="card"><div class="row"><h2>Condição por sistema</h2><span class="sp"></span><span class="note">% em dia = em dia ÷ equipamentos com histórico · clique num sistema para filtrar a tabela</span></div><div class="ol-sis">${OL_SIS.map(([g, nome, sub]) => { const L = ENG.filter(e => e.g === g); if (!L.length) return ''; const a = olAnel(L); if (g === 'inc') sub += ' (' + [...new Set(L.map(e => e.b))].join(', ') + ')';
      return `<button class="ol-an${OLF.g === g ? ' on' : ''}" data-olg="${g}" title="${OLF.g === g ? 'Clique para tirar o filtro' : 'Clique para ver só ' + nome + ' na tabela'}">${a.svg}<b>${nome}</b><small>${sub}</small><span><i class="ok">${a.ok} em dia</i>${a.am ? ` · <i class="am">${a.am} até 50 h</i>` : ''}${a.rd ? ` · <i class="rd">${a.rd} vencida${a.rd > 1 ? 's' : ''}</i>` : ''}${a.sm ? ` · ${a.sm} sem hist.` : ''}</span></button>`; }).join('')}</div></div>`;
-  const tab = `<div class="card"><div class="row"><h2>Equipamentos${OLF.g ? ` <button class="cm-chip on" data-olg="${OLF.g}" title="Tirar o filtro de sistema">${(OL_SIS.find(x => x[0] === OLF.g) || [, OLF.g])[1]} ✕</button>` : ''}</h2><span class="sp"></span><button class="mbtn sm" data-olall="1">Abrir todas</button><button class="mbtn sm" data-olall="0">Fechar todas</button></div>
+  const tab = `<div class="card"><div class="row"><h2>Equipamentos${OLF.g ? ` <button class="cm-chip on" data-olg="${OLF.g}" title="Tirar o filtro de sistema">${(SIS.find(x => x[0] === OLF.g) || [, OLF.g])[1]} ✕</button>` : ''}</h2><span class="sp"></span><button class="mbtn sm" data-olall="1">Abrir todas</button><button class="mbtn sm" data-olall="0">Fechar todas</button></div>
    <div class="cm-chips">${chips.map(([k, l, c]) => `<button class="cm-chip${OLF.f === k ? ' on' : ''}" data-olf="${k}">${l} <b>${c}</b></button>`).join('')}</div>
-   ${olSisChips(ENG)}<div class="tw"><table class="t ol-t"><thead><tr><th rowspan="2">Empurrador</th><th rowspan="2">Equipamento</th><th rowspan="2" class="r">Cárter</th><th rowspan="2">Óleo</th><th rowspan="2" class="r">Hor. atual</th><th colspan="2" class="ol-gu">Última troca</th><th colspan="2" class="ol-gp">Próxima troca</th><th rowspan="2" class="r">Situação</th></tr>
+   ${olSisChips(ENG)}<div class="tw"><table class="t ol-t"><thead><tr><th rowspan="2">${BS ? 'Balsa' : 'Empurrador'}</th><th rowspan="2">Equipamento</th><th rowspan="2" class="r">Cárter</th><th rowspan="2">Óleo</th><th rowspan="2" class="r">Hor. atual</th><th colspan="2" class="ol-gu">Última troca</th><th colspan="2" class="ol-gp">Próxima troca</th><th rowspan="2" class="r">Situação</th></tr>
     <tr><th class="r ol-gu">Horímetro</th><th class="r ol-gu">Data</th><th class="r ol-gp">Horímetro</th><th class="r ol-gp">Data</th></tr></thead><tbody>${rows || '<tr><td colspan="10" class="note">Nenhum equipamento neste filtro.</td></tr>'}</tbody></table></div>
-   <p class="note">Clique no empurrador para abrir ou fechar · clique num equipamento para lançar a troca (FR 049_B) · situação: vencido = passou do prazo (horas ou dias de atraso), atenção = até 50 h ou 7 d, em dia = quanto falta · cárter = volume da matriz de lubrificação</p></div>`;
+   <p class="note">Clique na linha d${BS ? 'a balsa' : 'o empurrador'} para abrir ou fechar · clique num equipamento para lançar a troca (FR 049_B) · situação: vencido = passou do prazo (horas ou dias de atraso), atenção = até 50 h ou 7 d, em dia = quanto falta · cárter = volume da matriz de lubrificação</p></div>`;
   // saldo para a troca: esquerda = atraso (h ou d), direita = % do intervalo que ainda resta
   const crit = id => ENG.filter(e => e.vid === id && !e.sem).sort((a, z) => (a.v < 0 || z.v < 0) ? a.v - z.v : a.pct - z.pct)[0];
   // 3.57 (Supervisor, 29/10/2026: “troca esse modelo por esse”): eixo central “vence agora”, atraso à esquerda em vermelho com o número na ponta, o que falta à direita na cor da situação; do mais urgente para o mais folgado
@@ -48,20 +50,20 @@ function vOleoP() {
   if (O3.mode === 'frota') {
     const L = F.map(b => { const c = crit(b.id); return c ? { l: `<b>${esc(b.n)}</b><small>${esc(c.name)}</small>`, v: c.v, p: c.pct, d: c.daysLeft, st: c.st, t: c.restTxt, go: b.id } : null; }).filter(Boolean);
     const ok = ENG.filter(e => !e.sem), pior = ok.filter(e => e.v < 0).sort((a, z) => a.v - z.v)[0], prox = ok.filter(e => e.v >= 0).sort((a, z) => a.daysLeft - z.daysLeft)[0];
-    corpo = `<p class="note">o equipamento mais crítico de cada empurrador · clique numa barra para abrir o empurrador</p>${saldo(L)}
+    corpo = `<p class="note">o equipamento mais crítico de cada ${Q} · clique numa barra para abrir ${BS ? 'a balsa' : 'o empurrador'}</p>${saldo(L)}
      <div class="ol-ft"><div><span>Mais atrasado</span><b style="color:${pior ? 'var(--badt)' : 'var(--okt)'}">${pior ? esc(pior.b + ' · ' + pior.name + ' · ' + pior.restTxt.replace('−', '')) : 'nenhum'}</b></div><div><span>Próxima a vencer</span><b>${prox ? esc(prox.b + ' · ' + prox.name + ' · ' + dt(prox.proxD)) : '—'}</b></div></div>`;
   } else { const b = F.find(x => x.id === O3.ves) || F[0];
     /* 1 empurrador: colunas Equipamento · Horímetro atual (e leitura) · Saldo (← atraso | intervalo que resta →) · Próxima troca (pedido do Supervisor, 22/10/2026) */
-    const v = b && vessel(b.id), LD = v ? lubDados().filter(d => d.v === v && !d.saida) : [], E1 = b ? ENG.filter(e => e.vid === b.id) : [];
-    const hl = e => { const d = LD.find(q => eqNomeC(v, q.e).startsWith(e.name)), h = d && horAtual(v.id, lubHp(v, d.e)), dd = h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
+    const v = !BS && b && vessel(b.id), LD = v ? lubDados().filter(d => d.v === v && !d.saida) : [], E1 = b ? ENG.filter(e => e.vid === b.id) : [];
+    const hl = BS ? (e => { const hr = balHor(e.vid); return hr ? 'lido ' + brD(hr.date) : 'sem leitura'; }) : e => { const d = LD.find(q => eqNomeC(v, q.e).startsWith(e.name)), h = d && horAtual(v.id, lubHp(v, d.e)), dd = h && !h.est ? Math.floor((hoje() - pD(h.date)) / 864e5) : null;
       return !h ? 'sem leitura' : h.est ? 'estimado' : `<span class="${dd > MCA_SEM_LEITURA_D ? 'ol-old' : ''}">lido ${brD(h.date)}${dd > MCA_SEM_LEITURA_D ? ' · ' + dd + ' d' : ''}</span>`; };
     corpo = !b ? '<p class="note">Sem equipamentos.</p>' : saldo(E1.map(e => ({ l: `<b>${esc(e.name)}</b><small>${e.atual != null ? nf(e.atual) + ' h · ' : ''}${hl(e)}${e.proxD ? ' · troca ' + brD(isoD(e.proxD)) : ''}</small>`, v: e.v, p: e.pct, d: e.daysLeft, st: e.st, t: e.restTxt, sem: e.sem }))); }
-  const graf = `<div class="card"><div class="row"><h2>Intervalo remanescente até a troca de óleo</h2><span class="sp"></span><span class="ol-seg"><button data-olm="frota" class="${O3.mode === 'frota' ? 'on' : ''}">Frota inteira</button><button data-olm="1" class="${O3.mode !== 'frota' ? 'on' : ''}">1 empurrador</button></span><select id="olSv" class="ol-sv">${F.map(b => `<option value="${b.id}"${b.id === O3.ves ? ' selected' : ''}>${esc(b.n)}</option>`).join('')}</select></div>
+  const graf = `<div class="card"><div class="row"><h2>Intervalo remanescente até a troca de óleo</h2><span class="sp"></span><span class="ol-seg"><button data-olm="frota" class="${O3.mode === 'frota' ? 'on' : ''}">Frota inteira</button><button data-olm="1" class="${O3.mode !== 'frota' ? 'on' : ''}">1 ${Q}</button></span><select id="olSv" class="ol-sv">${F.map(b => `<option value="${b.id}"${b.id === O3.ves ? ' selected' : ''}>${esc(b.n)}</option>`).join('')}</select></div>
    ${corpo}<p class="note">Linha do meio = vence agora · à esquerda, quanto atrasou · à direita, quanto falta · comprimento = dias até a troca, no ritmo de cada motor · ordem = mais urgente primeiro</p></div>`;
-  const t = document.createElement('div'); t.innerHTML = vLubReg(); const card = t.querySelector(':scope > .card');   // filtros e tabela da antiga tela Registros de lubrificação
-  const reg = card ? `<div class="card" id="ol-trocas"><div class="row"><h2>Trocas registradas</h2><span class="sp"></span><span class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta do empurrador no Google Drive) e complementos de óleo</span></div>${card.innerHTML}</div>` : '';
-  return `<div class="cm-v"><div class="vh"><div><h1>Óleo da frota</h1><p>Troca de óleo por horímetro ou prazo (Anexo I · matriz de lubrificação) · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d · registro pelo FR 049_B</p></div><span class="sp"></span><button class="mbtn" data-olreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button><button class="mbtn" data-act="lubComp">＋ Complemento de nível</button><button class="mbtn pri" data-ollanca>＋ Registrar troca de óleo</button></div>
-   ${olFaixa(o3Dados().ENG)}<div class="cm-ws">${tab}${graf}${olDemanda()}${olConsumoCard()}${reg}</div></div>`;
+  const t = document.createElement('div'); t.innerHTML = vLubReg(BS ? new Set(F.map(b => b.id)) : undefined); const card = t.querySelector(':scope > .card');   // filtros e tabela da antiga tela Registros de lubrificação
+  const reg = card ? `<div class="card" id="ol-trocas"><div class="row"><h2>Trocas registradas</h2><span class="sp"></span><span class="note">FR 049_B (com o PDF das 2 folhas, que vai para a pasta d${BS ? 'a balsa' : 'o empurrador'} no Google Drive)${BS ? '' : ' e complementos de óleo'}</span></div>${card.innerHTML}</div>` : '';
+  return `<div class="cm-v"><div class="vh"><div><h1>${BS ? '3.1 Lubrificação · troca de óleo (FR 049_B)' : 'Óleo da frota'}</h1><p>${BS ? 'Troca do óleo do motor-bomba e dos mancais da bomba por horímetro ou prazo (plano da NP 024)' : 'Troca de óleo por horímetro ou prazo (Anexo I · matriz de lubrificação)'} · alerta com ≤ ${OL_ALERTA_H} h ou ≤ 7 d · registro pelo FR 049_B</p></div><span class="sp"></span>${typeof frotaSw === 'function' ? frotaSw('#oleo', '#ballub') : ''}<button class="mbtn" data-olreset title="Volta os blocos à posição e ao tamanho original">Reorganizar</button>${BS ? '' : '<button class="mbtn" data-act="lubComp">＋ Complemento de nível</button>'}<button class="mbtn pri" data-ollanca>＋ Registrar troca de óleo</button></div>
+   ${olFaixa(ENG, BS ? new Set(F.map(b => b.id)) : null)}<div class="cm-ws">${tab}${graf}${BS ? balOlDemanda(ENG) : olDemanda()}${BS ? '' : olConsumoCard()}${reg}</div></div>`;
 }
 // 3.55 (Supervisor, 29/10/2026: “essas informações são possíveis?”): faixa do mês, óleo para as trocas programadas (pedido de compra) e consumo do MCP
 function olCap(e) { if (e.cap) return { L: +e.cap, est: false }; const t = o3Carter(e).t || '', n = (t.match(/\d+(?:,\d+)?/g) || []).map(x => +x.replace(',', '.')); return n.length ? { L: n.reduce((a, x) => a + x, 0) / n.length, est: true } : { L: 0, est: true, sem: true }; }
@@ -80,11 +82,11 @@ function olConsumoCard() {
     ${L.map(x => `<tr><td><b>${esc(x.v.nome)}</b>${mcpPos(x.v).length > 1 ? ' · ' + x.p : ''}</td><td class="r mono">${x.n ? String(Math.round(x.L * 10) / 10).replace('.', ',') + ' L (' + x.n + '×)' : '—'}</td><td class="r mono">${x.h != null ? nf(x.h) : '—'}</td><td class="r mono"><b>${x.taxa != null ? x.taxa.toFixed(2).replace('.', ',') : '—'}</b></td><td><span class="pill ${ST[x.st][0]}">${ST[x.st][1]}</span></td></tr>`).join('')}</tbody></table></div>
     <p class="note">Últimos ${C.dias} dias: litros dos complementos de nível ÷ horas do motor.${C.med ? ` Mediana da frota: ${C.med.toFixed(2).replace('.', ',')} L/100 h.` : ''} Acima de 1,5× a mediana = atenção; acima de 2× = investigar (anéis e camisas, guias de válvula, turbo ou vazamento). Confirme com a compressão (1.1.12) e a análise de óleo (1.1.29).</p></div>`;
 }
-function olFaixa(ENG) {
-  const ms = isoD(hoje()).slice(0, 7), R = recs('lub').filter(r => !r.excluido && (r.date || '').slice(0, 7) === ms), fr = R.filter(r => r.tipo !== 'comp');
+function olFaixa(ENG, ids) {
+  const ms = isoD(hoje()).slice(0, 7), R = recs('lub').filter(r => !r.excluido && (r.date || '').slice(0, 7) === ms && (!ids || ids.has(r.vessel))), fr = R.filter(r => r.tipo !== 'comp');
   const lt = R.reduce((a, r) => a + (r.tipo === 'comp' ? +r.L || 0 : (r.eq || []).filter(q => q.status === 'T').reduce((b, q) => b + litros(q.qtd), 0)), 0);
   const k = (l, x, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${x}</b></div>`, n = s => ENG.filter(e => e.st === s).length;
-  return `<div class="sf-k ol-fx">${k('Vencidas', n('red'), n('red') ? 'var(--badt)' : 'var(--okt)')}${k('Atenção (até 50 h ou 7 d)', n('amber'), n('amber') ? 'var(--warnt)' : '')}${k('Em dia', n('green'), 'var(--okt)')}${k(`FR 049_B em ${MESES[hoje().getMonth()]}`, fr.length, '')}${k('Óleo no mês (trocas + complementos)', nf(Math.round(lt)) + ' L', '')}</div>`;
+  return `<div class="sf-k ol-fx">${k('Vencidas', n('red'), n('red') ? 'var(--badt)' : 'var(--okt)')}${k('Atenção (até 50 h ou 7 d)', n('amber'), n('amber') ? 'var(--warnt)' : '')}${k('Em dia', n('green'), 'var(--okt)')}${k(`FR 049_B em ${MESES[hoje().getMonth()]}`, fr.length, '')}${k(ids ? 'Óleo no mês (trocas)' : 'Óleo no mês (trocas + complementos)', nf(Math.round(lt)) + ' L', '')}</div>`;
 }
 VX.oleo = vOleoP;
 AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.open]); O3.S('mode', O3.mode); O3.S('ves', O3.ves); };
@@ -92,17 +94,17 @@ AFTER.oleo = () => { const m = $('#main'), salva = () => { O3.S('open', [...O3.o
     const v = t.closest('[data-olv]'); if (v) { const id = v.dataset.olv; O3.open.has(id) ? O3.open.delete(id) : O3.open.add(id); O3.ves = id; salva(); render(); return; }
     const f = t.closest('[data-olf]'); if (f) { OLF.f = f.dataset.olf; render(); return; }
     const sg = t.closest('[data-olg]'); if (sg) { OLF.g = OLF.g === sg.dataset.olg ? '' : sg.dataset.olg; render(); return; }
-    const a = t.closest('[data-olall]'); if (a) { O3.open = new Set(a.dataset.olall === '1' ? o3Dados().F.map(b => b.id) : []); salva(); render(); return; }
+    const a = t.closest('[data-olall]'); if (a) { O3.open = new Set(a.dataset.olall === '1' ? (VIEW === 'ballub' ? balO3Dados() : o3Dados()).F.map(b => b.id) : []); salva(); render(); return; }
     const md = t.closest('[data-olm]'); if (md) { O3.mode = md.dataset.olm; salva(); render(); return; }
     const g = t.closest('[data-olgo]'); if (g) { O3.ves = g.dataset.olgo; O3.mode = '1'; O3.open.add(O3.ves); salva(); render(); return; }
-    if (t.closest('[data-ollanca]')) { if (!precisa(false)) return; lubAbrirForm(O3.mode !== 'frota' ? O3.ves : undefined); return; }
+    if (t.closest('[data-ollanca]')) { if (!precisa(false)) return; lubAbrirForm(O3.mode !== 'frota' ? O3.ves : VIEW === 'ballub' ? (balO3Dados().F[0] || {}).id : undefined); return; }
     const fr = t.closest('[data-frv]'); if (fr) { if (!precisa(false)) return; lubAbrirForm(fr.dataset.frv); return; }
     const x = t.closest('[data-lubexc]'); if (x) { lubExcluir(x.dataset.lubexc); return; }
     const lv = t.closest('[data-lubver]'); if (lv) lubVerModal(lv.dataset.lubver); };
   m.onchange = e => { const id = e.target.id;
     if (id === 'olSv') { O3.ves = e.target.value; O3.mode = '1'; salva(); render(); }
     if (id === 'lrB') { LR.barco = e.target.value; render(); } if (id === 'lrM') { LR.mes = e.target.value; render(); } };
-  janelasLivres(document.querySelector('#main .cm-ws'), 'smf_ol_lay3', '[data-olreset]');
+  janelasLivres(document.querySelector('#main .cm-ws'), VIEW === 'ballub' ? 'smf_ballub_lay2' : 'smf_ol_lay3', '[data-olreset]');
   if (Date.now() - OL_IR < 3000) { OL_IR = 0; setTimeout(() => { const s = document.getElementById('ol-trocas'); if (s) s.scrollIntoView({ block: 'start' }); }, 300); } };
 { const st = document.createElement('style'); st.textContent = `
 #main .ol-t th{white-space:nowrap}#main .ol-t th.ol-gu{background:#F4F6F9;text-align:center}#main .ol-t th.ol-gp{background:#E8F0FE;color:#1967D2;text-align:center}

@@ -539,7 +539,7 @@ function balNav() {
   return it('bal', 'Integridade técnica da frota', 'hoje')
     + g('1 · Recebimento da balsa', 'grp-trab') + (VX.balhor ? it('balhor', '1.1 Horímetros', 'hor') : '') + (VX.balcor ? it('balcor', '1.2 Manutenção corretiva', 'exec') : '')
     + g('2 · Planejamento (PCM)') + it('balcr', '2.1 Cronograma de manutenção', 'crono') + (VX.balprog ? it('balprog', '2.2 Backlog e OM preventiva', 'prev2') : '') + it('balpl', '2.3 Plano preventivo', 'plan') + (VX.balrisco ? it('balrisco', '2.4 Equipamentos críticos e riscos', 'risco') : '')
-    + g('3 · Monitoramento de condição') + it('balcal', '3.2 Controles', 'compr')   // abas Calibração · Compressão · Docagem, como a 3.2 dos empurradores (mcTopo no js/87)
+    + g('3 · Monitoramento de condição') + (VX.ballub ? it('ballub', '3.1 Lubrificação', 'oleo') : '') + it('balcal', '3.2 Controles', 'compr')   // abas Calibração · Compressão · Docagem, como a 3.2 dos empurradores (mcTopo no js/87)
     + g('5 · Fechamento mensal') + it('balkpi', '5.1 Indicadores da NP 024', 'kpi') + (VX.balrel ? it('balrel', '5.3 Relatório gerencial', 'relg') : '')
     + g('Apoio', 'grp-apoio') + it('balft', 'Ficha técnica', 'barcos') + it('enxbib', 'Biblioteca técnica', 'bib') + it('admin', 'Administração', 'adm'); }   // a mesma Biblioteca dos empurradores
 // ---------- dados de exemplo das balsas (seed: some em “Limpar dados de exemplo”) ----------

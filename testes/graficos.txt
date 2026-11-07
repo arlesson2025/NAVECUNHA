@@ -12,6 +12,7 @@ balhor | Horas de operação do motor-bomba por balsa
 balkpi | Aderência ao cronograma
 balkpi | Disponibilidade por balsa
 balkpi | Falhas por equipamento
+ballub | Intervalo remanescente até a troca de óleo
 compr | Detalhe por cilindro
 compr | Histórico de compressão
 enxapres | Slides
@@ -41,4 +42,5 @@ enxrel | Checklist de fechamento
 enxviag | % do ano em viagem
 enxviag | Comboios por mês
 enxviag | Linha do tempo
+enxviag | Mapa da frota
 oleo | Intervalo remanescente até a troca de óleo
