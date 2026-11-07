@@ -1127,3 +1127,4 @@ table.ctl-t td{border-top:0!important;border-bottom:0!important}table.ctl-t tr.c
 #main .sf-k>div.sf-kl{cursor:pointer}#main .sf-k>div.sf-kl:hover{border-color:#1A73E8!important;box-shadow:0 0 0 1px #1A73E8}#main .sf-k>div.sf-kl:hover span{color:#1A73E8}
 #main .sf-mx th.sf-thl a{color:inherit;text-decoration:none;display:block}#main .sf-mx th.sf-thl a:hover,#main .sf-mx th.sf-thl a:hover small{color:#1A73E8;text-decoration:underline}
 #main .sf-mx tr.sf-gr th,#main .sf-mx tr.sf-gr th a{font-weight:700!important;color:#1F2A37}
+#main .sf-k{margin:12px 0 18px}
