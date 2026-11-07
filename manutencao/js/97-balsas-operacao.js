@@ -172,12 +172,34 @@ document.addEventListener('change', e => { const c = e.target.closest && e.targe
 // ---------- 2.4 Equipamentos críticos e riscos das balsas (Supervisor, 06/11/2026: “se ainda não tiver equipamentos críticos das balsas faz, acho que tá no plano”) ----------
 // os equipamentos críticos são os do plano BA1 com item de prioridade Crítica (NP 024 item 8); a matriz de risco (severidade × probabilidade) entra com a Matriz técnica das balsas
 const balCritGr = () => [...new Set(BA1.filter(t => t.prio === 'Crítica').map(balGr))];
+// matriz de risco das balsas (Supervisor, 06/11/2026: “faltou isso nas balsas”): os sistemas críticos do item 7 da NP 024, no mesmo modelo 5 × 5 da NP 055 6.2
+// (rskMatriz, js/91). Severidade por impacto [Segurança e saúde, Meio ambiente, Operação]: a NP 024 não traz as notas; proposta interna a revisar com o Supervisor
+// (como nos empurradores). Probabilidade = falhas registradas no sistema em 12 meses ÷ nº de balsas em operação; o sistema da falha sai do equipamento informado
+const BAL_RSK = [
+  ['Bombeamento', 'Bomba centrífuga de carga e descarga', [4, 5, 5], /bomba/i],
+  ['Motor-bomba', 'Motor diesel (MWM 6.10 TCA, MWM D229-6, Cummins 6CTA 8.3)', [3, 3, 5], /motor/i],
+  ['Tubulações e válvulas', 'Válvulas de gaveta, PSV de pressão e vácuo, válvula de alívio e manômetro da rede de carga', [5, 5, 4], /v[aá]lvula|psv|al[ií]vio|man[oô]metro|tubula|flange|junta/i],
+  ['Alarme de nível alto', 'Circuito, sensores e boia do alarme de nível dos tanques', [4, 5, 4], /alarme|n[ií]vel/i],
+  ['Elétrico e sinalização', 'Luzes de navegação, quadro de iluminação, iluminação de emergência, baterias e carregador', [5, 3, 4], /luz|luzes|ilumina|bateria|el[eé]tric|quadro/i],
+  ['Estrutura', 'Casco (obras vivas), escotilhas e escotilhões', [5, 5, 5], /casco|escotilh|estrutur|chapa/i]];
+function balRskDados() {
+  const ini = new Date(hoje()); ini.setFullYear(ini.getFullYear() - 1); const nB = BALSAS.filter(b => !(typeof vgEmReforma === 'function' && vgEmReforma(b.id))).length || 1;
+  const F = recs('avaria').filter(r => r.bal && !r.excluido && balsaDe(r.vessel) && new Date(balAt(r)) >= ini);
+  const sisDe = r => { const t = (r.sis || '') + ' ' + (r.desc || ''); const i = BAL_RSK.findIndex(x => x[3].test(r.sis || '')); return i >= 0 ? i : BAL_RSK.findIndex(x => x[3].test(t)); };
+  return BAL_RSK.map(([n, ativo, sv], i) => { const S0 = Math.max(...sv), L = F.filter(r => sisDe(r) === i), tx = L.length / nB, P = RSK_PROB(tx), R = S0 * P;
+    return { i, n, ativo, sv, S: S0, F: L, tx, P, R, niv: RSK_NIV(R) }; });
+}
 function vBalRisco() {
   const E = BALSAS.map(balLinhas), op = E.filter(x => x.e.st !== 'ref'), G = balCritGr(), CR = BA1.filter(t => t.prio === 'Crítica');
   const nCv = op.reduce((a, x) => a + x.e.crit.length, 0), nFc = op.reduce((a, x) => a + x.e.A.filter(a2 => a2.c === 'Crítica').length, 0), NC = 2 + G.length;
   const k = (l, v, c, sub) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b>${sub ? `<small class="sf-mut" style="display:block">${sub}</small>` : ''}</div>`;
   const resumo = `<div class="card"><h2>Resumo</h2><div class="sf-k sf-k2">${k('Equipamentos críticos (plano NP 024)', G.length, '')}${k('Itens críticos do plano', CR.length, '', 'conforme o motor de cada balsa')}${k('Serviços críticos vencidos', nCv, nCv ? 'var(--badt)' : 'var(--okt)', 'impedem a operação')}${k('Falhas críticas abertas', nFc, nFc ? 'var(--badt)' : 'var(--okt)', 'impedem a operação')}</div>
-    <p class="note">Crítico = item do plano preventivo com prioridade Crítica (2.3 Plano preventivo). Serviço crítico vencido ou falha crítica aberta deixa a balsa impedida de operar (NP 024 6.1). A matriz de risco (severidade × probabilidade, como a NP 055 6.2 dos empurradores) entra com a Matriz técnica de equipamentos das balsas.</p></div>`;
+    <p class="note">Crítico = item do plano preventivo com prioridade Crítica (2.3 Plano preventivo). Serviço crítico vencido ou falha crítica aberta deixa a balsa impedida de operar (NP 024 6.1).</p></div>`;
+  const D = balRskDados(), nC = D.filter(x => x.niv[0] === 'Crítico').length, nAl = D.filter(x => x.niv[0] === 'Alto').length;
+  const risco = `<div class="card"><h2>Matriz de risco · NP 024 item 7</h2><div class="rk5-w">${rskMatriz(D).replace('Severidade (maior impacto da NP 6.2)', 'Severidade (maior impacto)').replace('falhas por empurrador', 'falhas por balsa')}<div class="rk5-lg">${[['Crítico', 20], ['Alto', 10], ['Moderado', 5], ['Baixo', 1]].map(([n, r]) => { const c = RSK_NIV(r); return `<span><i style="background:${c[1]}"></i>${n} ${r === 20 ? '(20–25)' : r === 10 ? '(10–16)' : r === 5 ? '(5–9)' : '(1–4)'}</span>`; }).join('')}<span style="margin-top:8px"><b>${nC + nAl}</b> sistema${nC + nAl === 1 ? '' : 's'} com risco crítico ou alto</span></div></div>
+    <div class="tw"><table class="t ctl-t"><thead><tr><th>Nº</th><th>Sistema crítico · ativo</th><th class="c">Segurança e saúde</th><th class="c">Meio ambiente</th><th class="c">Operação</th><th class="c">Severidade</th><th class="c">Falhas 12 meses</th><th class="c">Probabilidade</th><th class="c">Risco</th></tr></thead><tbody>
+    ${D.map(x => `<tr><td><b>${x.i + 1}</b></td><td><b>${esc(x.n)}</b><div class="note">${esc(x.ativo)}</div></td>${x.sv.map(v => `<td class="c">${v}</td>`).join('')}<td class="c"><b>${x.S}</b></td><td class="c">${x.F.length}<div class="note">${nf(x.tx, 2)} por balsa</div></td><td class="c"><b>${x.P}</b></td><td class="c"><span class="pill" style="background:${x.niv[1]};color:${x.niv[2]}">${x.niv[0]} · ${x.R}</span></td></tr>`).join('')}</tbody></table></div>
+    <p class="note">Sistemas críticos do item 7 da NP 024. Severidade = maior nota entre os três impactos (1 insignificante a 5 catastrófica); a NP 024 não traz as notas: proposta interna, revisar com o Supervisor. Probabilidade = falhas registradas no sistema nos últimos 12 meses ÷ nº de balsas em operação: 0 = 1 · até 0,2 = 2 · até 0,5 = 3 · até 1 = 4 · acima de 1 = 5. Risco = severidade × probabilidade.</p></div>`;
   const lista = `<div class="card"><h2>Equipamentos críticos · itens do plano</h2><div class="tw"><table class="t"><thead><tr><th>Equipamento</th><th>Itens críticos</th><th>Balsas com item crítico vencido</th></tr></thead><tbody>${G.map(g => { const I = CR.filter(t => balGr(t) === g), V = op.filter(x => x.e.crit.some(y => balGr(y.t) === g));
       return `<tr><td class="nowrap"><b>${esc(g)}</b></td><td>${I.map(t => `<div><b>${t.id}</b>${t.mot ? ` <span class="sf-mut">(${esc(BAL_MOTOR[t.mot] || t.mot)})</span>` : ''} · ${esc(String(t.serv || '').slice(0, 110))}${String(t.serv || '').length > 110 ? '…' : ''}</div>`).join('')}</td><td>${V.length ? V.map(x => `<a href="#balprog/${x.e.b.id}" class="sf-lk sf-chip">${esc(x.e.b.nome)}</a>`).join(' ') : '<span class="sf-mut">nenhuma</span>'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
   const linha = x => { const b = x.e.b, crit = x.I.filter(y => y.t.prio === 'Crítica'), at = crit.some(y => y.g === 'venc');
@@ -188,7 +210,7 @@ function vBalRisco() {
     <tr><th class="l">Balsa</th><th class="l">Motor-bomba</th>${G.map((g, i) => `<th class="${i ? '' : 'sf-sep'}">${esc(BAL_GR_C[BAL_GR.indexOf(g)] || g)}</th>`).join('')}</tr></thead><tbody>
     ${A.length ? gh('Com item crítico vencido', A.length, 'at') + A.map(linha).join('') : ''}${Ed.length ? gh('Em dia', Ed.length) + Ed.map(linha).join('') : ''}${F.length ? gh('Fora de operação', F.length, 'fo') + F.map(x => `<tr class="sf-fo"><td class="sf-n"><b>${esc(x.e.b.nome)}</b> <span class="pill p-mut">Em reforma</span></td><td colspan="${NC - 1}" class="sf-fot">fora das contas do plano</td></tr>`).join('') : ''}</tbody></table></div>
     <div class="sf-rod"><div class="sf-leg"><span><span class="sf-c sf-r">3</span> vencidos</span><span><span class="sf-c sf-a">2</span> vencem no mês</span><span><span class="sf-g"></span> em dia</span><span><span class="sf-o"></span> sem histórico</span><span><span class="sf-na">—</span> não se aplica</span></div></div></div>`;
-  return balCab('2.4 Equipamentos críticos e riscos · NP 024', 'Equipamentos críticos do plano preventivo das balsas (itens de prioridade Crítica) e os controles de cada balsa', frotaSw('#enxrisco', '#balrisco')) + resumo + matriz + lista;
+  return balCab('2.4 Equipamentos críticos e riscos · NP 024', 'Equipamentos críticos do plano preventivo das balsas (itens de prioridade Crítica) e os controles de cada balsa', frotaSw('#enxrisco', '#balrisco')) + resumo + risco + matriz + lista;
 }
 VX.balrisco = balJan('balrisco', vBalRisco);
 BAL_VIEWS.splice(BAL_VIEWS.findIndex(v => v[0] === 'balpl') + 1, 0, ['balrisco', 'Equipamentos críticos e riscos']); BAL_NUM.balrisco = '2.4'; NP_TAG.balrisco = 'NP 024 · 6.1 e 8';
