@@ -53,7 +53,7 @@ function bqIr(b) {
 }
 { const nav = document.getElementById('nav');
   const w = document.createElement('div'); w.className = 'bq'; w.id = 'bqW';
-  w.innerHTML = `<input id="bqI" type="search" placeholder="Buscar empurrador, OM, item, documento…" autocomplete="off" aria-label="Busca" title="Atalho: /"><div id="bqP" class="bq-p" hidden></div>`;
+  w.innerHTML = `<input id="bqI" type="search" placeholder="Buscar empurrador, OM, item…" autocomplete="off" aria-label="Busca" title="Atalho: /"><div id="bqP" class="bq-p" hidden></div>`;
   nav.parentNode.insertBefore(w, nav);
   const mt = document.querySelector('.mtop'), mn = document.getElementById('mnu');
   if (mt && mn) { const b = document.createElement('button'); b.id = 'bqM'; b.type = 'button'; b.setAttribute('aria-label', 'Buscar'); b.textContent = '🔍'; mt.appendChild(b);

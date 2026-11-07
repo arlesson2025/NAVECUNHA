@@ -1,5 +1,5 @@
 'use strict';
-/* ===== 4.1 Indicadores de desempenho · NP 055 item 9 (SMF 3.92, 30/10/2026) =====
+/* ===== 5.1 Indicadores de desempenho · NP 055 item 9 (SMF 3.92, 30/10/2026) =====
    Pedido do Supervisor: tela única com os 6 indicadores oficiais da NP 055 (item 9), para a auditoria; o que não está na NP fica
    separado em “Acompanhamento interno”. Fórmulas aprovadas pelo Supervisor (30/10/2026), iguais ao texto da NP:
    · Disponibilidade = (h calendário − h indisponíveis por manutenção) ÷ h calendário; indisponível = corretiva que impediu a operação
@@ -124,7 +124,7 @@ function vEnxKpi() {
     <div><i>Corretivas abertas em ${lab}</i><b>${cm.length}</b><small>${cls.map(([c, n]) => `${c} ${n}`).join(' · ')}</small></div></div>
     ${lineChart(ad, M12.map(x => x.lab), 90, '%', 0)}
     <p class="note">A aderência ao cronograma é o principal indicador do plano preventivo, mas não está na tabela do item 9 da NP 055: sugerido incluir na próxima revisão da NP (meta ≥ 90%).</p></div>`;
-  return enxCab('4.1 Indicadores de desempenho · NP 055 item 9', 'Os 6 indicadores da NP com meta, numerador e denominador, fórmula e os registros que entraram na conta · mensais pelo mês de referência, semanais pela última semana completa, trimestral pelo último trimestre fechado', sel + '<button class="mbtn" data-enxreset>Reorganizar</button>')
+  return enxCab('5.1 Indicadores de desempenho · NP 055 item 9', 'Os 6 indicadores da NP com meta, numerador e denominador, fórmula e os registros que entraram na conta · mensais pelo mês de referência, semanais pela última semana completa, trimestral pelo último trimestre fechado', sel + '<button class="mbtn" data-enxreset>Reorganizar</button>')
     + faixa + cards.join('') + interno + '</div></div>';
 }
 // ---------- listas (para o auditor recalcular) ----------

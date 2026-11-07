@@ -1,7 +1,7 @@
 /* =====================================================================
    4.4 APRESENTAÇÃO TÉCNICA MENSAL (SMF 3.107, 30/10/2026; pedido do Supervisor: trazer a apresentação da versão
    antiga, CTLE_MAN_previa, “trabalhamos muito e fizemos”). Slides 16:9 (1280 × 720) para a reunião do mês, com os
-   mesmos números do 4.3 Relatório gerencial (rmeDados) e dos indicadores da NP 055 item 9 (js/90).
+   mesmos números do 5.3 Relatório gerencial (rmeDados) e dos indicadores da NP 055 item 9 (js/90).
    Mês escolhido (até o dia 10 abre no mês passado, como o 4.3); fotos de antes e depois das OMs e dos FR 049_B do
    mês (desmarque o que não mostrar) e fotos de destaque adicionadas neste aparelho (docagem, equipe, terceiros).
    Apresentar em tela cheia (setas, Esc) ou baixar em PDF (html2canvas + jsPDF de lib/).
@@ -152,7 +152,7 @@ function atpSlides(R, P) {
     if (R.doca.length) it.push(['Docagem', R.doca.slice(0, 4).map(d => vName(d[0]) + ' até ' + brD(d[1])).join(', ')]);
     if (lv.length) it.push(['Trocas de óleo vencidas', lv.slice(0, 4).map(x => vName(x[0]) + ' ' + x[1]).join(', ')]);
     if (aM.length) it.push(['Fechar ações de bloqueio', aM.length + ' medida(s) sem definição, atrasada(s) ou em andamento']); }
-  L.push(sl(head('Plano', 'Plano de ação', AC.length ? 'ações em andamento no 4.2 Plano de ação' : 'prioridades para o próximo mês (nenhuma ação aberta no 4.2)') + `<div class="at-ac">${it.slice(0, 6).map((x, i) => `<div><b${x[2] ? ` style="background:${ATP_C.bad}"` : ''}>${i + 1}</b><div><h4>${esc(rmeTxt(x[0], 90))}</h4><p>${esc(x[1])}</p></div></div>`).join('') || '<div class="at-vz at-ok">Nenhuma pendência relevante</div>'}</div>${txt ? `<p class="at-obs"><b>Comentário do Supervisor:</b> ${esc(rmeTxt(txt, 420))}</p>` : ''}`));
+  L.push(sl(head('Plano', 'Plano de ação', AC.length ? 'ações em andamento no 5.2 Plano de ação' : 'prioridades para o próximo mês (nenhuma ação aberta no 4.2)') + `<div class="at-ac">${it.slice(0, 6).map((x, i) => `<div><b${x[2] ? ` style="background:${ATP_C.bad}"` : ''}>${i + 1}</b><div><h4>${esc(rmeTxt(x[0], 90))}</h4><p>${esc(x[1])}</p></div></div>`).join('') || '<div class="at-vz at-ok">Nenhuma pendência relevante</div>'}</div>${txt ? `<p class="at-obs"><b>Comentário do Supervisor:</b> ${esc(rmeTxt(txt, 420))}</p>` : ''}`));
   // 17 · contracapa
   L.push(`<div class="at-sl at-cv at-fim" style="background-image:linear-gradient(0deg,rgba(11,31,58,.9),rgba(11,31,58,.55)),url(img/apres-fim.jpg)"><div class="at-cvl at-cc"><div class="at-lg"><img src="${LOGOS.nav}" alt=""><i></i><img src="${LOGOS.vda}" alt=""></div><h1>Compromisso que não para</h1><p>Manutenção dos empurradores fluviais · ISO 9001 · ISO 14001 · ISO 45001</p></div></div>`);
   const N = L.length; return L.map((s, i) => s.replace('@P', (i + 1) + ' / ' + N));
@@ -160,7 +160,7 @@ function atpSlides(R, P) {
 // ---------- tela ----------
 function vEnxApres() {
   const P = atpPer(), h = hoje(), op = []; for (let i = 0; i < 12; i++) { const x = new Date(h.getFullYear(), h.getMonth() - i, 1); op.push([isoD(x).slice(0, 7), ATP_MES[x.getMonth()] + ' ' + x.getFullYear()]); }
-  return enxCab('4.4 Apresentação técnica mensal', 'Slides da reunião mensal com os mesmos números do 4.3 Relatório gerencial · clique num slide para apresentar em tela cheia',
+  return enxCab('5.4 Apresentação técnica mensal', 'Slides da reunião mensal com os mesmos números do 5.3 Relatório gerencial · clique num slide para apresentar em tela cheia',
     `<label class="f">Mês<select id="atpM">${op.map(([k, l]) => `<option value="${k}"${ATP.mes === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label><label class="f">Apresentado por<input id="atpA" value="${esc(atpAut())}"></label><button class="mbtn" data-atpshow>▶ Apresentar</button><button class="mbtn pri" data-atppdf>⬇ Baixar PDF</button>`)
    + `<div class="card"><div class="row"><h2>Fotos da apresentação · ${esc(P.nome)}</h2><span class="sp"></span><label class="mbtn sm" style="cursor:pointer">＋ Adicionar fotos de destaque<input type="file" id="atpX" accept="image/*" multiple hidden></label></div>
      <p class="note">Entram as fotos de antes e depois das OMs corretivas, das OMs preventivas e dos FR 049_B do mês (as do Drive são baixadas com sinal). Desmarque o que não quiser mostrar. “Adicionar fotos de destaque” é para docagem, equipe, serviços de terceiros e outros destaques: ficam só neste aparelho.</p><div id="atpSel" class="at-sel"></div></div>
@@ -220,7 +220,7 @@ AFTER.enxapres = () => { const m = $('#main');
   up(); carrega(); };
 Object.assign(NP_TAG, { enxapres: '9' });
 ENX_OK.push('enxapres'); PCM_ETAPAS[3][2].push('enxapres');
-PCM_MENU.find(g => /^4 /.test(g[0]))[1].push(['enxapres', '4.4 Apresentação técnica', 'apres']);
+PCM_MENU.find(g => /^5 /.test(g[0]))[1].push(['enxapres', '5.4 Apresentação técnica', 'apres']);
 ICO.apres = '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M12 16v4M8 20h8M7 12l3-3 2 2 4-4"/>';
 { const st = document.createElement('style'); st.textContent = `
 .at-grid{display:flex;flex-wrap:wrap;gap:16px}.at-th{overflow:hidden;border-radius:8px;box-shadow:0 1px 4px rgba(16,24,40,.18);cursor:pointer;background:#fff;flex:none}.at-th:hover{outline:2px solid #1A73E8}

@@ -53,12 +53,12 @@ Várias sessões do Claude trabalham no projeto em paralelo (locais e na nuvem).
 ## Menu de hoje
 
 **Empurradores** (`PCM_MENU` no js/85; faixa das etapas `pcmFaixa`):
-- **Integridade técnica da frota** (`enxhoje`: Matriz `sfMatriz` ou Cartões `sfCartoes`; “Pontos de atenção”) · **Pendências** (`enxpend`)
-- **1 Recebimento do empurrador**: 1.1 Horímetros (`enxhor`) · 1.2 Manutenção corretiva (`enxcor`, aba Análise de falhas `enxfal`, js/89) · 1.3 Viagens e comboios (`enxviag`, js/94)
+- **Integridade técnica da frota** (`enxhoje`: Matriz `sfMatriz` ou Cartões `sfCartoes`; “Pontos de atenção”) · **Layout da frota** (`enxviag`, js/94 e js/102-103: mapa, comboios, painel) · **Pendências** (`enxpend`)
+- **1 Recebimento do empurrador**: 1.1 Horímetros (`enxhor`) · 1.2 Manutenção corretiva (`enxcor`, aba Análise de falhas `enxfal`, js/89)
 - **2 Planejamento (PCM)**: 2.1 Plano anual preventivo (`enxcr`) · 2.2 Backlog e OM preventiva (`enx`) · 2.3 Equipamentos críticos e riscos (`enxrisco`, js/91)
 - **3 Monitoramento de condição**: 3.1 Lubrificação (`oleo`) · 3.2 Controles (abas `MC_VIEWS`: Calibração `enxcal`, Compressão `compr`, Análise de óleo `anoleo`, Arrefecimento `enxarr`, Sensores `enxsen`, Docagem `enxdoca` js/96) · 3.3 Diagnóstico dos MCP (`enxdiag`)
-- **4 Fechamento mensal**: 4.1 Indicadores NP 9 (`enxkpi`, js/90) · 4.2 Plano de ação (`enxacao`) · 4.3 Relatório gerencial (`enxrel`, js/86) · 4.4 Apresentação técnica (`enxapres`, js/92)
-- **5 Gestão semanal**: 5.1 Solicitações e requisições (`semsc`, js/93; lê o PDF do Sankhya)
+- **4 Gestão semanal**: 4.1 Solicitações e requisições (`semsc`, js/93; lê o PDF do Sankhya)
+- **5 Fechamento mensal**: 5.1 Indicadores da NP 055 (`enxkpi`, js/90) · 5.2 Plano de ação (`enxacao`) · 5.3 Relatório gerencial (`enxrel`, js/86) · 5.4 Apresentação técnica (`enxapres`, js/92)
 - **Apoio**: Histórico dos equipamentos (`enxeq`, js/95) · Biblioteca técnica (`enxbib`, botões Empurradores · Balsas · Comuns) · Administração (`admin`)
 
 **Balsas** (`balNav` no js/83; frota escolhida no seletor do topo do menu, `FROTA_TIPO = 'bal'`; só Biblioteca e Administração são comuns): Situação das balsas (`bal`, Matriz ou Lista) · 1 Recebimento: 1.1 Horímetros (`balhor`), 1.2 Manutenção corretiva (`balcor`, com Análise de falhas) · 2 Planejamento: 2.1 Cronograma (`balcr`), 2.2 Programar preventiva (`balprog`), 2.3 Plano preventivo (`balpl`, um quadro só) · 3 Condição: 3.1 Docagem (`baldoca`), 3.2 Plano de calibração (`balcal`), 3.3 Compressão dos motores (`balcmp`) · 4 Fechamento: 4.1 Indicadores (`balkpi`), 4.2 Relatório mensal (`balrel`) · Apoio: Ficha técnica (`balft`), Biblioteca, Administração. Código em `js/83` e `js/97` a `js/100`. As balsas **não** entram em `S.cfg.frota` nem nas contas dos empurradores.
@@ -95,12 +95,12 @@ Várias sessões do Claude trabalham no projeto em paralelo (locais e na nuvem).
 
 **Indicadores**
 - Nome único por fórmula. **Aderência ao cronograma** = feito no prazo ÷ o que venceu. **Serviços preventivos não realizados dentro do prazo** = previstos cujo prazo passou sem execução. **Itens em dia** e **Vencidos agora** = foto do momento.
-- NP 055 item 9 (4.1): disponibilidade (só corretiva que impediu a operação + horas paradas da preventiva), MTBF e MTTR só de falhas Crítica e Alta, backlog lançado do Sankhya toda segunda, registro fotográfico, plano preditivo (1.1.12 e 1.1.29) no trimestre.
+- NP 055 item 9 (5.1): disponibilidade (só corretiva que impediu a operação + horas paradas da preventiva), MTBF e MTTR só de falhas Crítica e Alta, backlog lançado do Sankhya toda segunda, registro fotográfico, plano preditivo (1.1.12 e 1.1.29) no trimestre.
 - Balsas (NP 024 item 10): disponibilidade, MTBF só Crítica e Alta, MTTR, backlog (falhas abertas há mais de 15 dias), cobertura preditiva (balsas com compressão em dia ÷ 29).
 
 **Relatórios**
-- 4.3 Relatório gerencial (js/86): capa com foto e sumário, painel, preventiva, corretiva, compressão (pressão medida do pior cilindro, todos os motores), calibração (barras de atraso e saldo), plano de ação e aprovação, evidências fotográficas, contracapa; anexo técnico opcional. **Todo número no período e no acumulado do ano.** Sem menção ao SGI (não é documento controlado). Gráficos `rmeGraf` (barras finas, acumulado em curva suave) e `rmeDiv` (zero no meio, atraso à esquerda). “Emitir” congela a cópia (`snap` `relmes`).
-- 4.4 Apresentação técnica: slides com os números do 4.3; apresentar em tela cheia ou PDF.
+- 5.3 Relatório gerencial (js/86): capa com foto e sumário, painel, preventiva, corretiva, compressão (pressão medida do pior cilindro, todos os motores), calibração (barras de atraso e saldo), plano de ação e aprovação, evidências fotográficas, contracapa; anexo técnico opcional. **Todo número no período e no acumulado do ano.** Sem menção ao SGI (não é documento controlado). Gráficos `rmeGraf` (barras finas, acumulado em curva suave) e `rmeDiv` (zero no meio, atraso à esquerda). “Emitir” congela a cópia (`snap` `relmes`).
+- 5.4 Apresentação técnica: slides com os números do 5.3; apresentar em tela cheia ou PDF.
 
 **Palavras**
 - “empurrador” (nunca “barco” nem “embarcação”, salvo texto citado da NP); “Registrar a execução”; “Local não informado”; “ficha técnica do empurrador”; “Ordens de Máquinas” (documento do CTF/MFM). Nome do sistema: **SMF**.

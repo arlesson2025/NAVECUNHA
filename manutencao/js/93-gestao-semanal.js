@@ -1,7 +1,7 @@
 /* =====================================================================
    5 · GESTÃO SEMANAL (SMF 3.115, 31/10/2026; pedido do Supervisor: “toda sexta tenho 8 min com a diretoria para dizer
    o que fiz na semana e o que tem para a próxima”; “preciso gerenciar o que foi pedido no Sankhya e quanto tempo tem”).
-   · 5.1 Solicitações e requisições (semsc): SC (serviço externo ou material) e RM (material do estoque) abertas no Sankhya,
+   · 4.1 Solicitações e requisições (semsc): SC (serviço externo ou material) e RM (material do estoque) abertas no Sankhya,
      com os dias em aberto (até 7 · 8 a 15 · mais de 15 · mais de 30), situação, previsão e OM ligada. O SMF não fala com o
      Sankhya: cadastro à mão ou “Colar do Sankhya” (linhas copiadas do Excel: Nº · Data · Descrição · Empurrador/balsa · OM).
      Registro: snap tipo 'screq' (tp SC/RM, num, date, txt, vessel, om, urg, prev, st, fim, obs, hist).
@@ -51,7 +51,7 @@ function vSemSc() {
       <td class="nowrap">${can.edit() ? (ab ? `<button class="mbtn sm pri" data-gsfim="${r.id}">${r.tp === 'RM' ? 'Atendida' : 'Entregue'}</button> <button class="mbtn sm" data-gsed="${r.id}">Atualizar</button>` : `<button class="mbtn sm" data-gsed="${r.id}">Ver</button>`) : ''}</td></tr>`; };
   const chip = (k, t) => `<button class="${GS.f === k ? 'on' : ''}" data-gsf="${k}">${t}</button>`;
   const nk = (l, v, c) => `<div><span>${l}</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
-  return enxCab('5.1 Solicitações e requisições', 'O que foi pedido no Sankhya e há quanto tempo · SC = solicitação de serviço externo ou material · RM = requisição de material do estoque', '<button class="mbtn" data-enxreset>Reorganizar</button>')
+  return enxCab('4.1 Solicitações e requisições', 'O que foi pedido no Sankhya e há quanto tempo · SC = solicitação de serviço externo ou material · RM = requisição de material do estoque', '<button class="mbtn" data-enxreset>Reorganizar</button>')
    + `<div class="card"><h2>Resumo</h2><div class="sf-k">${nk('Em aberto', M.A.length)}${nk('Mais de 15 dias', M.d15.length, M.d15.length ? 'var(--badt)' : 'var(--okt)')}${nk('Mais de 30 dias', M.d30.length, M.d30.length ? 'var(--badt)' : 'var(--okt)')}${nk('Atendidas em 7 dias', M.f7.length)}${nk('Tempo médio de atendimento (30 dias)', M.med == null ? '—' : nf(M.med, 1) + ' dias')}</div></div>
    <div class="card"><div class="row"><h2>${GS.f === 'fim' ? 'Atendidas e canceladas' : 'Em aberto · do mais antigo para o mais novo'} · ${L.length}</h2><span class="sp"></span><input id="gsQ" placeholder="Buscar nº, item, OM…" value="${esc(GS.q)}" style="max-width:220px"></div>
      <div class="cm-chips">${chip('ab', 'Todas em aberto')}${chip('SC', 'SC')}${chip('RM', 'RM')}${chip('fim', 'Atendidas e canceladas')}</div>
@@ -199,6 +199,6 @@ AFTER.semsc = () => { const m = $('#main');
   m.oninput = e => { if (e.target.id === 'gsQ') { GS.q = e.target.value; clearTimeout(m._gs); m._gs = setTimeout(() => { render(); const q = $('#gsQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 400); } };
   const ws = m.querySelector('.cm-ws'); if (ws) janelasLivres(ws, 'smf_semsc_lay', '[data-enxreset]'); };
 ENX_OK.push('semsc');
-PCM_MENU.splice(PCM_MENU.findIndex(g => g[0] === 'Apoio'), 0, ['5 · Gestão semanal', [['semsc', '5.1 Solicitações e requisições', 'screq']]]);
+PCM_MENU.splice(PCM_MENU.findIndex(g => /^5 /.test(g[0])), 0, ['4 · Gestão semanal', [['semsc', '4.1 Solicitações e requisições', 'screq']]]);   // antes do fechamento mensal (Supervisor, 06/11/2026)
 { const st = document.createElement('style'); st.textContent = '.gs-it summary{cursor:pointer;margin-top:2px}.gs-it table{margin:4px 0 0;font-size:12.5px}.gs-it td{padding:2px 6px}'; document.head.appendChild(st); }
 ICO.screq = '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>';

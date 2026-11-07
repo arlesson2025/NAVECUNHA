@@ -304,7 +304,7 @@ function vEnxViag() {
   const opB = `<option value="">Todas as balsas</option>${vgBalsas().map(b => `<option value="${b.id}"${VG.fb === b.id ? ' selected' : ''}>${esc(b.nome)}</option>`).join('')}`;
   const opR = `<option value="">Todas as rotas</option>${rotas().map(r => `<option value="${r.id}"${VG.fr === r.id ? ' selected' : ''}>${esc(vgRotaCurta(r.id))}</option>`).join('')}`;
   const seg = `<div class="seg"><button data-vgm="E" class="${eb ? '' : 'on'}">Empurradores</button><button data-vgm="B" class="${eb ? 'on' : ''}">Balsas</button></div>`;
-  return enxCab('1.3 Layout da frota', 'Saídas de Manaus com as balsas do comboio, tempo de viagem, tempo parado no porto e reformas · a chegada vem do FR 027_L; sem ela, é estimada pela rota',
+  return enxCab('Layout da frota', 'Saídas de Manaus com as balsas do comboio, tempo de viagem, tempo parado no porto e reformas · a chegada vem do FR 027_L; sem ela, é estimada pela rota',
     `<label class="f">Ano<select id="vgA">${anos.map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select></label><button class="mbtn" data-enxreset>Reorganizar</button>`)
    + `${typeof vgMapaCard === 'function' ? vgMapaCard() : ''}${typeof vgManCard === 'function' ? vgManCard() : ''}${vgOnde(V, TA.length, ano)}
    <div class="card"><div class="row"><h2>Operação por ${eb ? 'balsa' : 'empurrador'}</h2><span class="sp"></span>${seg}</div>${tab}<p class="note">Dias em viagem e no porto contam de 01/01 até hoje; o período em reforma não entra. “est.” = tem chegada estimada pela rota. Parado há = desde a última chegada (ou do fim da reforma); acima de 60 dias fica em destaque. Reformas: lançar e consultar no <a href="#enxeq">Histórico dos equipamentos</a>.</p></div>
@@ -388,9 +388,10 @@ AFTER.enxviag = () => { const m = $('#main');
     if (t.id === 'vgFb') { VG.fb = t.value; return render(); }
     if (t.id === 'vgFr') { VG.fr = t.value; return render(); } };
   const ws = m.querySelector('.cm-ws'); if (ws) { vgLayMigra(); janelasLivres(ws, 'smf_enxviag_lay5', '[data-enxreset]'); } if (typeof vgMapaIniciar === 'function') vgMapaIniciar(); if (typeof heMigraReformas === 'function') heMigraReformas(); };
-ENX_OK.push('enxviag'); PCM_ETAPAS[0][2].push('enxviag');
-PCM_MENU.find(g => /^1 /.test(g[0]))[1].push(['enxviag', '1.3 Layout da frota', 'viag']);
-ICO.viag = '<path d="M3 17h18l-2 3H5z"/><path d="M6 17V9h8l3 4v4"/><path d="M9 9V5h3v4"/>';
+// Layout da frota no topo do menu, junto da Integridade técnica e das Pendências: é visão geral da frota, não etapa do recebimento (Supervisor, 06/11/2026)
+ENX_OK.push('enxviag');
+PCM_MENU[0][1].splice(1, 0, ['enxviag', 'Layout da frota', 'viag']);
+ICO.viag = '<path d="M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/>';
 { const st = document.createElement('style'); st.textContent = `
 .vg-lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted,#5B6B80);margin:2px 0 8px}.vg-lg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .vg-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}

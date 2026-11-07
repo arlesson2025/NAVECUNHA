@@ -16,11 +16,13 @@ function enxRota() {   // chamado pelo render: no modo enxuto, tela fora da list
   VIEW = ENX_ALIAS[VIEW] || 'enxhoje'; ARG = ''; try { history.replaceState(null, '', '#' + VIEW); } catch (e) { }
 }
 // menu em 4 etapas do PCM (SMF 3.22, Supervisor: “sequência, etapas, nomes técnicos”; “não deixa ruim de operar”)
+// ícone próprio do 3.3 Diagnóstico (um estetoscópio; antes o mesmo gráfico dos Indicadores)
+ICO.diag = '<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2.5a4.5 4.5 0 0 0 9 0V13"/><circle cx="19" cy="11" r="2"/>';
 const PCM_MENU = [['', [['enxhoje', 'Integridade técnica da frota', 'hoje'], ['enxpend', 'Pendências', 'inicio']]],
   ['1 · Recebimento do empurrador', [['enxhor', '1.1 Horímetros', 'hor'], ['enxcor', '1.2 Manutenção corretiva', 'omsv2']]],
   ['2 · Planejamento (PCM)', [['enxcr', '2.1 Plano anual preventivo', 'crono'], ['enx', '2.2 Backlog e OM preventiva', 'prev2'], ['enxrisco', '2.3 Equipamentos críticos e riscos', 'risco']]],
-  ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnóstico dos MCP\'s', 'graf']]],
-  ['4 · Fechamento mensal', [['enxkpi', '4.1 Indicadores (NP 9)', 'kpi'], ['enxacao', '4.2 Plano de ação', 'acao'], ['enxrel', '4.3 Relatório gerencial', 'relg']]],
+  ['3 · Monitoramento de condição', [['oleo', '3.1 Lubrificação', 'oleo'], ['enxcal', '3.2 Controles', 'compr'], ['enxdiag', '3.3 Diagnóstico dos MCP', 'diag']]],
+  ['5 · Fechamento mensal', [['enxkpi', '5.1 Indicadores da NP 055', 'kpi'], ['enxacao', '5.2 Plano de ação', 'acao'], ['enxrel', '5.3 Relatório gerencial', 'relg']]],
   ['Apoio', [['enxbib', 'Biblioteca técnica', 'bib'], ['admin', 'Administração', 'adm']]]];
 // 3.88: um ícone para cada item do menu (Horímetros tinha o mesmo da Situação da frota; 4.1 e 4.2 o mesmo)
 ICO.hor = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5h4"/>';
