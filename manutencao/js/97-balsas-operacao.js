@@ -14,39 +14,72 @@ function balG(b, s) {
 }
 function balLinhas(b) { const e = balEstado(b); return { e, I: e.P.map(({ t, s }) => ({ t, s, g: balG(b, s) })) }; }
 const BALM = { modo: (() => { try { return localStorage.getItem('smf_bal_modo') || 'matriz'; } catch (e) { return 'matriz'; } })() };
-function balMatriz(E) {
-  const cel = (L, at) => sfCel(L.map(x => ({ g: x.g })), at), T = BAL_GR.map(() => ({ v: 0, m: 0 }));
-  const lin = E.map(x => { const b = x.e.b, hr = balHor(b.id), ref = x.e.st === 'ref';
-    const cs = BAL_GR.map((g, i) => { const L = x.I.filter(y => balGr(y.t) === g); T[i].v += L.filter(y => y.g === 'venc').length; T[i].m += L.filter(y => y.g === 'mes').length;
-      return `<td class="sf-cc${i ? '' : ' sf-sep'}">${ref ? '<span class="sf-na">—</span>' : `<a href="#balprog/${b.id}" class="sf-lk">${cel(L, '')}</a>`}</td>`; }).join('');
-    return `<tr><td class="sf-n"><a href="#balft/${b.id}" class="sf-lk"><b>${esc(b.nome)}</b></a><div>${balPil(BAL_ST, x.e.st)} <span class="sf-mut">${esc(BAL_MOTOR[b.mot] || '')}</span></div></td>
-      <td class="nowrap note">${hr ? nf(hr.h) + ' h<div>' + brD(hr.date) + '</div>' : '—'}</td>
-      <td class="sf-cc sf-sep">${x.e.A.length ? `<a href="#balft/${b.id}" class="sf-lk"><span class="sf-c ${x.e.A.some(a => a.c === 'Crítica') ? 'sf-r' : 'sf-a'}">${x.e.A.length}</span></a>` : ref ? '<span class="sf-na">—</span>' : '<span class="sf-g"></span>'}</td>${cs}</tr>`; }).join('');
-  const tot = `<tfoot><tr><td class="sf-n"><b>Total das balsas</b><div class="sf-mut">vencidos · vencem no mês</div></td><td></td><td class="sf-cc sf-sep">${E.reduce((a, x) => a + x.e.A.length, 0) || ''}</td>${T.map((t, i) => `<td class="sf-cc${i ? '' : ' sf-sep'}"><div style="color:#C5221F">${t.v || ''}</div><div style="color:#B06000">${t.m || ''}</div></td>`).join('')}</tr></tfoot>`;
-  return `<div class="tw"><table class="sf-mx"><thead><tr class="sf-gr"><th colspan="2"></th><th class="sf-sep">Liberação</th><th colspan="${BAL_GR.length}" class="sf-sep">Manutenção preventiva (NP 024 item 8)</th></tr>
-    <tr><th class="l">Balsa</th><th class="l">Motor-bomba</th><th class="sf-sep">Falhas abertas</th>${BAL_GR_C.map((g, i) => `<th class="${i ? '' : 'sf-sep'}" title="${esc(BAL_GR[i])}">${g}</th>`).join('')}</tr></thead><tbody>${lin}</tbody>${tot}</table></div>
-    <p class="note">Número vermelho = serviços vencidos · âmbar = vencem no mês · ✓ = em dia · quadrado vazio = sem histórico. Clique numa célula para programar a preventiva da balsa; no nome, a ficha técnica.</p>`;
+// Integridade técnica das balsas no mesmo desenho da dos empurradores (Supervisor, 06/11/2026: “não dá pra deixar o da balsa na mesma ideia?”, “os cartões
+// também?”): caixas de números, matriz com em dia discreto e os grupos Precisa de atenção · Em dia · Sem histórico · Fora de operação, cartões e pontos de atenção
+const balAten = x => x.e.st === 'bloq' || x.e.st === 'rest';
+const balViaIds = () => { try { return new Set(S.cfg.frota.flatMap(v => { const o = vgOndeDe(v.id, false); return o && o.st === 'via' ? (o.balsas || []) : []; })); } catch (e) { return new Set(); } };
+const balDiasHor = hr => hr ? Math.max(0, Math.round((pD(isoD(hoje())) - pD(hr.date)) / 864e5)) : null;
+function balKpis(E) {
+  const op = E.filter(x => x.e.st !== 'ref'), n = k => op.filter(x => x.e.st === k).length, cr = op.reduce((a, x) => a + x.e.crit.length, 0), via = balViaIds().size;
+  const barra = [[n('lib'), '#1E8E3E'], [n('rest'), '#F9AB00'], [n('bloq'), '#C5221F'], [n('sem'), '#9AA4B1']].filter(z => z[0]).map(([q, c]) => `<i style="flex:${q};background:${c}"></i>`).join('');
+  const box = (l, v, c, h, t) => `<div class="sf-kl" role="link" tabindex="0" title="${t}" onclick="location.hash='${h}'"><span>${l} ›</span><b${c ? ` style="color:${c}"` : ''}>${v}</b></div>`;
+  return `<div class="sf-k sf-k2"><div class="sf-ksit"><span>Situação das ${op.length} em operação</span><div class="sf-ksn"><b style="color:var(--okt)">${n('lib')}</b><small>liberadas</small><b style="color:var(--warnt)">${n('rest')}</b><small>com restrição</small><b style="color:var(--badt)">${n('bloq')}</b><small>impedidas</small>${n('sem') ? `<b style="color:#5F6B7A">${n('sem')}</b><small>sem histórico</small>` : ''}</div><div class="sf-kbar">${barra}</div></div>
+    ${box('Em viagem', via, '', '#enxviag', 'Abrir o Layout da frota')}${box('Serviços críticos vencidos', cr, cr ? 'var(--badt)' : 'var(--okt)', '#balprog', 'Abrir a 2.2 Backlog e OM preventiva')}</div>`;
 }
+function balMatriz(E) {
+  const T = BAL_GR.map(() => [0, 0]), NC = 5 + BAL_GR.length;
+  const tag = x => balAten(x) ? ` <span class="pill ${x.e.st === 'bloq' ? 'p-bad' : 'p-warn'}">${BAL_ST[x.e.st][1]}</span>` : '';
+  const linha = x => { const b = x.e.b, hr = balHor(b.id), d = balDiasHor(hr);
+    const cs = BAL_GR.map((g, i) => { const L = x.I.filter(y => balGr(y.t) === g); T[i][0] += L.filter(y => y.g === 'venc').length; T[i][1] += L.filter(y => y.g === 'mes').length;
+      return `<td class="sf-cc${i ? '' : ' sf-sep'}"><a href="#balprog/${b.id}" class="sf-lk">${sfCel(L.map(y => ({ g: y.g })), '')}</a></td>`; }).join('');
+    return `<tr class="sf-lin${balAten(x) ? ' sf-at' : ''}"><td class="sf-n"><a href="#balft/${b.id}" class="sf-lk"><b>${esc(b.nome)}</b></a>${tag(x)}</td><td class="sf-lc">${esc(BAL_MOTOR[b.mot] || '—')}</td>
+      <td class="sf-hr"><a href="#balhor" class="sf-lk">${hr ? nf(hr.h) + ' h' : '—'}</a></td><td class="sf-hdc">${d == null ? '<span class="sf-hd sf-red">(sem leitura)</span>' : `<span class="sf-hd ${d > 14 ? 'sf-red' : 'sf-mut'}">(${d} ${d === 1 ? 'dia' : 'dias'})</span>`}</td>
+      <td class="sf-cc sf-sep">${x.e.A.length ? `<a href="#balcor" class="sf-lk"><span class="sf-c ${x.e.A.some(a => a.c === 'Crítica') ? 'sf-r' : 'sf-a'}">${x.e.A.length}</span></a>` : '<span class="sf-g"></span>'}</td>${cs}</tr>`; };
+  const linF = x => { const b = x.e.b, z = typeof vgRefDados === 'function' && typeof vgEmReforma === 'function' && vgEmReforma(b.id) ? vgRefDados(b.id) : null;
+    return `<tr class="sf-fo"><td class="sf-n"><a href="#balft/${b.id}" class="sf-lk"><b>${esc(b.nome)}</b></a> <span class="pill p-mut">Em reforma</span></td><td class="sf-lc">${esc(BAL_MOTOR[b.mot] || '—')}</td>
+      <td colspan="${NC - 2}" class="sf-fot">${z ? [z.r && z.r.local ? esc(z.r.local) : '', z.ini ? 'desde ' + brD(z.ini) : '', z.prev ? 'entrega prevista ' + brD(z.prev) : 'sem previsão de entrega'].filter(Boolean).join(' · ') : 'fora de operação'}</td></tr>`; };
+  const gh = (t, n, c) => `<tr class="sf-gh${c ? ' ' + c : ''}"><td colspan="${NC}">${t} · ${n}</td></tr>`, op = E.filter(x => x.e.st !== 'ref');
+  const A = op.filter(balAten), Ed = op.filter(x => x.e.st === 'lib'), Sh = op.filter(x => x.e.st === 'sem'), F = E.filter(x => x.e.st === 'ref');
+  const corpo = (A.length ? gh('Precisa de atenção', A.length, 'at') + A.map(linha).join('') : '') + (Ed.length ? gh('Em dia', Ed.length) + Ed.map(linha).join('') : '')
+    + (Sh.length ? gh('Sem histórico', Sh.length, 'fo') + Sh.map(linha).join('') : '') + (F.length ? gh('Fora de operação', F.length, 'fo') + F.map(linF).join('') : '');
+  const nA = op.reduce((a, x) => a + x.e.A.length, 0), z = '<span class="sf-na sf-z">—</span>';
+  const tot = `<tfoot><tr class="sf-tot"><td colspan="4"><b>Total das balsas</b> <span class="sf-tl">Vencidos</span></td><td class="sf-cc sf-sep">${nA ? `<span class="sf-c sf-r" title="falhas abertas">${nA}</span>` : z}</td>${T.map((t, i) => `<td class="sf-cc${i ? '' : ' sf-sep'}">${t[0] ? `<span class="sf-c sf-r">${t[0]}</span>` : z}</td>`).join('')}</tr>
+    <tr class="sf-tot sf-tot2"><td colspan="4"><span class="sf-tl">Vencem no mês</span></td><td class="sf-cc sf-sep">${z}</td>${T.map((t, i) => `<td class="sf-cc${i ? '' : ' sf-sep'}">${t[1] ? `<span class="sf-c sf-a">${t[1]}</span>` : z}</td>`).join('')}</tr></tfoot>`;
+  return `<div class="tw"><table class="sf-mx"><thead><tr class="sf-gr"><th colspan="4"></th><th class="sf-sep" data-sfdica="O que decide se a balsa pode operar (NP 024 6.1): falha crítica aberta impede a operação; falha alta deixa com restrição. Clique no número para abrir a 1.2 Manutenção corretiva.">Liberação</th><th colspan="${BAL_GR.length}" class="sf-sep" data-sfdica="Plano preventivo da NP 024 (item 8), um equipamento por coluna. Número vermelho = itens vencidos; âmbar = vencem no mês; ponto verde = em dia. Clique na célula para abrir a 2.2 Backlog e OM preventiva da balsa.">Manutenção preventiva</th></tr>
+    <tr><th class="l">Balsa</th><th class="l">Motor-bomba</th><th class="r">Horímetro</th><th class="r">Sem leitura há</th><th class="sf-sep"><small>abertas</small>Falhas</th>${BAL_GR_C.map((g, i) => `<th class="${i ? '' : 'sf-sep'}" title="${esc(BAL_GR[i])}">${g}</th>`).join('')}</tr></thead><tbody>${corpo}</tbody>${tot}</table></div>
+    <div class="sf-rod"><div class="sf-leg"><span><span class="sf-c sf-r">3</span> vencidos</span><span><span class="sf-c sf-a">2</span> vencem no mês</span><span><span class="sf-g"></span> em dia</span><span><span class="sf-o"></span> sem histórico</span><span><span class="sf-na">—</span> não se aplica</span></div><details class="sf-como"><summary>Como ler</summary><p>Ponto verde = em dia; número vermelho = serviços vencidos; número âmbar = vencem no mês; quadrado vazio = sem histórico. Impedida de operar = serviço crítico vencido ou falha crítica aberta; com restrição = outro serviço vencido ou falha alta (NP 024 6.1). Clique numa célula para programar a preventiva da balsa (2.2); no nome, a ficha técnica; no horímetro, a 1.1. Sem leitura há: dias desde a última leitura do horímetro do motor-bomba, em vermelho acima de 14 dias. Fora de operação: balsas em reforma (1.3 Layout da frota).</p></details></div>`;
+}
+function balCartoes(E) {
+  const tagC = { 'p-ok': 'ok', 'p-warn': 'at', 'p-bad': 'bad' };
+  return `<div class="sf-cards">${E.map(x => { const b = x.e.b, hr = balHor(b.id), P = x.I, v = P.filter(y => y.g === 'venc').length, m = P.filter(y => y.g === 'mes').length, ok = P.filter(y => y.g === 'ok').length, sem = P.filter(y => y.g === 'sem').length, t = v + m + ok || 1, st = BAL_ST[x.e.st], nA = x.e.A.length;
+    return `<div class="sf-cd" onclick="location.hash='#balprog/${b.id}'"><div class="sf-cdh"><b>${esc(b.nome)}</b><span class="sf-cfg">${esc(BAL_MOTOR[b.mot] || '')}</span><span class="sf-tag ${tagC[st[0]] || ''}">${esc(st[1])}</span></div>
+      <div class="sf-mut">Motor-bomba: ${hr ? nf(hr.h) + ' h · leitura de ' + brD(hr.date) : 'sem leitura'}${nA ? ` · <b class="sf-red">${nA} falha${nA > 1 ? 's' : ''} aberta${nA > 1 ? 's' : ''}</b>` : ''}</div>
+      ${x.e.st === 'ref' ? '<div class="sf-mut">Em reforma: fora das contas do plano.</div>' : `<div class="sf-st"><i style="width:${v / t * 100}%;background:#C5221F"></i><i style="width:${m / t * 100}%;background:#F9AB00"></i><i style="width:${ok / t * 100}%;background:#1E8E3E"></i></div>
+      <div class="sf-pl">${v ? `<span class="pill p-bad">${v} vencido${v === 1 ? '' : 's'}</span>` : ''}${x.e.crit.length ? `<span class="pill p-bad"><b>${x.e.crit.length} crítico${x.e.crit.length === 1 ? '' : 's'}</b></span>` : ''}${m ? `<span class="pill p-warn">${m} no mês</span>` : ''}<span class="pill p-ok">${ok} em dia</span>${sem ? `<span class="pill p-mut">${sem} sem histórico</span>` : ''}</div>`}</div>`; }).join('')}</div>
+    <p class="note">Clique no cartão para abrir a 2.2 Backlog e OM preventiva da balsa. Barra: vencidos · vencem no mês · em dia.</p>`;
+}
+// pontos de atenção agrupados por motivo, uma etiqueta por balsa (como nos empurradores)
 function balPorque(E) {
-  const R = E.filter(x => x.e.st === 'bloq' || x.e.st === 'rest');
-  if (!R.length) return '<p class="note">Todas as balsas em operação estão liberadas.</p>';
-  return `<ul class="bal-ag">${R.map(x => { const b = x.e.b, M = [];
-    x.e.A.forEach(a => M.push(`<a href="#balft/${b.id}">Falha ${esc(a.c)}: ${esc(a.desc)}${a.om ? ' · OM ' + esc(a.om) : ' · sem OM no Sankhya'}</a>`));
-    if (x.e.crit.length) M.push(`<a href="#balprog/${b.id}">${x.e.crit.length} serviço${x.e.crit.length === 1 ? '' : 's'} crítico${x.e.crit.length === 1 ? '' : 's'} vencido${x.e.crit.length === 1 ? '' : 's'}: ${esc([...new Set(x.e.crit.map(y => balGr(y.t)))].join(', '))}</a>`);
-    const out = x.e.venc.filter(y => y.t.prio !== 'Crítica'); if (out.length) M.push(`<a href="#balprog/${b.id}">${out.length} outro${out.length === 1 ? '' : 's'} vencido${out.length === 1 ? '' : 's'}: ${esc([...new Set(out.map(y => balGr(y.t)))].join(', '))}</a>`);
-    return `<li>${balPil(BAL_ST, x.e.st)} <b>${esc(b.nome)}</b> · ${M.join(' · ')}</li>`; }).join('')}</ul>`;
+  const G = [], op = E.filter(x => x.e.st !== 'ref'), ch = (h, t) => `<a href="${h}" class="sf-lk sf-chip">${t}</a>`;
+  const g = (c, tit, I) => { if (I.length) G.push(`<div class="sf-pa ${c}"><b>${tit}</b><div class="sf-chips">${I.join('')}</div></div>`); };
+  const nA = (x, c) => x.e.A.filter(a => a.c === c).length, n = (x, k) => esc(x.e.b.nome) + (k > 1 ? ` <small>${k}</small>` : '');
+  g('bad', 'Falha crítica aberta', op.filter(x => nA(x, 'Crítica')).map(x => ch('#balcor', n(x, nA(x, 'Crítica')))));
+  g('bad', 'Serviço crítico vencido', op.filter(x => x.e.crit.length).map(x => ch('#balprog/' + x.e.b.id, n(x, x.e.crit.length))));
+  g('at', 'Falha alta aberta', op.filter(x => nA(x, 'Alta')).map(x => ch('#balcor', n(x, nA(x, 'Alta')))));
+  g('at', 'Outros serviços vencidos', op.filter(x => x.e.venc.length > x.e.crit.length).map(x => ch('#balprog/' + x.e.b.id, esc(x.e.b.nome) + ` <small>${x.e.venc.length - x.e.crit.length}</small>`)));
+  return (G.join('') || '<p class="note">Nenhum ponto de atenção: todas as balsas em operação liberadas.</p>') + '<p class="note">Vermelho impede de operar; âmbar restringe a operação. Clique na balsa para ir à tela que resolve.</p>';
 }
 function vBal2() {
-  const E = BALSAS.map(balLinhas), md = BALM.modo === 'lista' ? 'lista' : 'matriz';
+  const E = BALSAS.map(balLinhas), md = ['matriz', 'cartoes', 'lista'].includes(BALM.modo) ? BALM.modo : 'matriz';
   if (md === 'lista') return vBal().replace('<button class="mbtn" data-balfalha="">', balModoBt(md) + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">');
-  const cnt = k => E.filter(x => x.e.st === k).length, ord = { bloq: 0, rest: 1, lib: 2, sem: 3, ref: 4 };
-  const F = E.filter(x => BALF.f === 'todas' || x.e.st === BALF.f).sort((a, b) => ord[a.e.st] - ord[b.e.st] || b.e.venc.length - a.e.venc.length || (a.e.b.nome < b.e.b.nome ? -1 : 1));
-  return balCab('Integridade técnica da frota', `${BALSAS.length} balsas petroleiras · para operar pela NP 024 6.1: impedida de operar = serviço Crítico vencido ou falha Crítica aberta; com restrição = outro vencido ou falha Alta`, frotaSw() + balModoBt(md) + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">⚠ Registrar falha</button>')
-   + `<div class="cm-chips">${[['todas', 'Todas', E.length], ['bloq', 'Impedidas de operar', cnt('bloq')], ['rest', 'Liberadas com restrição', cnt('rest')], ['lib', 'Liberadas', cnt('lib')], ['sem', 'Sem histórico', cnt('sem')], ['ref', 'Em reforma', cnt('ref')]].map(([k, t, n]) => `<button class="cm-chip${BALF.f === k ? ' on' : ''}" data-balf="${k}">${t} <b>${n}</b></button>`).join('')}</div>
-   <div class="card"><h2>Matriz das balsas · equipamento por equipamento</h2>${balMatriz(F)}</div>
-   <div class="card"><h2>Por que não está liberada</h2>${balPorque(E)}</div>`;
+  const ord = { bloq: 0, rest: 1, lib: 2, sem: 3, ref: 4 }, L = [...E].sort((a, b) => ord[a.e.st] - ord[b.e.st] || b.e.venc.length - a.e.venc.length || (a.e.b.nome < b.e.b.nome ? -1 : 1));
+  return balCab('Integridade técnica da frota', '<i style="font-size:17px">Asset Integrity Management</i>', frotaSw() + '<button class="mbtn" data-bal27a="">📋 FR 027_A</button><button class="mbtn" data-balfalha="">⚠ Registrar falha</button>')
+   + `<div class="card"><h2 class="sf-h2">Integridade do Plano de Manutenção - Frota de Balsas<span class="sf-segh" data-nodrag>${balModoBt(md)}</span></h2>${balKpis(E)}${md === 'cartoes' ? balCartoes(L) : balMatriz(L)}</div>
+   <div class="card"><h2>Pontos de atenção</h2>${balPorque(E)}</div>`;
 }
-const balModoBt = md => `<div class="seg"><button data-balmodo="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-balmodo="lista" class="${md === 'lista' ? 'on' : ''}">☰ Lista</button></div>`;
+const balModoBt = md => `<div class="seg"><button data-balmodo="matriz" class="${md === 'matriz' ? 'on' : ''}">▦ Matriz</button><button data-balmodo="cartoes" class="${md === 'cartoes' ? 'on' : ''}">▤ Cartões</button><button data-balmodo="lista" class="${md === 'lista' ? 'on' : ''}">☰ Lista</button></div>`;
+// arranjo das janelas mudou (saiu o quadro de filtros): o arranjo guardado da tela volta ao padrão uma vez
+try { if (!localStorage.getItem('smf_bal_lay_v2')) { localStorage.removeItem('smf_bal_lay'); localStorage.setItem('smf_bal_lay_v2', '1'); } } catch (e) { }
 // ---------- programar a preventiva (como a 2.2) ----------
 const BALP = { sel: {} };   // serviços marcados por balsa
 function balProgSel(b, I) { if (!BALP.sel[b.id]) BALP.sel[b.id] = new Set(I.filter(x => x.g === 'venc' || x.g === 'mes').map(x => x.t.id)); return BALP.sel[b.id]; }

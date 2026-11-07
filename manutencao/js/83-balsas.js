@@ -530,7 +530,7 @@ function balJan(k, fn) { return () => { const t = document.createElement('div');
     else C.push(`<div class="card">${c.classList.contains('cm-chips') ? '<h2>Resumo</h2>' : c.classList.contains('bal-kg') ? '<h2>Indicadores da NP 024</h2>' : ''}${c.outerHTML}</div>`); });
   return `<div class="cm-v">${vh ? vh.outerHTML : ''}<div class="cm-ws">${C.join('')}</div></div>`; }; }
 Object.entries({ bal: vBal, balcr: vBalCr, balpl: vBalPl, baldoca: vBalDoca, balcal: vBalCal, balcmp: vBalCmp, balkpi: vBalKpi, balft: vBalFt }).forEach(([k, fn]) => { VX[k] = balJan(k, fn); });
-BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.querySelector('#main .cm-ws'); if (ws) janelasLivres(ws, 'smf_' + k + (k === 'balft' && ARG ? '1' : '') + '_lay', '[data-balreset="' + k + '"]'); }; });
+BAL_VIEWS.forEach(([k]) => { AFTER[k] = () => { balAfter(); const ws = document.querySelector('#main .cm-ws'); if (ws) { janelasLivres(ws, 'smf_' + k + (k === 'balft' && ARG ? '1' : '') + '_lay', '[data-balreset="' + k + '"]'); if (k === 'bal' && typeof sfAjustaAltura === 'function') requestAnimationFrame(() => sfAjustaAltura(ws, 'smf_bal_lay')); } }; });
 // menu da frota de balsas (renderNav chama quando FROTA_TIPO = 'bal')
 function balNav() {
   const it = (k, n, ic) => `<a href="#${k}" class="${VIEW === k || (k === 'balcor' && VIEW === 'balfal') || (k === 'balcal' && ['balcmp', 'baldoca'].includes(VIEW)) ? 'on' : ''}">${ico(ic)}<span>${n}</span>${(n2 => n2 ? `<span class="n">${n2}</span>` : '')(k === 'bal' ? BALSAS.filter(b => balEstado(b).st === 'bloq').length : k === 'balcor' ? recs('avaria').filter(r => r.bal && !r.excluido && !r.fim && balsaDe(r.vessel)).length : 0)}</a>`;
